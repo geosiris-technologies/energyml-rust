@@ -697,13 +697,20 @@ impl PackageIndex {
         })
     }
 
-    /// Who references this uuid - `graph::dependents`, from the index.
+    /// Who references the node an **address** names - `graph::dependents_of_uri`,
+    /// from the index.
     ///
-    /// One [`Pointer`] per reference. Same set as `graph::dependents` over the
-    /// same objects; the order is by source node, then by path id, where
-    /// `graph::dependents` gives the order the walk met them in.
-    pub fn dependents_of(&self, uuid: &str) -> Vec<Pointer> {
-        let Some(id) = self.id_of(&uuid.to_ascii_lowercase()) else {
+    /// The address is read by the one door ([`PackageIndex::node`]): a full uri
+    /// answers for that exact entry, so an object held in two versions does not
+    /// hand one version the referrers of the other. A bare uuid is accepted
+    /// only as an entry adapter and answers the uuid's default node.
+    ///
+    /// One [`Pointer`] per reference. Same set as `graph::dependents_of_uri`
+    /// over the same objects (and as `graph::dependents` when the uuid is held
+    /// once); the order is by source node, then by path id, where the graph
+    /// functions give the order the walk met them in.
+    pub fn dependents_of(&self, address: &str) -> Vec<Pointer> {
+        let Some(id) = self.find(address) else {
             return Vec::new();
         };
         let mut out = Vec::new();

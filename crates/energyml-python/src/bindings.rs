@@ -399,6 +399,55 @@ impl PyEpc {
         Ok(out)
     }
 
+    /// Every file name the package's arrays declare and where each resolves
+    /// (`energyml h5`). Changes nothing.
+    ///
+    /// Returns a list of `{declared, pointers, found, example, proxies}`;
+    /// `found` is `None` or `{path, origin, agrees}`. Pin a missing file with
+    /// `pin_data_file` and ask again.
+    fn array_files<'py>(&self, py: Python<'py>) -> PyResult<Vec<Bound<'py, PyDict>>> {
+        let mut out = Vec::new();
+        for file in self.inner.array_files() {
+            let row = PyDict::new(py);
+            row.set_item("declared", file.declared)?;
+            row.set_item("pointers", file.pointers)?;
+            match file.found {
+                Some(found) => {
+                    let one = PyDict::new(py);
+                    one.set_item("path", found.path)?;
+                    one.set_item("origin", found.origin)?;
+                    one.set_item("agrees", found.agrees)?;
+                    row.set_item("found", one)?;
+                }
+                None => row.set_item("found", py.None())?,
+            }
+            row.set_item("example", file.example)?;
+            row.set_item("proxies", file.proxies)?;
+            out.push(row);
+        }
+        Ok(out)
+    }
+
+    /// Write the declared file names down in `out` (`energyml h5 --fix`).
+    ///
+    /// Returns `None` when every array already names the file it is in
+    /// (nothing is written), else `{renamed, declarations, diagnostics,
+    /// before, lost}`: `renamed` is a list of `(declared, now)` and `lost` is
+    /// the verdict read back from the written package - non-zero means the
+    /// repair did not repair.
+    fn repair_arrays<'py>(&mut self, py: Python<'py>, out: &str) -> PyResult<Option<Bound<'py, PyDict>>> {
+        let Some(done) = self.inner.repair_arrays(out).map_err(failed)? else {
+            return Ok(None);
+        };
+        let report = PyDict::new(py);
+        report.set_item("renamed", done.renamed)?;
+        report.set_item("declarations", done.declarations)?;
+        report.set_item("diagnostics", done.diagnostics)?;
+        report.set_item("before", done.before)?;
+        report.set_item("lost", done.lost)?;
+        Ok(Some(report))
+    }
+
     /// Where it came from.
     #[getter]
     fn path(&self) -> Option<String> {

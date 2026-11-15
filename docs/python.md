@@ -212,6 +212,27 @@ done = pkg.rename_data_file("survey.h5", "survey_2026.h5")
 
 Quote first; the operation refuses as a whole rather than doing part.
 
+## Repairing the declared data files
+
+```python
+files = pkg.array_files()                 # what `energyml h5` prints; changes nothing
+# [{"declared": "survey.h5", "pointers": 12, "found": {"path": ..., "origin": ..., "agrees": False},
+#   "example": "/RESQML/...", "proxies": [...]}, ...]   ("found" is None when the search failed)
+pkg.pin_data_file("survey.h5", "/data/dataset_7.dat")   # say where a missing file is, then ask again
+done = pkg.repair_arrays("fixed.epc")     # what `energyml h5 --fix` does; None = nothing to fix
+print(done["renamed"], done["declarations"], done["lost"])
+```
+
+The bridge carries no logic of its own: the survey, the rewrite and the verdict
+are `energyml_storage::repair`'s, the same ones the command line uses. `lost` is
+read back from the written package; non-zero means the repair did not repair
+(the package uses an `externalResource` relationship the writer does not
+reproduce).
+
+`referenced_by(uri)` answers for **that uri**: when a package holds two
+versions of one uuid, an object that names version 2 is not reported as
+pointing at version 1.
+
 ## Examples
 
 Worked examples live in the bridge's `examples/` folder,

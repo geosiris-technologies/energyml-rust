@@ -506,6 +506,56 @@ pub struct RenamePlan {
     pub refusals: Vec<String>,
 }
 
+/// Where the search found the file a package declares.
+///
+/// `energyml_storage::Resolution`, converted.
+#[derive(Debug, Clone)]
+pub struct FoundFile {
+    /// The path of the file the numbers come out of.
+    pub path: String,
+    /// Which kind of place that was, in words (`Origin::describe`).
+    pub origin: String,
+    /// Whether the package already said the right thing.
+    pub agrees: bool,
+}
+
+/// One file name the package's array pointers declare, and where it resolves.
+///
+/// `energyml_storage::repair::Row`, converted: the same survey `energyml h5`
+/// prints.
+#[derive(Debug, Clone)]
+pub struct ArrayFile {
+    /// The declared name (empty when a pointer names none).
+    pub declared: String,
+    /// How many array pointers name it.
+    pub pointers: usize,
+    /// Where the search found it, when it did.
+    pub found: Option<FoundFile>,
+    /// A dataset path inside the file, to say what was looked for.
+    pub example: String,
+    /// The `EpcExternalPartReference` proxies (lower case uuids) that use it.
+    pub proxies: Vec<String>,
+}
+
+/// What repairing the declared file names did.
+///
+/// `energyml_storage::repair::Fixed`, converted, plus the verdict
+/// (`Fixed::lost`) read back from the written package.
+#[derive(Debug, Clone, Default)]
+pub struct ArraysRepaired {
+    /// `(declared, now)` for each name rewritten.
+    pub renamed: Vec<(String, String)>,
+    /// How many declarations were rewritten.
+    pub declarations: usize,
+    /// What the writer had to say.
+    pub diagnostics: Vec<String>,
+    /// Pointers naming no file before the repair.
+    pub before: usize,
+    /// Pointers that named a file before and name none in the written
+    /// package. Non-zero: the repair did not repair.
+    pub lost: usize,
+}
+
 /// What a rename did.
 #[derive(Debug, Clone, Default)]
 pub struct Renamed {
@@ -892,6 +942,55 @@ impl Package {
         })
     }
 
+    /// Every file name the package's arrays declare and where each resolves
+    /// (`energyml h5`). Changes nothing; an empty list means no external array.
+    ///
+    /// A name the search could not find is `found: None`; tell the package
+    /// where the file is with [`Package::pin_data_file`] and ask again.
+    pub fn array_files(&self) -> Vec<ArrayFile> {
+        energyml_storage::repair::survey(&self.store)
+            .into_iter()
+            .map(|(declared, row)| ArrayFile {
+                declared,
+                pointers: row.pointers,
+                found: row.found.map(|found| FoundFile {
+                    path: found.path.display().to_string(),
+                    origin: found.origin.describe().to_string(),
+                    agrees: found.agrees(),
+                }),
+                example: row.example,
+                proxies: row.proxies.into_iter().collect(),
+            })
+            .collect()
+    }
+
+    /// Write the answer of [`Package::array_files`] down in `out`
+    /// (`energyml h5 --fix`): every name whose file was found under another
+    /// name is rewritten to the name of the file found.
+    ///
+    /// The survey, the rewrite and the verdict are
+    /// `energyml_storage::repair`'s; this converts. `None` when every array
+    /// already names the file it is in (nothing is written). The written
+    /// package is reopened and counted, and `lost` carries the verdict.
+    pub fn repair_arrays(&mut self, out: impl AsRef<Path>) -> Result<Option<ArraysRepaired>, String> {
+        let out = out.as_ref();
+        let rows = energyml_storage::repair::survey(&self.store);
+        let Some(fixed) =
+            energyml_storage::repair::fix(&mut self.store, &rows, out).map_err(|why| format!("{why}"))?
+        else {
+            return Ok(None);
+        };
+        let written = Package::open(out)?;
+        let lost = fixed.lost(&written.store);
+        Ok(Some(ArraysRepaired {
+            diagnostics: fixed.diagnostics.iter().map(|one| format!("{one}")).collect(),
+            renamed: fixed.renamed,
+            declarations: fixed.declarations,
+            before: fixed.before,
+            lost,
+        }))
+    }
+
     /// Where it came from, when it came from a file.
     pub fn path(&self) -> Option<PathBuf> {
         self.store.path().map(Path::to_path_buf)
@@ -1269,17 +1368,14 @@ impl Package {
     /// exactly when a caller is about to delete or cut. The refusal names the
     /// unreadable objects.
     pub fn referenced_by(&self, uri: &str) -> Result<Vec<Link>, String> {
-        let uuid = self
-            .store
-            .resource(uri)
-            .map_err(|why| format!("{why}"))?
-            .uuid
-            .clone();
+        // The entry must exist; the question is then asked for **its uri**, so
+        // that two versions of one uuid are not mixed (`dependents_of_uri`).
+        self.store.resource(uri).map_err(|why| format!("{why}"))?;
         let held = refuse_unreadable(self.store.read_objects(None), "referenced_by")?;
-        Ok(energyml_storage::graph::dependents(
+        Ok(energyml_storage::graph::dependents_of_uri(
             held.iter()
                 .map(|(summary, object)| (summary, object.as_reflect())),
-            &uuid,
+            uri,
         )
         .into_iter()
         .map(|one| Link {
