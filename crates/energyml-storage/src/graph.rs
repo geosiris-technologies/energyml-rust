@@ -2326,6 +2326,22 @@ fn entries_named<'a>(
         if !exact.is_empty() {
             pool = exact;
         }
+    } else {
+        // A reference that names no version fits an entry that carries none
+        // exactly (`identity::version_fit`, the store's `choose`): that entry is
+        // the one it means when the package holds it beside versioned ones.
+        let unversioned: Vec<&'a ObjectSummary> = pool
+            .iter()
+            .copied()
+            .filter(|one| {
+                identifiers::EtpUri::parse(&one.uri)
+                    .ok()
+                    .is_some_and(|uri| uri.object_version.is_none())
+            })
+            .collect();
+        if !unversioned.is_empty() {
+            pool = unversioned;
+        }
     }
     pool
 }

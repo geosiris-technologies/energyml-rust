@@ -334,8 +334,6 @@ struct Column {
     ring: [[f64; 2]; 4],
     /// The corner heights of each level, `[smaller K, larger K]`.
     heights: [[f64; 4]; 2],
-    /// The column's box in plan, and its range of heights.
-    reach: [[f64; 2]; 3],
 }
 
 /// The column's box in plan has four finite bounds, so the grid of buckets can
@@ -392,7 +390,6 @@ fn column(grid: usize, cell: &Hexahedron) -> Result<Column, CellsError> {
         [ring[1][0] - ring[0][0], ring[1][1] - ring[0][1]],
         [ring[3][0] - ring[0][0], ring[3][1] - ring[0][1]],
     ];
-    let reach = reach_of(cell);
     Ok(Column {
         index: cell.index,
         origin: ring[0],
@@ -402,7 +399,6 @@ fn column(grid: usize, cell: &Hexahedron) -> Result<Column, CellsError> {
             [c[0][2], c[1][2], c[2][2], c[3][2]],
             [c[4][2], c[5][2], c[6][2], c[7][2]],
         ],
-        reach,
     })
 }
 

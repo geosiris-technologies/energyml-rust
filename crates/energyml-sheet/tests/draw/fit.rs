@@ -90,6 +90,25 @@ fn a_centred_and_an_end_anchored_text_fit_on_both_sides() {
 }
 
 /// Break it: let `fit_to_page` rewrite a text that fits; the one item below becomes two or changes position.
+/// A word cannot be broken: a tick label centred at the edge of a plot comes back inside the page, moved as
+/// little as it takes, on one line.
+///
+/// Break it: push the lines of `fit_to_page` at their own `at[0]` (drop `into_page`); the label then ends past 200.
+#[test]
+fn an_unbreakable_word_at_the_edge_comes_back_inside_the_page() {
+    let style = TextStyle {
+        anchor: Anchor::Middle,
+        ..TextStyle::default()
+    };
+    let mut list = list_with("2959.639", [198.0, 20.0], style);
+    energyml_sheet::draw::text::fit_to_page(&mut list);
+    let lines = texts(&list);
+    assert_eq!(lines.len(), 1, "one word, one line: {lines:?}");
+    let right = max_text_x(&list).expect("a text");
+    assert!(right <= 200.0 + 1e-9, "{right}");
+    assert!(right >= 200.0 - 1e-6, "moved as little as it takes: {right}");
+}
+
 #[test]
 fn a_text_that_fits_is_left_alone() {
     let mut list = list_with("short", [10.0, 20.0], TextStyle::default());

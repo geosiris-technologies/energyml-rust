@@ -231,10 +231,27 @@ pub fn distance_to_line(point: [f64; 2], line: &[[f64; 2]]) -> f64 {
 /// must stay inside the page: nothing a view writes leaves the image.
 #[allow(dead_code)] // each view's test file calls it, a build of one file alone would not
 pub fn assert_texts_in_page(list: &DisplayList, what: &str) {
+    use energyml_sheet::draw::text::{styled_width, x_span};
     let widest = energyml_sheet::draw::text::max_text_x(list).expect("the picture has a text");
+    // The text that reaches furthest, named, so a failure says what to fix.
+    let named = list
+        .layers
+        .iter()
+        .flat_map(|layer| &layer.elements)
+        .flat_map(|element| &element.items)
+        .filter_map(|item| match item {
+            Item::Text { at, text, style } if style.rotate == 0.0 => Some((
+                x_span(at[0], style.anchor, styled_width(text, style))[1],
+                text.as_str(),
+            )),
+            _ => None,
+        })
+        .max_by(|a, b| a.0.total_cmp(&b.0))
+        .map(|(_, text)| text)
+        .unwrap_or_default();
     assert!(
         widest <= list.size[0] + 1e-6,
-        "{what}: a text reaches x = {widest:.2} on a page {} wide",
+        "{what}: a text reaches x = {widest:.2} on a page {} wide: {named:?}",
         list.size[0]
     );
 }

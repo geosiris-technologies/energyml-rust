@@ -266,8 +266,9 @@ pub fn max_text_x(list: &DisplayList) -> Option<f64> {
 
 /// Break every unrotated text that leaves the page (past `list.size[0]`, or before 0) into lines that fit, one
 /// [`Item::Text`] a line, the lines [`LINE_STEP_PER_SIZE`] times the size apart below the first (the first keeps
-/// its baseline). A text that fits is not touched. A text whose anchor leaves less than one character of room is
-/// left alone (there is nothing to break it against).
+/// its baseline). A text that fits is not touched. A line that still leaves the page (one word longer than the
+/// room, or an anchor that leaves less than one character of room, a tick label at the edge of a plot) is moved
+/// back inside it, as little as it takes; only a word wider than the whole page stays out.
 ///
 /// The lines below the first take the room of what is under the text: a view that places a long title with
 /// something close underneath should break it itself, with a room of its own, before this pass. This is the net
@@ -293,10 +294,16 @@ pub fn fit_to_page(list: &mut DisplayList) {
                 } else {
                     1.0
                 };
-                let wrapped = wrap(&text, room(at[0], style.anchor, page), style.size * factor);
-                for (n, line) in wrapped.lines.into_iter().enumerate() {
+                let room = room(at[0], style.anchor, page);
+                let lines = if room >= style.size {
+                    wrap(&text, room, style.size * factor).lines
+                } else {
+                    vec![text]
+                };
+                for (n, line) in lines.into_iter().enumerate() {
+                    let x = into_page(at[0], style.anchor, styled_width(&line, &style), page);
                     element.items.push(Item::Text {
-                        at: [at[0], at[1] + style.size * LINE_STEP_PER_SIZE * n as f64],
+                        at: [x, at[1] + style.size * LINE_STEP_PER_SIZE * n as f64],
                         text: line,
                         style,
                     });
@@ -306,7 +313,7 @@ pub fn fit_to_page(list: &mut DisplayList) {
     }
 }
 
-/// Whether this item is an unrotated text that leaves the page and has room to be broken.
+/// Whether this item is an unrotated text that leaves the page, on either side.
 fn overflows(item: &Item, page: f64) -> bool {
     let Item::Text { at, text, style } = item else {
         return false;
@@ -314,8 +321,24 @@ fn overflows(item: &Item, page: f64) -> bool {
     if style.rotate != 0.0 || !at[0].is_finite() || !page.is_finite() {
         return false;
     }
-    let room = room(at[0], style.anchor, page);
-    room >= style.size && styled_width(text, style) > room
+    let span = x_span(at[0], style.anchor, styled_width(text, style));
+    span[1] > page || span[0] < 0.0
+}
+
+/// The anchor abscissa that puts a text `width` wide inside `[0, page]`, moved as little as it takes: past the
+/// right edge it comes back to end there, then before the left edge it starts at 0 (a text wider than the page
+/// starts at 0 and still runs out on the right).
+fn into_page(x: f64, anchor: Anchor, width: f64, page: f64) -> f64 {
+    let mut x = x;
+    let span = x_span(x, anchor, width);
+    if span[1] > page {
+        x -= span[1] - page;
+    }
+    let span = x_span(x, anchor, width);
+    if span[0] < 0.0 {
+        x -= span[0];
+    }
+    x
 }
 
 /// A number written short: `decimals` decimals at most, no trailing zeros and

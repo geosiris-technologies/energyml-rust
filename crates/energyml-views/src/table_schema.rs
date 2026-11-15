@@ -185,8 +185,8 @@ impl ViewKind for TableSchemaView {
         // What objects say of tables: the lookups of the properties, from the index.
         let mut index_edges: Vec<IndexEdge> = Vec::new();
         for sheet in &sheets {
-            let (uuid, _) = energyml_core::identity::parse_address(&sheet.uri);
-            for pointer in cx.index.dependents_of(&uuid) {
+            // The full uri: two versions of one table are two tables.
+            for pointer in cx.index.dependents_of(&sheet.uri) {
                 let field = pointer.path.rsplit('.').next().unwrap_or(&pointer.path);
                 let field = field.split('[').next().unwrap_or(field);
                 if LOOKUP_FIELDS.contains(&field) {
