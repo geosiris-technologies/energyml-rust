@@ -3,8 +3,8 @@
 //! as cubic curves.
 //!
 //! The steps are separate and named, so each can be replaced or checked on
-//! its own: back edges ([`cycles`]), layers ([`layering`]), order inside a
-//! layer ([`ordering`]), positions ([`place`]) and routes ([`route`]). The
+//! its own: back edges (`cycles`), layers (`layering`), order inside a
+//! layer (`ordering`), positions ([`place`]) and routes ([`route`]). The
 //! module does not draw: a view turns [`Placed`] into a
 //! [`DisplayList`](crate::draw::list::DisplayList).
 //!

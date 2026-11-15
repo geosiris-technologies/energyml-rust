@@ -28,10 +28,10 @@
 //!
 //! - [`build`] is the expensive stage: it reads the frame, the trajectory, the
 //!   curtain's columns, the boundaries and the surfaces' maps, and places them.
-//! - [`layout`] and [`draw`] only arrange the numbers of a [`Model`] under a
+//! - [`layout()`] and [`draw`] only arrange the numbers of a [`Model`] under a
 //!   [`View`]: nothing is read or computed again, so a change of window or of
 //!   exaggeration costs a drawing, not a reading.
-//! - [`pick`] and [`pixel_of`] are the way back and the way there between a
+//! - [`pick()`] and [`pixel_of`] are the way back and the way there between a
 //!   pixel and the data.
 //!
 //! The drawing's metadata carries the request and the view: [`redraw`] makes

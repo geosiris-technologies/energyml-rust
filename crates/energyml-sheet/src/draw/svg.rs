@@ -161,7 +161,7 @@ pub enum DrawError {
     },
 }
 
-/// What an SVG's `<metadata>` carries: written by [`write`], read back by
+/// What an SVG's `<metadata>` carries: written by [`write()`], read back by
 /// [`read_metadata`]. The body is the caller's own text (usually JSON it
 /// serialised itself): this module never parses it.
 #[derive(Clone, Debug, PartialEq, Eq)]

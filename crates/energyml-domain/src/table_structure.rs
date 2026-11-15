@@ -11,7 +11,7 @@
 //!   rank, to itself, to a table named row by row by its title, to objects by uri; objects
 //!   that hold a reference to a table (a `CategoryLookup`) are edges of the package index;
 //! - [`self_parents`], [`row_forest`], [`group_roots`] - the rows of a table whose column
-//!   names a parent row, as a [`Forest`](crate::forest::Forest);
+//!   names a parent row, as a [`Forest`];
 //! - [`kv_shape`] - whether a sheet is a key-value table (a LAS header, a list of
 //!   parameters), and which column plays which role, the guesses said.
 

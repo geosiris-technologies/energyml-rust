@@ -534,7 +534,7 @@ pub struct UriColumn {
 /// Convention E: `Some` when the column is text, has at least one uri, and every non-empty, non-absent
 /// value passes `EtpUri::parse` and names an object (a uuid).
 ///
-/// Such a column is **not** a link to a row ([`super::resolve`] answers
+/// Such a column is **not** a link to a row ([`super::resolve()`] answers
 /// [`LinkRefusal::NotARowLink`]): its values are object chips (`source::object_chip`).
 pub fn uri_column(cells: &ColumnCells<'_>) -> Option<UriColumn> {
     if cells.family() != Family::Text {

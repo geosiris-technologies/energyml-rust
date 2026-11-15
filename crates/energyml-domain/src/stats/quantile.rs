@@ -7,7 +7,7 @@
 //! default of R and of NumPy).
 //!
 //! Above [`EXACT_QUANTILE_LIMIT`] values the answer comes from a
-//! [`LogSketch`](super::sketch::LogSketch) and says so in
+//! [`LogSketch`] and says so in
 //! [`Quantiles::method`], with its relative error.
 
 use super::sketch::{LogSketch, SKETCH_RELATIVE_ERROR, SketchRefusal};

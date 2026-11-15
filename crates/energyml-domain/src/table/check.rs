@@ -1,7 +1,7 @@
 //! Checking the links of a table, and of a set of tables.
 //!
 //! [`check_links`] follows every cell of every declared link column
-//! ([`super::resolve`]) and counts what it finds: rows found, keys that dangle,
+//! ([`super::resolve()`]) and counts what it finds: rows found, keys that dangle,
 //! keys that name several rows, titles that name no table, empty and absent
 //! cells, links that cannot be followed. A column of object uris (convention E)
 //! is checked against the package with [`crate::source::object_chip`]. Nothing

@@ -16,7 +16,7 @@
 //! gives nothing. The plan boxes of the cells are filed once, when the grid is
 //! read, in the grid of buckets of `energyml_geostat::buckets`; a cut asks it,
 //! for each segment of the trace, for the cells whose box the segment's box
-//! meets, and tests those few against the segment exactly ([`crosses_box`]). A
+//! meets, and tests those few against the segment exactly (`crosses_box`). A
 //! grid of millions of cells so pays, per section, for the few hundred the trace
 //! passes near, not for every cell (and a test counts the cells tried).
 //!

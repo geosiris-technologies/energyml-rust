@@ -4,7 +4,7 @@
 //!
 //! 1. **the shape**, as written facts: the property's own words ([`property::read`]) and what the description found
 //!    ([`Description`]: counts, moments, quantiles, the typed [`Observation`]s);
-//! 2. **the distribution**: a histogram of the [`Binned`](energyml_domain::stats::Binned) the description holds, on a
+//! 2. **the distribution**: a histogram of the [`Binned`] the description holds, on a
 //!    logarithmic axis when the values span several decades, with the modes and the threshold it found;
 //! 3. **the relation** with a sister property ([`PackageIndex::siblings`]): the density of the pairs
 //!    ([`PairWalk`]) as a raster, and the 1:1 diagonal;

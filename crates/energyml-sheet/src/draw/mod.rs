@@ -2,7 +2,7 @@
 //!
 //! [`DisplayList`] is what a view decides to draw: keyed elements in layers,
 //! in user units (pixels or millimetres), y down. [`svg::write`] serialises it,
-//! [`png`] rasterises it, [`hit`] says what is under a point. [`ticks`],
+//! [`png`] rasterises it, [`hit()`] says what is under a point. [`ticks`],
 //! [`spread`] and [`text`] are what a layout needs to place graduations and
 //! labels; [`raster`] paints value grids through a colour the caller passes;
 //! [`layered`] places a graph in layers.

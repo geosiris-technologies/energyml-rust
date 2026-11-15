@@ -57,17 +57,17 @@ use crate::error::{Error, Result};
 use crate::source::ArraySource;
 use crate::values::{self, Values};
 
-/// A property read slab by slab, for the statistics.
+// A property read slab by slab, for the statistics.
 pub mod chunks;
-/// Whether two properties are kin: the same quantity along other directions or
-/// times.
+// Whether two properties are kin: the same quantity along other directions or
+// times.
 pub mod kinship;
 /// The one reading of the link a column or a property makes to a table
 /// (convention B).
 pub mod link;
 /// What the file says of a property, as typed findings.
 pub mod observe;
-/// The shape of a property's values: components, elements, time, realizations.
+// The shape of a property's values: components, elements, time, realizations.
 pub mod shape;
 
 /// The one reading of convention B on a list of facets (see [`link`]).

@@ -1224,7 +1224,7 @@ impl GraphicalSet {
     /// another version of it does not decorate it. A bare uuid, the library's
     /// entry adapter, names no version and takes the entries of every one.
     ///
-    /// The one matcher is [`Cascade::targeting`]'s (a map of the set's entries by
+    /// The one matcher is `Cascade::targeting`'s (a map of the set's entries by
     /// target); this builds it for one question. A walk that asks many keeps its
     /// [`Cascade`].
     pub fn targeting(&self, address: &str) -> Vec<&Entry> {

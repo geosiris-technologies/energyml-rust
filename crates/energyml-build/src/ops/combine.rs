@@ -17,7 +17,7 @@
 //!
 //! # References
 //!
-//! - RESQML Technical Reference Guide v2.2, section 7.1 p. 222:
+//! - RESQML Technical Reference Guide v2.2 (Energistics, 2022), section 7.1 p. 222:
 //!   `ValueCountPerIndexableElement` and `LabelPerComponent`.
 
 use energyml_analysis::combine::{self as derived, Combines};

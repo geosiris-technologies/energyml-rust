@@ -32,11 +32,11 @@ pub fn write(layout: &Layout) -> Result<String, DrawError> {
     write_styled(layout, &PictureStyle::default())
 }
 
-/// [`write`], with the caller's ink, background and object.
+/// [`write()`], with the caller's ink, background and object.
 ///
 /// # Errors
 ///
-/// As [`write`].
+/// As [`write()`].
 pub fn write_styled(layout: &Layout, style: &PictureStyle) -> Result<String, DrawError> {
     crate::draw::svg::write(&of_layout(layout, style), None)
 }

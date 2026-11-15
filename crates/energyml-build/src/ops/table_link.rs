@@ -24,7 +24,7 @@
 //!
 //! # References
 //!
-//! - Energistics common Technical Reference Guide v2.3, section 11.11 p. 294
+//! - Energistics common Technical Reference Guide v2.3 (2022), section 11.11 p. 294
 //!   (`PropertyKindFacet`), section 11.3 p. 285 (`FacetKind`), section 11.2
 //!   p. 284 (`FacetExt`).
 

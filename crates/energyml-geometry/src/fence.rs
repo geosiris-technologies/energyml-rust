@@ -367,7 +367,7 @@ fn flush(out: &mut Panel, current: &mut Vec<(f64, f64, f64)>, trace: &Walk<'_>, 
 /// Outside the trace, the point is **clamped** to its ends rather than
 /// extrapolated: a section does not leave its trace.
 ///
-/// For many abscissas on one trace, build a [`Walk`] once instead: this builds
+/// For many abscissas on one trace, build a `Walk` once instead: this builds
 /// it at every call.
 pub fn point_at(trace: &[[f64; 2]], s: f64) -> [f64; 2] {
     Walk::new(trace).point(s)

@@ -2,7 +2,7 @@
 //!
 //! This is a wrapper of [`energyml_section::along_well`], which holds everything: [`section::offers`] says what a
 //! frame offers, [`section::build`] reads and places the hole, the curtain, the boundaries, the horizons and the
-//! tops, [`section::layout`] lays them out. This module declares the settings (the fields of the section's
+//! tops, [`section::layout()`] lays them out. This module declares the settings (the fields of the section's
 //! [`section::Request`] and [`section::View`], flattened; a structure that does not flatten is a JSON setting),
 //! fetches the placed surfaces through [`section::PlacedMesh::read`] (the one door of the geometry), colours the
 //! curtain through [`crate::colour::value_colours`], and calls `layout`. It does not call

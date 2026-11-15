@@ -1410,7 +1410,7 @@ pub fn plan(
 // Reading a workflow back: the constraint of a step, and the draft of a recipe
 // ---------------------------------------------------------------------------
 
-/// Read a constraint [`write_workflow`] wrote: `follows fabricant:<op> (<uuid>)`,
+/// Read a constraint `write_workflow` wrote: `follows fabricant:<op> (<uuid>)`,
 /// then `; serves <a>, <b>`, then `; held: <why>`. Anything else: `None`.
 ///
 /// The reader lives beside its writer (the constraint is a convention of this
