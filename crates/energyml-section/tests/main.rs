@@ -3,6 +3,7 @@
 //!
 //! Run them alone: `cargo test --workspace --test section_view <filter>`.
 
+mod along_well;
 mod assemble;
 mod corridor;
 mod crosses;

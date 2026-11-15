@@ -25,11 +25,15 @@
 //! The same split as `energyml-sheet` (`Board` → `layout` → `svg::write`), the
 //! precedent of a drawing computed in Rust.
 //!
+//! [`along_well`] is the geosteering section: a curtain along a well, its own
+//! model, the shared drawing (`energyml_sheet::draw`).
+//!
 //! # No native dependency
 //!
 //! wasm is a hard requirement (see ADR-0007): everything here is
 //! computation over a `ValueSource`, and the SVG is a `String`.
 
+pub mod along_well;
 pub mod assemble;
 pub mod crosses;
 pub mod erosion;
