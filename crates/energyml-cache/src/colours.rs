@@ -362,7 +362,7 @@ pub fn decisions_of(
             if !wanted.contains(summary.uri.as_str()) {
                 continue;
             }
-            if let Some(decision) = decide_summary(index, store, &set, summary, options) {
+            if let Some(decision) = decide_summary(index, store, &set, &summary, options) {
                 decided.insert(summary.uri.clone(), decision.map_err(|why| why.to_string()));
             }
         }
@@ -643,7 +643,7 @@ pub fn of_package(cache: &Cache, store: &EpcStore, wanted: &Wanted<'_>) -> Resul
             {
                 continue;
             }
-            let Some(decision) = decide_summary(index, store, &set, summary, &wanted.options) else {
+            let Some(decision) = decide_summary(index, store, &set, &summary, &wanted.options) else {
                 continue;
             };
             rows.push(Coloured {
