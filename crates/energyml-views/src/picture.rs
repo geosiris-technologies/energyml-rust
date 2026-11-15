@@ -198,7 +198,20 @@ pub fn redraw(kinds: &ViewKinds, svg_text: &str, cx: &ViewContext<'_>) -> Result
 ///
 /// # Errors
 ///
-/// Without the `png` feature, `FeatureNotEnabled` by name; with it, what the rasteriser refuses.
+/// Without the `png` feature of this crate, `FeatureNotEnabled` by name; with it, what the rasteriser refuses.
+#[cfg(feature = "png")]
 pub fn png(svg_text: &str, scale: f32) -> Result<Vec<u8>, ViewRefusal> {
     Ok(energyml_sheet::draw::png::render(svg_text, scale)?)
+}
+
+/// Without the `png` feature of this crate: the refusal, by name, even when another crate of the build turned on the
+/// sheet's rasteriser (features unify), so a view answers by its own features.
+#[cfg(not(feature = "png"))]
+pub fn png(svg_text: &str, scale: f32) -> Result<Vec<u8>, ViewRefusal> {
+    let _ = (svg_text, scale);
+    Err(energyml_sheet::draw::DrawError::FeatureNotEnabled {
+        feature: "png",
+        what: "render a PNG",
+    }
+    .into())
 }
