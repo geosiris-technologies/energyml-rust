@@ -45,6 +45,7 @@ mod select;
 mod series;
 mod sources;
 mod terrain;
+mod view;
 
 #[derive(Parser)]
 #[command(name = "energyml", about, version)]
@@ -185,6 +186,8 @@ enum Command {
     /// A digital elevation model from a catalogue source, written as a 2D grid -
     /// the quote without `--out`.
     Terrain(terrain::TerrainArgs),
+    /// The views of a package as pictures: what each view can show, what it takes, its SVG, and its PNG on demand.
+    View(view::ViewArgs),
     /// Write the reference of every command, `cli-reference.md`, from
     /// their definitions - or check it (`--check`). A tool of the repository,
     /// run by a script of each repository; hidden from the help.
@@ -781,6 +784,7 @@ fn try_run() -> Result<ExitCode> {
         Command::Import(args) => import::run(args),
         Command::Create(args) => create::run(args),
         Command::Terrain(args) => terrain::run(args),
+        Command::View(args) => view::run(args, modes.clone()).map(|()| ExitCode::SUCCESS),
         Command::CliReference(args) => cli_reference::run::<Cli>(args),
         Command::GalaxyTool(args) => galaxy::run(args),
         Command::External(words) => external::run(&words),
