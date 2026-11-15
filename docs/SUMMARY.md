@@ -65,3 +65,4 @@
 - [0026 A head portion says whether the file describes it](adr/0026-a-head-portion-says-whether-the-file-describes-it.md)
 - [0027 Gaps, seams, scales and quantiles](adr/0027-gaps-seams-scales-and-quantiles.md)
 - [0028 One drawing for every view](adr/0028-one-drawing-for-every-view.md)
+- [0029 A link to a table is one qualifier facet](adr/0029-convention-b-links-by-qualifier-facet.md)

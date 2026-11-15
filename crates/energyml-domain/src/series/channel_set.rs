@@ -141,7 +141,7 @@ pub fn read_log_with(log: &dyn Reflect, arrays: &dyn ArraySource) -> Result<Vec<
 
 /// How a column's values are read.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Decode {
+pub(super) enum Decode {
     Number,
     Integer,
     Boolean,
@@ -175,12 +175,12 @@ impl Decode {
 }
 
 /// An index as the set declares it, before its values are read.
-struct Declared {
-    kind: IndexKind,
-    mnemonic: String,
-    uom: Option<String>,
-    direction: Direction,
-    datum: Option<String>,
+pub(super) struct Declared {
+    pub(super) kind: IndexKind,
+    pub(super) mnemonic: String,
+    pub(super) uom: Option<String>,
+    pub(super) direction: Direction,
+    pub(super) datum: Option<String>,
 }
 
 /// One `ChannelIndex`, read - or refused.
@@ -221,13 +221,13 @@ fn declared(index: &dyn Reflect, rank: usize) -> Result<Declared, Refused> {
 }
 
 /// A channel as listed, before its values are read.
-struct Listed {
-    uuid: Option<String>,
-    mnemonic: String,
-    uom: Option<String>,
-    data_kind: String,
-    decode: Decode,
-    property_kind: Option<PropertyKindRef>,
+pub(super) struct Listed {
+    pub(super) uuid: Option<String>,
+    pub(super) mnemonic: String,
+    pub(super) uom: Option<String>,
+    pub(super) data_kind: String,
+    pub(super) decode: Decode,
+    pub(super) property_kind: Option<PropertyKindRef>,
 }
 
 /// Where a set's rows are.
@@ -252,17 +252,16 @@ pub fn read(set: &dyn Reflect) -> Result<Series, Refused> {
     read_with(set, &NoObjects)
 }
 
-/// Read a channel set, its rows inline or in a dataset `arrays` reads - the
-/// one reading of a set, both forms through the same row loop.
-pub fn read_with(set: &dyn Reflect, arrays: &dyn ArraySource) -> Result<Series, Refused> {
-    if !reads(set) {
-        return Err(Refused::NotThisReader {
-            expected: "a WITSML ChannelSet",
-            found: set.type_info().type_key.to_string(),
-        });
-    }
-    let (uuid, title) = identity_of(set);
-
+/// The indexes a set declares, its channels as listed, and its rows (inline or
+/// in a dataset `arrays` reads), before any cell is decoded.
+///
+/// The one place that reads these, for [`read_with`] and for the array channels
+/// of `series::matrix` (README of the lot, S9): neither reads the rows twice.
+/// The caller has checked [`reads`].
+pub(super) fn rows_of(
+    set: &dyn Reflect,
+    arrays: &dyn ArraySource,
+) -> Result<(Vec<Declared>, Vec<Listed>, Vec<Value>), Refused> {
     // -- the data: inline, in a dataset, or refused ------------------------------
     // By syntax, never guessed from content (module doc).
     let data = objects(set, "Data").into_iter().next().ok_or(Refused::NoData)?;
@@ -390,6 +389,20 @@ pub fn read_with(set: &dyn Reflect, arrays: &dyn ArraySource) -> Result<Series, 
         }
         Rows::Dataset { data, file, path } => dataset_rows(data, file, path, arrays, &indexes, &listed)?,
     };
+    Ok((indexes, listed, rows))
+}
+
+/// Read a channel set, its rows inline or in a dataset `arrays` reads - the
+/// one reading of a set, both forms through the same row loop.
+pub fn read_with(set: &dyn Reflect, arrays: &dyn ArraySource) -> Result<Series, Refused> {
+    if !reads(set) {
+        return Err(Refused::NotThisReader {
+            expected: "a WITSML ChannelSet",
+            found: set.type_info().type_key.to_string(),
+        });
+    }
+    let (uuid, title) = identity_of(set);
+    let (indexes, listed, rows) = rows_of(set, arrays)?;
     let width = indexes.len() + listed.len();
     let mut index_values: Vec<Vec<f64>> = vec![Vec::with_capacity(rows.len()); indexes.len()];
     let mut columns: Vec<Column> = listed
@@ -589,7 +602,7 @@ fn cells_of(values: &energyml_storage::ArrayValues) -> Vec<Value> {
 }
 
 /// A number, an instant or nothing - or a refusal naming the cell.
-fn read_number(cell: &Value, decode: Decode, row: usize, column: &str) -> Result<Option<f64>, Refused> {
+pub(super) fn read_number(cell: &Value, decode: Decode, row: usize, column: &str) -> Result<Option<f64>, Refused> {
     let wrong = |found: String| Refused::ValueKind {
         row,
         column: column.to_string(),

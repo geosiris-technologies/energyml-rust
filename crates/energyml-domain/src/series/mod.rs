@@ -56,6 +56,7 @@ pub mod channel_set;
 pub mod decimate;
 pub mod flow_test;
 pub mod instant;
+pub mod matrix;
 pub mod production;
 pub mod rate_pressure;
 pub mod time_series;

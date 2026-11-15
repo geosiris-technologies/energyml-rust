@@ -38,6 +38,7 @@ new record that supersedes the old one, which keeps its text and a status line.
 | [0026](0026-a-head-portion-says-whether-the-file-describes-it.md) | A head portion says whether the file describes it, and is in the line's frame |
 | [0027](0027-gaps-seams-scales-and-quantiles.md) | Gaps, seams, scales and quantiles: the numbers the views share |
 | [0028](0028-one-drawing-for-every-view.md) | One drawing for every view: `draw` knows no format, one display list, one rule for graduations, a PNG is always the SVG rasterised |
+| [0029](0029-convention-b-links-by-qualifier-facet.md) | A link to a table is one `qualifier` facet holding the uri of the table, read once; the axes of a property come from the table it names |
 
 Decisions about the ETP protocol implementation are recorded in the
 [`retp`](https://github.com/geosiris-technologies/retp) repository.

@@ -22,6 +22,7 @@
 //! | [`strata_by_md`] | and on its other frames and trajectories, looked up by MD |
 //! | [`series`] | what does this log or time series say, sample by sample |
 //! | [`along_md`] | where an MD falls between the nodes, and what the value is there |
+//! | [`component_axes`] | what each component of a vector property stands for |
 //!
 //! # The rule the whole crate follows
 //!
@@ -65,6 +66,7 @@ pub mod color_inherit;
 /// The colour of an object per target - walked once, resumed on demand, kept
 /// between questions and invalidated by the objects a change touched.
 pub mod color_walks;
+pub mod component_axes;
 pub mod crs;
 /// The narrow XML reader and the `PropertyKindDictionary` scan built on it.
 ///
