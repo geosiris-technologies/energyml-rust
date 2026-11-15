@@ -1057,50 +1057,14 @@ fn category(
     // front end's `categories` parse it, so a text key that reads as a number
     // matches the same rows in both.
     let key_column = lookup.key_columns.first().copied();
-    let key_of = |row: usize| -> Option<f64> {
-        let column = key_column?;
-        lookup
-            .rows
-            .cell(row, column)?
-            .to_string()
-            .trim()
-            .parse::<f64>()
-            .ok()
-    };
+    let key_of = |row: usize| key_number(&lookup, key_column, row);
     if !lookup.duplicate_keys().is_empty() {
         notes.push(format!(
             "table {table_uuid} repeats a key; the first row holding it is the one a code names"
         ));
     }
 
-    let mut units = Vec::with_capacity(lookup.rows.rows);
-    for row in 0..lookup.rows.rows {
-        let cells: Vec<String> = (0..lookup.titles.len())
-            .filter(|column| !lookup.key_columns.contains(column))
-            .filter_map(|column| lookup.rows.cell(row, column))
-            .map(|cell| cell_text(&cell))
-            .filter(|text| !text.is_empty())
-            .collect();
-        // The row's number is what the front end's legend keys it on: the key,
-        // the position where the key does not read as a number.
-        let code = key_of(row).unwrap_or(row as f64);
-        let label = if cells.is_empty() {
-            number(code)
-        } else {
-            cells.join(JOIN)
-        };
-        let (uuid, by_title) = unit_titled(&cells, &label, known, notes);
-        units.push(Unit {
-            code,
-            uuid,
-            uri: None,
-            title: label,
-            rank: None,
-            colour: None,
-            colour_from: None,
-            by_title,
-        });
-    }
+    let (mut units, unit_of_row) = category_units(&lookup, key_column, &table_uuid, known, notes);
 
     let Some(patch) = read.patches.first() else {
         return Err(Refusal::absent(what, "states no values"));
@@ -1135,6 +1099,9 @@ fn category(
             None => (value.fract() == 0.0 && *value >= 0.0 && (*value as usize) < lookup.rows.rows)
                 .then_some(*value as usize),
         };
+        // A row of a keyed table whose key reads as no number made no unit: it
+        // is not one a stored value can name.
+        let row = row.and_then(|row| unit_of_row.get(row).copied().flatten());
         let Some(row) = row else {
             return Err(Refusal::defect(
                 interval(title, mds, at),
@@ -1181,6 +1148,75 @@ fn category(
         units,
         named,
     })
+}
+
+/// The number a row's key reads as: the key cell's text, trimmed, parsed - the
+/// way the front end's `categories` parse it. `None` for a table with no key
+/// column and for a key that does not read as a number.
+fn key_number(lookup: &Lookup, key_column: Option<usize>, row: usize) -> Option<f64> {
+    let column = key_column?;
+    lookup
+        .rows
+        .cell(row, column)?
+        .to_string()
+        .trim()
+        .parse::<f64>()
+        .ok()
+}
+
+/// One unit per row of a category table, and, for each row, the index of its
+/// unit in the list (`None` for a row that made none).
+///
+/// The row's number is what the front end's legend keys it on: the key, or the
+/// rank of the row **in a table that has no key**. A row of a *keyed* table
+/// whose key does not read as a number makes **no unit**: its rank would be a
+/// code no stored value can reach (a stored value is compared with the keys),
+/// and it could collide with a real key. The note says which row.
+fn category_units(
+    lookup: &Lookup,
+    key_column: Option<usize>,
+    table_uuid: &str,
+    known: &Known<'_>,
+    notes: &mut Vec<String>,
+) -> (Vec<Unit>, Vec<Option<usize>>) {
+    let mut units = Vec::with_capacity(lookup.rows.rows);
+    let mut unit_of_row = vec![None; lookup.rows.rows];
+    for row in 0..lookup.rows.rows {
+        let cells: Vec<String> = (0..lookup.titles.len())
+            .filter(|column| !lookup.key_columns.contains(column))
+            .filter_map(|column| lookup.rows.cell(row, column))
+            .map(|cell| cell_text(&cell))
+            .filter(|text| !text.is_empty())
+            .collect();
+        let code = match key_number(lookup, key_column, row) {
+            Some(code) => code,
+            None if key_column.is_some() => {
+                notes.push(format!(
+                    "table {table_uuid} row {row}: its key does not read as a number, so no code names it"
+                ));
+                continue;
+            }
+            None => row as f64,
+        };
+        let label = if cells.is_empty() {
+            number(code)
+        } else {
+            cells.join(JOIN)
+        };
+        let (uuid, by_title) = unit_titled(&cells, &label, known, notes);
+        unit_of_row[row] = Some(units.len());
+        units.push(Unit {
+            code,
+            uuid,
+            uri: None,
+            title: label,
+            rank: None,
+            colour: None,
+            colour_from: None,
+            by_title,
+        });
+    }
+    (units, unit_of_row)
 }
 
 /// The unit of the package whose title a table row carries - when exactly one
@@ -1387,5 +1423,60 @@ fn number(value: f64) -> String {
         format!("{}", value as i64)
     } else {
         format!("{value}")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::table::Rows;
+
+    fn keyed(keys: &[&str]) -> Lookup {
+        let names: Vec<String> = (0..keys.len()).map(|at| format!("unit {at}")).collect();
+        let rows = keys.len();
+        Lookup {
+            titles: vec![Some("code".into()), Some("name".into())],
+            key_columns: vec![0],
+            rows: Rows {
+                columns: vec![
+                    Some(Values::Text(keys.iter().map(|k| k.to_string()).collect())),
+                    Some(Values::Text(names)),
+                ],
+                per_row: vec![1, 1],
+                nulls: vec![None, None],
+                rows,
+                notes: Vec::new(),
+            },
+            notes: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn a_keyed_row_whose_key_is_not_a_number_names_no_code() {
+        // Common TRG 2.3 §9.1 p. 190: the key names the row. A key that reads as
+        // no number cannot be named by a stored value, so it makes no unit (its
+        // rank as a code could collide with a real key).
+        let table = keyed(&["1", "x", "3"]);
+        let mut notes = Vec::new();
+        let (units, unit_of_row) =
+            category_units(&table, Some(0), "t1", &Known::default(), &mut notes);
+        let codes: Vec<f64> = units.iter().map(|unit| unit.code).collect();
+        assert_eq!(codes, vec![1.0, 3.0]);
+        assert_eq!(unit_of_row, vec![Some(0), None, Some(1)]);
+        assert!(
+            notes.iter().any(|note| note.contains("row 1") && note.contains("key does not read as a number")),
+            "the row is named: {notes:?}"
+        );
+    }
+
+    #[test]
+    fn a_keyless_category_table_gives_each_row_its_rank_as_code() {
+        let mut table = keyed(&["a", "b"]);
+        table.key_columns.clear();
+        let mut notes = Vec::new();
+        let (units, _) = category_units(&table, None, "t1", &Known::default(), &mut notes);
+        let codes: Vec<f64> = units.iter().map(|unit| unit.code).collect();
+        assert_eq!(codes, vec![0.0, 1.0]);
+        assert!(notes.is_empty(), "{notes:?}");
     }
 }

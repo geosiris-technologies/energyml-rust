@@ -39,7 +39,7 @@
 use crate::error::Result;
 use crate::property::{self, IndexableElement};
 use crate::source::ArraySource;
-use crate::table::{Cell, Lookup};
+use crate::table::{Cell, KeyIndex, Lookup, RowMatch, row_named_by};
 use crate::values::Values;
 use energyml_core::value::Reflect;
 
@@ -357,7 +357,10 @@ fn one_property(
                 .collect()
         })
         .unwrap_or_default();
-    if let (Some(table), true) = (&labels, table_columns.len() > 1) {
+    // The table's key index, built **once** and asked for every cell: a code
+    // names its row by the table's key, or by its rank when it has none.
+    let index: Option<KeyIndex> = labels.as_ref().map(Lookup::key_index);
+    if let (Some(table), Some(index), true) = (&labels, &index, table_columns.len() > 1) {
         return Ok(table_columns
             .iter()
             .enumerate()
@@ -373,16 +376,21 @@ fn one_property(
                 kind_title: if rank == 0 { kind_title.clone() } else { None },
                 from: From::Property(read.uuid.clone()),
                 values: (0..rows)
-                    .map(|at| cell_of(table, &values, at, at_column).or_else(|| cell_text(&values, at)))
+                    .map(|at| {
+                        cell_of(table, index, &values, at, at_column)
+                            .or_else(|| cell_text(&values, at))
+                    })
                     .collect(),
             })
             .collect());
     }
 
     let cells = (0..rows)
-        .map(|at| match &labels {
-            Some(table) => label_at(table, &values, at).or_else(|| cell_text(&values, at)),
-            None => cell_text(&values, at),
+        .map(|at| match (&labels, &index) {
+            (Some(table), Some(index)) => {
+                label_at(table, index, &values, at).or_else(|| cell_text(&values, at))
+            }
+            _ => cell_text(&values, at),
         })
         .collect();
 
@@ -397,16 +405,37 @@ fn one_property(
 }
 
 /// The cell of this table column, at the row the code designates.
-fn cell_of(table: &Lookup, values: &Values, at: usize, column: usize) -> Option<String> {
-    let code = match values {
-        Values::Integer(v) => *v.get(at)? as usize,
-        Values::Floating(v) => *v.get(at)? as usize,
-        _ => return None,
-    };
-    match table.rows.cell(code, column)? {
+fn cell_of(
+    table: &Lookup,
+    index: &KeyIndex,
+    values: &Values,
+    at: usize,
+    column: usize,
+) -> Option<String> {
+    let row = row_of(index, values, at)?;
+    match table.rows.cell(row, column)? {
         Cell::Text(text) => Some(text),
         Cell::Number(number) => Some(trim(number)),
         Cell::Boolean(flag) => Some(flag.to_string()),
+    }
+}
+
+/// The row of the code table that the value at `at` names: **by the table's
+/// key** when it has one, by its rank from 0 when it has none
+/// (`house/table/row-rank-without-key`, [`row_named_by`]) - never the rank of a
+/// keyed table. A duplicated key names its first row ("first match wins"). A
+/// value no row holds, and a refused table, name no row: the caller falls back
+/// on the stored value.
+fn row_of(index: &KeyIndex, values: &Values, at: usize) -> Option<usize> {
+    let value = match values {
+        Values::Integer(v) => *v.get(at)? as f64,
+        Values::Floating(v) => *v.get(at)?,
+        _ => return None,
+    };
+    match row_named_by(index, &Cell::Number(value)) {
+        Ok(RowMatch::One(row)) => Some(row),
+        Ok(RowMatch::Several(rows)) => rows.first().copied(),
+        Ok(RowMatch::None) | Err(_) => None,
     }
 }
 
@@ -426,16 +455,12 @@ fn kind_uuid(kind: &property::PropertyKindRef) -> Option<String> {
 /// in both forms: a `StringTableLookup` has `Key` and `Value`, a category
 /// `ColumnBasedTable` has the code then its name. A single-column table returns
 /// that column - it *is* the label.
-fn label_at(table: &Lookup, values: &Values, at: usize) -> Option<String> {
-    let code = match values {
-        Values::Integer(v) => *v.get(at)? as usize,
-        Values::Floating(v) => *v.get(at)? as usize,
-        _ => return None,
-    };
+fn label_at(table: &Lookup, index: &KeyIndex, values: &Values, at: usize) -> Option<String> {
+    let row = row_of(index, values, at)?;
     let column = (0..table.titles.len())
         .rev()
         .find(|one| !table.key_columns.contains(one))?;
-    match table.rows.cell(code, column)? {
+    match table.rows.cell(row, column)? {
         Cell::Text(text) => Some(text),
         Cell::Number(number) => Some(trim(number)),
         Cell::Boolean(flag) => Some(flag.to_string()),
@@ -582,4 +607,65 @@ pub fn to_csv(merged: &Merged, separator: char) -> String {
         out.push('\n');
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::table::Rows;
+
+    fn lookup(key: Option<Vec<i64>>, labels: Vec<&str>) -> Lookup {
+        let mut columns = Vec::new();
+        let mut titles = Vec::new();
+        let mut key_columns = Vec::new();
+        if let Some(key) = key {
+            columns.push(Some(Values::Integer(key)));
+            titles.push(Some("code".to_string()));
+            key_columns.push(0);
+        }
+        let rows = labels.len();
+        columns.push(Some(Values::Text(labels.into_iter().map(String::from).collect())));
+        titles.push(Some("name".to_string()));
+        let width = columns.len();
+        Lookup {
+            titles,
+            key_columns,
+            rows: Rows {
+                columns,
+                per_row: vec![1; width],
+                nulls: vec![None; width],
+                rows,
+                notes: Vec::new(),
+            },
+            notes: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn a_keyed_category_table_names_its_row_by_key() {
+        // Common TRG 2.3 §9.1 p. 190: a key column is what makes the table a
+        // lookup; a code names its row by that key, never by its position.
+        let table = lookup(Some(vec![10, 20, 30]), vec!["a", "b", "c"]);
+        let index = table.key_index();
+        assert_eq!(
+            label_at(&table, &index, &Values::Integer(vec![20]), 0).as_deref(),
+            Some("b")
+        );
+        assert_eq!(
+            label_at(&table, &index, &Values::Integer(vec![1]), 0),
+            None,
+            "a keyed table is never read by rank"
+        );
+    }
+
+    #[test]
+    fn a_keyless_category_table_names_its_row_by_rank() {
+        let table = lookup(None, vec!["a", "b", "c"]);
+        let index = table.key_index();
+        assert_eq!(
+            label_at(&table, &index, &Values::Integer(vec![1]), 0).as_deref(),
+            Some("b")
+        );
+        assert_eq!(label_at(&table, &index, &Values::Integer(vec![3]), 0), None);
+    }
 }
