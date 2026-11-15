@@ -22,7 +22,10 @@ fn a_text_block_counts_its_strings_and_lends_no_bytes() {
     assert_eq!(numbers.len(), 3);
     assert!(numbers.iter().all(|x| x.is_nan()));
     // The empty string is a value, not a hole.
-    assert_eq!(values.text(), Some(&["sand".to_string(), String::new(), "shale".to_string()][..]));
+    assert_eq!(
+        values.text(),
+        Some(&["sand".to_string(), String::new(), "shale".to_string()][..])
+    );
     // Numbers are not text.
     assert_eq!(ArrayValues::F64(vec![1.0]).text(), None);
 }

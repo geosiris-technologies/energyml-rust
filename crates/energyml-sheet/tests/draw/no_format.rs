@@ -14,22 +14,48 @@ const SOURCES: &[(&str, &str)] = &[
     ("draw/svg.rs", include_str!("../../src/draw/svg.rs")),
     ("draw/text.rs", include_str!("../../src/draw/text.rs")),
     ("draw/ticks.rs", include_str!("../../src/draw/ticks.rs")),
-    ("draw/layered/mod.rs", include_str!("../../src/draw/layered/mod.rs")),
-    ("draw/layered/cycles.rs", include_str!("../../src/draw/layered/cycles.rs")),
-    ("draw/layered/layering.rs", include_str!("../../src/draw/layered/layering.rs")),
-    ("draw/layered/ordering.rs", include_str!("../../src/draw/layered/ordering.rs")),
-    ("draw/layered/place.rs", include_str!("../../src/draw/layered/place.rs")),
-    ("draw/layered/route.rs", include_str!("../../src/draw/layered/route.rs")),
+    (
+        "draw/layered/mod.rs",
+        include_str!("../../src/draw/layered/mod.rs"),
+    ),
+    (
+        "draw/layered/cycles.rs",
+        include_str!("../../src/draw/layered/cycles.rs"),
+    ),
+    (
+        "draw/layered/layering.rs",
+        include_str!("../../src/draw/layered/layering.rs"),
+    ),
+    (
+        "draw/layered/ordering.rs",
+        include_str!("../../src/draw/layered/ordering.rs"),
+    ),
+    (
+        "draw/layered/place.rs",
+        include_str!("../../src/draw/layered/place.rs"),
+    ),
+    (
+        "draw/layered/route.rs",
+        include_str!("../../src/draw/layered/route.rs"),
+    ),
 ];
 
 #[test]
 fn the_draw_module_names_no_format_crate() {
     // Breaks if a source gains `use energyml_domain::color::Rgba;` or a path
     // such as `crate::layout`.
-    let forbidden = ["energyml_core", "energyml_domain", "energyml_storage", "super::super"];
+    let forbidden = [
+        "energyml_core",
+        "energyml_domain",
+        "energyml_storage",
+        "super::super",
+    ];
     for (name, source) in SOURCES {
         for word in forbidden {
-            assert!(!source.contains(word), "{name} names `{word}`: the drawing module knows no format");
+            assert!(
+                !source.contains(word),
+                "{name} names `{word}`: the drawing module knows no format"
+            );
         }
         for (at, _) in source.match_indices("crate::") {
             let rest = &source[at + "crate::".len()..];

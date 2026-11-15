@@ -15,7 +15,12 @@ fn the_cross_product_is_right_handed() {
 fn unit_refuses_what_has_no_direction() {
     assert_eq!(unit([0.0; 3]), None);
     assert_eq!(unit([f64::NAN, 0.0, 0.0]), None);
-    assert_eq!(unit([3.0, 4.0, 0.0]), Some([0.6, 0.8, 0.0]));
+    // 3/5 is not exact in binary: compare within one ulp-sized tolerance.
+    let u = unit([3.0, 4.0, 0.0]).expect("a 3-4-5 vector has a direction");
+    assert!(
+        (u[0] - 0.6).abs() < 1e-15 && (u[1] - 0.8).abs() < 1e-15 && u[2] == 0.0,
+        "{u:?}"
+    );
     // Two floors, both kept: the caller's, and the crate default.
     assert_eq!(unit_above([1e-13, 0.0, 0.0], 1e-12), None);
     let tiny = unit([1e-13, 0.0, 0.0]).expect("above f64::EPSILON");

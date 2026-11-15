@@ -62,7 +62,11 @@ pub fn render(svg: &str, scale: f32) -> Result<Vec<u8>, DrawError> {
     if let Some(refusal) = take(&first) {
         return Err(refusal);
     }
-    let scale = if scale.is_finite() && scale > 0.0 { scale } else { 1.0 };
+    let scale = if scale.is_finite() && scale > 0.0 {
+        scale
+    } else {
+        1.0
+    };
     let size = tree.size();
     let width = (f64::from(size.width()) * f64::from(scale)).ceil() as u64;
     let height = (f64::from(size.height()) * f64::from(scale)).ceil() as u64;
@@ -158,7 +162,9 @@ fn embedded_png_only(
 fn check_png(mime: &str, data: &[u8]) -> Result<(), DrawError> {
     const SIGNATURE: &[u8] = b"\x89PNG\r\n\x1a\n";
     if mime != "image/png" {
-        return Err(DrawError::ImageNotPng { mime: mime.to_string() });
+        return Err(DrawError::ImageNotPng {
+            mime: mime.to_string(),
+        });
     }
     if data.len() < 24 || &data[..8] != SIGNATURE {
         return Err(DrawError::ImageUnreadable {

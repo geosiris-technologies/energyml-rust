@@ -16,49 +16,149 @@
 use std::fmt::Write as _;
 
 use crate::draw::list::{
-    Anchor, Colour, DisplayList, Hatch, Item, LineCap, LineJoin, PageUnit, Paint, Stroke, SymbolKind, valid_name,
+    Anchor, Colour, DisplayList, Hatch, Item, LineCap, LineJoin, PageUnit, Paint, Stroke, SymbolKind,
+    valid_name,
 };
 use crate::draw::text::FONT_STACK;
 
 /// What went wrong drawing. Typed; the text names what is missing.
 #[derive(Debug, Clone, PartialEq, thiserror::Error)]
 pub enum DrawError {
-    #[error("this build cannot {what}: energyml-sheet was built without its `{feature}` feature (rebuild with `--features {feature}`)")]
-    FeatureNotEnabled { feature: &'static str, what: &'static str },
+    /// The build lacks a cargo feature this operation needs.
+    #[error(
+        "this build cannot {what}: energyml-sheet was built without its `{feature}` feature (rebuild with `--features {feature}`)"
+    )]
+    FeatureNotEnabled {
+        /// The missing cargo feature.
+        feature: &'static str,
+        /// What cannot be done without it.
+        what: &'static str,
+    },
+    /// An `<image>` that is not a PNG.
     #[error("an <image> of type `{mime}` cannot be drawn: only a PNG embedded as a data URL is")]
-    ImageNotPng { mime: String },
-    #[error("an <image> that points to `{href}` cannot be drawn: only an image embedded as a data URL is (no file is read)")]
-    ImageNotEmbedded { href: String },
+    ImageNotPng {
+        /// The media type found.
+        mime: String,
+    },
+    /// An `<image>` whose `href` is not an embedded data URL.
+    #[error(
+        "an <image> that points to `{href}` cannot be drawn: only an image embedded as a data URL is (no file is read)"
+    )]
+    ImageNotEmbedded {
+        /// The `href` found.
+        href: String,
+    },
+    /// An embedded PNG that cannot be decoded.
     #[error("an embedded PNG does not decode: {why}")]
-    ImageUnreadable { why: String },
+    ImageUnreadable {
+        /// What the decoder said.
+        why: String,
+    },
+    /// The SVG text could not be parsed.
     #[error("the SVG did not parse: {0}")]
     Svg(String),
+    /// The requested image size is out of range.
     #[error("cannot make an image of {width} x {height} pixels (at most {limit} pixels, at least one)")]
-    Size { width: u64, height: u64, limit: u64 },
+    Size {
+        /// Requested width, pixels.
+        width: u64,
+        /// Requested height, pixels.
+        height: u64,
+        /// The most pixels allowed.
+        limit: u64,
+    },
+    /// The PNG encoder failed.
     #[error("encoding the PNG: {0}")]
     Encode(String),
+    /// The display list as a whole is not drawable.
     #[error("the display list cannot be drawn: {why}")]
-    BadPage { why: &'static str },
+    BadPage {
+        /// What is wrong with the page.
+        why: &'static str,
+    },
+    /// An element of a layer is not drawable.
     #[error("element {element} of layer `{layer}` cannot be drawn: {why}")]
-    BadItem { layer: String, element: usize, why: &'static str },
-    #[error("`{name}` is not a valid {what} name (lower-case letters, digits and `-`, starting with a letter)")]
-    BadName { what: &'static str, name: String },
+    BadItem {
+        /// Name of the layer.
+        layer: String,
+        /// Index of the element in the layer.
+        element: usize,
+        /// What is wrong with it.
+        why: &'static str,
+    },
+    /// A name (a layer, a `data-*` attribute) is not well formed.
+    #[error(
+        "`{name}` is not a valid {what} name (lower-case letters, digits and `-`, starting with a letter)"
+    )]
+    BadName {
+        /// What kind of name it was meant to be.
+        what: &'static str,
+        /// The offending name.
+        name: String,
+    },
+    /// The gap between spread labels is negative or not finite.
     #[error("labels cannot be spread {gap} apart: the gap must be a finite number from 0")]
-    BadGap { gap: f64 },
+    BadGap {
+        /// The gap given.
+        gap: f64,
+    },
+    /// The window is not an increasing range of finite numbers.
     #[error("the window [{from}, {to}] is not an increasing range of finite numbers")]
-    BadWindow { from: f64, to: f64 },
+    BadWindow {
+        /// Start of the window.
+        from: f64,
+        /// End of the window.
+        to: f64,
+    },
+    /// The image has no pixel along the axis to map.
     #[error("no pixel to map: the image is {pixels} pixels along this axis")]
-    NoPixels { pixels: u32 },
+    NoPixels {
+        /// The pixel count along the axis.
+        pixels: u32,
+    },
+    /// Positions that must increase do not.
     #[error("the positions are not increasing at sample {at}")]
-    NotIncreasing { at: usize },
+    NotIncreasing {
+        /// Index of the sample where the order breaks.
+        at: usize,
+    },
+    /// A single sample has no neighbour to give it a width.
     #[error("a single sample has no neighbour to take its width from: give a cap")]
     SingleSampleNeedsWidth,
+    /// A grid is given a number of values that does not match its shape.
     #[error("a grid of {rows} x {cols} needs {expected} values, and {found} were given")]
-    GridShape { rows: usize, cols: usize, expected: usize, found: usize },
+    GridShape {
+        /// Number of rows.
+        rows: usize,
+        /// Number of columns.
+        cols: usize,
+        /// Number of values the shape needs.
+        expected: usize,
+        /// Number of values given.
+        found: usize,
+    },
+    /// A map picks an index outside the grid's axis.
     #[error("the {axis} map picks {pick}, and the grid has {len} {axis}")]
-    PickOutOfRange { axis: &'static str, pick: usize, len: usize },
+    PickOutOfRange {
+        /// The axis picked on.
+        axis: &'static str,
+        /// The index picked.
+        pick: usize,
+        /// The length of the axis.
+        len: usize,
+    },
+    /// A raster is given a number of bytes that does not match its size.
     #[error("a raster of {width} x {height} pixels needs {expected} bytes, and {found} were given")]
-    RasterBytes { width: u32, height: u32, expected: usize, found: usize },
+    RasterBytes {
+        /// Width, pixels.
+        width: u32,
+        /// Height, pixels.
+        height: u32,
+        /// Number of bytes needed.
+        expected: usize,
+        /// Number of bytes given.
+        found: usize,
+    },
 }
 
 /// What an SVG's `<metadata>` carries: written by [`write`], read back by
@@ -74,16 +174,29 @@ pub struct Metadata {
     pub format: u32,
     /// The version of the crate that wrote it.
     pub version: String,
+    /// The body, the caller's own text; this module never parses it.
     pub body: String,
 }
 
 /// Why an SVG's metadata could not be read back.
 #[derive(Debug, Clone, PartialEq, thiserror::Error)]
 pub enum MetadataError {
-    #[error("no <{element}> metadata in this SVG - it was not written by this view, or its <metadata> was removed")]
-    Missing { element: String },
+    /// The SVG has no matching `<metadata>` element.
+    #[error(
+        "no <{element}> metadata in this SVG - it was not written by this view, or its <metadata> was removed"
+    )]
+    Missing {
+        /// The element name looked for.
+        element: String,
+    },
+    /// The `<metadata>` element is present but does not read.
     #[error("the <{element}> metadata does not read: {why}")]
-    Unreadable { element: String, why: String },
+    Unreadable {
+        /// The element name read.
+        element: String,
+        /// Why it does not read.
+        why: String,
+    },
 }
 
 /// A number, `decimals` decimals at most, no trailing zeros, no "-0", never `NaN`.
@@ -92,8 +205,16 @@ pub(crate) fn num(v: f64, decimals: usize) -> String {
         return "0".to_string();
     }
     let text = format!("{v:.decimals$}");
-    let text = if text.contains('.') { text.trim_end_matches('0').trim_end_matches('.') } else { text.as_str() };
-    if text == "-0" || text.is_empty() { "0".to_string() } else { text.to_string() }
+    let text = if text.contains('.') {
+        text.trim_end_matches('0').trim_end_matches('.')
+    } else {
+        text.as_str()
+    };
+    if text == "-0" || text.is_empty() {
+        "0".to_string()
+    } else {
+        text.to_string()
+    }
 }
 
 /// Text made safe for XML content and attribute values: the five characters
@@ -121,10 +242,16 @@ pub fn write(list: &DisplayList, meta: Option<&Metadata>) -> Result<String, Draw
     list.validate()?;
     if let Some(meta) = meta {
         if !valid_name(&meta.element) {
-            return Err(DrawError::BadName { what: "metadata element", name: meta.element.clone() });
+            return Err(DrawError::BadName {
+                what: "metadata element",
+                name: meta.element.clone(),
+            });
         }
         if meta.namespace.is_empty() {
-            return Err(DrawError::BadName { what: "metadata namespace", name: meta.namespace.clone() });
+            return Err(DrawError::BadName {
+                what: "metadata namespace",
+                name: meta.namespace.clone(),
+            });
         }
     }
     let d = match list.unit {
@@ -215,7 +342,12 @@ pub fn write(list: &DisplayList, meta: Option<&Metadata>) -> Result<String, Draw
     }
 
     if let Some(background) = list.background {
-        let _ = write!(out, "<rect x=\"0\" y=\"0\" width=\"{}\" height=\"{}\"", num(w, d), num(h, d));
+        let _ = write!(
+            out,
+            "<rect x=\"0\" y=\"0\" width=\"{}\" height=\"{}\"",
+            num(w, d),
+            num(h, d)
+        );
         colour_attr(&mut out, "fill", background);
         out.push_str("/>\n");
     }
@@ -305,7 +437,10 @@ fn stroke_attrs(out: &mut String, stroke: &Option<Stroke>, d: usize) {
 }
 
 fn points_attr(points: &[[f64; 2]], d: usize) -> String {
-    let parts: Vec<String> = points.iter().map(|p| format!("{},{}", num(p[0], d), num(p[1], d))).collect();
+    let parts: Vec<String> = points
+        .iter()
+        .map(|p| format!("{},{}", num(p[0], d), num(p[1], d)))
+        .collect();
     parts.join(" ")
 }
 
@@ -319,12 +454,21 @@ fn write_item(out: &mut String, item: &Item, hatches: &[Hatch], d: usize) -> Res
         }
         Item::Polyline { points, stroke } => {
             if points.len() >= 2 {
-                let _ = write!(out, "<polyline points=\"{}\" fill=\"none\"", points_attr(points, d));
+                let _ = write!(
+                    out,
+                    "<polyline points=\"{}\" fill=\"none\"",
+                    points_attr(points, d)
+                );
                 stroke_attrs(out, &Some(stroke.clone()), d);
                 out.push_str("/>\n");
             }
         }
-        Item::Rect { rect, corner, fill, stroke } => {
+        Item::Rect {
+            rect,
+            corner,
+            fill,
+            stroke,
+        } => {
             let _ = write!(
                 out,
                 "<rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\"",
@@ -348,7 +492,12 @@ fn write_item(out: &mut String, item: &Item, hatches: &[Hatch], d: usize) -> Res
                 out.push_str("/>\n");
             }
         }
-        Item::Circle { centre, radius, fill, stroke } => {
+        Item::Circle {
+            centre,
+            radius,
+            fill,
+            stroke,
+        } => {
             let _ = write!(
                 out,
                 "<circle cx=\"{}\" cy=\"{}\" r=\"{}\"",
@@ -360,9 +509,21 @@ fn write_item(out: &mut String, item: &Item, hatches: &[Hatch], d: usize) -> Res
             stroke_attrs(out, stroke, d);
             out.push_str("/>\n");
         }
-        Item::Sector { centre, inner, outer, start, end, fill, stroke } => {
+        Item::Sector {
+            centre,
+            inner,
+            outer,
+            start,
+            end,
+            fill,
+            stroke,
+        } => {
             let whole = end - start >= std::f64::consts::TAU;
-            let _ = write!(out, "<path d=\"{}\"", sector_commands(*centre, *inner, *outer, *start, *end, d));
+            let _ = write!(
+                out,
+                "<path d=\"{}\"",
+                sector_commands(*centre, *inner, *outer, *start, *end, d)
+            );
             if whole {
                 out.push_str(" fill-rule=\"evenodd\"");
             }
@@ -370,7 +531,13 @@ fn write_item(out: &mut String, item: &Item, hatches: &[Hatch], d: usize) -> Res
             stroke_attrs(out, stroke, d);
             out.push_str("/>\n");
         }
-        Item::Symbol { at, kind, size, fill, stroke } => write_symbol(out, *at, *kind, *size, *fill, *stroke, d),
+        Item::Symbol {
+            at,
+            kind,
+            size,
+            fill,
+            stroke,
+        } => write_symbol(out, *at, *kind, *size, *fill, *stroke, d),
         Item::Text { at, text, style } => {
             let anchor = match style.anchor {
                 Anchor::Start => "start",
@@ -428,7 +595,10 @@ fn write_image(
     _raster: &crate::draw::raster::Raster,
     _d: usize,
 ) -> Result<(), DrawError> {
-    Err(DrawError::FeatureNotEnabled { feature: "png", what: "write a raster image into an SVG" })
+    Err(DrawError::FeatureNotEnabled {
+        feature: "png",
+        what: "write a raster image into an SVG",
+    })
 }
 
 /// A marker's symbol: one group, centred on `at`, every shape a path or a
@@ -452,18 +622,34 @@ fn write_symbol(
             if i > 0 {
                 data.push(' ');
             }
-            let _ = write!(data, "{}{},{}", if start { "M" } else { "L" }, num(x + p[0] * r, d), num(y + p[1] * r, d));
+            let _ = write!(
+                data,
+                "{}{},{}",
+                if start { "M" } else { "L" },
+                num(x + p[0] * r, d),
+                num(y + p[1] * r, d)
+            );
         }
         if closed {
             data.push_str(" Z");
         }
         format!("<path d=\"{data}\"")
     };
-    let circle = |radius: f64| format!("<circle cx=\"{}\" cy=\"{}\" r=\"{}\"", num(x, d), num(y, d), num(radius, d));
+    let circle = |radius: f64| {
+        format!(
+            "<circle cx=\"{}\" cy=\"{}\" r=\"{}\"",
+            num(x, d),
+            num(y, d),
+            num(radius, d)
+        )
+    };
     let body = match kind {
         SymbolKind::Circle => circle(r),
         SymbolKind::Point => circle((r / 2.0).max(1.5)),
-        SymbolKind::Square => path(&[[-0.85, -0.85], [0.85, -0.85], [0.85, 0.85], [-0.85, 0.85]], true),
+        SymbolKind::Square => path(
+            &[[-0.85, -0.85], [0.85, -0.85], [0.85, 0.85], [-0.85, 0.85]],
+            true,
+        ),
         SymbolKind::Diamond => path(&[[0.0, -1.0], [0.8, 0.0], [0.0, 1.0], [-0.8, 0.0]], true),
         SymbolKind::TriangleUp => path(&[[0.0, -1.0], [1.0, 0.85], [-1.0, 0.85]], true),
         SymbolKind::TriangleDown => path(&[[-1.0, -0.85], [1.0, -0.85], [0.0, 1.0]], true),
@@ -488,7 +674,11 @@ fn write_symbol(
     }
     colour_attr(out, "stroke", stroke);
     let width = if fill.is_none() { 2.0 } else { 1.0 };
-    let _ = writeln!(out, " stroke-width=\"{}\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></g>", num(width, d));
+    let _ = writeln!(
+        out,
+        " stroke-width=\"{}\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></g>",
+        num(width, d)
+    );
 }
 
 /// The `d` of a ring sector (SVG 1.1 section 8.3.8, elliptical arcs: a full
@@ -552,8 +742,16 @@ fn base64(bytes: &[u8]) -> String {
         let n = (u32::from(b[0]) << 16) | (u32::from(b[1]) << 8) | u32::from(b[2]);
         out.push(ALPHABET[(n >> 18) as usize & 63] as char);
         out.push(ALPHABET[(n >> 12) as usize & 63] as char);
-        out.push(if chunk.len() > 1 { ALPHABET[(n >> 6) as usize & 63] as char } else { '=' });
-        out.push(if chunk.len() > 2 { ALPHABET[n as usize & 63] as char } else { '=' });
+        out.push(if chunk.len() > 1 {
+            ALPHABET[(n >> 6) as usize & 63] as char
+        } else {
+            '='
+        });
+        out.push(if chunk.len() > 2 {
+            ALPHABET[n as usize & 63] as char
+        } else {
+            '='
+        });
     }
     out
 }
@@ -561,8 +759,13 @@ fn base64(bytes: &[u8]) -> String {
 /// Reads back the `<{element}>` metadata a caller put in an SVG. The format is
 /// not checked here: the caller knows which formats it reads.
 pub fn read_metadata(svg: &str, element: &str) -> Result<Metadata, MetadataError> {
-    let missing = || MetadataError::Missing { element: element.to_string() };
-    let unreadable = |why: String| MetadataError::Unreadable { element: element.to_string(), why };
+    let missing = || MetadataError::Missing {
+        element: element.to_string(),
+    };
+    let unreadable = |why: String| MetadataError::Unreadable {
+        element: element.to_string(),
+        why,
+    };
     let open = format!("<{element}");
     // The tag name must end there: `<target-view-x` is not `<target-view`.
     let mut from = 0;
@@ -591,7 +794,13 @@ pub fn read_metadata(svg: &str, element: &str) -> Result<Metadata, MetadataError
         let body_end = svg[body_start..].find(&close).ok_or_else(missing)? + body_start;
         unescape(&svg[body_start..body_end]).map_err(unreadable)?
     };
-    Ok(Metadata { element: element.to_string(), namespace, format, version, body })
+    Ok(Metadata {
+        element: element.to_string(),
+        namespace,
+        format,
+        version,
+        body,
+    })
 }
 
 /// The value of ` name="..."` in a start tag's attributes, unescaped.
@@ -609,9 +818,12 @@ fn unescape(text: &str) -> Result<String, String> {
     while let Some(at) = rest.find('&') {
         out.push_str(&rest[..at]);
         let after = &rest[at + 1..];
-        let end = after
-            .find(';')
-            .ok_or_else(|| format!("an `&` with no `;` near `{}`", rest[at..].chars().take(12).collect::<String>()))?;
+        let end = after.find(';').ok_or_else(|| {
+            format!(
+                "an `&` with no `;` near `{}`",
+                rest[at..].chars().take(12).collect::<String>()
+            )
+        })?;
         let name = &after[..end];
         let ch = match name {
             "amp" => '&',
@@ -627,7 +839,8 @@ fn unescape(text: &str) -> Result<String, String> {
                 } else {
                     None
                 };
-                code.and_then(char::from_u32).ok_or_else(|| format!("`&{name};` is not an entity XML 1.0 knows"))?
+                code.and_then(char::from_u32)
+                    .ok_or_else(|| format!("`&{name};` is not an entity XML 1.0 knows"))?
             }
         };
         out.push(ch);
@@ -653,7 +866,11 @@ mod tests {
             ("foobar", "Zm9vYmFy"),
         ];
         for (plain, encoded) in cases {
-            assert_eq!(base64(plain.as_bytes()), encoded, "RFC 4648 section 10: {plain:?}");
+            assert_eq!(
+                base64(plain.as_bytes()),
+                encoded,
+                "RFC 4648 section 10: {plain:?}"
+            );
         }
     }
 

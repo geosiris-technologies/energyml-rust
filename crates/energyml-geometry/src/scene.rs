@@ -777,23 +777,20 @@ pub fn attributes_for(
         // they are attached **as scalars with the disagreement reported**.
         // The one rule, shared with `Property::check` and every other reader:
         // `energyml_domain::property::count_fit`.
-        let mismatch = match energyml_domain::property::count_fit(
-            expected as u64,
-            components,
-            values.len() as u64,
-        ) {
-            energyml_domain::property::CountFit::Fits => false,
-            energyml_domain::property::CountFit::OnePerElement { declared } => {
-                refused.push(format!(
-                    "`{}` declares {declared} values per element and holds exactly one; it is \
+        let mismatch =
+            match energyml_domain::property::count_fit(expected as u64, components, values.len() as u64) {
+                energyml_domain::property::CountFit::Fits => false,
+                energyml_domain::property::CountFit::OnePerElement { declared } => {
+                    refused.push(format!(
+                        "`{}` declares {declared} values per element and holds exactly one; it is \
                      attached as a scalar array, and the document's own count is what is wrong",
-                    read.title.as_deref().unwrap_or(&read.uuid)
-                ));
-                components = 1;
-                false
-            }
-            energyml_domain::property::CountFit::Mismatch { .. } => true,
-        };
+                        read.title.as_deref().unwrap_or(&read.uuid)
+                    ));
+                    components = 1;
+                    false
+                }
+                energyml_domain::property::CountFit::Mismatch { .. } => true,
+            };
         if mismatch {
             // Reported, not repaired: padding or truncating would put values
             // on the wrong elements, which is exactly the failure this check

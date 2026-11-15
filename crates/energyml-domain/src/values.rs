@@ -575,11 +575,16 @@ fn widen(values: ArrayValues, family: Family, at: &str) -> Result<Values> {
                 "a string array whose external data came back as `{}` values",
                 other.element_type()
             ),
-            format!("{at}: the backend that read it does not decode strings, and no text is invented from numbers"),
+            format!(
+                "{at}: the backend that read it does not decode strings, and no text is invented from numbers"
+            ),
         )),
         (family, ArrayValues::Text(_)) => Err(Error::malformed(
             at,
-            format!("a {} array whose external data holds strings", family_word(family)),
+            format!(
+                "a {} array whose external data holds strings",
+                family_word(family)
+            ),
         )),
         (Family::Boolean, v) => Ok(Values::Boolean(
             numbers(&v, at)?.into_iter().map(|x| x != 0.0).collect(),

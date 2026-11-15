@@ -479,7 +479,9 @@ pub fn count_fit(element_count: u64, per_element: u64, actual: u64) -> CountFit 
     if actual == expected {
         CountFit::Fits
     } else if per_element > 1 && actual == element_count {
-        CountFit::OnePerElement { declared: per_element }
+        CountFit::OnePerElement {
+            declared: per_element,
+        }
     } else {
         CountFit::Mismatch { expected, actual }
     }

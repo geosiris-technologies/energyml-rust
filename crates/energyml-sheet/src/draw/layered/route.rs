@@ -8,8 +8,7 @@
 use super::ordering::{Layers, Slot};
 use super::place::Positions;
 use super::{
-    Flow, LayerInput, Route, RouteKind, Spacing, along_cross, along_span, cross_span, oriented,
-    point_of,
+    Flow, LayerInput, Route, RouteKind, Spacing, along_cross, along_span, cross_span, oriented, point_of,
 };
 
 type Pt = (f64, f64);

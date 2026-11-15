@@ -835,8 +835,12 @@ fn fixed_ascii(
 ) -> Result<Vec<String>> {
     use hdf5::types::FixedAscii;
     match size {
-        0..=16 => strings::<FixedAscii<16>>(dataset, selection, file, path_in_file, |s| s.as_str().to_string()),
-        17..=64 => strings::<FixedAscii<64>>(dataset, selection, file, path_in_file, |s| s.as_str().to_string()),
+        0..=16 => {
+            strings::<FixedAscii<16>>(dataset, selection, file, path_in_file, |s| s.as_str().to_string())
+        }
+        17..=64 => {
+            strings::<FixedAscii<64>>(dataset, selection, file, path_in_file, |s| s.as_str().to_string())
+        }
         65..=256 => {
             strings::<FixedAscii<256>>(dataset, selection, file, path_in_file, |s| s.as_str().to_string())
         }

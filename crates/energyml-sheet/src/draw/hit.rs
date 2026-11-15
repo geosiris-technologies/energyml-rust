@@ -20,6 +20,7 @@ pub struct Hit<'a> {
     pub layer: usize,
     /// Index of the element in its layer.
     pub element: usize,
+    /// The key of the element hit (`Element::key`).
     pub key: &'a str,
     /// On an `Item::Image`: the raster's column and row under the point.
     pub pixel: Option<[u32; 2]>,
@@ -39,10 +40,17 @@ pub fn hit(list: &DisplayList, x: f64, y: f64) -> Option<Hit<'_>> {
             continue;
         }
         for (element_index, element) in layer.elements.iter().enumerate().rev() {
-            let Some(key) = element.key.as_deref() else { continue };
+            let Some(key) = element.key.as_deref() else {
+                continue;
+            };
             for item in element.items.iter().rev() {
                 if let Some(pixel) = item_hit(item, p) {
-                    return Some(Hit { layer: layer_index, element: element_index, key, pixel });
+                    return Some(Hit {
+                        layer: layer_index,
+                        element: element_index,
+                        key,
+                        pixel,
+                    });
                 }
             }
         }
@@ -56,34 +64,44 @@ fn item_hit(item: &Item, p: [f64; 2]) -> Option<Option<[u32; 2]>> {
         distance <= stroke.as_ref().map_or(0.0, |s| s.width) / 2.0 + extra
     };
     let hit = match item {
-        Item::Polyline { points, stroke } => {
-            distance_to_polyline(p, points) <= stroke.width / 2.0 + HIT_SLOP
-        }
+        Item::Polyline { points, stroke } => distance_to_polyline(p, points) <= stroke.width / 2.0 + HIT_SLOP,
         Item::Path { path, fill, stroke } => {
             let subpaths = path.flatten();
             let filled = fill.is_some() && winding_sum(p, &subpaths) != 0;
-            let stroked = subpaths
-                .iter()
-                .any(|line| near(distance_to_polyline(p, line), stroke, if fill.is_some() { 0.0 } else { HIT_SLOP }))
-                && (stroke.is_some() || fill.is_none());
+            let stroked = subpaths.iter().any(|line| {
+                near(
+                    distance_to_polyline(p, line),
+                    stroke,
+                    if fill.is_some() { 0.0 } else { HIT_SLOP },
+                )
+            }) && (stroke.is_some() || fill.is_none());
             filled || stroked
         }
         Item::Polygon { points, fill, stroke } => {
             if fill.is_some() {
-                winding(p, points) != 0 || (stroke.is_some() && near(distance_to_ring(p, points), stroke, 0.0))
+                winding(p, points) != 0
+                    || (stroke.is_some() && near(distance_to_ring(p, points), stroke, 0.0))
             } else {
                 near(distance_to_ring(p, points), stroke, HIT_SLOP)
             }
         }
-        Item::Rect { rect, fill, stroke, .. } => {
+        Item::Rect {
+            rect, fill, stroke, ..
+        } => {
             let ring = rect_ring(rect);
             if fill.is_some() {
-                rect.contains(p[0], p[1]) || (stroke.is_some() && near(distance_to_ring(p, &ring), stroke, 0.0))
+                rect.contains(p[0], p[1])
+                    || (stroke.is_some() && near(distance_to_ring(p, &ring), stroke, 0.0))
             } else {
                 near(distance_to_ring(p, &ring), stroke, HIT_SLOP)
             }
         }
-        Item::Circle { centre, radius, fill, stroke } => {
+        Item::Circle {
+            centre,
+            radius,
+            fill,
+            stroke,
+        } => {
             let d = distance(p, *centre);
             if fill.is_some() {
                 d <= *radius || (stroke.is_some() && near((d - radius).abs(), stroke, 0.0))
@@ -91,7 +109,14 @@ fn item_hit(item: &Item, p: [f64; 2]) -> Option<Option<[u32; 2]>> {
                 near((d - radius).abs(), stroke, HIT_SLOP)
             }
         }
-        Item::Sector { centre, inner, outer, start, end, .. } => {
+        Item::Sector {
+            centre,
+            inner,
+            outer,
+            start,
+            end,
+            ..
+        } => {
             let dx = p[0] - centre[0];
             let dy = p[1] - centre[1];
             let r = dx.hypot(dy);
@@ -128,8 +153,10 @@ fn item_hit(item: &Item, p: [f64; 2]) -> Option<Option<[u32; 2]>> {
         Item::Image { rect, raster } => {
             if rect.contains(p[0], p[1]) {
                 let (w, h) = (raster.width(), raster.height());
-                let column = (((p[0] - rect.x) / rect.w * f64::from(w)).floor().max(0.0) as u32).min(w.saturating_sub(1));
-                let row = (((p[1] - rect.y) / rect.h * f64::from(h)).floor().max(0.0) as u32).min(h.saturating_sub(1));
+                let column = (((p[0] - rect.x) / rect.w * f64::from(w)).floor().max(0.0) as u32)
+                    .min(w.saturating_sub(1));
+                let row = (((p[1] - rect.y) / rect.h * f64::from(h)).floor().max(0.0) as u32)
+                    .min(h.saturating_sub(1));
                 return Some(Some([column, row]));
             }
             false
@@ -165,7 +192,10 @@ fn distance_to_polyline(p: [f64; 2], points: &[[f64; 2]]) -> f64 {
     match points {
         [] => f64::INFINITY,
         [only] => distance(p, *only),
-        _ => points.windows(2).map(|w| distance_to_segment(p, w[0], w[1])).fold(f64::INFINITY, f64::min),
+        _ => points
+            .windows(2)
+            .map(|w| distance_to_segment(p, w[0], w[1]))
+            .fold(f64::INFINITY, f64::min),
     }
 }
 

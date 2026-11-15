@@ -67,7 +67,9 @@ pub enum AxesRefusal {
         slab: u64,
     },
     /// Slabs pushed out of order.
-    #[error("slab {first} was pushed where slab {expected} was due: steps along the slowest axis need slabs in order")]
+    #[error(
+        "slab {first} was pushed where slab {expected} was due: steps along the slowest axis need slabs in order"
+    )]
     NotContiguous {
         /// The slab that was due.
         expected: u64,
@@ -172,7 +174,7 @@ impl AxesAccumulator {
                 })
             };
         }
-        if values.len() % self.slab != 0 {
+        if !values.len().is_multiple_of(self.slab) {
             return Err(AxesRefusal::NotWholeSlabs {
                 values: values.len(),
                 slab: self.slab as u64,
@@ -256,7 +258,11 @@ impl AxesAccumulator {
                             axis: a,
                             at: *at,
                             step: *step,
-                            ratio_to_median: if median > 0.0 { *step / median } else { f64::INFINITY },
+                            ratio_to_median: if median > 0.0 {
+                                *step / median
+                            } else {
+                                f64::INFINITY
+                            },
                         });
                     }
                 }
@@ -265,7 +271,11 @@ impl AxesAccumulator {
                 axis: a,
                 len: self.dims[a],
                 steps,
-                mean_abs_step: if steps > 0 { Some(total / steps as f64) } else { None },
+                mean_abs_step: if steps > 0 {
+                    Some(total / steps as f64)
+                } else {
+                    None
+                },
                 median_step: median,
                 jumps,
                 constant: steps > 0 && total == 0.0,
@@ -323,8 +333,12 @@ pub fn strongest(axes: &[AxisVariation], ratio: f64) -> Option<(usize, f64)> {
     if m <= 0.0 {
         return None;
     }
-    let others: f64 =
-        with_step.iter().filter(|(a, _)| *a != axis).map(|(_, v)| *v).sum::<f64>() / (with_step.len() - 1) as f64;
+    let others: f64 = with_step
+        .iter()
+        .filter(|(a, _)| *a != axis)
+        .map(|(_, v)| *v)
+        .sum::<f64>()
+        / (with_step.len() - 1) as f64;
     if others == 0.0 {
         return Some((axis, f64::INFINITY));
     }

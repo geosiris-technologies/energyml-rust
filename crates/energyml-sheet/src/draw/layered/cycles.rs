@@ -24,10 +24,7 @@ pub fn break_cycles(input: &LayerInput) -> Vec<usize> {
     let nodes = input.nodes.len();
     let edges = &input.edges;
 
-    if nodes > 0
-        && input.fixed_layer.len() == nodes
-        && input.fixed_layer.iter().all(Option::is_some)
-    {
+    if nodes > 0 && input.fixed_layer.len() == nodes && input.fixed_layer.iter().all(Option::is_some) {
         let mut back = Vec::new();
         for (index, &(from, to)) in edges.iter().enumerate() {
             if from == to || from >= nodes || to >= nodes {

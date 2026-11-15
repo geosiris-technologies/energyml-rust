@@ -30,7 +30,9 @@ mod without_png {
 
 #[cfg(feature = "png")]
 mod with_png {
-    use energyml_sheet::draw::list::{Anchor, Colour, DisplayList, Element, Item, Layer, PageUnit, Paint, Rect, TextStyle};
+    use energyml_sheet::draw::list::{
+        Anchor, Colour, DisplayList, Element, Item, Layer, PageUnit, Paint, Rect, TextStyle,
+    };
     use energyml_sheet::draw::png::{render, render_list};
     use energyml_sheet::draw::raster::Raster;
     use energyml_sheet::draw::svg::{self, DrawError};
@@ -72,11 +74,21 @@ mod with_png {
         layer.clip = clip;
         layer.elements.push(Element::new(vec![
             Item::Image {
-                rect: Rect { x: 10.0, y: 10.0, w: 20.0, h: 20.0 },
+                rect: Rect {
+                    x: 10.0,
+                    y: 10.0,
+                    w: 20.0,
+                    h: 20.0,
+                },
                 raster: Arc::new(raster),
             },
             Item::Rect {
-                rect: Rect { x: 12.0, y: 12.0, w: 2.0, h: 2.0 },
+                rect: Rect {
+                    x: 12.0,
+                    y: 12.0,
+                    w: 2.0,
+                    h: 2.0,
+                },
                 corner: 0.0,
                 fill: Some(Paint::Solid(Colour::rgb(0, 0, 0))),
                 stroke: None,
@@ -114,8 +126,16 @@ mod with_png {
         let pixmap = decode(&raster_list(None));
         assert_eq!(pixel(&pixmap, 15, 25), BLUE);
         assert_eq!(pixel(&pixmap, 25, 15), GREEN);
-        assert_eq!(pixel(&pixmap, 25, 25), [255, 255, 255, 255], "the transparent pixel shows the background");
-        assert_eq!(pixel(&pixmap, 13, 13), [0, 0, 0, 255], "the square is drawn over the raster");
+        assert_eq!(
+            pixel(&pixmap, 25, 25),
+            [255, 255, 255, 255],
+            "the transparent pixel shows the background"
+        );
+        assert_eq!(
+            pixel(&pixmap, 13, 13),
+            [0, 0, 0, 255],
+            "the square is drawn over the raster"
+        );
         assert_eq!(pixel(&pixmap, 17, 17), RED);
         assert_eq!(pixel(&pixmap, 19, 15), RED, "sharp: no mix at the border");
         assert_eq!(pixel(&pixmap, 20, 15), GREEN, "sharp: no mix at the border");
@@ -124,7 +144,12 @@ mod with_png {
     /// Casser : ne pas écrire `clip-path` sur le groupe du calque.
     #[test]
     fn a_raster_is_clipped_by_its_layer() {
-        let clip = Rect { x: 0.0, y: 0.0, w: 20.0, h: 40.0 };
+        let clip = Rect {
+            x: 0.0,
+            y: 0.0,
+            w: 20.0,
+            h: 40.0,
+        };
         let pixmap = decode(&raster_list(Some(clip)));
         assert_eq!(pixel(&pixmap, 25, 15), [255, 255, 255, 255]);
         assert_eq!(pixel(&pixmap, 15, 15), RED);
@@ -139,7 +164,12 @@ mod with_png {
         list.layers[0].elements.push(Element::new(vec![Item::Text {
             at: [2.0, 8.0],
             text: "Rv".to_string(),
-            style: TextStyle { size: 6.0, colour: Colour::rgb(0, 0, 0), anchor: Anchor::Start, rotate: 0.0 },
+            style: TextStyle {
+                size: 6.0,
+                colour: Colour::rgb(0, 0, 0),
+                anchor: Anchor::Start,
+                rotate: 0.0,
+            },
         }]));
         let meta = svg::Metadata {
             element: "test-view".to_string(),
@@ -178,11 +208,15 @@ mod with_png {
     fn only_an_embedded_png_is_drawn() {
         assert_eq!(
             render(&svg_with_image("data:image/jpeg;base64,/9j/"), 1.0),
-            Err(DrawError::ImageNotPng { mime: "image/jpeg".to_string() })
+            Err(DrawError::ImageNotPng {
+                mime: "image/jpeg".to_string()
+            })
         );
         assert_eq!(
             render(&svg_with_image("tile.png"), 1.0),
-            Err(DrawError::ImageNotEmbedded { href: "tile.png".to_string() })
+            Err(DrawError::ImageNotEmbedded {
+                href: "tile.png".to_string()
+            })
         );
         // "not a png", base64 (RFC 4648 section 4).
         assert!(matches!(
@@ -197,7 +231,10 @@ mod with_png {
         const ALPHABET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
         let mut out = String::new();
         for chunk in bytes.chunks(3) {
-            let n = chunk.iter().enumerate().fold(0u32, |n, (i, b)| n | (u32::from(*b) << (16 - 8 * i)));
+            let n = chunk
+                .iter()
+                .enumerate()
+                .fold(0u32, |n, (i, b)| n | (u32::from(*b) << (16 - 8 * i)));
             for k in 0..4 {
                 if k <= chunk.len() {
                     out.push(ALPHABET[((n >> (18 - 6 * k)) & 63) as usize] as char);
@@ -224,7 +261,11 @@ mod with_png {
         let href = format!("data:image/png;base64,{}", base64(&header));
         assert_eq!(
             render(&svg_with_image(&href), 1.0),
-            Err(DrawError::Size { width: 4097, height: 4096, limit: 16_777_216 })
+            Err(DrawError::Size {
+                width: 4097,
+                height: 4096,
+                limit: 16_777_216
+            })
         );
     }
 

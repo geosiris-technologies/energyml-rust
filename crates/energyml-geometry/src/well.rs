@@ -396,7 +396,8 @@ fn datum_in_line_frame(
     let Some(line_object) = source.object_at(&line_uri) else {
         return Err(format!("the line's CRS {line_uri} is not in the package"));
     };
-    let line_crs = energyml_domain::crs::read_with(line_object.as_reflect(), source).map_err(|e| e.to_string())?;
+    let line_crs =
+        energyml_domain::crs::read_with(line_object.as_reflect(), source).map_err(|e| e.to_string())?;
     if line_crs.is_time() {
         return Err("the line's CRS counts time, and a measured depth is a length".to_string());
     }
@@ -411,7 +412,9 @@ fn datum_in_line_frame(
     let check_horizontal: bool;
     match &datum_frame_uri {
         Some(uri) => {
-            let datum_crs = match energyml_domain::crs::compound_of_datum(datum, source).map_err(|e| e.to_string())? {
+            let datum_crs = match energyml_domain::crs::compound_of_datum(datum, source)
+                .map_err(|e| e.to_string())?
+            {
                 Some(compound) => compound,
                 None => {
                     let Some(object) = source.object_at(uri) else {
@@ -441,9 +444,11 @@ fn datum_in_line_frame(
                 .and_then(|h| reference_of(h, "Crs"))
                 .and_then(|uri| source.object_at(&uri));
             datum_projected = match horizontal {
-                Some(object) => energyml_domain::crs::read_with(object.as_reflect(), source)
-                    .map_err(|e| e.to_string())?
-                    .projected,
+                Some(object) => {
+                    energyml_domain::crs::read_with(object.as_reflect(), source)
+                        .map_err(|e| e.to_string())?
+                        .projected
+                }
                 None => CrsKind::Absent,
             };
             let vertical_object = reference_of(datum, "VerticalCrs").and_then(|uri| source.object_at(&uri));
@@ -501,10 +506,14 @@ fn datum_in_line_frame(
             placed[2] = metres / per_unit;
         }
         (Some(a), None) => {
-            return Err(format!("the datum's vertical unit is `{a}` and the line's is not stated"));
+            return Err(format!(
+                "the datum's vertical unit is `{a}` and the line's is not stated"
+            ));
         }
         (None, Some(b)) => {
-            return Err(format!("the datum's vertical unit is not stated and the line's is `{b}`"));
+            return Err(format!(
+                "the datum's vertical unit is not stated and the line's is `{b}`"
+            ));
         }
         _ => {}
     }
@@ -520,7 +529,8 @@ fn datum_in_line_frame(
 fn datum_frame(datum: &dyn Reflect) -> Option<String> {
     reference_of(datum, "LocalCrs")
         .or_else(|| {
-            crate::geometry::field_object(datum, "Location").and_then(|location| reference_of(location, "LocalCrs"))
+            crate::geometry::field_object(datum, "Location")
+                .and_then(|location| reference_of(location, "LocalCrs"))
         })
         .or_else(|| reference_of(datum, "Crs"))
 }

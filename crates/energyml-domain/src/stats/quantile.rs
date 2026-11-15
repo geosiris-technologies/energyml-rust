@@ -107,7 +107,11 @@ fn type7_by_selection(work: &mut [f64], q: f64) -> f64 {
     if h > lo as f64 {
         // Everything right of `lo` is at least `low`: the next order
         // statistic is the smallest of them.
-        let high = work[lo + 1..].iter().copied().min_by(f64::total_cmp).unwrap_or(low);
+        let high = work[lo + 1..]
+            .iter()
+            .copied()
+            .min_by(f64::total_cmp)
+            .unwrap_or(low);
         low + (h - lo as f64) * (high - low)
     } else {
         low
@@ -159,7 +163,9 @@ pub fn quantiles(values: &[f64], at: &[f64], method: QuantileMethod) -> Result<Q
             for value in values {
                 sketch.push(*value);
             }
-            at.iter().map(|q| sketch.quantile(*q).unwrap_or(f64::NAN)).collect()
+            at.iter()
+                .map(|q| sketch.quantile(*q).unwrap_or(f64::NAN))
+                .collect()
         }
     };
     Ok(Quantiles {

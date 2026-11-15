@@ -31,7 +31,12 @@ fn nice_ticks_never_exceed_the_target_plus_one() {
     // Breaks if the step is the nearest round number instead of the smallest
     // one that is at least `range / target`: 0..700 would get a step of 100 and
     // 8 values.
-    for (a, b, target) in [(0.0, 700.0, 5.0), (0.0, 1.0, 3.0), (-5300.0, -4100.0, 7.3), (0.0, 0.37, 2.5)] {
+    for (a, b, target) in [
+        (0.0, 700.0, 5.0),
+        (0.0, 1.0, 3.0),
+        (-5300.0, -4100.0, 7.3),
+        (0.0, 0.37, 2.5),
+    ] {
         let t = nice_ticks(a, b, target).unwrap();
         assert!(
             t.values.len() <= target.floor() as usize + 1,
@@ -45,10 +50,22 @@ fn nice_ticks_never_exceed_the_target_plus_one() {
 #[test]
 fn nice_ticks_refuse_by_name() {
     // Breaks if equal bounds give an empty list instead of a refusal.
-    assert_eq!(nice_ticks(5.0, 5.0, 5.0), Err(TickRefusal::Degenerate { at: 5.0 }));
-    assert!(matches!(nice_ticks(0.0, f64::NAN, 5.0), Err(TickRefusal::NotFinite { .. })));
-    assert!(matches!(nice_ticks(0.0, f64::INFINITY, 5.0), Err(TickRefusal::NotFinite { .. })));
-    assert_eq!(nice_ticks(0.0, 1.0, 0.5), Err(TickRefusal::BadTarget { target: 0.5 }));
+    assert_eq!(
+        nice_ticks(5.0, 5.0, 5.0),
+        Err(TickRefusal::Degenerate { at: 5.0 })
+    );
+    assert!(matches!(
+        nice_ticks(0.0, f64::NAN, 5.0),
+        Err(TickRefusal::NotFinite { .. })
+    ));
+    assert!(matches!(
+        nice_ticks(0.0, f64::INFINITY, 5.0),
+        Err(TickRefusal::NotFinite { .. })
+    ));
+    assert_eq!(
+        nice_ticks(0.0, 1.0, 0.5),
+        Err(TickRefusal::BadTarget { target: 0.5 })
+    );
 }
 
 #[test]
@@ -77,8 +94,14 @@ fn log_ticks_fine_then_decades_then_every_few() {
 #[test]
 fn log_ticks_refuse_non_positive_bounds() {
     // Breaks if the positivity check is removed (log10 of 0 is -inf).
-    assert!(matches!(log_ticks(0.0, 10.0, 5.0), Err(TickRefusal::NotPositive { .. })));
-    assert!(matches!(log_ticks(-1.0, 10.0, 5.0), Err(TickRefusal::NotPositive { .. })));
+    assert!(matches!(
+        log_ticks(0.0, 10.0, 5.0),
+        Err(TickRefusal::NotPositive { .. })
+    ));
+    assert!(matches!(
+        log_ticks(-1.0, 10.0, 5.0),
+        Err(TickRefusal::NotPositive { .. })
+    ));
 }
 
 #[test]

@@ -54,7 +54,8 @@ fn merged_accumulators_equal_one_pass() {
     // independent of the accumulator, it is built on it.
     let finite: Vec<f64> = values.iter().copied().filter(|v| v.is_finite()).collect();
     let mean = finite.iter().sum::<f64>() / finite.len() as f64;
-    let deviation = (finite.iter().map(|v| (v - mean) * (v - mean)).sum::<f64>() / finite.len() as f64).sqrt();
+    let deviation =
+        (finite.iter().map(|v| (v - mean) * (v - mean)).sum::<f64>() / finite.len() as f64).sqrt();
 
     for accumulator in [&whole, &merged] {
         assert_eq!(accumulator.count(), 1015);
@@ -64,12 +65,18 @@ fn merged_accumulators_equal_one_pass() {
         assert_eq!(accumulator.non_finite(), 15);
         let moments = accumulator.moments().expect("finite values");
         assert_eq!(moments.min, finite.iter().copied().fold(f64::INFINITY, f64::min));
-        assert_eq!(moments.max, finite.iter().copied().fold(f64::NEG_INFINITY, f64::max));
+        assert_eq!(
+            moments.max,
+            finite.iter().copied().fold(f64::NEG_INFINITY, f64::max)
+        );
         close(moments.mean, mean, 1e-12);
         close(moments.deviation, deviation, 1e-12);
     }
     // The merge of the logarithmic moments too (Chan, Golub and LeVeque 1983).
-    let (a, b) = (whole.positive_moments().unwrap(), merged.positive_moments().unwrap());
+    let (a, b) = (
+        whole.positive_moments().unwrap(),
+        merged.positive_moments().unwrap(),
+    );
     assert_eq!(a.count, b.count);
     close(a.mean, b.mean, 1e-12);
     close(a.deviation, b.deviation, 1e-12);
@@ -137,7 +144,12 @@ fn merging_two_null_values_is_refused() {
 #[test]
 fn exact_quantiles_follow_hyndman_and_fan_type_7() {
     // Hyndman and Fan 1996, type 7: h = (n - 1) q over the sorted values.
-    let q = quantiles(&[1.0, 2.0, 3.0, 4.0], &[0.5, 0.25, 0.0, 1.0], QuantileMethod::Exact).unwrap();
+    let q = quantiles(
+        &[1.0, 2.0, 3.0, 4.0],
+        &[0.5, 0.25, 0.0, 1.0],
+        QuantileMethod::Exact,
+    )
+    .unwrap();
     assert_eq!(q.values, vec![2.5, 1.75, 1.0, 4.0]);
     assert_eq!(q.method, QuantileMethodUsed::Exact);
     assert_eq!(q.at, vec![0.5, 0.25, 0.0, 1.0]);
@@ -184,7 +196,10 @@ fn sketch_quantiles_are_within_alpha_of_exact() {
     for (q, s) in at.iter().zip(&found.values) {
         let rank = (q * (sorted.len() - 1) as f64).floor() as usize;
         let x = sorted[rank];
-        assert!((s - x).abs() <= 0.01 * x.abs() * 1.000_001, "q {q}: sketch {s}, order statistic {x}");
+        assert!(
+            (s - x).abs() <= 0.01 * x.abs() * 1.000_001,
+            "q {q}: sketch {s}, order statistic {x}"
+        );
     }
 }
 
@@ -266,7 +281,10 @@ fn a_quantile_outside_zero_one_is_refused() {
 #[test]
 fn a_log_scale_refuses_non_positive_bounds() {
     let refused = Scale::new(ScaleKind::Log10, 0.0, 10.0, false);
-    assert!(matches!(refused, Err(ScaleRefusal::LogBoundNotPositive { .. })), "{refused:?}");
+    assert!(
+        matches!(refused, Err(ScaleRefusal::LogBoundNotPositive { .. })),
+        "{refused:?}"
+    );
     assert!(matches!(
         Scale::new(ScaleKind::Linear, 5.0, 1.0, false),
         Err(ScaleRefusal::Reversed { .. })
@@ -325,7 +343,10 @@ fn value_at_inverts_fraction() {
                 panic!("{value} is inside the scale")
             };
             let back = scale.value_at(f);
-            assert!(((back - value) / value).abs() < 1e-9, "{value} came back as {back}");
+            assert!(
+                ((back - value) / value).abs() < 1e-9,
+                "{value} came back as {back}"
+            );
         }
     }
 }
@@ -360,7 +381,10 @@ fn automatic_bounds_are_the_first_and_ninety_ninth_percentiles() {
 #[test]
 fn transform_refuses_a_non_positive_value_by_name() {
     let scale = Scale::new(ScaleKind::Log10, 1.0, 10.0, false).unwrap();
-    assert_eq!(scale.transform(-1.0), Err(ScaleRefusal::NotPositive { value: -1.0 }));
+    assert_eq!(
+        scale.transform(-1.0),
+        Err(ScaleRefusal::NotPositive { value: -1.0 })
+    );
     assert_eq!(scale.transform(100.0), Ok(2.0));
 }
 

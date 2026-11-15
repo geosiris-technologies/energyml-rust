@@ -19,27 +19,16 @@ fn said(rule_id: &str) -> String {
 /// domain; or write "4 times" in `rules/stats.toml`.
 #[test]
 fn the_numbers_of_the_stats_rules_are_the_codes() {
-    assert!(
-        said(id::STATS_GAP_NEVER_BRIDGED).contains(&format!("{GAP_RATIO} times the median step"))
-    );
-    assert!(
-        said(id::STATS_SEAM_IS_SIGNALLED).contains(&format!("{JUMP_RATIO} times the median step"))
-    );
-    assert!(
-        said(id::STATS_LOG_FROM_THREE_DECADES)
-            .contains(&format!("at least {LOG_DECADES} decades"))
-    );
+    assert!(said(id::STATS_GAP_NEVER_BRIDGED).contains(&format!("{GAP_RATIO} times the median step")));
+    assert!(said(id::STATS_SEAM_IS_SIGNALLED).contains(&format!("{JUMP_RATIO} times the median step")));
+    assert!(said(id::STATS_LOG_FROM_THREE_DECADES).contains(&format!("at least {LOG_DECADES} decades")));
     let bounds = said(id::STATS_AUTOMATIC_BOUNDS_ARE_PERCENTILES);
     let (low, high) = ((AUTO_LOW * 100.0).round(), (AUTO_HIGH * 100.0).round());
     assert!(
         bounds.contains(&format!("{low}st and {high}th percentiles")),
         "{bounds}"
     );
-    assert_eq!(
-        EXACT_QUANTILE_LIMIT % 1_000_000,
-        0,
-        "the text counts in millions"
-    );
+    assert_eq!(EXACT_QUANTILE_LIMIT % 1_000_000, 0, "the text counts in millions");
     assert!(bounds.contains(&format!("{} million values", EXACT_QUANTILE_LIMIT / 1_000_000)));
     assert!(bounds.contains(&format!("{} %", (SKETCH_RELATIVE_ERROR * 100.0).round())));
 }

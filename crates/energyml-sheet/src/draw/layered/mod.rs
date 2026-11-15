@@ -27,9 +27,7 @@ mod route;
 
 pub use cycles::break_cycles;
 pub use layering::{FixedColumns, LayeringMethod, LayeringMethods, LongestPath};
-pub use ordering::{
-    Barycenter, Layers, Median, OrderingMethod, OrderingMethods, Slot, build_layers,
-};
+pub use ordering::{Barycenter, Layers, Median, OrderingMethod, OrderingMethods, Slot, build_layers};
 pub use place::{Positions, place};
 pub use route::route;
 
@@ -45,13 +43,16 @@ pub const LAYERED_MAX_SLOTS: usize = 20_000;
 /// A node's box, user units.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct BoxSpec {
+    /// Width of the box, user units.
     pub width: f64,
+    /// Height of the box, user units.
     pub height: f64,
 }
 
 /// What [`layered`] places.
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct LayerInput {
+    /// The boxes to place, one per node.
     pub nodes: Vec<BoxSpec>,
     /// (from, to), indices into `nodes`. Duplicates are kept; `(n, n)` is a loop.
     pub edges: Vec<(usize, usize)>,
@@ -111,9 +112,13 @@ pub struct LayeredOptions {
     pub ordering: String,
     /// How many sweeps the ordering makes.
     pub sweeps: u8,
+    /// Which way the layers follow each other.
     pub flow: Flow,
+    /// The gaps and margins between boxes, layers and bends.
     pub spacing: Spacing,
+    /// The most real nodes accepted; more is refused with `LayoutRefusal::TooLarge`.
     pub max_nodes: usize,
+    /// The most slots accepted; more is refused with `LayoutRefusal::TooManySlots`.
     pub max_slots: usize,
 }
 
@@ -134,42 +139,92 @@ impl Default for LayeredOptions {
 /// Why a graph is not placed. Typed; the face writes the sentence.
 #[derive(Clone, Debug, PartialEq, thiserror::Error)]
 pub enum LayoutRefusal {
+    /// The graph has more nodes than the layout places.
     #[error(
         "{nodes} nodes are more than the {limit} a layered layout places: centre the graph on a selection"
     )]
-    TooLarge { nodes: usize, limit: usize },
+    TooLarge {
+        /// How many nodes the graph has.
+        nodes: usize,
+        /// The most nodes a layered layout places.
+        limit: usize,
+    },
+    /// Cutting long edges by layer makes too many slots.
     #[error("cutting the long edges by layer makes {slots} slots, more than {limit}")]
-    TooManySlots { slots: usize, limit: usize },
+    TooManySlots {
+        /// How many slots the cut makes.
+        slots: usize,
+        /// The most slots a layered layout places.
+        limit: usize,
+    },
+    /// An edge names a node that does not exist.
     #[error("edge {edge} names node {node}, and there are {nodes} nodes")]
     EdgeOutOfRange {
+        /// Index of the offending edge.
         edge: usize,
+        /// The node index the edge names.
         node: usize,
+        /// The number of nodes.
         nodes: usize,
     },
+    /// A per-node input does not have one entry per node.
     #[error("{what} has {found} entries, and there are {expected} nodes")]
     LengthMismatch {
+        /// The name of the input that is the wrong length.
         what: &'static str,
+        /// The length it should have.
         expected: usize,
+        /// The length it has.
         found: usize,
     },
+    /// A node's box has a negative or non-finite size.
     #[error("node {node} has a size that is negative or not finite")]
-    BadBox { node: usize },
+    BadBox {
+        /// Index of the node.
+        node: usize,
+    },
+    /// A node is pinned at a negative or non-finite point.
     #[error("node {node} is pinned at a point that is negative or not finite")]
-    BadPin { node: usize },
+    BadPin {
+        /// Index of the node.
+        node: usize,
+    },
+    /// The fixed-columns layering found a node with no fixed layer.
     #[error("the {method} layering needs a fixed layer for every node, and node {node} has none")]
-    NoFixedLayer { method: &'static str, node: usize },
+    NoFixedLayer {
+        /// The id of the layering method.
+        method: &'static str,
+        /// Index of the node that has none.
+        node: usize,
+    },
+    /// No method is registered under the requested id.
     #[error("no {kind} method is registered under `{id}`")]
-    UnknownMethod { kind: &'static str, id: String },
+    UnknownMethod {
+        /// The kind of method looked up (layering or ordering).
+        kind: &'static str,
+        /// The id that matched nothing.
+        id: String,
+    },
+    /// A layering method put an edge against the flow.
     #[error("the {method} layering put edge {edge} against the flow")]
-    MethodBroke { method: String, edge: usize },
+    MethodBroke {
+        /// The id of the layering method.
+        method: String,
+        /// Index of the edge put against the flow.
+        edge: usize,
+    },
 }
 
 /// A node's box once placed.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PlacedBox {
+    /// Left edge of the box, user units.
     pub x: f64,
+    /// Top edge of the box, user units.
     pub y: f64,
+    /// Width of the box, user units.
     pub width: f64,
+    /// Height of the box, user units.
     pub height: f64,
     /// The layer the node sits in.
     pub layer: usize,
@@ -198,7 +253,9 @@ pub enum RouteKind {
 pub struct Route {
     /// The edge's index in the input.
     pub edge: usize,
+    /// How the edge is drawn.
     pub kind: RouteKind,
+    /// The cubic Bezier pieces `[start, c1, c2, end]`, user units.
     pub segments: Vec<[[f64; 2]; 4]>,
 }
 
@@ -231,6 +288,7 @@ pub struct Placed {
     pub back: Vec<usize>,
     /// Width and height of the drawing, margins included.
     pub size: [f64; 2],
+    /// How many layers the drawing has.
     pub layer_count: usize,
     /// Crossings between edge pieces in the final order.
     pub crossings: usize,
@@ -239,18 +297,12 @@ pub struct Placed {
 }
 
 /// The two registries [`layered`] reads.
+#[derive(Default)]
 pub struct Methods {
+    /// The registry of layering methods.
     pub layering: LayeringMethods,
+    /// The registry of ordering methods.
     pub ordering: OrderingMethods,
-}
-
-impl Default for Methods {
-    fn default() -> Self {
-        Methods {
-            layering: LayeringMethods::with_builtins(),
-            ordering: OrderingMethods::with_builtins(),
-        }
-    }
 }
 
 /// Place a graph in layers.
@@ -380,14 +432,7 @@ pub fn layered(
 
     // 7. Positions and routes.
     let positions = place(&layers, input, options.flow, &options.spacing);
-    let routes = route(
-        &layers,
-        &positions,
-        input,
-        &back,
-        options.flow,
-        &options.spacing,
-    );
+    let routes = route(&layers, &positions, input, &back, options.flow, &options.spacing);
     Ok(Placed {
         boxes: positions.boxes,
         routes,

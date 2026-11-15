@@ -569,7 +569,9 @@ impl ColorMap {
                 position = if (map_high - map_low).abs() < f64::EPSILON {
                     map_low
                 } else {
-                    map_low + (clamped.ln() - map_low.ln()) / (map_high.ln() - map_low.ln()) * (map_high - map_low)
+                    map_low
+                        + (clamped.ln() - map_low.ln()) / (map_high.ln() - map_low.ln())
+                            * (map_high - map_low)
                 };
             }
         }

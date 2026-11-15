@@ -3,7 +3,7 @@
 //! RESQML TRG 2.2 §7.1 p. 222: *"The size of the vector is constant on all
 //! elements"*; `ValueCountPerIndexableElement` is the count per element.
 
-use energyml_domain::property::{count_fit, CountFit};
+use energyml_domain::property::{CountFit, count_fit};
 
 #[test]
 fn one_count_rule() {

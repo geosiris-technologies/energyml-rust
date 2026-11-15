@@ -249,9 +249,7 @@ impl Default for Interpolations {
 impl Interpolations {
     /// A registry with no method.
     pub fn none() -> Self {
-        Interpolations {
-            entries: Vec::new(),
-        }
+        Interpolations { entries: Vec::new() }
     }
 
     /// The five built-in methods: nearest, previous, linear, log_linear, angular.
@@ -276,10 +274,7 @@ impl Interpolations {
 
     /// The method of this id (the caller's addition first).
     pub fn get(&self, id: &str) -> Option<&dyn Interpolator> {
-        self.entries
-            .iter()
-            .find(|m| m.id() == id)
-            .map(|m| m.as_ref())
+        self.entries.iter().find(|m| m.id() == id).map(|m| m.as_ref())
     }
 
     /// The ids, once each, in the order of the registry.

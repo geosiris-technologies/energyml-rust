@@ -254,7 +254,11 @@ pub fn fraction(value: f64, scale: &Scale) -> Fraction {
 /// The automatic bounds: the first and ninety-ninth percentiles of the finite
 /// values, and on a logarithmic scale of the finite values `> 0` (the others
 /// are set aside). A constant gives equal bounds, which [`resolve`] refuses.
-pub fn auto_bounds(values: &[f64], kind: ScaleKind, method: QuantileMethod) -> Result<(f64, f64), ScaleRefusal> {
+pub fn auto_bounds(
+    values: &[f64],
+    kind: ScaleKind,
+    method: QuantileMethod,
+) -> Result<(f64, f64), ScaleRefusal> {
     let population: Vec<f64> = values
         .iter()
         .copied()

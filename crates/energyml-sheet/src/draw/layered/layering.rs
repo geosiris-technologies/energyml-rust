@@ -29,8 +29,7 @@ impl LayeringMethod for LongestPath {
 
     fn layers(&self, input: &LayerInput, back: &[usize]) -> Result<Vec<usize>, LayoutRefusal> {
         let nodes = input.nodes.len();
-        let fixed =
-            |node: usize| -> Option<usize> { input.fixed_layer.get(node).copied().flatten() };
+        let fixed = |node: usize| -> Option<usize> { input.fixed_layer.get(node).copied().flatten() };
         let mut layer: Vec<usize> = (0..nodes).map(|n| fixed(n).unwrap_or(0)).collect();
 
         // The edges of the acyclic graph: not loops, reversed when back, and

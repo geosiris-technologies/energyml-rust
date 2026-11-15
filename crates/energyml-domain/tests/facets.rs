@@ -77,8 +77,7 @@ fn a_column_reads_its_facets_through_the_same_door() {
     // The form of the convention B of a column that names its link in a
     // `qualifier` facet: the value is a URI, so it is an extension.
     use energyml_eml_2_3::{
-        AbstractValueArray, Column, ColumnBasedTable, FacetExt, FacetKind, IntegerXmlArray,
-        PropertyKindFacet,
+        AbstractValueArray, Column, ColumnBasedTable, FacetExt, FacetKind, IntegerXmlArray, PropertyKindFacet,
     };
     let uri = "eml:///eml23.ColumnBasedTable(00000000-0000-0000-0000-000000000009)";
     let object = ColumnBasedTable {

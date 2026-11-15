@@ -1,7 +1,7 @@
 //! Stepping the current MD by notches, on the nodes or on a fine grid.
 
-use super::gap::median_step;
 use super::bracket::nearest_node;
+use super::gap::median_step;
 use super::{MAX_FINE_STEPS, SNAP_FRACTION};
 
 /// How a notch moves the MD.

@@ -25,9 +25,8 @@ mod stepper;
 pub use bracket::{Bracket, BracketRefusal, bracket, nearest_node, union_axis};
 pub use gap::{GapRule, median_step};
 pub use interpolate::{
-    ANGULAR, Applies, InterpChoice, InterpNote, InterpRefusal, Interpolated, Interpolations,
-    Interpolator, LINEAR, LOG_LINEAR, NEAREST, Nature, PREVIOUS, default_interpolation,
-    interpolate_row,
+    ANGULAR, Applies, InterpChoice, InterpNote, InterpRefusal, Interpolated, Interpolations, Interpolator,
+    LINEAR, LOG_LINEAR, NEAREST, Nature, PREVIOUS, default_interpolation, interpolate_row,
 };
 pub use stepper::{MdStepper, StepMode, StepRefusal, Stepped};
 

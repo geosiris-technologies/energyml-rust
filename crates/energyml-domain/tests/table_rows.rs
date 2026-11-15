@@ -94,8 +94,14 @@ fn double_table_lookup_keys_keep_their_fraction() {
     let object = DoubleTableLookup {
         uuid: "00000000-0000-0000-0000-00000000000b".into(),
         value: vec![
-            DoubleLookup { key: 0.5, value: 10.0 },
-            DoubleLookup { key: 0.7, value: 20.0 },
+            DoubleLookup {
+                key: 0.5,
+                value: 10.0,
+            },
+            DoubleLookup {
+                key: 0.7,
+                value: 20.0,
+            },
         ],
         ..Default::default()
     };
@@ -112,8 +118,14 @@ fn string_table_lookup_keys_stay_integers() {
     let object = StringTableLookup {
         uuid: "00000000-0000-0000-0000-00000000000c".into(),
         value: vec![
-            StringLookup { key: 1, value: "sand".into() },
-            StringLookup { key: 2, value: "shale".into() },
+            StringLookup {
+                key: 1,
+                value: "sand".into(),
+            },
+            StringLookup {
+                key: 2,
+                value: "shale".into(),
+            },
         ],
         ..Default::default()
     };

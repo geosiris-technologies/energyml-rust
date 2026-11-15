@@ -95,7 +95,11 @@ fn exact(m: u32, e: i32) -> f64 {
 fn candidates(limit: f64, ascending: bool) -> Vec<f64> {
     let e = limit.log10().floor() as i32;
     let mantissas: [u32; 3] = if ascending { [1, 2, 5] } else { [5, 2, 1] };
-    let powers: Vec<i32> = if ascending { (e - 1..=e + 1).collect() } else { (e - 1..=e + 1).rev().collect() };
+    let powers: Vec<i32> = if ascending {
+        (e - 1..=e + 1).collect()
+    } else {
+        (e - 1..=e + 1).rev().collect()
+    };
     powers
         .into_iter()
         .flat_map(|power| mantissas.into_iter().map(move |m| exact(m, power)))
@@ -171,10 +175,12 @@ pub fn nice_ticks(a: f64, b: f64, target: f64) -> Result<LinearTicks, TickRefusa
     if last - first > MAX_TICKS {
         return Err(TickRefusal::NotFinite { a, b });
     }
-    let values = (first..=last)
-        .map(|k| tidy(k as f64 * step, decimals))
-        .collect();
-    Ok(LinearTicks { step, decimals, values })
+    let values = (first..=last).map(|k| tidy(k as f64 * step, decimals)).collect();
+    Ok(LinearTicks {
+        step,
+        decimals,
+        values,
+    })
 }
 
 /// The graduations of a logarithmic axis between `a` and `b` (in whichever
@@ -216,19 +222,31 @@ pub fn log_ticks(a: f64, b: f64, target: f64) -> Result<LogTicks, TickRefusal> {
     };
     let fine = within(&[1, 2, 5], 1);
     if fine.len() as f64 <= target {
-        return Ok(LogTicks { density: LogDensity::Fine, values: fine });
+        return Ok(LogTicks {
+            density: LogDensity::Fine,
+            values: fine,
+        });
     }
     let decades = within(&[1], 1);
     if decades.len() as f64 <= target {
-        return Ok(LogTicks { density: LogDensity::Decades, values: decades });
+        return Ok(LogTicks {
+            density: LogDensity::Decades,
+            values: decades,
+        });
     }
     for every in 2..400 {
         let values = within(&[1], every);
         if values.len() as f64 <= target {
-            return Ok(LogTicks { density: LogDensity::Every(every as u32), values });
+            return Ok(LogTicks {
+                density: LogDensity::Every(every as u32),
+                values,
+            });
         }
     }
-    Ok(LogTicks { density: LogDensity::Every(400), values: within(&[1], 400) })
+    Ok(LogTicks {
+        density: LogDensity::Every(400),
+        values: within(&[1], 400),
+    })
 }
 
 /// `text` without a minus sign when everything after it is zero or the point:

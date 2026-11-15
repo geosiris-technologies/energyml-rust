@@ -55,7 +55,7 @@ use energyml_core::identity;
 use energyml_core::value::{FieldValue, Reflect, Scalar};
 
 use crate::error::{Error, Result};
-use crate::property::{read_facets, Facet, PropertyKindRef};
+use crate::property::{Facet, PropertyKindRef, read_facets};
 use crate::source::ArraySource;
 use crate::values::{self, Values};
 
@@ -307,7 +307,9 @@ impl Rows {
 
     /// The whole of one row, in column order, scalar cells (`cell` per column).
     pub fn row(&self, row: usize) -> Vec<Option<Cell>> {
-        (0..self.columns.len()).map(|column| self.cell(row, column)).collect()
+        (0..self.columns.len())
+            .map(|column| self.cell(row, column))
+            .collect()
     }
 
     /// The whole of one row, every column as its values.

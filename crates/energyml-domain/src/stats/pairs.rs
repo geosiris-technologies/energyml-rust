@@ -169,7 +169,12 @@ pub struct PairSummary {
 impl PairAccumulator {
     /// An accumulator over two scales, a density grid of side `n`, and an
     /// optional rule for the ratio `y / x`.
-    pub fn new(x: Scale, y: Scale, n: usize, ratio_rule: Option<CellRule>) -> Result<PairAccumulator, PairRefusal> {
+    pub fn new(
+        x: Scale,
+        y: Scale,
+        n: usize,
+        ratio_rule: Option<CellRule>,
+    ) -> Result<PairAccumulator, PairRefusal> {
         let density = DensityGrid::new(x, y, n)?;
         if let Some(rule) = &ratio_rule {
             rule.check()?;
@@ -288,7 +293,8 @@ impl PairAccumulator {
             undefined_ratio: self.undefined_ratio,
             ratio_rule: self.rule,
             matched: self.matched,
-            share_matched: if defined > 0 {
+            // No rule, no share: a share of zero would read as "no pair matched" (pairs_with_a_hole_are_counted_and_left_out).
+            share_matched: if self.rule.is_some() && defined > 0 {
                 Some(self.matched as f64 / defined as f64)
             } else {
                 None

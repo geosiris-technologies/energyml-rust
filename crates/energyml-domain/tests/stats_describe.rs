@@ -6,12 +6,12 @@
 //! it follows (S7 seams, S8 three decades and percentiles).
 
 use energyml_domain::color::Scaling;
+use energyml_domain::stats::describe::Sampling;
 use energyml_domain::stats::describe::{
     DescribeRefusal, Describer, Observation, Plan, SliceChunks, ValueChunks, describe,
 };
 use energyml_domain::stats::modes::StatMethods;
 use energyml_domain::stats::scale::ScaleKind;
-use energyml_domain::stats::describe::Sampling;
 
 /// 120 values over `[30, 4]`, spread over four decades.
 fn logarithmic_block() -> Vec<f64> {
@@ -46,7 +46,10 @@ impl ValueChunks for Short {
     }
 }
 
-fn has(description: &energyml_domain::stats::describe::Description, wanted: impl Fn(&Observation) -> bool) -> bool {
+fn has(
+    description: &energyml_domain::stats::describe::Description,
+    wanted: impl Fn(&Observation) -> bool,
+) -> bool {
     description.observations.iter().any(wanted)
 }
 
@@ -111,7 +114,12 @@ fn a_sample_is_always_declared() {
     )));
     // Neighbours are needed for the axes: they are not computed, and it says so.
     assert!(description.axes.is_empty());
-    assert!(description.methods.iter().any(|m| m.family == "axes" && m.id == "skipped"));
+    assert!(
+        description
+            .methods
+            .iter()
+            .any(|m| m.family == "axes" && m.id == "skipped")
+    );
     // Whole arrays declare nothing of the kind.
     let whole = describe(&values, &[100], Plan::default()).unwrap();
     assert!(!has(&whole, |o| matches!(o, Observation::Sampled { .. })));
@@ -135,7 +143,9 @@ fn a_slowest_window_visits_only_its_slabs() {
 fn four_decades_propose_the_log_scale() {
     // 0.11 to 6393 is 4.76 decades (the span of an UDAR resistivity); S8
     // proposes the log scale from three.
-    let values: Vec<f64> = (0..200).map(|i| 0.11 * (6393.0f64 / 0.11).powf(i as f64 / 199.0)).collect();
+    let values: Vec<f64> = (0..200)
+        .map(|i| 0.11 * (6393.0f64 / 0.11).powf(i as f64 / 199.0))
+        .collect();
     let description = describe(&values, &[200], Plan::default()).unwrap();
     assert_eq!(description.scale.unwrap().kind(), ScaleKind::Log10);
     assert!(has(&description, |o| matches!(
@@ -145,7 +155,10 @@ fn four_decades_propose_the_log_scale() {
             ..
         }
     )));
-    assert!(!has(&description, |o| matches!(o, Observation::FileSaysLinear { .. })));
+    assert!(!has(&description, |o| matches!(
+        o,
+        Observation::FileSaysLinear { .. }
+    )));
     // The file says linear while the values span decades: said.
     let plan = Plan {
         file_scaling: Some(Scaling {
@@ -155,7 +168,10 @@ fn four_decades_propose_the_log_scale() {
         ..Plan::default()
     };
     let described = describe(&values, &[200], plan).unwrap();
-    assert!(has(&described, |o| matches!(o, Observation::FileSaysLinear { .. })));
+    assert!(has(&described, |o| matches!(
+        o,
+        Observation::FileSaysLinear { .. }
+    )));
     // The percentiles are the bounds, and the histogram is over them.
     let binned = description.binned.unwrap();
     assert_eq!(binned.bins(), 24);
@@ -167,7 +183,10 @@ fn a_linear_array_is_not_proposed_a_log_scale() {
     let values: Vec<f64> = (1..=100).map(f64::from).collect();
     let description = describe(&values, &[100], Plan::default()).unwrap();
     assert_eq!(description.scale.unwrap().kind(), ScaleKind::Linear);
-    assert!(!has(&description, |o| matches!(o, Observation::SpansDecades { .. })));
+    assert!(!has(&description, |o| matches!(
+        o,
+        Observation::SpansDecades { .. }
+    )));
 }
 
 #[test]
@@ -189,18 +208,26 @@ fn zeros_in_a_log_description_are_counted() {
     };
     let description = describe(&[0.0, 1.0, 10.0, 100.0, 1000.0], &[5], plan).unwrap();
     assert_eq!(description.scale.unwrap().kind(), ScaleKind::Log10);
-    assert!(has(&description, |o| matches!(o, Observation::NonPositiveInLog { count: 1 })));
+    assert!(has(&description, |o| matches!(
+        o,
+        Observation::NonPositiveInLog { count: 1 }
+    )));
 }
 
 #[test]
 fn null_values_are_said_and_never_described() {
     // RESQML IntegerExternalArray.NullValue: counted apart, never averaged.
     let values = [1.0, -999.0, 3.0];
-    let source = SliceChunks::new(&values, vec![3]).unwrap().with_null_value(Some(-999));
+    let source = SliceChunks::new(&values, vec![3])
+        .unwrap()
+        .with_null_value(Some(-999));
     let mut describer = Describer::new(&source, Plan::default(), StatMethods::builtin()).unwrap();
     describer.step(&source, usize::MAX).unwrap();
     let description = describer.finish().unwrap();
-    assert!(has(&description, |o| matches!(o, Observation::NullValues { count: 1, .. })));
+    assert!(has(&description, |o| matches!(
+        o,
+        Observation::NullValues { count: 1, .. }
+    )));
     assert_eq!(description.accumulator.null(), 1);
     assert_eq!(description.moments.unwrap().mean, 2.0);
 }
@@ -208,7 +235,10 @@ fn null_values_are_said_and_never_described() {
 #[test]
 fn values_that_are_not_numbers_are_said() {
     let description = describe(&[1.0, f64::NAN, 3.0, f64::INFINITY], &[4], Plan::default()).unwrap();
-    assert!(has(&description, |o| matches!(o, Observation::NotANumber { count: 2, .. })));
+    assert!(has(&description, |o| matches!(
+        o,
+        Observation::NotANumber { count: 2, .. }
+    )));
     assert_eq!(description.moments.unwrap().mean, 2.0);
 }
 
@@ -223,7 +253,10 @@ fn values_outside_the_file_min_max_are_counted() {
     };
     let values: Vec<f64> = vec![1.0, 5.0, 9.0, 11.0, -2.0];
     let description = describe(&values, &[5], plan).unwrap();
-    assert!(has(&description, |o| matches!(o, Observation::OutsideFileMinMax { count: 2, .. })));
+    assert!(has(&description, |o| matches!(
+        o,
+        Observation::OutsideFileMinMax { count: 2, .. }
+    )));
 }
 
 #[test]
@@ -264,7 +297,10 @@ fn a_plan_out_of_range_is_refused_before_reading() {
         Ok(_) => panic!("the plan must be refused"),
     };
     assert!(matches!(
-        refused(Plan { bins: 0, ..Plan::default() }),
+        refused(Plan {
+            bins: 0,
+            ..Plan::default()
+        }),
         DescribeRefusal::BinsOutOfRange { bins: 0, .. }
     ));
     assert!(matches!(
@@ -336,7 +372,11 @@ fn values_that_do_not_fill_the_dimensions_are_refused() {
     let refused = SliceChunks::new(&[1.0, 2.0, 3.0], vec![2, 2]);
     assert!(matches!(
         refused,
-        Err(DescribeRefusal::ValuesDoNotFill { values: 3, expected: 4, .. })
+        Err(DescribeRefusal::ValuesDoNotFill {
+            values: 3,
+            expected: 4,
+            ..
+        })
     ));
 }
 
@@ -347,7 +387,10 @@ fn a_constant_array_has_no_scale_and_no_histogram_rather_than_a_guess() {
     assert!(description.binned.is_none());
     assert_eq!(description.moments.unwrap().deviation, 0.0);
     assert!(description.axes[0].constant);
-    assert!(has(&description, |o| matches!(o, Observation::ConstantAlong { axis: 0 })));
+    assert!(has(&description, |o| matches!(
+        o,
+        Observation::ConstantAlong { axis: 0 }
+    )));
 }
 
 #[test]
@@ -357,7 +400,10 @@ fn a_seam_is_observed_with_its_position() {
     let mut values: Vec<f64> = (0..10).map(f64::from).collect();
     values.push(24.0);
     let description = describe(&values, &[11], Plan::default()).unwrap();
-    assert!(has(&description, |o| matches!(o, Observation::Jump(j) if j.at == 10 && j.axis == 0)));
+    assert!(has(
+        &description,
+        |o| matches!(o, Observation::Jump(j) if j.at == 10 && j.axis == 0)
+    ));
 }
 
 #[test]
@@ -369,6 +415,9 @@ fn two_clusters_give_two_modes_and_a_threshold_in_a_description() {
     assert_eq!(description.modes.len(), 2, "{:?}", description.modes);
     let threshold = description.threshold.expect("two separated populations");
     assert!(threshold.at > 1.5 && threshold.at < 100.0, "{threshold:?}");
-    assert!(has(&description, |o| matches!(o, Observation::Modes { count: 2 })));
+    assert!(has(&description, |o| matches!(
+        o,
+        Observation::Modes { count: 2 }
+    )));
     assert!(has(&description, |o| matches!(o, Observation::Threshold(_))));
 }

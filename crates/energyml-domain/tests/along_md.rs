@@ -8,9 +8,8 @@ use std::f64::consts::{PI, TAU};
 
 use energyml_domain::along_md::{
     ANGULAR, Applies, Bracket, BracketRefusal, GapRule, InterpChoice, InterpNote, InterpRefusal,
-    Interpolations, Interpolator, LINEAR, LOG_LINEAR, MdStepper, NEAREST, Nature, PREVIOUS,
-    StepMode, StepRefusal, bracket, default_interpolation, interpolate_row, median_step,
-    nearest_node, union_axis,
+    Interpolations, Interpolator, LINEAR, LOG_LINEAR, MdStepper, NEAREST, Nature, PREVIOUS, StepMode,
+    StepRefusal, bracket, default_interpolation, interpolate_row, median_step, nearest_node, union_axis,
 };
 
 fn builtin(id: &str) -> Box<dyn Interpolator> {
@@ -73,10 +72,7 @@ fn descending_or_repeated_depths_are_refused() {
         bracket(&[0.0, 1.0, 1.0, 2.0], 0.5, 0.0),
         Err(BracketRefusal::NotIncreasing { at: 2 })
     );
-    assert_eq!(
-        median_step(&[1.0]),
-        Err(StepRefusal::TooFewNodes { nodes: 1 })
-    );
+    assert_eq!(median_step(&[1.0]), Err(StepRefusal::TooFewNodes { nodes: 1 }));
     assert_eq!(
         median_step(&[0.0, f64::NAN]),
         Err(StepRefusal::NodeNotFinite { at: 1 })
@@ -144,10 +140,7 @@ fn the_nearest_node_on_a_tie_is_the_shallower() {
 fn the_union_of_two_axes_merges_close_nodes() {
     let a = [0.0, 1.0, 2.0];
     let b = [1.0 + 1e-9, 2.5];
-    assert_eq!(
-        union_axis(&[&a, &b], 1e-6).unwrap(),
-        vec![0.0, 1.0, 2.0, 2.5]
-    );
+    assert_eq!(union_axis(&[&a, &b], 1e-6).unwrap(), vec![0.0, 1.0, 2.0, 2.5]);
     assert_eq!(
         union_axis(&[&a, &b], -1.0),
         Err(StepRefusal::BadTolerance { tolerance: -1.0 })
@@ -239,9 +232,7 @@ fn log_linear_refuses_a_non_positive_value() {
 #[test]
 fn angular_goes_the_short_way_round() {
     let m = builtin(ANGULAR);
-    let v = m
-        .between(350f64.to_radians(), 10f64.to_radians(), 0.5)
-        .unwrap();
+    let v = m.between(350f64.to_radians(), 10f64.to_radians(), 0.5).unwrap();
     let from_zero = v.rem_euclid(TAU).min(TAU - v.rem_euclid(TAU));
     assert!(from_zero < 1e-12, "{v}");
 }
@@ -411,10 +402,7 @@ fn an_addition_of_the_caller_is_tried_first() {
         vec![NEAREST, PREVIOUS, LINEAR, LOG_LINEAR, ANGULAR]
     );
     registry.push(Box::new(Always42));
-    assert_eq!(
-        registry.get("linear").unwrap().between(0.0, 1.0, 0.5),
-        Ok(42.0)
-    );
+    assert_eq!(registry.get("linear").unwrap().between(0.0, 1.0, 0.5), Ok(42.0));
     assert_eq!(registry.ids().len(), 5, "an id is listed once");
     assert!(registry.get("unknown").is_none());
 }

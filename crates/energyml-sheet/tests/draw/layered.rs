@@ -6,8 +6,8 @@
 //! in memory.
 
 use energyml_sheet::draw::layered::{
-    BoxSpec, Flow, LAYERED_MAX_NODES, LayerInput, LayeredOptions, LayeringMethod, LayoutRefusal,
-    Methods, Placed, PlacedBox, RouteKind, layered,
+    BoxSpec, Flow, LAYERED_MAX_NODES, LayerInput, LayeredOptions, LayeringMethod, LayoutRefusal, Methods,
+    Placed, PlacedBox, RouteKind, layered,
 };
 
 fn boxes(count: usize) -> Vec<BoxSpec> {

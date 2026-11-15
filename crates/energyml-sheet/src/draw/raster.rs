@@ -82,7 +82,7 @@ impl Raster {
                 found: rgba.len(),
             });
         }
-        let painted = rgba.chunks_exact(4).filter(|p| p[3] != 0).count();
+        let painted = rgba.as_chunks::<4>().0.iter().filter(|p| p[3] != 0).count();
         let pixels = expected / 4;
         Ok(Raster {
             width,
@@ -127,7 +127,12 @@ impl Raster {
             return None;
         }
         let at = (y as usize * self.width as usize + x as usize) * 4;
-        Some([self.rgba[at], self.rgba[at + 1], self.rgba[at + 2], self.rgba[at + 3]])
+        Some([
+            self.rgba[at],
+            self.rgba[at + 1],
+            self.rgba[at + 2],
+            self.rgba[at + 3],
+        ])
     }
 
     fn put(&mut self, x: usize, y: usize, pixel: [u8; 4]) {
@@ -153,12 +158,14 @@ pub struct Cover {
 /// and the last mirror their only neighbour. A non-finite position is `None`
 /// and is skipped when looking for neighbours.
 pub fn node_covers(positions: &[f64], half_cap: Option<f64>) -> Result<Vec<Option<Cover>>, DrawError> {
-    if let Some(c) = half_cap {
-        if !c.is_finite() || c <= 0.0 {
-            return Err(DrawError::BadGap { gap: c });
-        }
+    if let Some(c) = half_cap
+        && (!c.is_finite() || c <= 0.0)
+    {
+        return Err(DrawError::BadGap { gap: c });
     }
-    let finite: Vec<usize> = (0..positions.len()).filter(|&i| positions[i].is_finite()).collect();
+    let finite: Vec<usize> = (0..positions.len())
+        .filter(|&i| positions[i].is_finite())
+        .collect();
     for pair in finite.windows(2) {
         if positions[pair[1]] <= positions[pair[0]] {
             return Err(DrawError::NotIncreasing { at: pair[1] });
@@ -279,13 +286,13 @@ fn check_axis(covers: &[Option<Cover>], window: [f64; 2], pixels: u32) -> Result
     }
     let mut last = f64::NEG_INFINITY;
     for (i, c) in covers.iter().enumerate() {
-        if let Some(c) = c {
-            if c.at.is_finite() {
-                if c.at < last {
-                    return Err(DrawError::NotIncreasing { at: i });
-                }
-                last = c.at;
+        if let Some(c) = c
+            && c.at.is_finite()
+        {
+            if c.at < last {
+                return Err(DrawError::NotIncreasing { at: i });
             }
+            last = c.at;
         }
     }
     Ok((w1 - w0) / f64::from(pixels))
@@ -388,13 +395,13 @@ pub fn columns_for(
     period: Option<f64>,
 ) -> Result<ColumnMap, DrawError> {
     let h = check_axis(covers, window, pixels)?;
-    if let Some(p) = period {
-        if !p.is_finite() || p <= 0.0 {
-            return Err(DrawError::BadWindow {
-                from: window[0],
-                to: window[1],
-            });
-        }
+    if let Some(p) = period
+        && (!p.is_finite() || p <= 0.0)
+    {
+        return Err(DrawError::BadWindow {
+            from: window[0],
+            to: window[1],
+        });
     }
     let w0 = window[0];
     let mut picks: Vec<Option<usize>> = vec![None; pixels as usize];
@@ -476,7 +483,7 @@ impl RowReduce for MaxReduce {
 }
 
 /// The reductions: built-ins, the caller's additions tried first
-/// (the registry of `crate::layout`, ADR-0006).
+/// (the registry of the section layout, ADR-0006).
 pub struct RowReduces(Vec<Box<dyn RowReduce>>);
 
 impl RowReduces {
@@ -647,7 +654,7 @@ pub fn paint_quads(
                 }
             }
             xs.sort_by(f64::total_cmp);
-            for span in xs.chunks_exact(2) {
+            for span in xs.as_chunks::<2>().0 {
                 let from = (span[0] - 0.5).ceil().clamp(0.0, width as f64) as usize;
                 let to = (span[1] - 0.5).ceil().clamp(0.0, width as f64) as usize;
                 for i in from..to {
@@ -691,7 +698,7 @@ pub fn encode_png(raster: &Raster) -> Result<Vec<u8>, DrawError> {
         limit: MAX_RASTER_PIXELS,
     };
     let mut data = Vec::with_capacity(raster.rgba.len());
-    for p in raster.rgba.chunks_exact(4) {
+    for p in raster.rgba.as_chunks::<4>().0 {
         let c = ColorU8::from_rgba(p[0], p[1], p[2], p[3]).premultiply();
         data.extend_from_slice(&[c.red(), c.green(), c.blue(), c.alpha()]);
     }

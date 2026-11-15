@@ -81,13 +81,20 @@ fn a_degree_per_thirty_metres_is_a_degree_over_thirty_metres() {
     close(convert(3.0, "1/30 dega/m", "dega/m").unwrap(), 0.1, 1e-12);
     // 0.01 dega/ft is a degree per 100 ft: 100 ft = 30.48 m, so a degree per
     // 30 m is 30.48 / 30 times as steep as a degree per 100 ft.
-    close(convert(1.0, "0.01 dega/ft", "1/30 dega/m").unwrap(), 30.0 / 30.48, 1e-12);
+    close(
+        convert(1.0, "0.01 dega/ft", "1/30 dega/m").unwrap(),
+        30.0 / 30.48,
+        1e-12,
+    );
 }
 
 #[test]
 fn a_resistivity_is_not_an_angle_per_length() {
     let refused = convert(1.0, "ohm.m", "rad/m");
-    assert!(matches!(refused, Err(Error::MismatchedUnits { .. })), "{refused:?}");
+    assert!(
+        matches!(refused, Err(Error::MismatchedUnits { .. })),
+        "{refused:?}"
+    );
 }
 
 #[test]
@@ -118,7 +125,10 @@ fn the_reciprocal_refuses_two_resistivities() {
     // Not a conversion of unit (fiche 05 Q11): two resistivities are converted,
     // not inverted.
     let refused = resistivity_reciprocal(1.0, "ohm.m", "ohm.cm");
-    assert!(matches!(refused, Err(Error::MismatchedUnits { .. })), "{refused:?}");
+    assert!(
+        matches!(refused, Err(Error::MismatchedUnits { .. })),
+        "{refused:?}"
+    );
 }
 
 #[test]
@@ -152,7 +162,11 @@ fn every_class_name_is_a_class_of_the_dictionary() {
                 .iter()
                 .any(|kind| kind.quantity_class.as_deref() == Some(dimension.class_name()))
         });
-        assert!(present, "`{}` is no quantity class of the dictionary", dimension.class_name());
+        assert!(
+            present,
+            "`{}` is no quantity class of the dictionary",
+            dimension.class_name()
+        );
     }
 }
 

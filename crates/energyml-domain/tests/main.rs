@@ -58,7 +58,7 @@ mod table_rows;
 mod trg_2_2;
 mod units_families;
 mod uri_follow;
-mod values;
 mod value_count;
+mod values;
 mod well_strata;
 mod wellbore_table;

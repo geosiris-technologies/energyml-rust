@@ -14,6 +14,7 @@ pub struct Positions {
     pub boxes: Vec<PlacedBox>,
     /// One per slot: the centre of a box, the point of a bend.
     pub slot_at: Vec<[f64; 2]>,
+    /// Width and height of the drawing, margins included, user units.
     pub size: [f64; 2],
 }
 

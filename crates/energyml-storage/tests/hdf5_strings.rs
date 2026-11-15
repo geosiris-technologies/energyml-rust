@@ -23,7 +23,10 @@ fn folder(name: &str) -> PathBuf {
 }
 
 fn varlen(values: &[&str]) -> Vec<VarLenUnicode> {
-    values.iter().map(|s| VarLenUnicode::from_str(s).expect("a valid string")).collect()
+    values
+        .iter()
+        .map(|s| VarLenUnicode::from_str(s).expect("a valid string"))
+        .collect()
 }
 
 fn text(values: &[&str]) -> ArrayValues {
@@ -126,7 +129,9 @@ fn strings_are_not_written_and_an_existing_dataset_survives() {
         metadata: ArrayMetadata::new(vec![2], "double"),
         values: ArrayValues::F64(vec![1.0, 2.0]),
     };
-    backend.write(&path, "/t/kept", &numbers).expect("the numbers are written");
+    backend
+        .write(&path, "/t/kept", &numbers)
+        .expect("the numbers are written");
 
     let strings = ArrayData {
         metadata: ArrayMetadata::new(vec![1], "string"),

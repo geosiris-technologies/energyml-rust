@@ -8,10 +8,16 @@ use super::{LayerInput, oriented};
 /// through a layer it does not end in.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Slot {
+    /// A real node, by its index in the input.
     Node(usize),
     /// The bend of `edge` in the layer `step` layers after its first end
     /// (in the direction of the flow); `step` starts at 1.
-    Bend { edge: usize, step: usize },
+    Bend {
+        /// Index of the edge that bends here.
+        edge: usize,
+        /// Layers after the edge's first end, from 1.
+        step: usize,
+    },
 }
 
 /// The layered graph: nodes and bends, which layer each is in, their order in

@@ -89,9 +89,14 @@ fn six_values_for_three_nodes_of_two_components_attach_as_vectors() {
 #[test]
 fn five_values_for_three_nodes_of_two_components_are_refused() {
     let (found, notes) = scene::attributes_for(&point_set(), &[&property(5)], &NoObjects);
-    assert!(found.is_empty(), "five values on three nodes of two must not attach");
     assert!(
-        notes.iter().any(|note| note.contains("has 5 value(s) for 3 point(s) × 2")),
+        found.is_empty(),
+        "five values on three nodes of two must not attach"
+    );
+    assert!(
+        notes
+            .iter()
+            .any(|note| note.contains("has 5 value(s) for 3 point(s) × 2")),
         "{notes:?}"
     );
 }

@@ -134,7 +134,7 @@ pub fn tally(values: &[f64], cols: usize, rule: &CellRule) -> Result<RuleTally, 
     if cols > u32::MAX as usize {
         return Err(TallyRefusal::TooManyColumns { cols });
     }
-    if values.len() % cols != 0 {
+    if !values.len().is_multiple_of(cols) {
         return Err(TallyRefusal::Ragged {
             values: values.len(),
             cols,

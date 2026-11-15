@@ -21,9 +21,9 @@ use energyml_eml_2_0::{
     AbstractProjectedCrs, AbstractVerticalCrs, DataObjectReference, LengthUom, PlaneAngleMeasure,
     PlaneAngleUom, ProjectedCrsEpsgCode, ProjectedUnknownCrs, VerticalCrsEpsgCode, VerticalUnknownCrs,
 };
+use energyml_geometry::geometry;
 use energyml_geometry::scene::{self, Placement};
 use energyml_geometry::well::{self, HeadPortion};
-use energyml_geometry::geometry;
 use energyml_resqml_2_0_1::{
     AbstractDoubleArray, AbstractParametricLineGeometry, AbstractPoint3dArray, DoubleConstantArray,
     DoubleLatticeArray, LocalDepth3dCrs, MdDatum, MdReference, ParametricLineGeometry, Point3d,
@@ -214,7 +214,8 @@ impl ArraySource for Site {
     }
 }
 
-const FRAME_URI: &str = "eml:///resqml20.obj_WellboreFrameRepresentation(ffffffff-ffff-4fff-8fff-ffffffffffff)";
+const FRAME_URI: &str =
+    "eml:///resqml20.obj_WellboreFrameRepresentation(ffffffff-ffff-4fff-8fff-ffffffffffff)";
 
 fn close(a: [f64; 3], b: [f64; 3]) -> bool {
     a.iter().zip(b).all(|(x, y)| (x - y).abs() < 1e-9)
@@ -238,7 +239,10 @@ fn a_line_starting_below_md_0_is_joined_to_the_datum_in_its_own_frame() {
     let head = well::head_portion(&frame, &site)
         .unwrap()
         .expect("MD 35 is below the datum");
-    assert!(matches!(head, HeadPortion::Assumed(_)), "the chord is stated by no object");
+    assert!(
+        matches!(head, HeadPortion::Assumed(_)),
+        "the chord is stated by no object"
+    );
     assert_eq!(head.points().len(), 18, "the datum, then 17 samples of the line");
     // The datum is written in the line's frame: no calculation at all.
     assert_eq!(head.points()[0], [0.0, 0.0, 0.0]);
@@ -303,7 +307,11 @@ fn a_datum_counted_in_feet_is_brought_to_the_lines_unit() {
         trajectory: trajectory(10.0, 10.0, A),
     };
     let head = well::head_portion(&frame(35.0), &site).unwrap().unwrap();
-    assert!(close(head.points()[0], [0.0, 0.0, -3.048]), "{:?}", head.points()[0]);
+    assert!(
+        close(head.points()[0], [0.0, 0.0, -3.048]),
+        "{:?}",
+        head.points()[0]
+    );
 }
 
 /// What cannot be proved the same system is refused, by name: another
@@ -355,9 +363,17 @@ fn a_line_reaching_md_0_needs_no_datum() {
     assert!(head.is_described());
     assert_eq!(head.points().len(), 17);
     // MD 17.5 = (17.5 / 50) * (30, 0, 40).
-    assert!(close(head.points()[8], [10.5, 0.0, 14.0]), "{:?}", head.points()[8]);
+    assert!(
+        close(head.points()[8], [10.5, 0.0, 14.0]),
+        "{:?}",
+        head.points()[8]
+    );
     // MD 35.
-    assert!(close(head.points()[16], [21.0, 0.0, 28.0]), "{:?}", head.points()[16]);
+    assert!(
+        close(head.points()[16], [21.0, 0.0, 28.0]),
+        "{:?}",
+        head.points()[16]
+    );
 }
 
 /// The first node above the start of the line: `frame` places it by extending

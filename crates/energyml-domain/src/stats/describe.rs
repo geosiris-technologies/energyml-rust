@@ -20,7 +20,10 @@
 use super::accumulate::{Accumulator, Moments};
 use super::axes::{AxesAccumulator, AxesRefusal, AxisVariation, Jump, STRONGEST_RATIO, strongest};
 use super::binned::{BinRefusal, Binned, binned_exact, binned_from_sketch};
-use super::modes::{BinInput, DEFAULT_BINS, FIXED, HISTOGRAM_PEAKS, MAX_BINS, Mode, StatMethods, Threshold, ThresholdRefusal, VALLEY};
+use super::modes::{
+    BinInput, DEFAULT_BINS, FIXED, HISTOGRAM_PEAKS, MAX_BINS, Mode, StatMethods, Threshold, ThresholdRefusal,
+    VALLEY,
+};
 use super::quantile::{EXACT_QUANTILE_LIMIT, QuantileMethod, QuantileMethodUsed, Quantiles, quantiles};
 use super::scale::{AUTO_HIGH, AUTO_LOW, Scale, ScaleKind, ScaleRefusal, propose_log};
 use super::sketch::{LogSketch, SKETCH_RELATIVE_ERROR};
@@ -93,7 +96,10 @@ impl ValueChunks for SliceChunks<'_> {
         let Some(end) = end else {
             return Err(crate::Error::Malformed {
                 at: "slab range".to_string(),
-                reason: format!("slabs {first}..{first}+{count} are past the {} the array holds", self.dims[0]),
+                reason: format!(
+                    "slabs {first}..{first}+{count} are past the {} the array holds",
+                    self.dims[0]
+                ),
             });
         };
         Ok(self.values[first as usize * self.slab..end as usize * self.slab].to_vec())
@@ -461,7 +467,11 @@ impl Describer {
     /// Refused: a plan with a bad number of bars, a quantile outside `[0, 1]`,
     /// an unknown method id, or a sampling that does not fit; a source with no
     /// dimension or too many values to index.
-    pub fn new(source: &dyn ValueChunks, plan: Plan, methods: StatMethods) -> Result<Describer, DescribeRefusal> {
+    pub fn new(
+        source: &dyn ValueChunks,
+        plan: Plan,
+        methods: StatMethods,
+    ) -> Result<Describer, DescribeRefusal> {
         let dims = source.dims().to_vec();
         let (total, slab) = sizes(&dims)?;
         if plan.bins == 0 || plan.bins > MAX_BINS {
@@ -470,7 +480,11 @@ impl Describer {
                 limit: MAX_BINS,
             });
         }
-        if let Some(bad) = plan.quantiles.iter().find(|q| !q.is_finite() || **q < 0.0 || **q > 1.0) {
+        if let Some(bad) = plan
+            .quantiles
+            .iter()
+            .find(|q| !q.is_finite() || **q < 0.0 || **q > 1.0)
+        {
             return Err(DescribeRefusal::QuantileOutOfRange { at: *bad });
         }
         let unknown = |family: &'static str, id: &str| DescribeRefusal::UnknownMethod {
@@ -516,7 +530,10 @@ impl Describer {
             ScaleKind::Linear
         };
         let positions: u64 = dims.iter().sum();
-        let axes = if plan.axes && !matches!(plan.sampling, Sampling::Regular { .. }) && positions <= MAX_AXES_POSITIONS {
+        let axes = if plan.axes
+            && !matches!(plan.sampling, Sampling::Regular { .. })
+            && positions <= MAX_AXES_POSITIONS
+        {
             let mut axes_dims = dims.clone();
             axes_dims[0] = end - start;
             match AxesAccumulator::new(&axes_dims, kind) {
@@ -583,7 +600,7 @@ impl Describer {
         let base = self.cursor * self.slab as u64;
         for (offset, value) in values.iter().enumerate() {
             if let Sampling::Regular { step } = self.plan.sampling
-                && (base + offset as u64) % step != 0
+                && !(base + offset as u64).is_multiple_of(step)
             {
                 continue;
             }
@@ -607,14 +624,21 @@ impl Describer {
             // The axes see whole slabs, the null value as a hole.
             let seen: Vec<f64> = values
                 .iter()
-                .map(|v| if self.null_value.is_some_and(|n| *v == n as f64) { f64::NAN } else { *v })
+                .map(|v| {
+                    if self.null_value.is_some_and(|n| *v == n as f64) {
+                        f64::NAN
+                    } else {
+                        *v
+                    }
+                })
                 .collect();
-            axes.push_slabs(self.cursor - self.start, &seen).map_err(|_| DescribeRefusal::ShortRead {
-                first: self.cursor,
-                count,
-                expected,
-                got: values.len() as u64,
-            })?;
+            axes.push_slabs(self.cursor - self.start, &seen)
+                .map_err(|_| DescribeRefusal::ShortRead {
+                    first: self.cursor,
+                    count,
+                    expected,
+                    got: values.len() as u64,
+                })?;
         }
         self.cursor += count;
         Ok(self.progress())
@@ -677,7 +701,10 @@ impl Describer {
                 None => {
                     let (low, high) = match kind {
                         ScaleKind::Linear => (sketch.quantile(AUTO_LOW), sketch.quantile(AUTO_HIGH)),
-                        ScaleKind::Log10 => (sketch.positive_quantile(AUTO_LOW), sketch.positive_quantile(AUTO_HIGH)),
+                        ScaleKind::Log10 => (
+                            sketch.positive_quantile(AUTO_LOW),
+                            sketch.positive_quantile(AUTO_HIGH),
+                        ),
                     };
                     match (low, high) {
                         (Some(low), Some(high)) => Ok((low, high)),
@@ -706,7 +733,10 @@ impl Describer {
             let found = match &retained {
                 Some(values) => quantiles(values, &at, plan.quantile_method).ok(),
                 None => {
-                    let values: Vec<f64> = at.iter().map(|q| sketch.quantile(*q).unwrap_or(f64::NAN)).collect();
+                    let values: Vec<f64> = at
+                        .iter()
+                        .map(|q| sketch.quantile(*q).unwrap_or(f64::NAN))
+                        .collect();
                     Some(Quantiles {
                         at: at.clone(),
                         values,
@@ -814,7 +844,9 @@ impl Describer {
                 });
             }
             if mode_list.len() >= 2 {
-                observations.push(Observation::Modes { count: mode_list.len() });
+                observations.push(Observation::Modes {
+                    count: mode_list.len(),
+                });
             }
             if let Some(id) = &plan.threshold_method
                 && let Some(threshold_method) = methods.threshold_method(id)
@@ -867,7 +899,13 @@ impl Describer {
         }
 
         // The counts.
-        let share = |count: u64| if visited > 0 { count as f64 / visited as f64 } else { 0.0 };
+        let share = |count: u64| {
+            if visited > 0 {
+                count as f64 / visited as f64
+            } else {
+                0.0
+            }
+        };
         if accumulator.non_finite() > 0 {
             observations.push(Observation::NotANumber {
                 count: accumulator.non_finite(),

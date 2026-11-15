@@ -185,7 +185,14 @@ impl Accumulator {
                 theirs: other.null_value,
             });
         }
-        let (finite, mean, m2) = chan(self.finite, self.mean, self.m2, other.finite, other.mean, other.m2);
+        let (finite, mean, m2) = chan(
+            self.finite,
+            self.mean,
+            self.m2,
+            other.finite,
+            other.mean,
+            other.m2,
+        );
         let (positive, log_mean, log_m2) = chan(
             self.positive,
             self.log_mean,

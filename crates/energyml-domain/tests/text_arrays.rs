@@ -14,7 +14,9 @@ use energyml_domain::source::{ArraySource, ObjectSource};
 use energyml_domain::table::Lookup;
 use energyml_domain::values::{self, Values};
 use energyml_eml_2_3 as eml;
-use energyml_storage::{ArrayBuffer, ArrayData, ArrayLocation, ArrayMetadata, ArrayValues, ExternalDataReason};
+use energyml_storage::{
+    ArrayBuffer, ArrayData, ArrayLocation, ArrayMetadata, ArrayValues, ExternalDataReason,
+};
 
 /// Datasets by `(file, path)`, located with the storage's own locator.
 struct Held {
@@ -122,7 +124,10 @@ fn a_string_array_read_as_numbers_is_refused_not_emptied() {
     let held = Held::of(vec![("/s", ArrayValues::F64(vec![1.0, 2.0, 3.0]))]);
     let error = values::read(&array, &held, "column").expect_err("a refusal");
     let message = format!("{error}");
-    assert!(message.contains("string") && message.contains("double"), "{message}");
+    assert!(
+        message.contains("string") && message.contains("double"),
+        "{message}"
+    );
 }
 
 /// Break it: let `numbers` answer `Ok(Vec::new())` for `Text`.
@@ -157,7 +162,9 @@ fn one_unreadable_text_column_does_not_empty_the_table() {
     let name = eml::Column {
         title: Some("name".into()),
         value_count_per_row: 1,
-        values: Some(eml::AbstractValueArray::StringExternalArray(string_array(vec![part("/s", 3)]))),
+        values: Some(eml::AbstractValueArray::StringExternalArray(string_array(vec![
+            part("/s", 3),
+        ]))),
         ..Default::default()
     };
     let table = eml::ColumnBasedTable {

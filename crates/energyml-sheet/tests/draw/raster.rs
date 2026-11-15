@@ -5,9 +5,9 @@
 //! inside), never from a file.
 
 use energyml_sheet::draw::raster::{
-    ColumnMap, GridView, MAX_RASTER_PIXELS, MaxReduce, MeanReduce, MinReduce, NearestReduce, PaintCounts, Raster,
-    RowMap, RowPick, RowReduce, RowReduces, columns_for, interval_covers, node_covers, paint_grid, paint_quads,
-    rows_for,
+    ColumnMap, GridView, MAX_RASTER_PIXELS, MaxReduce, MeanReduce, MinReduce, NearestReduce, PaintCounts,
+    Raster, RowMap, RowPick, RowReduce, RowReduces, columns_for, interval_covers, node_covers, paint_grid,
+    paint_quads, rows_for,
 };
 use energyml_sheet::draw::svg::DrawError;
 
@@ -20,11 +20,17 @@ fn cover_of(positions: &[f64], cap: Option<f64>) -> Vec<Option<energyml_sheet::d
 #[test]
 fn node_covers_reach_half_way_to_each_neighbour() {
     let covers = cover_of(&[0.0, 10.0, 30.0], None);
-    let spans: Vec<(f64, f64, f64)> = covers.iter().map(|c| {
-        let c = c.unwrap();
-        (c.from, c.at, c.to)
-    }).collect();
-    assert_eq!(spans, vec![(-5.0, 0.0, 5.0), (5.0, 10.0, 20.0), (20.0, 30.0, 40.0)]);
+    let spans: Vec<(f64, f64, f64)> = covers
+        .iter()
+        .map(|c| {
+            let c = c.unwrap();
+            (c.from, c.at, c.to)
+        })
+        .collect();
+    assert_eq!(
+        spans,
+        vec![(-5.0, 0.0, 5.0), (5.0, 10.0, 20.0), (20.0, 30.0, 40.0)]
+    );
 }
 
 /// S7: a gap longer than the cap is never bridged. Casser : retirer le
@@ -33,7 +39,11 @@ fn node_covers_reach_half_way_to_each_neighbour() {
 fn a_gap_stays_a_gap() {
     let covers = cover_of(&[0.0, 10.0, 20.0, 200.0, 210.0], Some(15.0));
     let map = rows_for(&covers, [0.0, 220.0], 44).unwrap();
-    assert!(map.picks[7..37].iter().all(|p| *p == RowPick::Blank), "{:?}", &map.picks[7..37]);
+    assert!(
+        map.picks[7..37].iter().all(|p| *p == RowPick::Blank),
+        "{:?}",
+        &map.picks[7..37]
+    );
     assert_eq!(map.picks[43], RowPick::Blank);
     assert_eq!(map.blank, 31);
     assert_eq!(map.picks[37], RowPick::Sample(3));
@@ -68,7 +78,12 @@ fn an_interval_row_covers_its_interval() {
     let map = rows_for(&covers, [0.0, 40.0], 4).unwrap();
     assert_eq!(
         map.picks,
-        vec![RowPick::Sample(0), RowPick::Sample(1), RowPick::Sample(1), RowPick::Sample(1)]
+        vec![
+            RowPick::Sample(0),
+            RowPick::Sample(1),
+            RowPick::Sample(1),
+            RowPick::Sample(1)
+        ]
     );
 }
 
@@ -110,7 +125,11 @@ fn identity_columns(n: usize) -> ColumnMap {
 #[test]
 fn paint_uses_the_given_colour_for_every_cell() {
     let values: Vec<f64> = (0..6).map(f64::from).collect();
-    let grid = GridView { rows: 2, cols: 3, values: &values };
+    let grid = GridView {
+        rows: 2,
+        cols: 3,
+        values: &values,
+    };
     let raster = paint_grid(
         grid,
         &identity_rows(2),
@@ -129,7 +148,11 @@ fn paint_uses_the_given_colour_for_every_cell() {
 #[test]
 fn a_value_the_colour_refuses_is_counted_not_painted() {
     let values = [0.0, 1.0, 2.0, f64::NAN, 4.0, 5.0];
-    let grid = GridView { rows: 2, cols: 3, values: &values };
+    let grid = GridView {
+        rows: 2,
+        cols: 3,
+        values: &values,
+    };
     let raster = paint_grid(
         grid,
         &identity_rows(2),
@@ -192,10 +215,21 @@ fn a_pixel_whose_centre_is_inside_a_quad_is_painted() {
     for y in 0..3 {
         for x in 0..5 {
             let inside = x < 4 && y < 2;
-            assert_eq!(raster.pixel(x, y), Some(if inside { RED } else { [0, 0, 0, 0] }), "({x}, {y})");
+            assert_eq!(
+                raster.pixel(x, y),
+                Some(if inside { RED } else { [0, 0, 0, 0] }),
+                "({x}, {y})"
+            );
         }
     }
-    assert_eq!(counts, PaintCounts { painted: 8, blank: 7, not_coloured: 0 });
+    assert_eq!(
+        counts,
+        PaintCounts {
+            painted: 8,
+            blank: 7,
+            not_coloured: 0
+        }
+    );
     assert_eq!(raster.counts(), counts);
 }
 
@@ -205,7 +239,9 @@ fn the_later_quad_wins_where_two_overlap() {
     let mut raster = Raster::transparent(6, 2).unwrap();
     let first = [[0.0, 0.0], [4.0, 0.0], [4.0, 2.0], [0.0, 2.0]];
     let second = [[2.0, 0.0], [6.0, 0.0], [6.0, 2.0], [2.0, 2.0]];
-    paint_quads(&mut raster, &[first, second], &|k| Some(if k == 0 { RED } else { GREEN }));
+    paint_quads(&mut raster, &[first, second], &|k| {
+        Some(if k == 0 { RED } else { GREEN })
+    });
     assert_eq!(raster.pixel(1, 0), Some(RED));
     assert_eq!(raster.pixel(2, 0), Some(GREEN));
     assert_eq!(raster.pixel(3, 1), Some(GREEN));
@@ -244,7 +280,11 @@ fn a_nearer_cell_without_colour_clears_what_is_behind() {
 fn a_raster_too_large_is_refused() {
     assert_eq!(
         Raster::transparent(4097, 4096),
-        Err(DrawError::Size { width: 4097, height: 4096, limit: MAX_RASTER_PIXELS })
+        Err(DrawError::Size {
+            width: 4097,
+            height: 4096,
+            limit: MAX_RASTER_PIXELS
+        })
     );
     assert!(matches!(Raster::transparent(0, 1), Err(DrawError::Size { .. })));
     assert!(Raster::transparent(4096, 4096).is_ok());
@@ -255,7 +295,11 @@ fn a_raster_too_large_is_refused() {
 fn bytes_of_the_wrong_length_are_refused() {
     assert!(matches!(
         Raster::from_rgba(2, 2, vec![0; 15]),
-        Err(DrawError::RasterBytes { expected: 16, found: 15, .. })
+        Err(DrawError::RasterBytes {
+            expected: 16,
+            found: 15,
+            ..
+        })
     ));
     assert!(Raster::from_rgba(2, 2, vec![0; 16]).is_ok());
 }
@@ -263,24 +307,66 @@ fn bytes_of_the_wrong_length_are_refused() {
 /// Casser : accepter des positions non croissantes.
 #[test]
 fn positions_that_do_not_increase_are_refused_by_name() {
-    assert_eq!(node_covers(&[0.0, 5.0, 5.0], None), Err(DrawError::NotIncreasing { at: 2 }));
+    assert_eq!(
+        node_covers(&[0.0, 5.0, 5.0], None),
+        Err(DrawError::NotIncreasing { at: 2 })
+    );
     assert_eq!(node_covers(&[3.0], None), Err(DrawError::SingleSampleNeedsWidth));
-    assert!(matches!(node_covers(&[0.0, 1.0], Some(0.0)), Err(DrawError::BadGap { .. })));
-    assert!(matches!(rows_for(&[], [1.0, 1.0], 4), Err(DrawError::BadWindow { .. })));
-    assert_eq!(rows_for(&[], [0.0, 1.0], 0), Err(DrawError::NoPixels { pixels: 0 }));
+    assert!(matches!(
+        node_covers(&[0.0, 1.0], Some(0.0)),
+        Err(DrawError::BadGap { .. })
+    ));
+    assert!(matches!(
+        rows_for(&[], [1.0, 1.0], 4),
+        Err(DrawError::BadWindow { .. })
+    ));
+    assert_eq!(
+        rows_for(&[], [0.0, 1.0], 0),
+        Err(DrawError::NoPixels { pixels: 0 })
+    );
 }
 
 /// Casser : ne pas vérifier la longueur des valeurs de la grille.
 #[test]
 fn a_grid_of_the_wrong_size_or_a_pick_out_of_it_is_refused() {
     let values = [0.0; 5];
-    let bad = GridView { rows: 2, cols: 3, values: &values };
-    let refused = paint_grid(bad, &identity_rows(2), &identity_columns(3), &NearestReduce, &|_| None);
-    assert!(matches!(refused, Err(DrawError::GridShape { expected: 6, found: 5, .. })));
+    let bad = GridView {
+        rows: 2,
+        cols: 3,
+        values: &values,
+    };
+    let refused = paint_grid(
+        bad,
+        &identity_rows(2),
+        &identity_columns(3),
+        &NearestReduce,
+        &|_| None,
+    );
+    assert!(matches!(
+        refused,
+        Err(DrawError::GridShape {
+            expected: 6,
+            found: 5,
+            ..
+        })
+    ));
     let values = [0.0; 6];
-    let grid = GridView { rows: 2, cols: 3, values: &values };
-    let refused = paint_grid(grid, &identity_rows(3), &identity_columns(3), &NearestReduce, &|_| None);
-    assert!(matches!(refused, Err(DrawError::PickOutOfRange { axis: "rows", .. })));
+    let grid = GridView {
+        rows: 2,
+        cols: 3,
+        values: &values,
+    };
+    let refused = paint_grid(
+        grid,
+        &identity_rows(3),
+        &identity_columns(3),
+        &NearestReduce,
+        &|_| None,
+    );
+    assert!(matches!(
+        refused,
+        Err(DrawError::PickOutOfRange { axis: "rows", .. })
+    ));
 }
 
 /// W3C PNG Specification (Second Edition), signature and IHDR chunk

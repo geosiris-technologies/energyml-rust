@@ -5,7 +5,9 @@
 //! Data is made here; each expectation cites its source (a published method,
 //! or a decision of the specification) where it is used.
 
-use energyml_domain::stats::axes::{AxesAccumulator, AxesRefusal, Jump, STRONGEST_RATIO, strongest, variation};
+use energyml_domain::stats::axes::{
+    AxesAccumulator, AxesRefusal, Jump, STRONGEST_RATIO, strongest, variation,
+};
 use energyml_domain::stats::binned::{Binned, BinnedFrom, binned_exact};
 use energyml_domain::stats::cells::{CellRule, TallyRefusal, runs, tally};
 use energyml_domain::stats::modes::{
@@ -79,7 +81,10 @@ fn one_cluster_gives_no_threshold() {
     let methods = StatMethods::builtin();
     let modes = methods.mode_method("histogram_peaks").unwrap().modes(&binned);
     assert_eq!(modes.len(), 1);
-    let refused = methods.threshold_method("valley").unwrap().threshold(&binned, &modes);
+    let refused = methods
+        .threshold_method("valley")
+        .unwrap()
+        .threshold(&binned, &modes);
     assert_eq!(refused, Err(ThresholdRefusal::Unimodal { modes: 1 }));
 }
 
@@ -90,7 +95,10 @@ fn a_shallow_valley_is_refused() {
     let methods = StatMethods::builtin();
     let modes = methods.mode_method("histogram_peaks").unwrap().modes(&binned);
     assert_eq!(modes.len(), 2, "{modes:?}");
-    let refused = methods.threshold_method("valley").unwrap().threshold(&binned, &modes);
+    let refused = methods
+        .threshold_method("valley")
+        .unwrap()
+        .threshold(&binned, &modes);
     match refused {
         Err(ThresholdRefusal::Shallow { depth, limit }) => {
             close(depth, 60.0 / 90.0, 1e-12);
@@ -141,7 +149,10 @@ fn otsu_splits_two_flat_blocks_between_them() {
     // One bar alone has nothing to split.
     let alone = histogram(&[0, 7, 0]);
     assert_eq!(
-        StatMethods::builtin().threshold_method("otsu").unwrap().threshold(&alone, &[]),
+        StatMethods::builtin()
+            .threshold_method("otsu")
+            .unwrap()
+            .threshold(&alone, &[]),
         Err(ThresholdRefusal::Empty)
     );
 }
@@ -164,13 +175,19 @@ fn sturges_and_freedman_diaconis_follow_their_formulas() {
         iqr: Some(1.0),
         span: 10.0,
     };
-    assert_eq!(methods.bin_method("freedman_diaconis").unwrap().bins(&fd), Some(50));
+    assert_eq!(
+        methods.bin_method("freedman_diaconis").unwrap().bins(&fd),
+        Some(50)
+    );
     // A zero spread leaves the rule undefined: the caller falls back.
     let flat = BinInput { iqr: Some(0.0), ..fd };
     assert_eq!(methods.bin_method("freedman_diaconis").unwrap().bins(&flat), None);
     // The fixed rule is the request, kept in 1..=MAX_BINS.
     assert_eq!(methods.bin_method("fixed").unwrap().bins(&sturges), Some(24));
-    let none = BinInput { requested: 0, ..sturges };
+    let none = BinInput {
+        requested: 0,
+        ..sturges
+    };
     assert_eq!(methods.bin_method("fixed").unwrap().bins(&none), Some(1));
 }
 
@@ -272,7 +289,13 @@ fn steps_carry_across_slabs_pushed_in_two_calls() {
 fn slabs_out_of_order_are_refused() {
     let mut accumulator = AxesAccumulator::new(&[6, 3], ScaleKind::Linear).unwrap();
     let refused = accumulator.push_slabs(2, &[0.0; 3]);
-    assert_eq!(refused, Err(AxesRefusal::NotContiguous { expected: 0, first: 2 }));
+    assert_eq!(
+        refused,
+        Err(AxesRefusal::NotContiguous {
+            expected: 0,
+            first: 2
+        })
+    );
     assert_eq!(
         accumulator.push_slabs(0, &[0.0; 4]),
         Err(AxesRefusal::NotWholeSlabs { values: 4, slab: 3 })
@@ -340,8 +363,13 @@ fn pairs_with_a_hole_are_counted_and_left_out() {
 fn the_ratio_rule_counts_ratios_below_the_tolerance() {
     // S10: only the counting is here; the rule itself belongs to the layer
     // that checks sister properties.
-    let mut pairs =
-        PairAccumulator::new(linear(0.0, 20.0), linear(0.0, 20.0), 4, Some(CellRule::Below(0.95))).unwrap();
+    let mut pairs = PairAccumulator::new(
+        linear(0.0, 20.0),
+        linear(0.0, 20.0),
+        4,
+        Some(CellRule::Below(0.95)),
+    )
+    .unwrap();
     pairs
         .push(&[10.0, 10.0, 10.0, 10.0, 0.0], &[9.0, 9.6, 10.0, 12.0, 5.0])
         .unwrap();
@@ -415,7 +443,12 @@ fn pairs_of_two_lengths_are_refused() {
         Err(PairRefusal::LengthsDiffer { x: 2, y: 1 })
     );
     assert!(matches!(
-        PairAccumulator::new(linear(0.0, 1.0), linear(0.0, 1.0), 4, Some(CellRule::Below(f64::NAN))),
+        PairAccumulator::new(
+            linear(0.0, 1.0),
+            linear(0.0, 1.0),
+            4,
+            Some(CellRule::Below(f64::NAN))
+        ),
         Err(PairRefusal::Rule(TallyRefusal::ThresholdNotFinite { .. }))
     ));
 }
@@ -438,7 +471,12 @@ fn the_tally_counts_per_row() {
 
 #[test]
 fn runs_join_consecutive_rows_over_the_share() {
-    let counted = tally(&[0.0, 0.0, 0.0, 0.0, 5.0, 5.0, 0.0, 0.0], 2, &CellRule::Below(1.0)).unwrap();
+    let counted = tally(
+        &[0.0, 0.0, 0.0, 0.0, 5.0, 5.0, 0.0, 0.0],
+        2,
+        &CellRule::Below(1.0),
+    )
+    .unwrap();
     assert_eq!(counted.matched_per_row, vec![2, 2, 0, 2]);
     assert_eq!(runs(&counted, 1.0).unwrap(), vec![0..2, 3..4]);
     // At half the cells, the same.
@@ -448,7 +486,12 @@ fn runs_join_consecutive_rows_over_the_share() {
 #[test]
 fn a_row_of_holes_is_never_a_run() {
     // A hole is not an alert: the row of NaN between two alerts splits the run.
-    let counted = tally(&[0.0, 0.0, f64::NAN, f64::NAN, 0.0, 0.0], 2, &CellRule::Below(1.0)).unwrap();
+    let counted = tally(
+        &[0.0, 0.0, f64::NAN, f64::NAN, 0.0, 0.0],
+        2,
+        &CellRule::Below(1.0),
+    )
+    .unwrap();
     assert_eq!(counted.present_per_row, vec![2, 0, 2]);
     assert_eq!(runs(&counted, 1.0).unwrap(), vec![0..1, 2..3]);
 }
@@ -459,14 +502,23 @@ fn a_ragged_matrix_is_refused() {
         tally(&[1.0; 5], 2, &CellRule::Below(1.0)),
         Err(TallyRefusal::Ragged { values: 5, cols: 2 })
     );
-    assert_eq!(tally(&[1.0; 4], 0, &CellRule::Below(1.0)), Err(TallyRefusal::NoColumn));
+    assert_eq!(
+        tally(&[1.0; 4], 0, &CellRule::Below(1.0)),
+        Err(TallyRefusal::NoColumn)
+    );
     assert!(matches!(
         tally(&[1.0; 4], 2, &CellRule::Outside { lo: 5.0, hi: 1.0 }),
         Err(TallyRefusal::BoundsReversed { .. })
     ));
     let counted = tally(&[1.0; 4], 2, &CellRule::Above(0.0)).unwrap();
-    assert_eq!(runs(&counted, 0.0), Err(TallyRefusal::ShareOutOfRange { share: 0.0 }));
-    assert_eq!(runs(&counted, 1.5), Err(TallyRefusal::ShareOutOfRange { share: 1.5 }));
+    assert_eq!(
+        runs(&counted, 0.0),
+        Err(TallyRefusal::ShareOutOfRange { share: 0.0 })
+    );
+    assert_eq!(
+        runs(&counted, 1.5),
+        Err(TallyRefusal::ShareOutOfRange { share: 1.5 })
+    );
 }
 
 #[test]

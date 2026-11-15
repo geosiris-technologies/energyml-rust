@@ -217,11 +217,8 @@ pub fn sweep(points: &[Point], tube: &Tube) -> Result<Swept> {
             // Re-orthogonalised at every station: the transported normal drifts
             // off the plane by a rounding error each time, and a hundred
             // stations of drift is a visibly elliptical tube.
-            normal = unit(sub(
-                normal,
-                scale(tangents[index], dot(normal, tangents[index])),
-            ))
-            .unwrap_or_else(|| any_perpendicular(tangents[index]));
+            normal = unit(sub(normal, scale(tangents[index], dot(normal, tangents[index]))))
+                .unwrap_or_else(|| any_perpendicular(tangents[index]));
         }
         let binormal = cross(tangents[index], normal);
         for side in 0..tube.sides {
