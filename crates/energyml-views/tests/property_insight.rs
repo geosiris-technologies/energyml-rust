@@ -185,7 +185,11 @@ fn every_property_without_a_lookup_table_is_offered_and_nothing_else() {
     let (opened, uris) = world(vec![property(RH, "Rh", vec![1], spread(), None)]);
     let offers = kinds().offers(&opened.index);
     let objects: Vec<&str> = offers.iter().map(|offer| offer.objects[0].as_str()).collect();
-    assert_eq!(objects, vec![uris[0].as_str()], "the frame and the trajectory are not properties");
+    assert_eq!(
+        objects,
+        vec![uris[0].as_str()],
+        "the frame and the trajectory are not properties"
+    );
     assert!(offers.iter().all(|offer| offer.missing.is_empty()));
     // Break it: offer every object of the package.
 }
@@ -220,7 +224,10 @@ fn the_height_of_each_bar_is_the_count_of_the_door() {
         );
     }
     let tallest = found.iter().map(|bar| bar.rect.h).fold(0.0, f64::max);
-    assert!((tallest - plot.h).abs() < 1.0e-9, "the tallest bar fills the frame");
+    assert!(
+        (tallest - plot.h).abs() < 1.0e-9,
+        "the tallest bar fills the frame"
+    );
     // Break it: scale the bars by the number of values instead of by the tallest count, or take the count of a
     // bin from the values read twice.
 }
@@ -245,7 +252,10 @@ fn a_property_spanning_decades_is_drawn_in_log_and_a_narrow_one_in_linear() {
         "{}",
         labels(&wide)
     );
-    assert!(labels(&wide).contains("logarithmic scale"), "the axis title says so");
+    assert!(
+        labels(&wide).contains("logarithmic scale"),
+        "the axis title says so"
+    );
     assert!(
         labels(&narrow).contains("histogram on a linear scale"),
         "{}",
@@ -263,7 +273,10 @@ fn a_property_spanning_decades_is_drawn_in_log_and_a_narrow_one_in_linear() {
     // Asking linear changes it, the observation staying a fact.
     let forced = drawn(&opened, &ask(&uris[0]).set("scale", json!("linear"))).list;
     assert!(labels(&forced).contains("histogram on a linear scale"));
-    assert!(labels(&forced).contains("a logarithmic scale is proposed"), "the proposal is still said");
+    assert!(
+        labels(&forced).contains("a logarithmic scale is proposed"),
+        "the proposal is still said"
+    );
     // Break it: decide the scale on the kind of the property instead of the decades its values span.
 }
 
@@ -308,7 +321,10 @@ fn the_colour_of_a_bar_is_that_of_its_middle_value_through_the_one_door() {
     );
     // A palette that does not exist is a refusal by its name, not a grey histogram.
     let refusal = refused(&opened, &ask(&uris[0]).set("palette", json!("Nope")));
-    assert!(matches!(&refusal, ViewRefusal::Palette { asked, .. } if asked == "Nope"), "{refusal}");
+    assert!(
+        matches!(&refusal, ViewRefusal::Palette { asked, .. } if asked == "Nope"),
+        "{refusal}"
+    );
     // Break it: paint every bar at the left edge of its bin, and the first colours move.
 }
 
@@ -355,7 +371,10 @@ fn the_modes_and_the_threshold_of_the_door_are_marked_where_it_puts_them() {
     };
     assert!((x - (plot.x + fraction * plot.w)).abs() < 1.0e-9);
     // The threshold lies between the two modes on the page too.
-    let (low, high) = (door.modes[0].at.min(door.modes[1].at), door.modes[0].at.max(door.modes[1].at));
+    let (low, high) = (
+        door.modes[0].at.min(door.modes[1].at),
+        door.modes[0].at.max(door.modes[1].at),
+    );
     assert!(low < threshold.at && threshold.at < high);
     // Break it: put the mode marks at the bar's index times the bar width of a linear axis.
 }
@@ -372,7 +391,9 @@ fn the_density_has_the_cells_the_pairs_fill_and_a_diagonal() {
 
     // The sister was found by its direction facet, not named.
     assert!(
-        texts(&list).iter().any(|text| text.contains("told apart by their direction facet")),
+        texts(&list)
+            .iter()
+            .any(|text| text.contains("told apart by their direction facet")),
         "{:?}",
         texts(&list)
     );
@@ -386,21 +407,35 @@ fn the_density_has_the_cells_the_pairs_fill_and_a_diagonal() {
         Item::Image { raster, .. } => raster.clone(),
         other => panic!("the density is an image: {other:?}"),
     };
-    assert_eq!((raster.width(), raster.height()), (DENSITY_SIZE as u32, DENSITY_SIZE as u32));
+    assert_eq!(
+        (raster.width(), raster.height()),
+        (DENSITY_SIZE as u32, DENSITY_SIZE as u32)
+    );
 
     // The door, on the same pairs and the scales each property is described with.
     let dims = [FRAME_NODES as u64];
-    let x = describe(&rh, &dims, Plan::default()).expect("a description").scale.expect("a scale");
-    let y = describe(&rv, &dims, Plan::default()).expect("a description").scale.expect("a scale");
+    let x = describe(&rh, &dims, Plan::default())
+        .expect("a description")
+        .scale
+        .expect("a scale");
+    let y = describe(&rv, &dims, Plan::default())
+        .expect("a description")
+        .scale
+        .expect("a scale");
     let mut pairs = PairAccumulator::new(x, y, DENSITY_SIZE, None).expect("an accumulator");
     pairs.push(&rh, &rv).expect("pairs");
     let summary = pairs.finish();
     let filled = summary.density.counts.iter().filter(|count| **count > 0).count();
     assert!(filled >= 2, "the pairs spread over cells");
     let painted = raster.rgba().chunks(4).filter(|pixel| pixel[3] > 0).count();
-    assert_eq!(painted, filled, "a pixel is painted exactly where a cell holds a pair");
+    assert_eq!(
+        painted, filled,
+        "a pixel is painted exactly where a cell holds a pair"
+    );
     assert!(
-        density.data.contains(&("pairs".to_string(), summary.pairs.to_string())),
+        density
+            .data
+            .contains(&("pairs".to_string(), summary.pairs.to_string())),
         "{:?}",
         density.data
     );
@@ -441,7 +476,10 @@ fn the_lowest_pairs_are_at_the_bottom_left_of_the_picture() {
     let (left_x, left_y) = *painted.iter().min_by_key(|(x, _)| *x).expect("a pixel");
     let (right_x, right_y) = *painted.iter().max_by_key(|(x, _)| *x).expect("a pixel");
     assert!(left_x < right_x);
-    assert!(left_y > right_y, "the left pixel is lower on the page ({left_y} against {right_y})");
+    assert!(
+        left_y > right_y,
+        "the left pixel is lower on the page ({left_y} against {right_y})"
+    );
     // Break it: write the grid's rows top down, and the line of pixels falls from the top left.
 }
 
@@ -465,8 +503,14 @@ fn the_share_of_pairs_under_a_ratio_is_the_door_s_count() {
 
     // The door: 2 of 20 by the cell rule, counted again here.
     let dims = [FRAME_NODES as u64];
-    let x = describe(&rh, &dims, Plan::default()).expect("a description").scale.expect("a scale");
-    let y = describe(&rv, &dims, Plan::default()).expect("a description").scale.expect("a scale");
+    let x = describe(&rh, &dims, Plan::default())
+        .expect("a description")
+        .scale
+        .expect("a scale");
+    let y = describe(&rv, &dims, Plan::default())
+        .expect("a description")
+        .scale
+        .expect("a scale");
     let mut pairs = PairAccumulator::new(
         x,
         y,
@@ -493,8 +537,14 @@ fn the_axis_that_varies_most_is_marked_and_the_bars_follow_the_door() {
     let list = drawn(&opened, &ask(&uris[0]).set("scale", json!("linear"))).list;
 
     let door = variation(&values, &[FRAME_NODES as u64, 3], ScaleKind::Linear).expect("a variation");
-    let steps: Vec<f64> = door.iter().map(|axis| axis.mean_abs_step.expect("a step")).collect();
-    assert!(steps[0] > steps[1], "the door says the nodes vary more than the components");
+    let steps: Vec<f64> = door
+        .iter()
+        .map(|axis| axis.mean_abs_step.expect("a step"))
+        .collect();
+    assert!(
+        steps[0] > steps[1],
+        "the door says the nodes vary more than the components"
+    );
 
     let layer = list.layer("variation").expect("the variation block");
     assert_eq!(layer.elements.len(), 2, "one bar per axis");
@@ -516,10 +566,19 @@ fn the_axis_that_varies_most_is_marked_and_the_bars_follow_the_door() {
     let strongest: Vec<bool> = layer
         .elements
         .iter()
-        .map(|element| element.data.contains(&("strongest".to_string(), "true".to_string())))
+        .map(|element| {
+            element
+                .data
+                .contains(&("strongest".to_string(), "true".to_string()))
+        })
         .collect();
     assert_eq!(strongest, vec![true, false], "the nodes axis is the strongest");
-    assert!(layer.elements[0].key.as_deref().is_some_and(|key| key.ends_with("#axis=0")));
+    assert!(
+        layer.elements[0]
+            .key
+            .as_deref()
+            .is_some_and(|key| key.ends_with("#axis=0"))
+    );
     // Break it: mark the longest label instead of the door's strongest axis, or give every bar the same width.
 }
 
@@ -541,7 +600,9 @@ fn a_property_the_description_refuses_keeps_its_facts_and_says_why() {
         "nothing is drawn from values that were not described"
     );
     assert!(
-        texts(&result.list).iter().any(|text| text.contains("3 value(s) per element") || text.contains("[3]")),
+        texts(&result.list)
+            .iter()
+            .any(|text| text.contains("3 value(s) per element") || text.contains("[3]")),
         "{:?}",
         texts(&result.list)
     );
@@ -568,7 +629,9 @@ fn constant_values_have_no_histogram_and_the_rest_is_drawn() {
     assert!(has_note(&result, "no-histogram"), "{:?}", result.notes);
     assert!(!has_layer(&result.list, "distribution"));
     assert!(
-        texts(&result.list).iter().any(|text| text.contains("from 5 to 5")),
+        texts(&result.list)
+            .iter()
+            .any(|text| text.contains("from 5 to 5")),
         "the moments are still written"
     );
     // Break it: draw one bar for a constant.
@@ -589,7 +652,10 @@ fn no_sister_is_a_note_and_a_sister_by_hand_is_checked_by_the_door() {
     ]);
     let alone = drawn(&opened, &ask(&uris[0]));
     assert!(has_note(&alone, "no-sibling"), "{:?}", alone.notes);
-    assert!(has_layer(&alone.list, "distribution"), "the other blocks are drawn");
+    assert!(
+        has_layer(&alone.list, "distribution"),
+        "the other blocks are drawn"
+    );
 
     let chosen = drawn(&opened, &ask(&uris[0]).set("sibling", json!(uris[1])));
     assert!(has_note(&chosen, "relation-not-drawn"), "{:?}", chosen.notes);
@@ -611,9 +677,15 @@ fn no_sister_is_a_note_and_a_sister_by_hand_is_checked_by_the_door() {
 fn a_bad_setting_is_refused_by_its_name() {
     let (opened, uris) = world(vec![property(RH, "Rh", vec![1], spread(), None)]);
     let bad = refused(&opened, &ask(&uris[0]).set("component", json!({"nope": 1})));
-    assert!(matches!(&bad, ViewRefusal::BadSetting { name, .. } if name == "component"), "{bad}");
+    assert!(
+        matches!(&bad, ViewRefusal::BadSetting { name, .. } if name == "component"),
+        "{bad}"
+    );
     let bins = refused(&opened, &ask(&uris[0]).set("bins", json!(0)));
-    assert!(matches!(&bins, ViewRefusal::BadSetting { name, .. } if name == "bins"), "{bins}");
+    assert!(
+        matches!(&bins, ViewRefusal::BadSetting { name, .. } if name == "bins"),
+        "{bins}"
+    );
     // The number of bars asked is the number drawn.
     let eight = drawn(&opened, &ask(&uris[0]).set("bins", json!(8))).list;
     assert_eq!(bars(&eight).len(), 8);
@@ -626,7 +698,10 @@ fn every_bar_and_axis_is_keyed_by_the_full_uri() {
     let (opened, uris) = world(vec![property(RH, "Rh", vec![3], values, None)]);
     let list = drawn(&opened, &ask(&uris[0]).set("scale", json!("linear"))).list;
     let keys = list.keys();
-    assert!(keys.iter().any(|key| *key == format!("{}#bin=0", uris[0])), "{keys:?}");
+    assert!(
+        keys.iter().any(|key| *key == format!("{}#bin=0", uris[0])),
+        "{keys:?}"
+    );
     assert!(keys.iter().any(|key| *key == format!("{}#axis=0", uris[0])));
     assert!(
         keys.iter().all(|key| key.starts_with(uris[0].as_str())),
@@ -645,7 +720,11 @@ fn a_drawing_is_made_again_from_its_own_metadata() {
     ]);
     let cx = opened.context(&NO_MAPS);
     let first = draw_svg(&kinds(), &ask(&uris[0]).set("bins", json!(12)), &cx).expect("drawn");
-    assert_eq!(first.ask.settings.get("scale"), Some(&json!("auto")), "the defaults are in the file");
+    assert_eq!(
+        first.ask.settings.get("scale"),
+        Some(&json!("auto")),
+        "the defaults are in the file"
+    );
     assert_eq!(first.ask.settings.get("bins"), Some(&json!(12)));
     let again = redraw(&kinds(), &first.svg, &cx).expect("drawn again");
     assert_eq!(first.svg, again.svg);

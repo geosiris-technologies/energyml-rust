@@ -18,15 +18,17 @@ use std::sync::Arc;
 
 use energyml_domain::package_index::{NodeState, PackageIndex};
 use energyml_domain::palettes::Reading;
-use energyml_domain::property::chunks::{AxisId, ChunkSelection, PairWalk, PropertyChunks, keep_ordered_axes};
+use energyml_domain::property::chunks::{
+    AxisId, ChunkSelection, PairWalk, PropertyChunks, keep_ordered_axes,
+};
 use energyml_domain::property::kinship::Kinship;
-use energyml_domain::property::shape::{ComponentPick, ElementAxes, Reduction, element_axes};
+use energyml_domain::property::shape::{ComponentPick, ElementAxes, element_axes};
 use energyml_domain::property::{self, Property, PropertyKindRef};
 use energyml_domain::source::ArraySource;
 use energyml_domain::stats::binned::Binned;
 use energyml_domain::stats::cells::CellRule;
 use energyml_domain::stats::describe::{
-    Describer, Description, DescribeRefusal, Observation, Plan, ScaleChoice, ValueChunks,
+    DescribeRefusal, Describer, Description, Observation, Plan, ScaleChoice, ValueChunks,
 };
 use energyml_domain::stats::modes::{DEFAULT_BINS, MAX_BINS, StatMethods, ThresholdMeasure};
 use energyml_domain::stats::pairs::{DENSITY_SIZE, PairSummary};
@@ -133,11 +135,7 @@ impl ViewKind for PropertyInsight {
             .filter(|node| {
                 node.state == NodeState::Present && TYPES.contains(&local_type(&node.qualified_type))
             })
-            .filter(|node| {
-                index
-                    .sheet(&node.uri)
-                    .is_some_and(|sheet| sheet.lookup.is_none())
-            })
+            .filter(|node| index.sheet(&node.uri).is_some_and(|sheet| sheet.lookup.is_none()))
             .map(|node| Offer {
                 view: ID,
                 objects: vec![node.uri.to_string()],
@@ -316,7 +314,15 @@ impl ViewKind for PropertyInsight {
             }
 
             // Block 3: the relation with a sister.
-            match relation_of(uri, described, &plan, &selection, rule, cx, settings.text("sibling")) {
+            match relation_of(
+                uri,
+                described,
+                &plan,
+                &selection,
+                rule,
+                cx,
+                settings.text("sibling"),
+            ) {
                 Ok(Some(relation)) => {
                     let density_colours = value_colours(
                         cx,
@@ -496,49 +502,10 @@ fn ratio_rule(below: Option<f64>) -> Result<Option<CellRule>, ViewRefusal> {
 
 /// The components asked for: `"all"`, `{"at": [..]}`, `{"along": axis, "at": [..]}` or `{"reduce": id}`.
 fn pick_of(value: Option<&Value>) -> Result<ComponentPick, ViewRefusal> {
-    let bad = |why: String| ViewRefusal::BadSetting {
-        name: "component".to_string(),
-        why,
-    };
-    let Some(value) = value else {
-        return Ok(ComponentPick::All);
-    };
-    if value.as_str() == Some("all") {
-        return Ok(ComponentPick::All);
+    match value {
+        None => Ok(ComponentPick::All),
+        Some(value) => crate::pick::component_pick("component", value, 0),
     }
-    let Some(map) = value.as_object() else {
-        return Err(bad("expected \"all\" or an object".to_string()));
-    };
-    let indices = |key: &str| -> Result<Option<Vec<usize>>, ViewRefusal> {
-        match map.get(key) {
-            None => Ok(None),
-            Some(list) => list
-                .as_array()
-                .and_then(|items| {
-                    items
-                        .iter()
-                        .map(|item| item.as_u64().map(|n| n as usize))
-                        .collect::<Option<Vec<usize>>>()
-                })
-                .map(Some)
-                .ok_or_else(|| bad(format!("`{key}` is a list of whole numbers"))),
-        }
-    };
-    if let Some(axis) = map.get("along") {
-        let axis = axis
-            .as_u64()
-            .ok_or_else(|| bad("`along` is the number of a dimension".to_string()))? as usize;
-        let at = indices("at")?.unwrap_or_default();
-        return Ok(ComponentPick::Along { axis, at });
-    }
-    if let Some(at) = indices("at")? {
-        return Ok(ComponentPick::At(at));
-    }
-    if let Some(id) = map.get("reduce").and_then(Value::as_str) {
-        let how = Reduction::from_id(id).ok_or_else(|| bad(format!("no reduction `{id}`")))?;
-        return Ok(ComponentPick::Reduce(how));
-    }
-    Err(bad("expected `along`, `at` or `reduce`".to_string()))
 }
 
 /// What a sister adds: the pairs, the two scales, and how it is called.
@@ -549,7 +516,6 @@ struct Relation {
     title: String,
     unit: Option<String>,
     kinship: Option<Kinship>,
-    sibling_uri: String,
 }
 
 /// The sister to compare with, and the pairs of the two properties; `Ok(None)` when there is none to compare with.
@@ -626,7 +592,6 @@ fn relation_of<'a>(
         title,
         unit: property.uom.clone(),
         kinship,
-        sibling_uri,
     }))
 }
 
@@ -873,10 +838,7 @@ fn facts_of(
         );
     }
     for (at, observation) in description.observations.iter().enumerate() {
-        fact(
-            &format!("observation-{at}"),
-            observation_words(observation, axis),
-        );
+        fact(&format!("observation-{at}"), observation_words(observation, axis));
     }
     facts
 }
@@ -1302,7 +1264,11 @@ fn variation_layer(
                         h: AXIS_ROW - 8.0,
                     },
                     corner: 0.0,
-                    fill: Some(Paint::Solid(if marked { style::HIGHLIGHT } else { style::SUBJECT })),
+                    fill: Some(Paint::Solid(if marked {
+                        style::HIGHLIGHT
+                    } else {
+                        style::SUBJECT
+                    })),
                     stroke: None,
                 });
                 if variation.constant {
@@ -1315,12 +1281,18 @@ fn variation_layer(
         };
         items.push(style::label_item(
             [
-                bar_x + variation.mean_abs_step.map_or(0.0, |step| {
-                    if longest > 0.0 { step / longest * room } else { 0.0 }
-                }) + 6.0,
+                bar_x
+                    + variation.mean_abs_step.map_or(0.0, |step| {
+                        if longest > 0.0 { step / longest * room } else { 0.0 }
+                    })
+                    + 6.0,
                 y + 14.0,
             ],
-            if marked { format!("{written}  (strongest)") } else { written },
+            if marked {
+                format!("{written}  (strongest)")
+            } else {
+                written
+            },
             style::text(style::SMALL, style::MUTED, Anchor::Start),
         ));
         let mut element = Element::keyed(format!("{uri}#axis={}", variation.axis), "axis", items);

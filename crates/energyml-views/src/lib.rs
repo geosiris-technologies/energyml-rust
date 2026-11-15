@@ -24,6 +24,7 @@
 //! | [`along_well`] | the geosteering section: a vertical section along a well, with the curtain of a property, the boundaries, the horizons and the tops |
 //! | [`image_track`] | a property with several values per element on a wellbore frame as an image: depth down, a plane of the matrix across, the value as a colour |
 //! | [`md_coverage`] | which objects cover which measured depths of a well: a band per MD reference, a bar per object, hatching for an extent inherited through a link, a cross for a reversed interval |
+//! | [`property_insight`] | what a property holds: its form, its distribution, its relation with a sibling, its variation along each axis |
 //! | [`provenance_graph`] | where each object comes from: activities, files, carriers; the whole package or the graph around one object |
 //! | [`survey_qc`] | the control of a directional survey: plan and section, inclination, azimuth and dogleg against MD, the gap with a trajectory; rejected stations and contradicted stated values marked |
 //! | [`table_curve`] | the curves of a table (KrPc, PVT): a curve per pair of numeric columns, a legend per column with its unit, a second ordinate axis when two families of units cross |
@@ -39,7 +40,9 @@ pub mod graph;
 pub mod image_track;
 pub mod kind;
 pub mod md_coverage;
+pub mod pick;
 pub mod picture;
+pub mod property_insight;
 pub mod provenance_graph;
 pub mod refusal;
 pub mod setting;

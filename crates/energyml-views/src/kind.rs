@@ -141,6 +141,7 @@ impl ViewKinds {
                 Box::new(crate::along_well::AlongWell),
                 Box::new(crate::image_track::ImageTrack),
                 Box::new(crate::md_coverage::MdCoverage),
+                Box::new(crate::property_insight::PropertyInsight),
                 Box::new(crate::provenance_graph::ProvenanceView),
                 Box::new(crate::survey_qc::SurveyQc),
                 Box::new(crate::table_curve::TableCurve),

@@ -6,6 +6,7 @@ mod fixtures;
 mod image_track;
 mod md_coverage;
 mod picture;
+mod property_insight;
 mod provenance_graph;
 mod registry;
 mod settings;
