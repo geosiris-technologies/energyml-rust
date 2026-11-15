@@ -5,6 +5,7 @@
 # Using it
 
 - [The library](library.md)
+- [The shape of a property](property-shape.md)
 - [Statistics, scales and measured depth](statistics-and-depth.md)
 - [The command line](cli.md)
 - [Python](python.md)
@@ -66,3 +67,5 @@
 - [0027 Gaps, seams, scales and quantiles](adr/0027-gaps-seams-scales-and-quantiles.md)
 - [0028 One drawing for every view](adr/0028-one-drawing-for-every-view.md)
 - [0029 A link to a table is one qualifier facet](adr/0029-convention-b-links-by-qualifier-facet.md)
+
+- [0042 What a property says of itself](adr/0042-what-a-property-says-of-itself.md)

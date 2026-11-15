@@ -40,6 +40,7 @@ mod package_index_versions;
 mod prefetch;
 mod property;
 mod property_counts_in_check;
+mod property_describe;
 mod property_kind;
 mod property_shape;
 mod read_block;

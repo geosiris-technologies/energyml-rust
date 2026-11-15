@@ -257,6 +257,17 @@ whatever the release: RESQML 2.0.1 writes the kind in `Facet` and the value in
 `Extension` when it is the producer's own
 ([ADR 0024](adr/0024-facets-read-in-every-version.md)).
 
+**Reading a block.** `values::read_block` reads a block of an array by its
+**stored** dimensions (`start` and `count` per dimension) and not the rest; a
+source that hands back a different number of values than the block holds is
+refused by name. `values::element_block` and `values::slab_block` compute the
+block for elements, or for some slabs of the slowest free dimension (a time step
+of a series, one realization), from the shape of the property: they are the one
+block arithmetic, and the description of a property by slabs
+(`property::chunks::PropertyChunks`) reads through them. The page
+[The shape of a property](property-shape.md) gives the shape, the choice of a
+component and the description of a property.
+
 ## From a representation to something you can draw
 
 ```rust

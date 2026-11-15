@@ -40,5 +40,7 @@ new record that supersedes the old one, which keeps its text and a status line.
 | [0028](0028-one-drawing-for-every-view.md) | One drawing for every view: `draw` knows no format, one display list, one rule for graduations, a PNG is always the SVG rasterised |
 | [0029](0029-convention-b-links-by-qualifier-facet.md) | A link to a table is one `qualifier` facet holding the uri of the table, read once; the axes of a property come from the table it names |
 
+| [0042](0042-what-a-property-says-of-itself.md) | What a property says of itself: dimensions reduced together, scalars for a wrong declared count, facets of 2.0.1 outside the 2.3 list, the `synthetic` mark, observations beside those of the values |
+
 Decisions about the ETP protocol implementation are recorded in the
 [`retp`](https://github.com/geosiris-technologies/retp) repository.
