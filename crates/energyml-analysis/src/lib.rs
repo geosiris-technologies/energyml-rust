@@ -34,6 +34,7 @@ pub use energyml_geostat::{
     rbf, resample, triangulate, variogram,
 };
 
+pub mod combine;
 pub mod fake;
 pub mod fault_sticks;
 pub mod fault_throw;

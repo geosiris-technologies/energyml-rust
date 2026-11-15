@@ -22,6 +22,9 @@ energyml-geometry = { path = "../energyml-geometry", version = "0.3.0" }
 # The domain-neutral algorithms (interpolation, meshing, iso-contours), re-exported
 # from `lib.rs` so `energyml_analysis::kriging::…` and the other paths keep resolving.
 energyml-geostat = { path = "../energyml-geostat", version = "0.3.0" }
+# `stats::CellRule` and `tally`, `units::convert`: the one count and the one
+# conversion.
+energyml-domain = { path = "../energyml-domain", version = "0.3.0" }
 thiserror = "2.0"
 
 # docs.rs builds on Linux with no native HDF5: every feature builds there.
