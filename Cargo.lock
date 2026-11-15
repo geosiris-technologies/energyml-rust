@@ -419,6 +419,7 @@ dependencies = [
  "energyml-schemas",
  "energyml-section",
  "energyml-storage",
+ "energyml-views",
  "serde_json",
  "ureq",
 ]
@@ -788,6 +789,27 @@ dependencies = [
  "energyml-witsml-2-0",
  "serde_json",
  "zip",
+]
+
+[[package]]
+name = "energyml-views"
+version = "0.3.0"
+dependencies = [
+ "energyml-cache",
+ "energyml-core",
+ "energyml-domain",
+ "energyml-eml-2-0",
+ "energyml-eml-2-3",
+ "energyml-geometry",
+ "energyml-resqml-2-0-1",
+ "energyml-resqml-2-2",
+ "energyml-schemas",
+ "energyml-section",
+ "energyml-sheet",
+ "energyml-storage",
+ "serde",
+ "serde_json",
+ "thiserror",
 ]
 
 [[package]]

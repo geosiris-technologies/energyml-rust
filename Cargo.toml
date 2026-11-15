@@ -20,6 +20,7 @@ members = [
     "crates/energyml-section",
     "crates/energyml-analysis",
     "crates/energyml-geostat",
+    "crates/energyml-views",
     "crates/energyml-build",
     "crates/energyml-build-derive",
     "crates/energyml-providers",

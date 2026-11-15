@@ -14,6 +14,7 @@
 - [Section view](section-view.md)
 - [Around the well](around-the-well.md)
 - [The geosteering section](along-well-section.md)
+- [Views as pictures](views.md)
 - [Provenance](provenance.md)
 - [The MCP server](mcp.md)
 - [Well sheet](well-sheet.md)
@@ -84,3 +85,4 @@
 - [0040 The members of a wellbore](adr/0040-the-members-of-a-wellbore.md)
 - [0041 Declared conventions, and the vertical without a CRS](adr/0041-declared-conventions-and-the-vertical-without-crs.md)
 - [0042 What a property says of itself](adr/0042-what-a-property-says-of-itself.md)
+- [0043 The views of a package through one door](adr/0043-the-views-of-a-package-through-one-door.md)
