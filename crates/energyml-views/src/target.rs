@@ -542,14 +542,14 @@ fn read_ring(
     // the full uri first: two versions of one frame uuid are two frames
     // (`[views-sheet R1]`). A reference that carries no complete uri falls back
     // to its uuid, which matches any version.
-    let support = read
+    let held_by = read
         .supporting_representation_uri
         .clone()
         .or_else(|| read.supporting_representation.clone())
         .unwrap_or_default();
-    if !energyml_core::identity::same_address(&support, frame_uri) {
+    if !energyml_core::identity::same_address(&held_by, frame_uri) {
         return Err(refuse(format!(
-            "`{title}` hangs on another frame ({support}) than the first property ({frame_uri}): the rings of one target share a frame"
+            "`{title}` hangs on another frame ({held_by}) than the first property ({frame_uri}): the rings of one target share a frame"
         )));
     }
 

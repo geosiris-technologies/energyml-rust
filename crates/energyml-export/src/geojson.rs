@@ -414,7 +414,14 @@ fn check_indices(object: &SceneObject) -> Result<()> {
                 ),
             ))
         };
-        let outside = |indices: &mut dyn Iterator<Item = u32>| indices.find(|i| *i as usize >= nodes);
+        let outside = |indices: &mut dyn Iterator<Item = u32>| {
+            for index in indices {
+                if index as usize >= nodes {
+                    return Some(index);
+                }
+            }
+            None
+        };
         let (what, found) = match &patch.topology {
             Topology::Triangles(triangles) => ("triangle", outside(&mut triangles.iter().flatten().copied())),
             Topology::Quads(quads) => ("quadrilateral", outside(&mut quads.iter().flatten().copied())),
