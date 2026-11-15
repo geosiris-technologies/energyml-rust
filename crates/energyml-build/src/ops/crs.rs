@@ -236,17 +236,23 @@ impl Operation for Crs {
                 // What tells two runs apart is what tells their compounds
                 // apart - the frame's uuid carries all of it.
                 seed: format!("{epsg}:{vertical_key}:{}", frame.uuid),
-                parameters: vec![
-                    Parameter::Double {
-                        title: "epsg".to_string(),
-                        value: epsg as f64,
-                        uom: None,
-                    },
-                    Parameter::Text {
+                parameters: vec![Parameter::Double {
+                    title: "epsg".to_string(),
+                    value: epsg as f64,
+                    uom: None,
+                }]
+                .into_iter()
+                // The vertical system by its EPSG code, as its template declares
+                // it (`double`); none given, none written.
+                .chain(match &vertical {
+                    Vertical::Epsg(code) => Some(Parameter::Double {
                         title: "vertical".to_string(),
-                        value: vertical_key,
-                    },
-                ],
+                        value: *code as f64,
+                        uom: None,
+                    }),
+                    Vertical::Unknown(_) => None,
+                })
+                .collect(),
             },
             says,
             dropped: Vec::new(),

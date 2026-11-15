@@ -35,7 +35,9 @@ use energyml_domain::provenance::Parameter;
 use energyml_eml_2_3 as eml;
 
 use crate::declare::{Inputs, ObjectIn, Params, Title};
-use crate::operation::{About, ActivityDraft, Category, Context, NewObject, Note, Operation, Plan, Refusal};
+use crate::operation::{
+    About, ActivityDraft, Category, Context, Need, NewObject, Note, Operation, Plan, Refusal, Slot,
+};
 
 /// The operation.
 pub struct TimeSeries;
@@ -67,6 +69,18 @@ pub struct TimeSeriesInputs {
 }
 
 impl Operation for TimeSeries {
+    fn reports(&self) -> Vec<Slot> {
+        vec![Slot::required(
+            "instantCount",
+            Need::Number {
+                uom: None,
+                least: None,
+                most: None,
+            },
+            "the instants of the series",
+        )]
+    }
+
     type Params = TimeSeriesParams;
     type Inputs = TimeSeriesInputs;
 

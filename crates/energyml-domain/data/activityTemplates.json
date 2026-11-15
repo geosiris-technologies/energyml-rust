@@ -10063,6 +10063,17 @@
       {
         "$type": "eml23.ParameterTemplate",
         "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 1,
+        "Title": "instantCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
           "dataObject"
         ],
         "IsInput": true,
@@ -10128,6 +10139,17 @@
         "MaxOccurs": 1,
         "MinOccurs": 0,
         "Title": "interpretationTitle"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 1,
+        "Title": "references"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -10209,6 +10231,17 @@
         "MaxOccurs": 1,
         "MinOccurs": 0,
         "Title": "homogeneous"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 1,
+        "Title": "memberCount"
       },
       {
         "$type": "eml23.ParameterTemplate",

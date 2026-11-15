@@ -1950,70 +1950,91 @@ fn record_choices(plan: &mut Plan, slots: &[Slot], settled: &Choices) {
         if plan.activity.parameters.iter().any(|p| p.title() == slot.name) {
             continue;
         }
-        let parameter = match &slot.need {
-            Need::Object { .. } | Need::Crs | Need::Interpretation | Need::PropertyKind => {
-                // A bare uuid is not a reference, and inventing the rest of one
-                // here would be this pass asserting a content type nobody wrote.
-                if !value.is_object() {
-                    continue;
-                }
-                Parameter::Object {
-                    title: slot.name.to_string(),
-                    reference: value.clone(),
-                }
+        // A list of settings (`times`, `layers`, the sections of a plan) is
+        // recorded one parameter per item, under the slot's title, as its
+        // template declares it (MaxOccurs above one). Skipping it left the
+        // activity without a parameter its template requires.
+        let items: Vec<&Value> = match value {
+            Value::Array(items)
+                if !matches!(
+                    slot.need,
+                    Need::Object { .. }
+                        | Need::Crs
+                        | Need::Interpretation
+                        | Need::PropertyKind
+                        | Need::Input(_)
+                ) =>
+            {
+                items.iter().collect()
             }
-            // **An input is not a parameter.** The activity records its
-            // inputs as such, through `apply`; adding it here would make it a
-            // setting, and the same fact would be stated twice under two
-            // natures.
-            Need::Input(_) => continue,
-            Need::Number { uom, .. } => match value.as_f64() {
-                Some(number) => Parameter::Double {
-                    title: slot.name.to_string(),
-                    value: number,
-                    uom: uom.map(str::to_string),
-                },
-                None => continue,
-            },
-            Need::Epsg => match value.as_f64() {
-                Some(number) => Parameter::Double {
-                    title: slot.name.to_string(),
-                    value: number,
-                    uom: None,
-                },
-                None => continue,
-            },
-            // The template declares `integer` for this slot (common TRG 2.3
-            // section 3.8, p. 47): a whole number is written as one. `accepts`
-            // has already checked that a choice here is an `i64`.
-            Need::Integer { .. } => match value.as_i64() {
-                Some(number) => Parameter::Integer {
-                    title: slot.name.to_string(),
-                    value: number,
-                },
-                None => continue,
-            },
-            // eml 2.3 has no boolean parameter - the template's `Constraint`
-            // says which two words, and this writes one of them.
-            Need::Flag => Parameter::Text {
-                title: slot.name.to_string(),
-                value: if value.as_bool() == Some(true) {
-                    "true".to_string()
-                } else {
-                    "false".to_string()
-                },
-            },
-            Need::Text | Need::Title | Need::Choice(_) | Need::Type(_) | Need::Vocabulary(_) => {
-                match value.as_str() {
-                    Some(text) => Parameter::Text {
+            one => vec![one],
+        };
+        for value in items {
+            let parameter = match &slot.need {
+                Need::Object { .. } | Need::Crs | Need::Interpretation | Need::PropertyKind => {
+                    // A bare uuid is not a reference, and inventing the rest of one
+                    // here would be this pass asserting a content type nobody wrote.
+                    if !value.is_object() {
+                        continue;
+                    }
+                    Parameter::Object {
                         title: slot.name.to_string(),
-                        value: text.to_string(),
+                        reference: value.clone(),
+                    }
+                }
+                // **An input is not a parameter.** The activity records its
+                // inputs as such, through `apply`; adding it here would make it a
+                // setting, and the same fact would be stated twice under two
+                // natures.
+                Need::Input(_) => continue,
+                Need::Number { uom, .. } => match value.as_f64() {
+                    Some(number) => Parameter::Double {
+                        title: slot.name.to_string(),
+                        value: number,
+                        uom: uom.map(str::to_string),
                     },
                     None => continue,
+                },
+                Need::Epsg => match value.as_f64() {
+                    Some(number) => Parameter::Double {
+                        title: slot.name.to_string(),
+                        value: number,
+                        uom: None,
+                    },
+                    None => continue,
+                },
+                // The template declares `integer` for this slot (common TRG 2.3
+                // section 3.8, p. 47): a whole number is written as one. `accepts`
+                // has already checked that a choice here is an `i64`.
+                Need::Integer { .. } => match value.as_i64() {
+                    Some(number) => Parameter::Integer {
+                        title: slot.name.to_string(),
+                        value: number,
+                    },
+                    None => continue,
+                },
+                // eml 2.3 has no boolean parameter - the template's `Constraint`
+                // says which two words, and this writes one of them.
+                Need::Flag => Parameter::Text {
+                    title: slot.name.to_string(),
+                    value: if value.as_bool() == Some(true) {
+                        "true".to_string()
+                    } else {
+                        "false".to_string()
+                    },
+                },
+                Need::Text | Need::Title | Need::Choice(_) | Need::Type(_) | Need::Vocabulary(_) => {
+                    match value.as_str() {
+                        Some(text) => Parameter::Text {
+                            title: slot.name.to_string(),
+                            value: text.to_string(),
+                        },
+                        None => continue,
+                    }
                 }
-            }
-        };
-        plan.activity.parameters.push(parameter);
+            };
+            plan.activity.parameters.push(parameter);
+        }
     }
 }
 

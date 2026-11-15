@@ -34,7 +34,9 @@ use energyml_eml_2_3 as eml;
 use energyml_resqml_2_2 as resqml;
 
 use crate::declare::{Inputs, ObjectIn, Params, Title};
-use crate::operation::{About, ActivityDraft, Category, Context, NewObject, Note, Operation, Plan, Refusal};
+use crate::operation::{
+    About, ActivityDraft, Category, Context, Need, NewObject, Note, Operation, Plan, Refusal, Slot,
+};
 
 /// The operation.
 pub struct EarthModel;
@@ -221,6 +223,18 @@ fn reference(slot: &str, input: &ObjectIn) -> Result<eml::DataObjectReference, R
 }
 
 impl Operation for EarthModel {
+    fn reports(&self) -> Vec<Slot> {
+        vec![Slot::required(
+            "references",
+            Need::Number {
+                uom: None,
+                least: None,
+                most: None,
+            },
+            "the objects the model references",
+        )]
+    }
+
     type Params = EarthModelParams;
     type Inputs = EarthModelInputs;
 

@@ -46,7 +46,9 @@ use energyml_domain::provenance::Parameter;
 use energyml_eml_2_3 as eml;
 
 use crate::declare::{Choice, Inputs, ObjectIn, Params, Title};
-use crate::operation::{About, ActivityDraft, Category, Context, NewObject, Note, Operation, Plan, Refusal};
+use crate::operation::{
+    About, ActivityDraft, Category, Context, Need, NewObject, Note, Operation, Plan, Refusal, Slot,
+};
 
 /// The operation.
 pub struct Collection;
@@ -100,6 +102,18 @@ pub struct CollectionInputs {
 }
 
 impl Operation for Collection {
+    fn reports(&self) -> Vec<Slot> {
+        vec![Slot::required(
+            "memberCount",
+            Need::Number {
+                uom: None,
+                least: None,
+                most: None,
+            },
+            "the objects in the collection",
+        )]
+    }
+
     type Params = CollectionParams;
     type Inputs = CollectionInputs;
 
