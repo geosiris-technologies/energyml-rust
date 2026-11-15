@@ -28,3 +28,7 @@ title = "Statistics, scales and gaps"
 [[theme]]
 id = "well"
 title = "Around the well"
+
+[[theme]]
+id = "survey"
+title = "Directional surveys"

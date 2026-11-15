@@ -50,7 +50,7 @@ energyml rules --house --json
 ```
 
 Themes today include attachments, colour, inheritance of properties, series,
-statistics, tables and the well (`energyml rules --house` lists the seven themes of this release).
+statistics, tables, the well and directional surveys (`energyml rules --house` lists the eight themes of this release).
 
 ### Statistics, scales and gaps
 
@@ -63,6 +63,10 @@ Where a trajectory is evaluated, the direction at a knot of a linear line is tha
 ### Tables and links
 
 A column links to another table by one `qualifier` facet that holds the complete uri of the target (convention B, [ADR 0029](adr/0029-convention-b-links-by-qualifier-facet.md)); the target table has one key column, by which a value names a row, or none, and then a value names a row by its rank from 0. A link that leads nowhere is an error, a key held by two rows, a declaration made in a description or a title, and a uri that names no object of the package are warnings, and a link that cannot be checked is said to be uncheckable, never passed. Read them with `energyml rules --house --theme table`; the decisions are in [ADR 0030](adr/0030-table-links-keys-and-ranks.md) and the way to use them in [Tables, keys and links](tables.md).
+
+### Directional surveys
+
+A survey that states no north is placed only with a north the caller declares, which is carried in the result and never written into the package, and a declaration never overrules a north the file states. A survey in true or magnetic north is turned to grid north by the convergence and the declination the file states, and a station left out as rejected is left out only when the caller declares so. A RESQML 2.0.1 deviation survey is read from the north of its projected CRS. Read them with `energyml rules --house --theme survey`; the decisions are in [ADR 0034](adr/0034-survey-north-and-stations.md).
 
 ## The full list
 

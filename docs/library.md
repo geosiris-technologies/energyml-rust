@@ -295,6 +295,37 @@ Readers are a registry (`energyml_geometry::Readers`) keyed on the
 version-independent concept name, so a new release that keeps a concept needs no
 new reader.
 
+## Directional surveys
+
+A survey is read in `energyml_geometry::stations`, for a WITSML 2.1 `Trajectory` and for a RESQML 2.0.1
+`DeviationSurveyRepresentation`, in four steps that each answer on their own.
+
+- **Read**: `stations_of` lists the stations of the file, the values it declares at them (`Tvd`, `DispNs`, `DispEw`,
+  `VertSect`, `Dls`) and the vertical section it declares (`AziVertSect` and its origin), and places nothing.
+- **Judge**: `diagnose` runs ten checks in a written order and reports each as passed, failed with a typed `Finding`, or
+  not reached. `read` replays the same steps and stops at the first failure with the same sentences.
+- **Place**: `read_declaring` places the survey from its datum. A convention the file does not state is a parameter of
+  the call (`SurveyDeclarations`): the north when `AziRef` is absent, and whether rejected stations are left out. The
+  result carries where its north came from (`NorthSource`: stated, corrected from the file's convergence and
+  declination, declared, or not needed) and the stations it kept. `survey_path` gives the line between the stations as a
+  `PlacedPath`. The points are in the units of the CRS the object is in.
+- **Compare**: `energyml_analysis::survey_qc` works on a read survey. `SignificanceCriterion` says whether an azimuth
+  carries information, `SectionAzimuth` gives the azimuth of the vertical section, `compare` sets a survey against another
+  path, `rotation_fit` fits the rotation between two surveys of one well, `stated_against_computed` compares the values the
+  file declares with those recomputed, and `pairings` pairs the surveys of a well.
+
+```rust
+use energyml_geometry::stations;
+
+let diagnosis = stations::diagnose(&survey, &store, &declarations);
+for (check, finding) in diagnosis.failures() {
+    println!("{check:?}: {finding:?}");
+}
+```
+
+The choices the registry makes for a survey are in [House rules](house-rules.md) and
+[ADR 0034](adr/0034-survey-north-and-stations.md).
+
 ## One CRS, whichever version wrote it
 
 A coordinate system is one object in RESQML 2.0.1 and three joined by references

@@ -73,5 +73,6 @@
 - [0031 The direction at a knot](adr/0031-tangent-at-a-knot.md)
 - [0032 The frame of a hole](adr/0032-hole-frame-in-a-direct-placed-frame.md)
 - [0033 TVD below the MD datum](adr/0033-tvd-below-the-md-datum.md)
+- [0034 The north of a survey and its stations](adr/0034-survey-north-and-stations.md)
 - [0041 Declared conventions, and the vertical without a CRS](adr/0041-declared-conventions-and-the-vertical-without-crs.md)
 - [0042 What a property says of itself](adr/0042-what-a-property-says-of-itself.md)

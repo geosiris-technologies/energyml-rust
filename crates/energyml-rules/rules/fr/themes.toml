@@ -27,3 +27,7 @@ title = "Statistiques, échelles et trous"
 [[theme]]
 id = "well"
 title = "Autour du puits"
+
+[[theme]]
+id = "survey"
+title = "Levés de trajectoire"
