@@ -54,7 +54,7 @@ impl Colour {
     /// `#rrggbb`, lower case (the alpha is not part of it: see [`Colour::opacity`]).
     pub fn hex(&self) -> String {
         // The drawing module names no format crate (tests/draw/no_format.rs): it writes its own bytes, the
-        // same text as `energyml_domain::color::Rgba::to_hex_rgb`, which `crate::colour` pins.
+        // same text as the domain colour's `to_hex_rgb`, which the sheet's `colour` module pins by a test.
         format!("#{:02x}{:02x}{:02x}", self.r, self.g, self.b)
     }
 
