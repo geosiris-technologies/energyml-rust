@@ -47,6 +47,7 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+pub mod around_well;
 pub mod clip;
 pub mod connection;
 pub mod defined;

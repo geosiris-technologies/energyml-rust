@@ -9,6 +9,7 @@
 //! that installs a process-wide default (a `set_default`, a global allocator)
 //! keeps a binary of its own, as a `[[test]]` in `Cargo.toml`.
 
+mod around_well;
 mod attribute_counts;
 mod build;
 mod connection;
@@ -33,6 +34,7 @@ mod vector;
 mod well;
 mod well_compound;
 mod well_drop;
+mod well_projection;
 mod wells_versions;
 mod wireframe;
 mod witsml_trajectory;
