@@ -52,6 +52,9 @@ use std::collections::{BTreeMap, BTreeSet};
 use energyml_core::identity;
 use energyml_core::value::{FieldValue, Reflect};
 
+use crate::activity::{
+    ActivityRefusal, ParameterIssue, TemplateRecord, conformance, descriptor_of, read_activity, read_template,
+};
 use crate::property;
 use crate::property_kind::Resolver;
 use crate::rules::{Finding, Gravity, Outcome, concepts_of};
@@ -163,6 +166,12 @@ const CHECKS: &[Integrity] = &[
         says: "two properties of one kind on one support, told apart only by a vertical and a lateral direction facet, keep the vertical value at least 0.95 times the lateral one in 95 % of their pairs, for a resistivity (the reading is ours: common TRG 2.3 §11.1 p. 281 names the directions, not the order of their values; ADR-0036)",
         gravity: Gravity::Warning,
         judge: directional_ratio,
+    },
+    Integrity {
+        id: "house/provenance/activity-follows-its-template",
+        says: "every parameter of an activity has an equivalent in the template its ActivityDescriptor names, of an allowed kind and in the allowed numbers (common TRG 2.3 §3.1 p. 40: \"Must have an equivalent in the activity descriptor parameters\"; §3.10 p. 49: an empty AllowedKind allows all, a MaxOccurs of -1 is unbounded; reading a data object that names an activity as a sub-activity is ours, ADR-0035)",
+        gravity: Gravity::Warning,
+        judge: activity_follows_its_template,
     },
 ];
 
@@ -1580,6 +1589,110 @@ fn judge_directional(
                 ));
             }
         }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// An activity against its template
+// ---------------------------------------------------------------------------
+
+/// How many departures a finding spells out before saying `and N more`.
+const ACTIVITY_ISSUES_SHOWN: usize = 10;
+
+/// One departure of an activity from its template, as the report reads it.
+fn issue_read(issue: &ParameterIssue) -> Option<String> {
+    match issue {
+        ParameterIssue::NotInTemplate { position, title } => {
+            Some(format!("parameter `{title}` ({position}) is not in the template"))
+        }
+        ParameterIssue::KindDiffers {
+            position,
+            title,
+            declared,
+            written,
+        } => Some(format!(
+            "parameter `{title}` ({position}) is written {}, the template allows {}",
+            written.word(),
+            declared.iter().map(|kind| kind.word()).collect::<Vec<_>>().join(", ")
+        )),
+        ParameterIssue::TooFew { title, min, found } => {
+            Some(format!("`{title}`: {found} for at least {min}"))
+        }
+        ParameterIssue::TooMany { title, max, found } => {
+            Some(format!("`{title}`: {found} for at most {max}"))
+        }
+        // The template is given to `conformance` here: this cannot happen.
+        ParameterIssue::TemplateAbsent => None,
+    }
+}
+
+/// **House rule** (`house/provenance/activity-follows-its-template`): each
+/// activity against the template its `ActivityDescriptor` names, by
+/// `crate::activity::conformance` - the one reading of conformance, never a
+/// second. A warning: the activity is read all the same. A template that
+/// cannot be found is *unverifiable*, never a pass.
+fn activity_follows_its_template(context: &Context<'_>, check: &Integrity, out: &mut Vec<Finding>) {
+    let templates: Vec<TemplateRecord> = context
+        .objects
+        .iter()
+        .filter_map(|(_, object)| read_template(*object).ok())
+        .collect();
+    for (uuid, object) in context.objects {
+        let activity = match read_activity(*object) {
+            Ok(activity) => activity,
+            Err(ActivityRefusal::NoIdentity { .. }) => {
+                out.push(unverifiable(
+                    check,
+                    uuid,
+                    "it has no uuid, so the template it names cannot be told from another".into(),
+                ));
+                continue;
+            }
+            Err(_) => continue,
+        };
+        let Some(descriptor) = &activity.descriptor else {
+            out.push(unverifiable(
+                check,
+                uuid,
+                "it names no ActivityDescriptor, so there is no template to hold it to".into(),
+            ));
+            continue;
+        };
+        let fetched: Option<TemplateRecord> = match descriptor_of(&activity, &templates) {
+            Some(_) => None,
+            None => context
+                .source
+                .object_at(&descriptor.address)
+                .and_then(|found| read_template(found.as_reflect()).ok()),
+        };
+        let template = match (descriptor_of(&activity, &templates), fetched.as_ref()) {
+            (Some(template), _) | (None, Some(template)) => template,
+            (None, None) => {
+                out.push(unverifiable(
+                    check,
+                    uuid,
+                    format!("its template `{}` is not in this package", descriptor.address),
+                ));
+                continue;
+            }
+        };
+        let reads: Vec<String> = conformance(&activity, Some(template))
+            .iter()
+            .filter_map(issue_read)
+            .collect();
+        if reads.is_empty() {
+            continue;
+        }
+        let mut read = reads
+            .iter()
+            .take(ACTIVITY_ISSUES_SHOWN)
+            .cloned()
+            .collect::<Vec<_>>()
+            .join("; ");
+        if reads.len() > ACTIVITY_ISSUES_SHOWN {
+            read.push_str(&format!(" and {} more", reads.len() - ACTIVITY_ISSUES_SHOWN));
+        }
+        out.push(violation(check, uuid, read));
     }
 }
 

@@ -1,0 +1,116 @@
+# Provenance: how activities and their templates are read and written where
+# the guide leaves it open. Source: ADR-0035. Code:
+# crates/energyml-domain/src/activity/, src/provenance.rs and
+# crates/energyml-build/src/recipe.rs. One checked rule (an entry of
+# `integrity::CHECKS`, a warning); the others are declared.
+
+[[rule]]
+id = "house/provenance/activity-follows-its-template"
+theme = "provenance"
+status = "active"
+stance = "interpreted"
+level = 1
+since = "2026-11-14"
+title = "An activity agrees with its template, and a disagreement is a warning"
+text = """
+Every parameter of an activity has a parameter of the same title in the template its `ActivityDescriptor` names, of a kind the template allows, in the numbers it allows (`MinOccurs`, `MaxOccurs`, -1 meaning no limit). A template that lists no allowed kind allows every kind, and a data object parameter that names an activity is read as a sub-activity. A disagreement is a warning: the activity is still read and drawn."""
+why = """
+The guide asks every parameter to have its equivalent in the template, without the capitals of a requirement. Packages written before this release disagree on hundreds of parameters, and their provenance is worth more read than refused, so a disagreement is detected and signalled, never a reason to refuse (ADR-0035)."""
+rulings = [
+  { by = "maintainer", on = "2026-11-14" },
+]
+refs = [
+  { kind = "spec", doc = "common TRG 2.3", at = "§3.1 p. 40", note = "Title: must have an equivalent in the activity descriptor parameters" },
+  { kind = "spec", doc = "common TRG 2.3", at = "§3.10 p. 49", note = "AllowedKind: none given allows all; MaxOccurs: -1 for infinite" },
+  { kind = "code", path = "crates/energyml-domain/src/integrity.rs", at = "activity_follows_its_template" },
+  { kind = "code", path = "crates/energyml-domain/src/activity/conformance.rs", at = "conformance" },
+  { kind = "design", path = "docs/adr/0035-provenance-read-and-written.md" },
+]
+at = [
+  { type = "finding", key = "house/provenance/activity-follows-its-template" },
+  { type = "view", key = "check.report" },
+  { type = "type", key = "Activity" },
+]
+
+[[rule]]
+id = "house/provenance/role-from-template-or-named-rule"
+theme = "provenance"
+status = "active"
+stance = "silent"
+level = 1
+since = "2026-11-14"
+title = "A parameter's role comes from its template, then from a named rule, never from its title"
+text = """
+Whether a parameter is an input, an output, both, neither or a sub-activity is read from the template (`IsInput`, `IsOutput`, `AllowedKind`). Without a template entry, a named rule may give it (`energyml-build:input-output`, for activities written by this library), and the rule is shown beside the role; otherwise the role is undeclared. A role is never guessed from a title."""
+why = """
+The guide writes the direction of a parameter in the template only. A title such as `input` means nothing to another producer; reading it as an input would draw edges of the provenance graph that the file does not state (ADR-0035)."""
+rulings = [
+  { by = "maintainer", on = "2026-11-14" },
+]
+refs = [
+  { kind = "spec", doc = "common TRG 2.3", at = "§3.10 p. 49", note = "IsInput, IsOutput are properties of the ParameterTemplate, not of the parameter" },
+  { kind = "code", path = "crates/energyml-domain/src/activity/roles.rs", at = "roles" },
+  { kind = "code", path = "crates/energyml-domain/src/activity/roles.rs", at = "EnergymlBuildInputOutput" },
+  { kind = "code", path = "crates/energyml-domain/tests/activity.rs", at = "without_template_or_rule_the_role_is_undeclared" },
+  { kind = "design", path = "docs/adr/0035-provenance-read-and-written.md" },
+]
+at = [
+  { type = "type", key = "Activity" },
+  { type = "view", key = "graph.tree" },
+]
+
+[[rule]]
+id = "house/provenance/kinds-without-a-class"
+theme = "provenance"
+status = "active"
+stance = "interpreted"
+level = 2
+since = "2026-11-14"
+title = "A data object naming an activity is a sub-activity, a time index is a timestamp"
+text = """
+No parameter class carries the kinds `subActivity` and `timestamp`: a `DataObjectParameter` whose object is an `Activity` is read as `subActivity`, and a `TimeIndexParameter` as `timestamp`."""
+why = """
+The guide lists six parameter kinds and five parameter classes. Without these two readings, a workflow written by any producer would disagree with its own template (ADR-0035)."""
+rulings = [
+  { by = "maintainer", on = "2026-11-14" },
+]
+refs = [
+  { kind = "spec", doc = "common TRG 2.3", at = "§3.4 p. 43", note = "ActivityParameterKind: dataObject, double, integer, string, timestamp, subActivity" },
+  { kind = "code", path = "crates/energyml-domain/src/activity/conformance.rs", at = "conformance" },
+  { kind = "code", path = "crates/energyml-domain/tests/activity.rs", at = "a_root_naming_its_children_by_data_object_conforms" },
+  { kind = "design", path = "docs/adr/0035-provenance-read-and-written.md" },
+]
+at = [
+  { type = "type", key = "Activity" },
+  { type = "type", key = "ActivityTemplate" },
+]
+
+[[rule]]
+id = "house/provenance/writers-declare-what-they-write"
+theme = "provenance"
+status = "active"
+stance = "extends"
+level = 1
+since = "2026-11-14"
+title = "This library declares in its templates every parameter it writes, the files read included"
+text = """
+Every canonical template of this library declares `input` and `inputFile`; a whole number is written as an `IntegerQuantityParameter`; the file a recipe step read is written as a `StringParameter` titled `inputFile`, whose value is `<slot>: <path>`. A package this library writes therefore agrees with its own templates."""
+why = """
+The guide asks every parameter to have its equivalent in the template and gives whole numbers their own class; it has no field for the files a step read, so that convention is ours, and stated (ADR-0035)."""
+rulings = [
+  { by = "maintainer", on = "2026-11-14" },
+]
+refs = [
+  { kind = "spec", doc = "common TRG 2.3", at = "§3.1 p. 40", note = "Title: must have an equivalent in the activity descriptor parameters" },
+  { kind = "spec", doc = "common TRG 2.3", at = "§3.8 p. 47", note = "IntegerQuantityParameter: a parameter containing an integer value" },
+  { kind = "code", path = "crates/energyml-domain/src/provenance.rs", at = "Parameter::Integer" },
+  { kind = "code", path = "crates/energyml-build/src/recipe.rs", at = "input_file_parameter" },
+  { kind = "code", path = "crates/energyml-build/tests/provenance_writers.rs", at = "the_projection_declares_input_and_input_file_before_output" },
+  { kind = "code", path = "crates/energyml-domain/src/provenance.rs", at = "every_canonical_template_declares_input_and_input_file" },
+  { kind = "design", path = "docs/adr/0035-provenance-read-and-written.md" },
+]
+at = [
+  { type = "type", key = "Activity" },
+  { type = "type", key = "ActivityTemplate" },
+  { type = "view", key = "create.chooser" },
+]

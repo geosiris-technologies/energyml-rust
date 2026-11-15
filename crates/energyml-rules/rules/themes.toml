@@ -36,3 +36,7 @@ title = "Directional surveys"
 [[theme]]
 id = "property"
 title = "Properties"
+
+[[theme]]
+id = "provenance"
+title = "Provenance"

@@ -35,6 +35,7 @@ mod geometry_local_crs;
 mod identity_guard;
 mod inherit;
 mod integrity;
+mod integrity_provenance;
 mod integrity_tables;
 mod matrix;
 mod md_extent;

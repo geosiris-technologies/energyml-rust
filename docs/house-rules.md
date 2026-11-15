@@ -50,7 +50,7 @@ energyml rules --house --json
 ```
 
 Themes today include attachments, colour, inheritance of properties, series,
-statistics, tables, the well, directional surveys and properties (`energyml rules --house` lists the nine themes of this release).
+statistics, tables, the well, directional surveys, properties and provenance (`energyml rules --house` lists the ten themes of this release).
 
 ### Statistics, scales and gaps
 
@@ -71,6 +71,10 @@ A survey that states no north is placed only with a north the caller declares, w
 ### Properties
 
 Two properties of one quantity on one support, told apart only by a vertical and a lateral `direction` facet, are expected to keep the order a layered medium gives them: for a resistivity, the vertical value is not below the lateral one. When more than 5 % of their pairs have a vertical value under 0.95 times the lateral one, the check report carries a warning, never an error: the specification names the directions and says nothing of the order of their values, so the expectation is ours and a package that breaks it is kept. A direction written as an extension value (`nwdf:vertical`) is not guessed: the check is then unverifiable, unless the caller declares which property is vertical. Read it with `energyml rules --house --theme property`; the decision is in [ADR 0036](adr/0036-directional-ratio.md).
+
+### Provenance
+
+An activity is held to the template its `ActivityDescriptor` names: each parameter has an equivalent of the same title, of an allowed kind and in the allowed numbers, and a departure is a warning in the check report, never a refusal, because the activity is read and drawn all the same. The role of a parameter (input, output, sub-activity) comes from its template or from a named rule, and is undeclared otherwise: it is never guessed from a title. What this library writes, it declares in its own templates, the files a step read included. Read them with `energyml rules --house --theme provenance`; the decisions are in [ADR 0035](adr/0035-provenance-read-and-written.md).
 
 ## The full list
 
