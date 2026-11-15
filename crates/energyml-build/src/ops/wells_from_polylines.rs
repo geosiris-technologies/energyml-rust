@@ -232,7 +232,7 @@ impl Operation for WellsFromPolylines {
                 &feature_title,
                 &interpretation_uuid,
                 &interpretation_title,
-                &cite,
+                cite,
                 super::blocks::WellboreFlags {
                     is_well_known: Some(false),
                     is_drilled: Some(false),

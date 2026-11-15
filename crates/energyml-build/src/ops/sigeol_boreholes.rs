@@ -480,7 +480,7 @@ impl Operation for SigeolBoreholes {
                     &title,
                     &interpretation_uuid,
                     &interpretation_title,
-                    &cite,
+                    cite,
                     super::blocks::WellboreFlags {
                         is_well_known: Some(true),
                         is_drilled: Some(true),
