@@ -115,11 +115,7 @@ fn bad_range(from: f64, to: f64) -> bool {
 impl WellAxis {
     /// Samples `md_range` (within the path's extent): its ends, every knot inside, and every `step`
     /// (`step <= 0`: knots and ends only). At most [`MAX_AXIS_SAMPLES`], counted before anything is evaluated.
-    pub fn new(
-        path: &PlacedPath,
-        md_range: [f64; 2],
-        step: f64,
-    ) -> Result<WellAxis, ProjectionRefusal> {
+    pub fn new(path: &PlacedPath, md_range: [f64; 2], step: f64) -> Result<WellAxis, ProjectionRefusal> {
         let [from, to] = md_range;
         if bad_range(from, to) {
             return Err(ProjectionRefusal::BadRange { from, to });
@@ -242,7 +238,6 @@ pub trait WellProjection: Send + Sync {
 struct Pose<'a> {
     path: &'a PlacedPath,
     q: Point,
-    sin_i: f64,
     cos_i: f64,
 }
 
@@ -254,13 +249,9 @@ fn pose(axis: &WellAxis, md: f64, dn: f64) -> Result<Pose<'_>, ProjectionRefusal
         return Err(ProjectionRefusal::NoDirection { md });
     }
     let q = offset_point(path, md, dn)?;
-    let (sin_i, cos_i) = direction.map_or((0.0, 0.0), |t| (t[0].hypot(t[1]), -t[2]));
-    Ok(Pose {
-        path,
-        q,
-        sin_i,
-        cos_i,
-    })
+    // cos I is the downward part of the unit tangent (z up): the only part of the inclination a pose needs.
+    let cos_i = direction.map_or(0.0, |t| -t[2]);
+    Ok(Pose { path, q, cos_i })
 }
 
 fn datum_of(path: &PlacedPath) -> Result<Point, ProjectionRefusal> {
@@ -283,8 +274,7 @@ fn north_of(compass: &energyml_domain::crs::CompassAxes, p: Point) -> f64 {
 fn tangent(axis: &WellAxis, md: f64) -> Result<Point, ProjectionRefusal> {
     axis.within(md)?;
     let path = axis.path.as_ref().ok_or(ProjectionRefusal::NoPath)?;
-    path.direction_at(md)
-        .ok_or(ProjectionRefusal::NoDirection { md })
+    path.direction_at(md).ok_or(ProjectionRefusal::NoDirection { md })
 }
 
 /// A 2D vector, or `None` when it vanishes.
@@ -326,11 +316,7 @@ fn offset_for_ordinate(axis: &WellAxis, md: f64, y: f64) -> Option<f64> {
 /// The inverse of a projection whose ordinate is `tvd(P) - dn sin I`: the sign changes of the abscissa error
 /// along the axis, each refined by bisection; the candidate nearest the hole (smallest `|dn|`) wins.
 #[allow(clippy::needless_range_loop)]
-fn invert_by_scan(
-    projection: &dyn WellProjection,
-    axis: &WellAxis,
-    xy: [f64; 2],
-) -> Option<[f64; 2]> {
+fn invert_by_scan(projection: &dyn WellProjection, axis: &WellAxis, xy: [f64; 2]) -> Option<[f64; 2]> {
     let error_at = |md: f64| -> Option<(f64, f64)> {
         let dn = offset_for_ordinate(axis, md, xy[1])?;
         let x = projection.place(axis, md, dn).ok()?[0];
@@ -556,9 +542,7 @@ pub struct WellProjections {
 impl WellProjections {
     /// An empty registry.
     pub fn new() -> Self {
-        WellProjections {
-            entries: Vec::new(),
-        }
+        WellProjections { entries: Vec::new() }
     }
 
     /// `md_bar`, `md_tvd`, `developed` and `plan`. `vertical_section` is built by the caller: it needs an
@@ -656,9 +640,31 @@ fn refine(
     if depth < MAX_REFINE_DEPTH {
         let mid = (m0 + m1) / 2.0;
         let pm = projection.place(axis, mid, 0.0)?;
-        if segment_distance(pm, p0, p1).0 > tolerance {
-            refine(axis, projection, (m0, p0), (mid, pm), tolerance, depth + 1, points, mds)?;
-            return refine(axis, projection, (mid, pm), (m1, p1), tolerance, depth + 1, points, mds);
+        // Against the middle of the chord, not the chord itself: a J well seen in plan is a straight line along
+        // which the MD does not run evenly, and a click or a span reads the MD back by interpolating along the
+        // segment (the_click_on_the_line_gives_the_md_back).
+        let chord_middle = [(p0[0] + p1[0]) / 2.0, (p0[1] + p1[1]) / 2.0];
+        if distance(pm, chord_middle) > tolerance {
+            refine(
+                axis,
+                projection,
+                (m0, p0),
+                (mid, pm),
+                tolerance,
+                depth + 1,
+                points,
+                mds,
+            )?;
+            return refine(
+                axis,
+                projection,
+                (mid, pm),
+                (m1, p1),
+                tolerance,
+                depth + 1,
+                points,
+                mds,
+            );
         }
     }
     points.push(p1);
@@ -667,7 +673,8 @@ fn refine(
 }
 
 /// The whole hole as a 2D polyline, fine enough for `tolerance` metres (each interval of the axis is cut at its
-/// middle while the middle point is farther than `tolerance` from the chord, down to a depth of 16).
+/// middle MD while the point at that MD is farther than `tolerance` from the middle of the chord, down to a depth
+/// of 16): the shape and the MD read back along a segment are both right within `tolerance`.
 pub fn locator_line(
     axis: &WellAxis,
     projection: &dyn WellProjection,
@@ -684,7 +691,16 @@ pub fn locator_line(
     let mut points = vec![samples[0].1];
     let mut mds = vec![samples[0].0];
     for pair in samples.windows(2) {
-        refine(axis, projection, pair[0], pair[1], tolerance, 0, &mut points, &mut mds)?;
+        refine(
+            axis,
+            projection,
+            pair[0],
+            pair[1],
+            tolerance,
+            0,
+            &mut points,
+            &mut mds,
+        )?;
     }
     let degenerate = points.iter().all(|&p| distance(p, points[0]) <= tolerance);
     Ok(LocatorLine {

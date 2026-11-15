@@ -107,7 +107,9 @@ pub struct Plane {
 #[derive(Debug, thiserror::Error)]
 pub enum MatrixRefusal {
     /// The count is neither the nodes' nor the intervals'.
-    #[error("{values} value(s) are neither {nodes} node(s) nor {intervals} interval(s) of {per_element} value(s) each")]
+    #[error(
+        "{values} value(s) are neither {nodes} node(s) nor {intervals} interval(s) of {per_element} value(s) each"
+    )]
     Count {
         /// Values the property holds.
         values: u64,
@@ -481,7 +483,10 @@ impl MatrixChannel {
 /// [`MatrixRefusal::AxisOrderUnstated`] for several `AxisDefinition` on a
 /// channel (their product would guess their order); the refusals of the set's
 /// own reading ([`MatrixRefusal::Series`]).
-pub fn read_channel_set(set: &dyn Reflect, arrays: &dyn ArraySource) -> Result<Vec<MatrixChannel>, MatrixRefusal> {
+pub fn read_channel_set(
+    set: &dyn Reflect,
+    arrays: &dyn ArraySource,
+) -> Result<Vec<MatrixChannel>, MatrixRefusal> {
     if !channel_set::reads(set) {
         return Err(MatrixRefusal::Series(Refused::NotThisReader {
             expected: "a WITSML ChannelSet",
@@ -573,7 +578,9 @@ pub fn read_channel_set(set: &dyn Reflect, arrays: &dyn ArraySource) -> Result<V
                         });
                     }
                     for item in items {
-                        values.push(read_number(item, Decode::Number, number, &one.mnemonic)?.unwrap_or(f64::NAN));
+                        values.push(
+                            read_number(item, Decode::Number, number, &one.mnemonic)?.unwrap_or(f64::NAN),
+                        );
                     }
                 }
                 _ => {
@@ -593,10 +600,7 @@ pub fn read_channel_set(set: &dyn Reflect, arrays: &dyn ArraySource) -> Result<V
                 "an array channel with no uuid: nothing gives it an identity",
             )
         })?;
-        let qualified = channel
-            .type_info()
-            .qualified_type
-            .unwrap_or("witsml21.Channel");
+        let qualified = channel.type_info().qualified_type.unwrap_or("witsml21.Channel");
         out.push(MatrixChannel {
             uri: energyml_core::identifiers::EtpUri::object(None, qualified, &uuid),
             title: Some(one.mnemonic.clone()),

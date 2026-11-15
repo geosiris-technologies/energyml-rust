@@ -17,8 +17,10 @@ use std::collections::BTreeMap;
 use energyml_core::reflect::EnergymlType;
 use energyml_core::registry::DynObject;
 use energyml_core::value::Reflect;
+use energyml_core::xml::XmlText;
 use energyml_domain::property::chunks::{
-    AxisId, ChunkSelection, ChunksRefusal, PairWalk, PairWalkRefusal, PropertyChunks, TimeChoice, keep_ordered_axes,
+    AxisId, ChunkSelection, ChunksRefusal, PairWalk, PairWalkRefusal, PropertyChunks, TimeChoice,
+    keep_ordered_axes,
 };
 use energyml_domain::property::observe::{
     FACET_VALUE_KINDS, MarkedObject, PropertyObservation, SyntheticMark, UnitCheck, UnitNotCheckable,
@@ -59,7 +61,11 @@ struct Datasets {
 
 impl Datasets {
     fn with(mut self, path: &str, dims: &[i64], values: Vec<f64>) -> Datasets {
-        assert_eq!(dims.iter().product::<i64>() as usize, values.len(), "a test dataset that fills its shape");
+        assert_eq!(
+            dims.iter().product::<i64>() as usize,
+            values.len(),
+            "a test dataset that fills its shape"
+        );
         self.sets.insert(path.to_string(), (dims.to_vec(), values));
         self
     }
@@ -87,12 +93,18 @@ impl ArraySource for Datasets {
     /// The whole shape of the dataset, whatever window the location names
     /// (what `EpcStore` answers).
     fn metadata(&self, location: &ArrayLocation) -> energyml_domain::Result<ArrayMetadata> {
-        let (dims, _) = self.sets.get(&location.path_in_file).expect("a dataset the test holds");
+        let (dims, _) = self
+            .sets
+            .get(&location.path_in_file)
+            .expect("a dataset the test holds");
         Ok(ArrayMetadata::new(dims.clone(), "double"))
     }
 
     fn read(&self, location: &ArrayLocation) -> energyml_domain::Result<ArrayData> {
-        let (dims, values) = self.sets.get(&location.path_in_file).expect("a dataset the test holds");
+        let (dims, values) = self
+            .sets
+            .get(&location.path_in_file)
+            .expect("a dataset the test holds");
         self.reads.set(self.reads.get() + 1);
         let (start, count) = if location.count.is_empty() {
             (vec![0; dims.len()], dims.clone())
@@ -100,9 +112,15 @@ impl ArraySource for Datasets {
             (location.start.clone(), location.count.clone())
         };
         let rank = dims.len();
-        assert!(start.len() == rank && count.len() == rank, "a window of the dataset's rank");
+        assert!(
+            start.len() == rank && count.len() == rank,
+            "a window of the dataset's rank"
+        );
         for k in 0..rank {
-            assert!(start[k] >= 0 && start[k] + count[k] <= dims[k], "a window inside the dataset");
+            assert!(
+                start[k] >= 0 && start[k] + count[k] <= dims[k],
+                "a window inside the dataset"
+            );
         }
         let strides: Vec<usize> = (0..rank)
             .map(|k| dims[k + 1..].iter().product::<i64>() as usize)
@@ -212,7 +230,10 @@ fn property_of(counts: Vec<i64>, arrays: Vec<resqml22::AbstractValueArray>) -> r
 }
 
 /// The same property, dated by a series of instants.
-fn series_property(counts: Vec<i64>, arrays: Vec<resqml22::AbstractValueArray>) -> resqml22::ContinuousProperty {
+fn series_property(
+    counts: Vec<i64>,
+    arrays: Vec<resqml22::AbstractValueArray>,
+) -> resqml22::ContinuousProperty {
     resqml22::ContinuousProperty {
         time_or_interval_series: Some(eml23::TimeOrIntervalSeries {
             use_interval: false,
@@ -246,7 +267,8 @@ fn refused(result: Result<PropertyChunks<'_>, ChunksRefusal>) -> ChunksRefusal {
 
 /// Describe a source the way a panel does: step to the end, then finish.
 fn describe(chunks: &dyn ValueChunks) -> Description {
-    let mut describer = Describer::new(chunks, Plan::default(), StatMethods::builtin()).expect("a plan that fits");
+    let mut describer =
+        Describer::new(chunks, Plan::default(), StatMethods::builtin()).expect("a plan that fits");
     describer.step(chunks, usize::MAX).expect("a read");
     describer.finish().expect("a description")
 }
@@ -285,7 +307,10 @@ fn describing_a_plane_reads_only_the_plane() {
         nodes(4),
         None,
         None,
-        &pick(ComponentPick::Along { axis: 0, at: vec![0, 1] }),
+        &pick(ComponentPick::Along {
+            axis: 0,
+            at: vec![0, 1],
+        }),
         &source,
     )
     .expect("chunks");
@@ -316,7 +341,10 @@ fn a_flat_store_is_read_whole_and_says_so() {
         nodes(4),
         None,
         None,
-        &pick(ComponentPick::Along { axis: 0, at: vec![0, 1] }),
+        &pick(ComponentPick::Along {
+            axis: 0,
+            at: vec![0, 1],
+        }),
         &source,
     )
     .expect("chunks");
@@ -330,7 +358,9 @@ fn a_flat_store_is_read_whole_and_says_so() {
 /// Break it: ignore `fixed` (the test reads `[0, 1, 2, 3]`).
 #[test]
 fn one_time_step_is_described_alone() {
-    let values: Vec<f64> = (0..3).flat_map(|t| (0..4).map(move |n| (10 * t + n) as f64)).collect();
+    let values: Vec<f64> = (0..3)
+        .flat_map(|t| (0..4).map(move |n| (10 * t + n) as f64))
+        .collect();
     let source = Datasets::default().with("/p", &[3, 4], values);
     let object = series_property(vec![1], vec![floats("/p", &[3, 4])]);
     let read = property::read(&object).expect("a property");
@@ -338,7 +368,8 @@ fn one_time_step_is_described_alone() {
         time: TimeChoice::Step(2),
         ..Default::default()
     };
-    let chunks = PropertyChunks::new(&uri(), &read, nodes(4), Some(3), None, &selection, &source).expect("chunks");
+    let chunks =
+        PropertyChunks::new(&uri(), &read, nodes(4), Some(3), None, &selection, &source).expect("chunks");
     assert_eq!(chunks.dims(), &[4]);
     assert_eq!(chunks.read(0, 4).expect("a read"), vec![20.0, 21.0, 22.0, 23.0]);
 }
@@ -351,10 +382,27 @@ fn every_time_step_keeps_time_slowest() {
     let source = Datasets::default().with("/p", &[3, 4], values);
     let object = series_property(vec![1], vec![floats("/p", &[3, 4])]);
     let read = property::read(&object).expect("a property");
-    let chunks = PropertyChunks::new(&uri(), &read, nodes(4), Some(3), None, &ChunkSelection::default(), &source)
-        .expect("chunks");
+    let chunks = PropertyChunks::new(
+        &uri(),
+        &read,
+        nodes(4),
+        Some(3),
+        None,
+        &ChunkSelection::default(),
+        &source,
+    )
+    .expect("chunks");
     assert_eq!(chunks.dims(), &[3, 4]);
-    assert_eq!(chunks.axis_ids(), &[AxisId::Time, AxisId::Element { dim: 0, ordered: true }]);
+    assert_eq!(
+        chunks.axis_ids(),
+        &[
+            AxisId::Time,
+            AxisId::Element {
+                dim: 0,
+                ordered: true
+            }
+        ]
+    );
     let refusal = refused(PropertyChunks::new(
         &uri(),
         &read,
@@ -367,7 +415,10 @@ fn every_time_step_keeps_time_slowest() {
         },
         &source,
     ));
-    assert!(matches!(refusal, ChunksRefusal::StepOutOfRange { step: 3, steps: 3 }), "{refusal}");
+    assert!(
+        matches!(refusal, ChunksRefusal::StepOutOfRange { step: 3, steps: 3 }),
+        "{refusal}"
+    );
 }
 
 /// RESQML IntegerExternalArray.NullValue: the describer counts the nulls itself,
@@ -378,8 +429,16 @@ fn a_null_value_is_left_to_the_describer_unless_reduced() {
     let source = Datasets::default().with("/p", &[3], vec![1.0, -999.0, 3.0]);
     let object = property_of(vec![1], vec![integers("/p", &[3], -999)]);
     let read = property::read(&object).expect("a property");
-    let chunks =
-        PropertyChunks::new(&uri(), &read, nodes(3), None, None, &ChunkSelection::default(), &source).expect("chunks");
+    let chunks = PropertyChunks::new(
+        &uri(),
+        &read,
+        nodes(3),
+        None,
+        None,
+        &ChunkSelection::default(),
+        &source,
+    )
+    .expect("chunks");
     assert_eq!(chunks.null_value(), Some(-999));
     let description = describe(&chunks);
     assert!(
@@ -417,11 +476,13 @@ fn a_null_value_is_left_to_the_describer_unless_reduced() {
 fn a_realization_must_be_chosen() {
     let source = Datasets::default();
     let mut object = property_of(vec![1], vec![floats("/p", &[2, 4])]);
-    object.realization_indices = Some(eml23::AbstractIntegerArray::IntegerXmlArray(eml23::IntegerXmlArray {
-        values: vec![0, 1],
-        count_per_value: 1,
-        ..Default::default()
-    }));
+    object.realization_indices = Some(eml23::AbstractIntegerArray::IntegerXmlArray(
+        eml23::IntegerXmlArray {
+            values: vec![0, 1],
+            count_per_value: 1,
+            ..Default::default()
+        },
+    ));
     let read = property::read(&object).expect("a property");
     let refusal = refused(PropertyChunks::new(
         &uri(),
@@ -432,7 +493,10 @@ fn a_realization_must_be_chosen() {
         &ChunkSelection::default(),
         &source,
     ));
-    assert!(matches!(refusal, ChunksRefusal::RealizationNotChosen { count: 2 }), "{refusal}");
+    assert!(
+        matches!(refusal, ChunksRefusal::RealizationNotChosen { count: 2 }),
+        "{refusal}"
+    );
     let refusal = refused(PropertyChunks::new(
         &uri(),
         &read,
@@ -445,7 +509,10 @@ fn a_realization_must_be_chosen() {
         },
         &source,
     ));
-    assert!(matches!(refusal, ChunksRefusal::RealizationOutOfRange { at: 2, count: 2 }), "{refusal}");
+    assert!(
+        matches!(refusal, ChunksRefusal::RealizationOutOfRange { at: 2, count: 2 }),
+        "{refusal}"
+    );
 }
 
 /// energyml-geometry scene rule: several values per element declared and one held is read as scalars.
@@ -455,8 +522,16 @@ fn one_value_per_element_is_read_as_scalars_only_whole() {
     let source = Datasets::default().with("/p", &[4], vec![1.0, 2.0, 3.0, 4.0]);
     let object = property_of(vec![2], vec![floats("/p", &[4])]);
     let read = property::read(&object).expect("a property");
-    let chunks =
-        PropertyChunks::new(&uri(), &read, nodes(4), None, None, &ChunkSelection::default(), &source).expect("chunks");
+    let chunks = PropertyChunks::new(
+        &uri(),
+        &read,
+        nodes(4),
+        None,
+        None,
+        &ChunkSelection::default(),
+        &source,
+    )
+    .expect("chunks");
     assert_eq!(chunks.dims(), &[4]);
     assert_eq!(chunks.read_as_scalars(), Some(2));
     assert_eq!(chunks.read(0, 4).expect("a read"), vec![1.0, 2.0, 3.0, 4.0]);
@@ -469,7 +544,10 @@ fn one_value_per_element_is_read_as_scalars_only_whole() {
         &pick(ComponentPick::At(vec![1])),
         &source,
     ));
-    assert!(matches!(refusal, ChunksRefusal::OnePerElement { declared: 2 }), "{refusal}");
+    assert!(
+        matches!(refusal, ChunksRefusal::OnePerElement { declared: 2 }),
+        "{refusal}"
+    );
 }
 
 /// A lookup table names categories: codes are not described as measures.
@@ -508,11 +586,13 @@ fn refuses_a_boolean_property() {
     let source = Datasets::default();
     let object = property_of(
         vec![1],
-        vec![resqml22::AbstractValueArray::BooleanConstantArray(eml23::BooleanConstantArray {
-            value: true,
-            count: 4,
-            ..Default::default()
-        })],
+        vec![resqml22::AbstractValueArray::BooleanConstantArray(
+            eml23::BooleanConstantArray {
+                value: true,
+                count: 4,
+                ..Default::default()
+            },
+        )],
     );
     let read = property::read(&object).expect("a property");
     let refusal = refused(PropertyChunks::new(
@@ -543,7 +623,10 @@ fn refuses_several_patches() {
         &ChunkSelection::default(),
         &source,
     ));
-    assert!(matches!(refusal, ChunksRefusal::Patches { count: 2 }), "{refusal}");
+    assert!(
+        matches!(refusal, ChunksRefusal::Patches { count: 2 }),
+        "{refusal}"
+    );
 }
 
 /// View 05 §2.3: no variation is measured across elements that have no order.
@@ -551,7 +634,9 @@ fn refuses_several_patches() {
 #[test]
 fn an_unordered_axis_is_not_a_variation() {
     // [6 elements, 3 components]: 1000 per element, 1 per component.
-    let values: Vec<f64> = (0..6).flat_map(|n| (0..3).map(move |c| (1000 * n + c) as f64)).collect();
+    let values: Vec<f64> = (0..6)
+        .flat_map(|n| (0..3).map(move |c| (1000 * n + c) as f64))
+        .collect();
     let source = Datasets::default().with("/p", &[6, 3], values);
     let object = property_of(vec![3], vec![floats("/p", &[6, 3])]);
     let read = property::read(&object).expect("a property");
@@ -567,10 +652,20 @@ fn an_unordered_axis_is_not_a_variation() {
     .expect("chunks");
     assert_eq!(
         chunks.axis_ids(),
-        &[AxisId::Element { dim: 0, ordered: false }, AxisId::Component { dim: 0 }]
+        &[
+            AxisId::Element {
+                dim: 0,
+                ordered: false
+            },
+            AxisId::Component { dim: 0 }
+        ]
     );
     let mut description = describe(&chunks);
-    assert_eq!(description.strongest.map(|(axis, _)| axis), Some(0), "the elements dominate, before the drop");
+    assert_eq!(
+        description.strongest.map(|(axis, _)| axis),
+        Some(0),
+        "the elements dominate, before the drop"
+    );
     let dropped = keep_ordered_axes(&mut description, chunks.axis_ids());
     assert_eq!(dropped, vec![0]);
     assert!(description.axes.iter().all(|a| a.axis != 0));
@@ -579,7 +674,11 @@ fn an_unordered_axis_is_not_a_variation() {
         Observation::Jump(jump) => jump.axis == 0,
         _ => false,
     };
-    assert!(!description.observations.iter().any(names_axis_0), "{:?}", description.observations);
+    assert!(
+        !description.observations.iter().any(names_axis_0),
+        "{:?}",
+        description.observations
+    );
     assert_eq!(description.strongest, None, "one axis left: none dominates");
 
     // Other dimensions of the description than the ids: nothing changes.
@@ -711,7 +810,11 @@ fn dictionary(class: &str) -> Dictionary {
 }
 
 /// Every observation of a property, with the kind in the class `class`.
-fn observed(object: &resqml22::ContinuousProperty, class: &str, source: &Datasets) -> Vec<PropertyObservation> {
+fn observed(
+    object: &resqml22::ContinuousProperty,
+    class: &str,
+    source: &Datasets,
+) -> Vec<PropertyObservation> {
     let read = property::read(object).expect("a property");
     let dictionary = dictionary(class);
     let resolver = Resolver::with_dictionary(source, &dictionary);
@@ -728,7 +831,10 @@ fn base() -> resqml22::ContinuousProperty {
 fn an_extension_facet_is_said() {
     let mut object = base();
     object.facet = vec![
-        facet(eml23::FacetKind::Direction, eml23::FacetExt::Other("nwdf:vertical".into())),
+        facet(
+            eml23::FacetKind::Direction,
+            eml23::FacetExt::Other("nwdf:vertical".into()),
+        ),
         facet(eml23::FacetKind::Direction, eml23::FacetExt::I),
     ];
     let seen = observed(&object, "length", &Datasets::default());
@@ -760,7 +866,11 @@ fn a_standard_value_under_another_kind_is_said() {
     let mut object = base();
     object.facet = vec![facet(eml23::FacetKind::Direction, eml23::FacetExt::K)];
     let seen = observed(&object, "length", &Datasets::default());
-    assert!(!seen.iter().any(|o| matches!(o, PropertyObservation::FacetValueOfOtherKind { .. })));
+    assert!(
+        !seen
+            .iter()
+            .any(|o| matches!(o, PropertyObservation::FacetValueOfOtherKind { .. }))
+    );
 }
 
 /// RESQML TRG 2.0.1 §6.36 p. 77: a 2.0.1 value is free text, the 2.3 list does not bind it.
@@ -776,12 +886,21 @@ fn a_2_0_1_value_is_not_held_to_the_2_3_list() {
         ..Default::default()
     };
     let read = property::read(&object).expect("a property");
-    assert!(read.qualified_type.starts_with("resqml20."), "{}", read.qualified_type);
+    assert!(
+        read.qualified_type.starts_with("resqml20."),
+        "{}",
+        read.qualified_type
+    );
     let source = Datasets::default();
     let dictionary = dictionary("length");
     let resolver = Resolver::with_dictionary(&source, &dictionary);
     let seen = observe::observations(&uri(), &read, &object, None, None, &source, &resolver);
-    assert!(!seen.iter().any(|o| matches!(o, PropertyObservation::FacetValueOfOtherKind { .. })), "{seen:?}");
+    assert!(
+        !seen
+            .iter()
+            .any(|o| matches!(o, PropertyObservation::FacetValueOfOtherKind { .. })),
+        "{seen:?}"
+    );
 }
 
 /// EML TRG 2.3 §11.2 p. 284: the table is the schema's documentation.
@@ -798,14 +917,23 @@ fn the_facet_kind_table_agrees_with_the_schema_documentation() {
             .strip_prefix("Applies to ")
             .and_then(|rest| rest.split_once(" facet kind"))
             .map(|(kind, _)| kind);
-        assert_eq!(schema_facet_kind(variant.value), documented, "the value `{}`", variant.value);
+        assert_eq!(
+            schema_facet_kind(variant.value),
+            documented,
+            "the value `{}`",
+            variant.value
+        );
     }
     for (value, kind) in FACET_VALUE_KINDS {
         let variant = variants
             .iter()
             .find(|v| !v.is_other && v.value == *value)
             .unwrap_or_else(|| panic!("`{value}` is not a value of FacetExt"));
-        assert!(variant.doc.contains(kind), "`{value}` is documented as `{}`", variant.doc);
+        assert!(
+            variant.doc.contains(kind),
+            "`{value}` is documented as `{}`",
+            variant.doc
+        );
     }
 }
 
@@ -858,7 +986,10 @@ fn a_length_in_metres_is_checked() {
     object.uom = unit("Pa");
     let seen = observed(&object, "length", &Datasets::default());
     assert!(
-        matches!(unit_of(&seen), UnitCheck::Outside(KindIssue::UomOutsideQuantityClass { .. })),
+        matches!(
+            unit_of(&seen),
+            UnitCheck::Outside(KindIssue::UomOutsideQuantityClass { .. })
+        ),
         "{seen:?}"
     );
 }
@@ -943,7 +1074,12 @@ fn a_synthetic_mark_is_said_only_when_written() {
     object.extension_name_value = vec![mark("maybe", None)];
     assert_eq!(
         marks(&observed(&object, "length", &Datasets::default())),
-        vec![(MarkedObject::Property, SyntheticMark::Unclear { value: "maybe".into() })]
+        vec![(
+            MarkedObject::Property,
+            SyntheticMark::Unclear {
+                value: "maybe".into()
+            }
+        )]
     );
     object.extension_name_value = Vec::new();
     assert!(marks(&observed(&object, "length", &Datasets::default())).is_empty());
@@ -976,21 +1112,45 @@ fn a_count_of_one_per_element_is_said() {
     let dictionary = dictionary("length");
     let resolver = Resolver::with_dictionary(&source, &dictionary);
     let said = |stored: &[u64]| {
-        observe::observations(&uri(), &read, &object, Some(&shape), Some(stored), &source, &resolver)
+        observe::observations(
+            &uri(),
+            &read,
+            &object,
+            Some(&shape),
+            Some(stored),
+            &source,
+            &resolver,
+        )
     };
     let seen = said(&[4]);
-    assert!(matches!(&seen[0], PropertyObservation::Shape { layout: None, .. }), "{seen:?}");
+    assert!(
+        matches!(&seen[0], PropertyObservation::Shape { layout: None, .. }),
+        "{seen:?}"
+    );
     assert_eq!(seen[1], PropertyObservation::DeclaredCountWrong { declared: 2 });
     let seen = said(&[5]);
-    assert!(matches!(&seen[0], PropertyObservation::Shape { layout: None, .. }), "{seen:?}");
     assert!(
-        matches!(&seen[1], PropertyObservation::StoredDisagrees(ShapeRefusal::StoredMismatch { .. })),
+        matches!(&seen[0], PropertyObservation::Shape { layout: None, .. }),
+        "{seen:?}"
+    );
+    assert!(
+        matches!(
+            &seen[1],
+            PropertyObservation::StoredDisagrees(ShapeRefusal::StoredMismatch { .. })
+        ),
         "{seen:?}"
     );
     // A stored shape that regroups the declared one: its layout is kept.
     let seen = said(&[8]);
-    assert!(matches!(&seen[0], PropertyObservation::Shape { layout: Some(_), .. }), "{seen:?}");
+    assert!(
+        matches!(&seen[0], PropertyObservation::Shape { layout: Some(_), .. }),
+        "{seen:?}"
+    );
     // No shape given: the shape is not guessed.
     let none = observe::observations(&uri(), &read, &object, None, Some(&[4]), &source, &resolver);
-    assert!(!none.iter().any(|o| matches!(o, PropertyObservation::Shape { .. })));
+    assert!(
+        !none
+            .iter()
+            .any(|o| matches!(o, PropertyObservation::Shape { .. }))
+    );
 }

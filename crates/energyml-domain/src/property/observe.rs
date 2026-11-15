@@ -223,7 +223,11 @@ fn facet_text(facet: &super::Facet) -> &str {
     facet.value.as_str()
 }
 
-fn shape_observations(shape: Option<&PropertyShape>, stored: Option<&[u64]>, out: &mut Vec<PropertyObservation>) {
+fn shape_observations(
+    shape: Option<&PropertyShape>,
+    stored: Option<&[u64]>,
+    out: &mut Vec<PropertyObservation>,
+) {
     // The shape is never guessed: without one, nothing is said.
     let Some(shape) = shape else {
         return;
@@ -281,7 +285,10 @@ fn facet_observations(property: &Property<'_>, out: &mut Vec<PropertyObservation
     // Several facets of one kind, in the order the kinds first appear.
     let mut counts: Vec<(&str, usize)> = Vec::new();
     for facet in &property.facets {
-        match counts.iter_mut().find(|(kind, _)| kind.eq_ignore_ascii_case(&facet.kind)) {
+        match counts
+            .iter_mut()
+            .find(|(kind, _)| kind.eq_ignore_ascii_case(&facet.kind))
+        {
             Some((_, count)) => *count += 1,
             None => counts.push((&facet.kind, 1)),
         }
@@ -298,7 +305,9 @@ fn facet_observations(property: &Property<'_>, out: &mut Vec<PropertyObservation
 
 fn kind_observations(property: &Property<'_>, resolver: &Resolver<'_>, out: &mut Vec<PropertyObservation>) {
     let Some(kind) = &property.kind else {
-        out.push(PropertyObservation::Unit(UnitCheck::NotCheckable(UnitNotCheckable::NoKind)));
+        out.push(PropertyObservation::Unit(UnitCheck::NotCheckable(
+            UnitNotCheckable::NoKind,
+        )));
         return;
     };
     let resolution = match resolver.resolve_at(kind, property.kind_uri.as_deref()) {
@@ -312,12 +321,17 @@ fn kind_observations(property: &Property<'_>, resolver: &Resolver<'_>, out: &mut
     };
     let issues = property_kind::check(&resolution, property.uom.as_deref());
     for issue in &issues {
-        if matches!(issue, KindIssue::AbstractKindUsed { .. } | KindIssue::Deprecated { .. }) {
+        if matches!(
+            issue,
+            KindIssue::AbstractKindUsed { .. } | KindIssue::Deprecated { .. }
+        ) {
             out.push(PropertyObservation::Kind(issue.clone()));
         }
     }
     let Some(uom) = &property.uom else {
-        out.push(PropertyObservation::Unit(UnitCheck::NotCheckable(UnitNotCheckable::NoUnit)));
+        out.push(PropertyObservation::Unit(UnitCheck::NotCheckable(
+            UnitNotCheckable::NoUnit,
+        )));
         return;
     };
     let Some(class) = resolution.quantity_class() else {

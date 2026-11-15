@@ -65,7 +65,9 @@ pub struct AngleConvention {
 #[derive(Clone, Debug, PartialEq, thiserror::Error)]
 pub enum PolarRefusal {
     /// No convention was declared.
-    #[error("no angle convention is declared: the origin and the sense of the angles are not stated by the file")]
+    #[error(
+        "no angle convention is declared: the origin and the sense of the angles are not stated by the file"
+    )]
     ConventionUndeclared,
     /// Radii and angles differ in number.
     #[error("{radii} radii for {angles} angles")]
@@ -136,9 +138,15 @@ pub fn plane_direction(
         == (convention.viewed_from == ViewedFrom::LookingDownhole);
     let (sin, cos) = theta.sin_cos();
     Ok(if clockwise {
-        [origin[0] * cos + origin[1] * sin, -origin[0] * sin + origin[1] * cos]
+        [
+            origin[0] * cos + origin[1] * sin,
+            -origin[0] * sin + origin[1] * cos,
+        ]
     } else {
-        [origin[0] * cos - origin[1] * sin, origin[0] * sin + origin[1] * cos]
+        [
+            origin[0] * cos - origin[1] * sin,
+            origin[0] * sin + origin[1] * cos,
+        ]
     })
 }
 
@@ -211,9 +219,7 @@ pub fn sector_bounds(angles: &[f64]) -> Result<Vec<[f64; 2]>, PolarRefusal> {
 
 /// `n` sectors evenly spread, the first centred on `first_centre`.
 pub fn regular_sectors(n: usize, first_centre: f64) -> Vec<f64> {
-    (0..n)
-        .map(|k| first_centre + k as f64 * TAU / n as f64)
-        .collect()
+    (0..n).map(|k| first_centre + k as f64 * TAU / n as f64).collect()
 }
 
 /// A point of the canonical plane carried into space by the frame.

@@ -453,7 +453,12 @@ impl ComponentPick {
         if reduced.is_empty() {
             ComponentPick::Along { axis, at }
         } else {
-            ComponentPick::AlongReduced { axis, at, reduced, by }
+            ComponentPick::AlongReduced {
+                axis,
+                at,
+                reduced,
+                by,
+            }
         }
     }
 
@@ -500,7 +505,12 @@ impl ComponentPick {
                 }
                 Ok(())
             }
-            ComponentPick::AlongReduced { axis, at, reduced, by } => {
+            ComponentPick::AlongReduced {
+                axis,
+                at,
+                reduced,
+                by,
+            } => {
                 if reduced.is_empty() {
                     return Err(ComponentRefusal::NothingReduced { axis: *axis });
                 }
@@ -580,7 +590,9 @@ impl ComponentPick {
                 }
                 Ok(out)
             }
-            ComponentPick::AlongReduced { axis, at, reduced, .. } => {
+            ComponentPick::AlongReduced {
+                axis, at, reduced, ..
+            } => {
                 let mut sorted = reduced.clone();
                 sorted.sort_unstable();
                 let mut out = Vec::new();
@@ -666,7 +678,12 @@ impl ComponentPick {
                     },
                 )
             }
-            ComponentPick::AlongReduced { axis, at, reduced, by } => {
+            ComponentPick::AlongReduced {
+                axis,
+                at,
+                reduced,
+                by,
+            } => {
                 let mut start: Vec<u64> = at.iter().map(|i| *i as u64).collect();
                 let mut count = vec![1u64; rank];
                 start[*axis] = 0;
@@ -815,23 +832,31 @@ pub fn element_axes(representation: &dyn Reflect, element: IndexableElement) -> 
             let (fastest, slowest) = super::grid2d_axes(representation)?;
             Ok(ElementAxes::Ordered(vec![slowest, fastest]))
         }
-        "WellboreFrameRepresentation" | "SeismicWellboreFrameRepresentation" | "WellboreMarkerFrameRepresentation"
+        "WellboreFrameRepresentation"
+        | "SeismicWellboreFrameRepresentation"
+        | "WellboreMarkerFrameRepresentation"
             if matches!(
                 element,
                 Nodes | Intervals | Interval | IntervalEdges | IntervalsFromDatum
             ) =>
         {
-            Ok(ElementAxes::Ordered(vec![super::element_count(representation, element)?]))
+            Ok(ElementAxes::Ordered(vec![super::element_count(
+                representation,
+                element,
+            )?]))
         }
-        "PolylineRepresentation" if matches!(element, Nodes | Intervals | Interval) => {
-            Ok(ElementAxes::Ordered(vec![super::element_count(representation, element)?]))
-        }
+        "PolylineRepresentation" if matches!(element, Nodes | Intervals | Interval) => Ok(
+            ElementAxes::Ordered(vec![super::element_count(representation, element)?]),
+        ),
         _ => unordered(representation, element),
     }
 }
 
 fn unordered(representation: &dyn Reflect, element: IndexableElement) -> DomainResult<ElementAxes> {
-    Ok(ElementAxes::Unordered(super::element_count(representation, element)?))
+    Ok(ElementAxes::Unordered(super::element_count(
+        representation,
+        element,
+    )?))
 }
 
 impl PropertyShape {

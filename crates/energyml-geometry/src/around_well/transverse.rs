@@ -113,7 +113,10 @@ impl std::fmt::Display for GridRefusal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             GridRefusal::SameAxisTwice => {
-                write!(f, "both dimensions run along the same axis: the plane is not spanned")
+                write!(
+                    f,
+                    "both dimensions run along the same axis: the plane is not spanned"
+                )
             }
             GridRefusal::Empty { slow } => write!(f, "the {} dimension has no offset", which(*slow)),
             GridRefusal::NotFinite { slow, at } => {

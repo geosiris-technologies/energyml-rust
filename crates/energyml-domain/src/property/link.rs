@@ -36,7 +36,9 @@ pub enum QualifierRefusal {
         count: usize,
     },
     /// A value that starts like an ETP uri and is not the uri of an object.
-    #[error("the qualifier facet `{value}` starts like an ETP uri and does not parse as the uri of an object")]
+    #[error(
+        "the qualifier facet `{value}` starts like an ETP uri and does not parse as the uri of an object"
+    )]
     MalformedUri {
         /// The value, trimmed.
         value: String,

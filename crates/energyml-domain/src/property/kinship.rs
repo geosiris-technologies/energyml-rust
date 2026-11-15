@@ -220,7 +220,9 @@ fn shape_of<'a>(facts: &KinFacts<'a>) -> &'a [u64] {
 
 /// The only `direction` facet, when there is exactly one.
 fn direction_of(facets: &[Facet]) -> Option<&Facet> {
-    let mut found = facets.iter().filter(|facet| facet.kind.eq_ignore_ascii_case("direction"));
+    let mut found = facets
+        .iter()
+        .filter(|facet| facet.kind.eq_ignore_ascii_case("direction"));
     let first = found.next()?;
     found.next().is_none().then_some(first)
 }

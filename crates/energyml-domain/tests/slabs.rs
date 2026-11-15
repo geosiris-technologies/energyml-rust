@@ -16,7 +16,7 @@ use energyml_core::registry::DynObject;
 use energyml_core::value::Reflect;
 use energyml_domain::source::{ArraySource, ObjectSource};
 use energyml_storage::array::{ArrayBuffer, ArrayData, ArrayLocation, ArrayMetadata, ArrayValues};
-use energyml_storage::{ExternalDataReason, Error as StorageError};
+use energyml_storage::{Error as StorageError, ExternalDataReason};
 
 /// Objects by uri, datasets by path in the file, and a count of what was read.
 #[derive(Default)]
@@ -109,7 +109,8 @@ impl ArraySource for Slabs {
             }
             (location.count.clone(), cut(values, dims, &start, &location.count))
         };
-        self.values_returned.set(self.values_returned.get() + picked.len());
+        self.values_returned
+            .set(self.values_returned.get() + picked.len());
         Ok(ArrayData {
             metadata: ArrayMetadata::new(counts, "double"),
             values: ArrayValues::F64(picked),

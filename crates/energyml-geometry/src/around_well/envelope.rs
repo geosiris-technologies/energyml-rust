@@ -82,7 +82,9 @@ pub enum EnvelopeRefusal {
         given: usize,
     },
     /// No angle convention was declared.
-    #[error("no angle convention is declared: the origin and the sense of the angles are not stated by the file")]
+    #[error(
+        "no angle convention is declared: the origin and the sense of the angles are not stated by the file"
+    )]
     ConventionUndeclared,
     /// The angles of a node do not turn one way within one turn.
     #[error("the angles of node {node} do not turn one way within one turn")]
@@ -291,8 +293,7 @@ pub fn ribbon(
                 index[(i + 1) * rows + r + 1],
                 index[(i + 1) * rows + r],
             ];
-            let (Some(a), Some(b), Some(c), Some(d)) =
-                (corners[0], corners[1], corners[2], corners[3])
+            let (Some(a), Some(b), Some(c), Some(d)) = (corners[0], corners[1], corners[2], corners[3])
             else {
                 mesh.holes += 1;
                 continue;

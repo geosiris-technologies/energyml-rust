@@ -127,10 +127,16 @@ fn a_2_0_1_crs_states_the_axis_order_of_its_projected_system() {
             second_degrees: 90.0
         })
     );
-    assert_eq!(northing_easting.axes.stated().unwrap().handedness(), Handedness::Left);
+    assert_eq!(
+        northing_easting.axes.stated().unwrap().handedness(),
+        Handedness::Left
+    );
 
     let easting_northing = crs::read(&depth_crs_2_0_1(eml20::AxisOrder2d::EastingNorthing)).expect("reads");
-    assert_eq!(easting_northing.axes.stated().unwrap().handedness(), Handedness::Right);
+    assert_eq!(
+        easting_northing.axes.stated().unwrap().handedness(),
+        Handedness::Right
+    );
 }
 
 #[test]
@@ -195,5 +201,9 @@ fn an_eml_2_3_compound_whose_two_statements_disagree_is_contradictory() {
             },
         }
     );
-    assert_eq!(read.to_projected([1.0, 2.0, 0.0])[0], 1.0, "points are placed all the same");
+    assert_eq!(
+        read.to_projected([1.0, 2.0, 0.0])[0],
+        1.0,
+        "points are placed all the same"
+    );
 }

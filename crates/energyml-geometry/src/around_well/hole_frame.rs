@@ -45,7 +45,9 @@ pub enum FrameRefusal {
         md: f64,
     },
     /// The hole is too close to vertical for a high side to exist (S4).
-    #[error("at MD {md}: the hole is {inclination} rad from vertical, under the threshold - it has no high side")]
+    #[error(
+        "at MD {md}: the hole is {inclination} rad from vertical, under the threshold - it has no high side"
+    )]
     HighSideUndefined {
         /// The measured depth.
         md: f64,
@@ -69,10 +71,14 @@ pub enum FrameRefusal {
         md: f64,
     },
     /// Neither the CRS nor the caller states the order of the horizontal axes.
-    #[error("the CRS states no usable order of its horizontal axes, and none was declared: which side is right is not known")]
+    #[error(
+        "the CRS states no usable order of its horizontal axes, and none was declared: which side is right is not known"
+    )]
     AxisOrderUnknown,
     /// A declaration against what the file states.
-    #[error("the file states a {stated:?}-handed frame and the declaration says {declared:?}: a declaration never overrides the file")]
+    #[error(
+        "the file states a {stated:?}-handed frame and the declaration says {declared:?}: a declaration never overrides the file"
+    )]
     DeclaredAgainstFile {
         /// What the file states.
         stated: Handedness,
@@ -130,11 +136,7 @@ impl Frames {
 /// radians: a hole within it of vertical (down or up) is refused. TODO(verify): the TRG WITSML 2.1 defines no
 /// high side (only the gravity toolface `Gtf`, section 16.10 p. 358); the definition used is the one of
 /// Sawaryn and Thorogood, SPE 84246.
-pub fn high_side_of(
-    md: f64,
-    tangent: Point,
-    min_inclination: f64,
-) -> Result<(Point, f64), FrameRefusal> {
+pub fn high_side_of(md: f64, tangent: Point, min_inclination: f64) -> Result<(Point, f64), FrameRefusal> {
     let t = unit(tangent).ok_or(FrameRefusal::NotFinite { md })?;
     let horizontal = t[0].hypot(t[1]);
     let inclination = horizontal.atan2(-t[2]);
@@ -179,11 +181,7 @@ pub fn hole_frame(
 /// The handedness is the file's, or the caller's when the file states none; both stated and different is
 /// refused as a whole, and so is neither. A depth outside the path, or where the line has no direction, or too
 /// close to vertical, is a refused frame at that depth only.
-pub fn frames_along(
-    path: &PlacedPath,
-    mds: &[f64],
-    options: &FrameOptions,
-) -> Result<Frames, FrameRefusal> {
+pub fn frames_along(path: &PlacedPath, mds: &[f64], options: &FrameOptions) -> Result<Frames, FrameRefusal> {
     let handedness = match (path.handedness(), options.handedness) {
         (Some(stated), Some(declared)) if stated != declared => {
             return Err(FrameRefusal::DeclaredAgainstFile { stated, declared });
@@ -199,9 +197,7 @@ pub fn frames_along(
             if path.range_of(md) != MdRange::Within {
                 return Err(FrameRefusal::MdOutside { md, first, last });
             }
-            let tangent = path
-                .direction_at(md)
-                .ok_or(FrameRefusal::NoDirection { md })?;
+            let tangent = path.direction_at(md).ok_or(FrameRefusal::NoDirection { md })?;
             hole_frame(
                 md,
                 path.at(md).point,
@@ -228,9 +224,7 @@ pub fn offset_point(path: &PlacedPath, md: f64, dn: f64) -> Result<Point, FrameR
     if !dn.is_finite() {
         return Err(FrameRefusal::NotFinite { md });
     }
-    let t = path
-        .direction_at(md)
-        .ok_or(FrameRefusal::NoDirection { md })?;
+    let t = path.direction_at(md).ok_or(FrameRefusal::NoDirection { md })?;
     let (h, _) = high_side_of(md, t, MIN_INCLINATION_DEGREES.to_radians())?;
     Ok(add(p, scale(h, dn)))
 }

@@ -108,7 +108,9 @@ pub enum ChunksRefusal {
         lookup: String,
     },
     /// Several values per element declared, one held, and a pick other than `All`.
-    #[error("declares {declared} values per element and holds one: only `ComponentPick::All` reads it, as scalars")]
+    #[error(
+        "declares {declared} values per element and holds one: only `ComponentPick::All` reads it, as scalars"
+    )]
     OnePerElement {
         /// The count the document declares.
         declared: u64,
@@ -327,7 +329,8 @@ impl<'a> PropertyChunks<'a> {
         // Whether a slab reads only the narrowed block is `slab_block`'s to say
         // (the one block arithmetic); asking it for the first slab reads no value
         // and checks the fixed indices.
-        let reads_narrowed = values::slab_block(&read_shape, &layout, &fixed, 0, 1, narrowed.as_ref())?.narrowed;
+        let reads_narrowed =
+            values::slab_block(&read_shape, &layout, &fixed, 0, 1, narrowed.as_ref())?.narrowed;
 
         Ok(PropertyChunks {
             at,
@@ -388,7 +391,10 @@ impl<'a> PropertyChunks<'a> {
     /// Whether the pick reduces components to one value: the values rendered
     /// are then reductions, and none of them is the NullValue.
     fn reduces(&self) -> bool {
-        matches!(self.pick, ComponentPick::Reduce(_) | ComponentPick::AlongReduced { .. })
+        matches!(
+            self.pick,
+            ComponentPick::Reduce(_) | ComponentPick::AlongReduced { .. }
+        )
     }
 }
 
@@ -412,7 +418,10 @@ impl ValueChunks for PropertyChunks<'_> {
         )?;
         let read = values::read_block(self.array, self.source, &self.at, &slab.block)?;
         let values = read.to_f64().ok_or_else(|| {
-            Error::unsupported(format!("values of the family {:?} as numbers", read.family()), &self.at)
+            Error::unsupported(
+                format!("values of the family {:?} as numbers", read.family()),
+                &self.at,
+            )
         })?;
         if matches!(self.pick, ComponentPick::All) {
             return Ok(values);
@@ -482,7 +491,9 @@ pub fn keep_ordered_axes(description: &mut Description, axis_ids: &[AxisId]) -> 
     });
     description.strongest = strongest(&description.axes, STRONGEST_RATIO);
     if let Some((axis, ratio)) = description.strongest {
-        description.observations.push(Observation::Strongest { axis, ratio });
+        description
+            .observations
+            .push(Observation::Strongest { axis, ratio });
     }
     drop
 }

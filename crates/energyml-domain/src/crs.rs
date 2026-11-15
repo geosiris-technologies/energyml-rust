@@ -1108,7 +1108,9 @@ pub fn read_with(crs: &dyn Reflect, source: &dyn ObjectSource) -> Result<Crs> {
     // The axis order of the projected system: RESQML 2.0.1's `ProjectedAxisOrder`, or the `AxisOrder`
     // of an eml 2.3 `ProjectedCrs` named directly. Never an error: a CRS whose axes cannot be read
     // still places its points.
-    if let Some(text) = measure::enum_value(crs, "ProjectedAxisOrder").or_else(|| measure::enum_value(crs, "AxisOrder")) {
+    if let Some(text) =
+        measure::enum_value(crs, "ProjectedAxisOrder").or_else(|| measure::enum_value(crs, "AxisOrder"))
+    {
         out.axes = reading_of_order(text);
     }
 
@@ -1280,7 +1282,8 @@ pub fn read_with(crs: &dyn Reflect, source: &dyn ObjectSource) -> Result<Crs> {
 /// readable and agree on the handedness, because the placed coordinates are the projected system's
 /// (what `to_projected` produces); two statements that disagree are `Contradictory`.
 fn compound_axes(plane: &dyn Reflect) -> AxisReading {
-    let projected_text = field_object(plane, "OriginProjectedCrs").and_then(|p| measure::enum_value(p, "AxisOrder"));
+    let projected_text =
+        field_object(plane, "OriginProjectedCrs").and_then(|p| measure::enum_value(p, "AxisOrder"));
     let projected = projected_text.as_deref().and_then(AxisOrder::from_order);
     let words = field_object(plane, "HorizontalAxes").and_then(|axes| {
         Some((
@@ -1610,7 +1613,7 @@ fn field_object<'a>(object: &'a dyn Reflect, field: &str) -> Option<&'a dyn Refl
 mod tests {
     use super::*;
 
-    fn crs(rotation: f64, direction: VerticalDirection) -> Crs {
+    pub(super) fn crs(rotation: f64, direction: VerticalDirection) -> Crs {
         Crs {
             uuid: "test".into(),
             kind: "LocalDepth3dCrs",
@@ -1763,6 +1766,7 @@ mod tests {
 
 #[cfg(test)]
 mod inverse_tests {
+    use super::tests::crs;
     use super::*;
 
     #[test]
@@ -1808,9 +1812,18 @@ mod inverse_tests {
         crs.y_offset = 2000.0;
         crs.z_offset = 35.0;
         let close = |a: [f64; 3], b: [f64; 3]| (0..3).all(|i| (a[i] - b[i]).abs() < 1e-12);
-        assert!(close(crs.direction_to_projected([1.0, 0.0, 0.0]), [0.0, 1.0, 0.0]));
-        assert!(close(crs.direction_to_projected([0.0, 0.0, 1.0]), [0.0, 0.0, -1.0]));
-        assert!(close(crs.direction_to_projected([0.0, 0.0, 0.0]), [0.0, 0.0, 0.0]));
+        assert!(close(
+            crs.direction_to_projected([1.0, 0.0, 0.0]),
+            [0.0, 1.0, 0.0]
+        ));
+        assert!(close(
+            crs.direction_to_projected([0.0, 0.0, 1.0]),
+            [0.0, 0.0, -1.0]
+        ));
+        assert!(close(
+            crs.direction_to_projected([0.0, 0.0, 0.0]),
+            [0.0, 0.0, 0.0]
+        ));
     }
 
     // The identity that defines the door: two doors, one fact.
@@ -1847,7 +1860,11 @@ mod inverse_tests {
         ];
         for (text, first, second, hand) in table {
             let order = AxisOrder::from_order(text).unwrap();
-            assert_eq!((order.first_degrees, order.second_degrees), (first, second), "{text}");
+            assert_eq!(
+                (order.first_degrees, order.second_degrees),
+                (first, second),
+                "{text}"
+            );
             assert_eq!(order.handedness(), hand, "{text}");
         }
         assert!(AxisOrder::from_order("up down").is_none());
@@ -1878,7 +1895,12 @@ mod inverse_tests {
             assert_eq!(order.compass().handedness(), Some(order.handedness()), "{text}");
         }
         let compass = AxisOrder::from_order("northing easting").unwrap().compass();
-        for (got, want) in compass.east.iter().zip([0.0, 1.0]).chain(compass.north.iter().zip([1.0, 0.0])) {
+        for (got, want) in compass
+            .east
+            .iter()
+            .zip([0.0, 1.0])
+            .chain(compass.north.iter().zip([1.0, 0.0]))
+        {
             assert!((got - want).abs() < 1e-12);
         }
     }

@@ -317,7 +317,11 @@ impl PropertySheet {
     /// The component shape, as [`ElementShape::of`] reads the property: the
     /// counts per element and the labels the sheet keeps.
     pub fn element_shape(&self) -> Result<ElementShape, ShapeRefusal> {
-        let labels: Vec<String> = self.label_per_component.iter().map(|label| label.to_string()).collect();
+        let labels: Vec<String> = self
+            .label_per_component
+            .iter()
+            .map(|label| label.to_string())
+            .collect();
         ElementShape::of(&self.value_count_per_element, &labels)
     }
 

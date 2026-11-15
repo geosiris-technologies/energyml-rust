@@ -68,10 +68,8 @@
 - [0027 Gaps, seams, scales and quantiles](adr/0027-gaps-seams-scales-and-quantiles.md)
 - [0028 One drawing for every view](adr/0028-one-drawing-for-every-view.md)
 - [0029 A link to a table is one qualifier facet](adr/0029-convention-b-links-by-qualifier-facet.md)
-
-- [0042 What a property says of itself](adr/0042-what-a-property-says-of-itself.md)
-
 - [0031 The direction at a knot](adr/0031-tangent-at-a-knot.md)
 - [0032 The frame of a hole](adr/0032-hole-frame-in-a-direct-placed-frame.md)
 - [0033 TVD below the MD datum](adr/0033-tvd-below-the-md-datum.md)
 - [0041 Declared conventions, and the vertical without a CRS](adr/0041-declared-conventions-and-the-vertical-without-crs.md)
+- [0042 What a property says of itself](adr/0042-what-a-property-says-of-itself.md)

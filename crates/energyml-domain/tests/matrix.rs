@@ -194,7 +194,11 @@ fn property(
 
 /// The `[4, 3, 2]` property of the examples, stored as `stored` says.
 fn cube_property(stored: &[i64]) -> resqml22::ContinuousProperty {
-    property(eml23::IndexableElement::Nodes, vec![3, 2], external("/rh", stored))
+    property(
+        eml23::IndexableElement::Nodes,
+        vec![3, 2],
+        external("/rh", stored),
+    )
 }
 
 fn along_first_dimension() -> ComponentPick {
@@ -305,7 +309,11 @@ fn a_reduction_is_read_whole() {
 /// Break it: refuse a count that is not the declared support's.
 #[test]
 fn interval_values_are_found_by_their_count() {
-    let object = property(eml23::IndexableElement::Nodes, vec![3, 2], external("/rh", &[3, 3, 2]));
+    let object = property(
+        eml23::IndexableElement::Nodes,
+        vec![3, 2],
+        external("/rh", &[3, 3, 2]),
+    );
     let property = read(&object);
     let source = Datasets::with("/rh", &[3, 3, 2], cube(3));
     let matrix = read_matrix(URI, &property, 4, &source).expect("a matrix");
@@ -342,7 +350,11 @@ fn node_values_declared_on_intervals_are_found_by_their_count() {
 /// Break it: read the values anyway.
 #[test]
 fn a_count_that_fits_neither_support_is_refused() {
-    let object = property(eml23::IndexableElement::Nodes, vec![3, 2], external("/rh", &[5, 3, 2]));
+    let object = property(
+        eml23::IndexableElement::Nodes,
+        vec![3, 2],
+        external("/rh", &[5, 3, 2]),
+    );
     let property = read(&object);
     let source = Datasets::with("/rh", &[5, 3, 2], cube(5));
     let refusal = read_matrix(URI, &property, 4, &source).expect_err("refused");
@@ -472,7 +484,10 @@ fn cell_reads_row_and_component() {
     assert_eq!(matrix.cell(2, &[1, 0]), Some(210.0));
     assert_eq!(matrix.cell(4, &[1, 0]), None);
     assert_eq!(matrix.cell(0, &[3, 0]), None);
-    assert_eq!(matrix.row(1), Some(&[100.0, 101.0, 110.0, 111.0, 120.0, 121.0][..]));
+    assert_eq!(
+        matrix.row(1),
+        Some(&[100.0, 101.0, 110.0, 111.0, 120.0, 121.0][..])
+    );
     assert_eq!(matrix.shape, ElementShape::of(&[3, 2], &[]).expect("a shape"));
     assert_eq!(matrix.uri, URI);
 }

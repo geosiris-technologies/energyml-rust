@@ -252,16 +252,16 @@ pub fn read(set: &dyn Reflect) -> Result<Series, Refused> {
     read_with(set, &NoObjects)
 }
 
+/// What [`rows_of`] gives back: the declared indexes, the channels as listed, and the raw rows.
+pub(super) type SetRows = (Vec<Declared>, Vec<Listed>, Vec<Value>);
+
 /// The indexes a set declares, its channels as listed, and its rows (inline or
 /// in a dataset `arrays` reads), before any cell is decoded.
 ///
 /// The one place that reads these, for [`read_with`] and for the array channels
 /// of `series::matrix` (README of the lot, S9): neither reads the rows twice.
 /// The caller has checked [`reads`].
-pub(super) fn rows_of(
-    set: &dyn Reflect,
-    arrays: &dyn ArraySource,
-) -> Result<(Vec<Declared>, Vec<Listed>, Vec<Value>), Refused> {
+pub(super) fn rows_of(set: &dyn Reflect, arrays: &dyn ArraySource) -> Result<SetRows, Refused> {
     // -- the data: inline, in a dataset, or refused ------------------------------
     // By syntax, never guessed from content (module doc).
     let data = objects(set, "Data").into_iter().next().ok_or(Refused::NoData)?;
@@ -602,7 +602,12 @@ fn cells_of(values: &energyml_storage::ArrayValues) -> Vec<Value> {
 }
 
 /// A number, an instant or nothing - or a refusal naming the cell.
-pub(super) fn read_number(cell: &Value, decode: Decode, row: usize, column: &str) -> Result<Option<f64>, Refused> {
+pub(super) fn read_number(
+    cell: &Value,
+    decode: Decode,
+    row: usize,
+    column: &str,
+) -> Result<Option<f64>, Refused> {
     let wrong = |found: String| Refused::ValueKind {
         row,
         column: column.to_string(),

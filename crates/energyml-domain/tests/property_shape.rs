@@ -10,8 +10,8 @@
 //! (`TimeOrIntervalSeries.UseInterval`). Every object is built here, in memory.
 
 use energyml_domain::property::shape::{
-    ComponentPick, ComponentRefusal, CountFit, ElementAxes, ElementShape, PropertyShape, Reduction, ShapeRefusal,
-    TimeAxis, element_axes,
+    ComponentPick, ComponentRefusal, CountFit, ElementAxes, ElementShape, PropertyShape, Reduction,
+    ShapeRefusal, TimeAxis, element_axes,
 };
 use energyml_domain::property::{self, Discrepancy, Instant};
 use energyml_eml_2_3 as eml23;
@@ -138,7 +138,10 @@ fn labels_must_count_the_product() {
     assert_eq!(ok.label_of(&[2, 1]), Some("c5"));
     assert_eq!(
         ElementShape::of(&[3, 2], &labels(5)),
-        Err(ShapeRefusal::LabelCount { labels: 5, expected: 6 })
+        Err(ShapeRefusal::LabelCount {
+            labels: 5,
+            expected: 6
+        })
     );
 }
 
@@ -158,7 +161,11 @@ fn a_component_past_its_axis_is_refused() {
     let shape = shape(&[3, 2]);
     assert_eq!(
         shape.flat_component(&[3, 0]),
-        Err(ComponentRefusal::OutOfRange { axis: 0, at: 3, len: 3 })
+        Err(ComponentRefusal::OutOfRange {
+            axis: 0,
+            at: 3,
+            len: 3
+        })
     );
     assert_eq!(
         shape.flat_component(&[1]),
@@ -188,7 +195,10 @@ fn along_reads_one_line_of_the_matrix() {
 fn a_reduction_ignores_non_finite_values() {
     let shape = shape(&[3]);
     let mean = ComponentPick::Reduce(Reduction::Mean);
-    assert_eq!(mean.select(&shape, &[1.0, f64::NAN, 3.0]).expect("a mean"), vec![2.0]);
+    assert_eq!(
+        mean.select(&shape, &[1.0, f64::NAN, 3.0]).expect("a mean"),
+        vec![2.0]
+    );
     assert!(same(
         &mean.select(&shape, &[f64::NAN; 3]).expect("a mean"),
         &[f64::NAN]
@@ -377,7 +387,12 @@ fn matrix_row() -> Vec<f64> {
 }
 
 fn along_reduced(axis: usize, at: Vec<usize>, reduced: Vec<usize>, by: Reduction) -> ComponentPick {
-    ComponentPick::AlongReduced { axis, at, reduced, by }
+    ComponentPick::AlongReduced {
+        axis,
+        at,
+        reduced,
+        by,
+    }
 }
 
 /// Break it: reduce along `axis` instead of `reduced` (the test sees `[10, 11]`).
@@ -391,7 +406,10 @@ fn a_dimension_reduced_by_its_mean() {
         vec![0.5, 10.5, 20.5]
     );
     let max = along_reduced(0, vec![0, 0], vec![1], Reduction::Max);
-    assert_eq!(max.select(&shape, &matrix_row()).expect("a max"), vec![1.0, 11.0, 21.0]);
+    assert_eq!(
+        max.select(&shape, &matrix_row()).expect("a max"),
+        vec![1.0, 11.0, 21.0]
+    );
 }
 
 /// Break it: count the `NaN` as 0 (`(0 + 11) / 2 = 5.5`).
@@ -401,7 +419,10 @@ fn a_reduced_dimension_skips_non_finite_values() {
     let mean = along_reduced(0, vec![0, 0], vec![1], Reduction::Mean);
     let mut row = matrix_row();
     row[2] = f64::NAN;
-    assert!(same(&mean.select(&shape, &row).expect("a mean"), &[0.5, 11.0, 20.5]));
+    assert!(same(
+        &mean.select(&shape, &row).expect("a mean"),
+        &[0.5, 11.0, 20.5]
+    ));
     row[3] = f64::NAN;
     assert!(same(
         &mean.select(&shape, &row).expect("a mean"),
@@ -535,7 +556,10 @@ fn a_narrowed_pick_selects_what_the_pick_selects() {
             .expect("a pick that reads a block");
         let block = sub_block(&row, &full.dims, &narrowed.start, &narrowed.count);
         assert_eq!(
-            narrowed.pick.select(&narrowed.shape, &block).expect("on the block"),
+            narrowed
+                .pick
+                .select(&narrowed.shape, &block)
+                .expect("on the block"),
             pick.select(&full, &row).expect("on the row"),
             "{pick:?}"
         );

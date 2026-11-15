@@ -73,7 +73,11 @@ fn a_block_reads_only_its_values() {
     }
     assert_eq!(floats(read), expected);
     assert_eq!(source.reads.get(), 1, "one read");
-    assert_eq!(source.values_returned.get(), 12, "the source returned the block alone");
+    assert_eq!(
+        source.values_returned.get(),
+        12,
+        "the source returned the block alone"
+    );
 }
 
 /// Break it: remove the comparison of the lengths in `read_block`.
@@ -104,7 +108,10 @@ fn a_part_window_offsets_the_block() {
         }
     }
     assert_eq!(floats(read), expected);
-    assert_eq!(values::stored_dims(&array, &source, "rh").expect("dims"), vec![2, 3, 2]);
+    assert_eq!(
+        values::stored_dims(&array, &source, "rh").expect("dims"),
+        vec![2, 3, 2]
+    );
 }
 
 /// Break it: remove the bounds check.
@@ -112,8 +119,8 @@ fn a_part_window_offsets_the_block() {
 fn a_block_past_the_array_is_refused() {
     let array = external(part(vec![0, 0, 0], vec![4, 3, 2]));
     let source = rh();
-    let refused = values::read_block(&array, &source, "rh", &block(&[3, 0, 0], &[2, 3, 2]))
-        .expect_err("past the end");
+    let refused =
+        values::read_block(&array, &source, "rh", &block(&[3, 0, 0], &[2, 3, 2])).expect_err("past the end");
     match refused {
         Error::Malformed { reason, .. } => assert!(reason.contains("dimension 0"), "{reason}"),
         other => panic!("expected a malformed refusal, got {other:?}"),
@@ -141,9 +148,13 @@ fn a_computed_array_is_cut_like_a_stored_one() {
         ..Default::default()
     };
     let source = Slabs::new();
-    assert_eq!(values::stored_dims(&lattice, &source, "lattice").expect("dims"), vec![4, 3]);
+    assert_eq!(
+        values::stored_dims(&lattice, &source, "lattice").expect("dims"),
+        vec![4, 3]
+    );
     let whole = floats(values::read(&lattice, &source, "lattice").expect("whole"));
-    let cut = floats(values::read_block(&lattice, &source, "lattice", &block(&[1, 0], &[2, 3])).expect("block"));
+    let cut =
+        floats(values::read_block(&lattice, &source, "lattice", &block(&[1, 0], &[2, 3])).expect("block"));
     assert_eq!(cut, whole[3..9].to_vec());
 }
 
@@ -210,7 +221,9 @@ fn a_slab_of_one_time_step() {
     let shape = three_steps(&[2]);
     let at = |stored: &[u64]| {
         let layout = shape.layout(stored).expect("a layout");
-        values::slab_block(&shape, &layout, &[1], 1, 2, None).expect("a slab").block
+        values::slab_block(&shape, &layout, &[1], 1, 2, None)
+            .expect("a slab")
+            .block
     };
     assert_eq!(at(&[3, 4, 2]), block(&[1, 1, 0], &[1, 2, 2]));
     assert_eq!(at(&[3, 8]), block(&[1, 2], &[1, 4]));

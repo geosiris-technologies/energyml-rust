@@ -334,7 +334,10 @@ impl AxisSources {
 
     /// The source of this id.
     pub fn find(&self, id: &str) -> Option<&dyn AxisSource> {
-        self.0.iter().find(|source| source.id() == id).map(|source| &**source)
+        self.0
+            .iter()
+            .find(|source| source.id() == id)
+            .map(|source| &**source)
     }
 
     /// Every dimension's axis; the first answer for a dimension wins.
@@ -571,8 +574,8 @@ fn paired_axis(
     let held = subject.shape.dims[dim];
     let object = read_object(objects, uri)?;
     let paired = property::read(object.as_reflect())?;
-    let shape = ElementShape::of_property(&paired)
-        .map_err(|why| crate::Error::malformed(uri, why.to_string()))?;
+    let shape =
+        ElementShape::of_property(&paired).map_err(|why| crate::Error::malformed(uri, why.to_string()))?;
     if shape.rank() != 1 || shape.dims[0] != held {
         return Err(AxisRefusal::CountMismatch {
             dim,
@@ -614,7 +617,11 @@ fn paired_axis(
 
     // The reference row: the first with a finite value. A row that is all `NaN`
     // is an absent sample and is skipped.
-    let all_absent = |row: usize| numbers[row * held..(row + 1) * held].iter().all(|value| value.is_nan());
+    let all_absent = |row: usize| {
+        numbers[row * held..(row + 1) * held]
+            .iter()
+            .all(|value| value.is_nan())
+    };
     let Some(reference) = (0..rows).find(|row| !all_absent(*row)) else {
         return Err(AxisRefusal::NotFinite { dim, at: 0 });
     };
@@ -629,7 +636,9 @@ fn paired_axis(
         let same = numbers[row * held..(row + 1) * held]
             .iter()
             .zip(&axis)
-            .all(|(found, expected)| (found - expected).abs() <= PAIRED_AXIS_TOLERANCE * expected.abs().max(1.0));
+            .all(|(found, expected)| {
+                (found - expected).abs() <= PAIRED_AXIS_TOLERANCE * expected.abs().max(1.0)
+            });
         if !same {
             return Err(AxisRefusal::VariesAlongIndex { dim, row });
         }
@@ -711,7 +720,9 @@ impl AxisSource for WitsmlAxisDefinition {
             answered = true;
             let definition = definitions[0];
             // One axis cannot describe a shape of several dimensions.
-            let count = crate::series::number_of(definition, "AxisCount").unwrap_or(0.0).max(0.0) as usize;
+            let count = crate::series::number_of(definition, "AxisCount")
+                .unwrap_or(0.0)
+                .max(0.0) as usize;
             if subject.shape.rank() != 1 {
                 return Some(Err(AxisRefusal::CountMismatch {
                     dim: 0,

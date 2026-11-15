@@ -70,11 +70,11 @@ pub mod observe;
 /// The shape of a property's values: components, elements, time, realizations.
 pub mod shape;
 
+/// The one reading of convention B on a list of facets (see [`link`]).
+pub use link::{QualifierRefusal, qualifier_link};
 /// The one rule "does the count read fit the shape?", kept here under its
 /// first path (`property::count_fit`); it lives in [`shape`].
 pub use shape::{CountFit, count_fit};
-/// The one reading of convention B on a list of facets (see [`link`]).
-pub use link::{QualifierRefusal, qualifier_link};
 
 /// What the values of a property hang on.
 ///

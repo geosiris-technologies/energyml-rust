@@ -746,7 +746,10 @@ pub fn element_block(shape: &PropertyShape, layout: &StoredLayout, first: u64, c
         counts[0] = count * p0;
         return Ok(Block { start, count: counts });
     }
-    Err(Error::unsupported("a run of elements over several stored dimensions", ""))
+    Err(Error::unsupported(
+        "a run of elements over several stored dimensions",
+        "",
+    ))
 }
 
 /// A block of stored values, and whether it holds only the components a

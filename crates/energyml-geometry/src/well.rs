@@ -246,6 +246,9 @@ pub enum PathRefusal {
 
 /// How a path is placed in metres, z up.
 #[derive(Clone, Debug)]
+// One placing per placed path, and a path per well: the size of the larger variant costs nothing, and boxing
+// the CRS would add an indirection to every evaluation.
+#[allow(clippy::large_enum_variant)]
 enum Placing {
     /// A RESQML line, local to its CRS: placed at each evaluation, `to_projected` then the unit factors.
     Crs {
@@ -299,7 +302,9 @@ impl PlacedPath {
         md_uom: &str,
     ) -> std::result::Result<PlacedPath, PathRefusal> {
         if crs.is_time() {
-            return Err(PathRefusal::TimeCrs { crs: crs.uuid.clone() });
+            return Err(PathRefusal::TimeCrs {
+                crs: crs.uuid.clone(),
+            });
         }
         let factor = |unit: &Option<String>| -> std::result::Result<f64, PathRefusal> {
             match unit {
@@ -508,7 +513,9 @@ impl PlacedPath {
 
 /// The arc of a survey's stations in the datum frame (metres, x east, y north, z up): the stations
 /// joined by `Path::new` kind 5, every check of `min_curvature::positions` made first.
-fn arc_of(stations: &[crate::min_curvature::Measured]) -> std::result::Result<crate::parametric::Path, PathRefusal> {
+fn arc_of(
+    stations: &[crate::min_curvature::Measured],
+) -> std::result::Result<crate::parametric::Path, PathRefusal> {
     let located = crate::min_curvature::positions(stations)?;
     let mut points = Vec::with_capacity(stations.len());
     let mut tangents = Vec::with_capacity(stations.len());
@@ -516,7 +523,10 @@ fn arc_of(stations: &[crate::min_curvature::Measured]) -> std::result::Result<cr
     for (station, at) in stations.iter().zip(&located) {
         // `positions` has refused an inclined station with no azimuth: `unwrap_or(0.0)` only meets
         // vertical stations, where the azimuth moves nothing.
-        let t = crate::min_curvature::direction(station.inclination.unwrap_or(0.0), station.azimuth.unwrap_or(0.0));
+        let t = crate::min_curvature::direction(
+            station.inclination.unwrap_or(0.0),
+            station.azimuth.unwrap_or(0.0),
+        );
         points.push([at.east, at.north, -at.tvd]);
         tangents.push([t[1], t[0], -t[2]]);
         mds.push(station.md);

@@ -7,8 +7,8 @@
 //! rule that a check without an index calls too.
 
 use crate::package_index::{IndexNode, PackageIndex};
-use crate::property::kinship::{KinFacts, Kinship, Sibling, kinship};
 use crate::property::IndexableElement;
+use crate::property::kinship::{KinFacts, Kinship, Sibling, kinship};
 use crate::property::link::qualifier_link;
 use crate::units::Dimension;
 
@@ -166,7 +166,11 @@ impl PackageIndex {
                             })
                             .collect();
                         let mut needs = vec![CandidateNeed::AngleConvention];
-                        let chosen = if angles.len() == 1 { angles.first().cloned() } else { None };
+                        let chosen = if angles.len() == 1 {
+                            angles.first().cloned()
+                        } else {
+                            None
+                        };
                         if angles.len() > 1 {
                             needs.push(CandidateNeed::ChooseAngles { candidates: angles });
                         }

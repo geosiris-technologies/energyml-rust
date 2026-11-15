@@ -121,7 +121,10 @@ fn an_ordinary_qualifier_is_no_link() {
 #[test]
 fn a_uri_beside_another_qualifier_is_refused() {
     let facets = [qualifier(TABLE_URI), qualifier("measured")];
-    assert_eq!(qualifier_link(&facets), Err(QualifierRefusal::Several { count: 2 }));
+    assert_eq!(
+        qualifier_link(&facets),
+        Err(QualifierRefusal::Several { count: 2 })
+    );
 }
 
 /// Break it: return `Ok(None)` for a value that starts like a uri and does not parse.
@@ -225,7 +228,10 @@ fn two_witsml_axes_are_refused_by_name() {
     let shape = shape(&[3]);
     let links = [AxisLink::WitsmlChannel { channel: uri.clone() }];
     let refusal = resolve(&store, &subject(&uri, &shape, &[], &links, None)).expect_err("refused");
-    assert!(matches!(refusal, AxisRefusal::OrderUnstated { axes: 2 }), "{refusal}");
+    assert!(
+        matches!(refusal, AxisRefusal::OrderUnstated { axes: 2 }),
+        "{refusal}"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -311,7 +317,14 @@ fn a_paired_axis_must_have_the_subjects_rows() {
     }];
     let refusal = resolve(&store, &subject("p", &shape, &[], &links, Some(4))).expect_err("refused");
     assert!(
-        matches!(refusal, AxisRefusal::CountMismatch { axis: 3, shape: 4, .. }),
+        matches!(
+            refusal,
+            AxisRefusal::CountMismatch {
+                axis: 3,
+                shape: 4,
+                ..
+            }
+        ),
         "{refusal}"
     );
 }
@@ -323,10 +336,7 @@ fn a_paired_axis_must_have_the_subjects_rows() {
 fn sixteen_regular_angles_are_cyclic() {
     let radians: Vec<f64> = (0..16).map(|k| k as f64 * std::f64::consts::TAU / 16.0).collect();
     let degrees: Vec<f64> = (0..16).map(|k| k as f64 * 22.5).collect();
-    for (uom, values, period) in [
-        ("rad", radians, std::f64::consts::TAU),
-        ("dega", degrees, 360.0),
-    ] {
+    for (uom, values, period) in [("rad", radians, std::f64::consts::TAU), ("dega", degrees, 360.0)] {
         let mut store = empty_store();
         put(&mut store, angles(PAIRED, 16, uom, values));
         let uri = uri_of(&store, PAIRED);
@@ -384,11 +394,13 @@ fn key_column(rows: usize) -> eml23::Column {
     eml23::Column {
         title: Some("rank".into()),
         value_count_per_row: 1,
-        values: Some(eml23::AbstractValueArray::IntegerXmlArray(eml23::IntegerXmlArray {
-            count_per_value: 1,
-            values: (0..rows as i64).collect(),
-            ..Default::default()
-        })),
+        values: Some(eml23::AbstractValueArray::IntegerXmlArray(
+            eml23::IntegerXmlArray {
+                count_per_value: 1,
+                values: (0..rows as i64).collect(),
+                ..Default::default()
+            },
+        )),
         ..Default::default()
     }
 }
@@ -412,7 +424,10 @@ fn ramp(rows: usize, from: f64) -> Vec<f64> {
 #[test]
 fn a_declared_table_of_80_rows_for_81_is_refused() {
     let mut store = empty_store();
-    put(&mut store, table("axes", 80, vec![column("Delta", ramp(80, -40.0))]));
+    put(
+        &mut store,
+        table("axes", 80, vec![column("Delta", ramp(80, -40.0))]),
+    );
     let uri = uri_of(&store, TABLE);
     let shape = shape(&[81]);
     let links = [AxisLink::Table {
@@ -422,7 +437,14 @@ fn a_declared_table_of_80_rows_for_81_is_refused() {
     }];
     let refusal = resolve(&store, &subject("p", &shape, &[], &links, None)).expect_err("refused");
     assert!(
-        matches!(refusal, AxisRefusal::CountMismatch { dim: 0, axis: 80, shape: 81 }),
+        matches!(
+            refusal,
+            AxisRefusal::CountMismatch {
+                dim: 0,
+                axis: 80,
+                shape: 81
+            }
+        ),
         "{refusal}"
     );
 }
@@ -433,7 +455,10 @@ fn a_declared_table_of_80_rows_for_81_is_refused() {
 #[test]
 fn a_declared_table_gives_its_named_column() {
     let mut store = empty_store();
-    put(&mut store, table("axes", 81, vec![column("Delta", ramp(81, -40.0))]));
+    put(
+        &mut store,
+        table("axes", 81, vec![column("Delta", ramp(81, -40.0))]),
+    );
     let uri = uri_of(&store, TABLE);
     let shape = shape(&[81]);
     let links = [AxisLink::Table {
@@ -447,7 +472,10 @@ fn a_declared_table_gives_its_named_column() {
     };
     assert_eq!(values[0], -40.0);
     assert_eq!(values[80], 40.0);
-    assert!(matches!(resolved.axes[0].origin, AxisOrigin::DeclaredTable { .. }));
+    assert!(matches!(
+        resolved.axes[0].origin,
+        AxisOrigin::DeclaredTable { .. }
+    ));
 }
 
 /// A column the table does not hold is refused by name.
@@ -513,14 +541,25 @@ fn convention_b_counts_the_value_columns() {
     let mut store = empty_store();
     put(
         &mut store,
-        table("axes", 3, vec![column("a", ramp(3, 0.0)), column("b", ramp(3, 0.0))]),
+        table(
+            "axes",
+            3,
+            vec![column("a", ramp(3, 0.0)), column("b", ramp(3, 0.0))],
+        ),
     );
     let uri = uri_of(&store, TABLE);
     let shape = shape(&[3]);
     let facets = [qualifier(&uri)];
     let refusal = resolve(&store, &subject("p", &shape, &facets, &[], None)).expect_err("refused");
     assert!(
-        matches!(refusal, AxisRefusal::TableColumns { columns: 2, rank: 1, .. }),
+        matches!(
+            refusal,
+            AxisRefusal::TableColumns {
+                columns: 2,
+                rank: 1,
+                ..
+            }
+        ),
         "{refusal}"
     );
 }
@@ -533,14 +572,25 @@ fn convention_b_refuses_unequal_dimensions() {
     let mut store = empty_store();
     put(
         &mut store,
-        table("axes", 3, vec![column("a", ramp(3, 0.0)), column("b", ramp(3, 0.0))]),
+        table(
+            "axes",
+            3,
+            vec![column("a", ramp(3, 0.0)), column("b", ramp(3, 0.0))],
+        ),
     );
     let uri = uri_of(&store, TABLE);
     let shape = shape(&[3, 2]);
     let facets = [qualifier(&uri)];
     let refusal = resolve(&store, &subject("p", &shape, &facets, &[], None)).expect_err("refused");
     assert!(
-        matches!(refusal, AxisRefusal::CountMismatch { dim: 1, axis: 3, shape: 2 }),
+        matches!(
+            refusal,
+            AxisRefusal::CountMismatch {
+                dim: 1,
+                axis: 3,
+                shape: 2
+            }
+        ),
         "{refusal}"
     );
 }
@@ -701,7 +751,14 @@ fn an_axis_of_the_wrong_length_is_refused_whoever_gave_it() {
         )
         .expect_err("refused");
     assert!(
-        matches!(refusal, AxisRefusal::CountMismatch { dim: 0, axis: 3, shape: 4 }),
+        matches!(
+            refusal,
+            AxisRefusal::CountMismatch {
+                dim: 0,
+                axis: 3,
+                shape: 4
+            }
+        ),
         "{refusal}"
     );
 }

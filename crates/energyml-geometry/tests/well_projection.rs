@@ -110,7 +110,11 @@ fn a_vertical_well_is_a_vertical_line_in_section_and_a_point_in_plan() {
     let plan = locator_line(&axis, &Plan, 0.01).unwrap();
     assert!(plan.degenerate);
     assert_eq!(locator_md_at(&plan, [0.0, 0.0]), None);
-    close2(locator_mark(&axis, &MdBar, 600.0).unwrap().at, [0.0, 600.0], 1e-12);
+    close2(
+        locator_mark(&axis, &MdBar, 600.0).unwrap().at,
+        [0.0, 600.0],
+        1e-12,
+    );
 }
 // break: never set `degenerate`.
 
@@ -166,7 +170,11 @@ fn md_tvd_and_developed_lower_a_sample_by_its_offset() {
     let axis = WellAxis::new(&path, [0.0, 2000.0], 10.0).unwrap();
     close2(MdTvd.place(&axis, 1500.0, 10.0).unwrap(), [1500.0, 990.0], 1e-6);
     // The vertical part does not advance in plan: s = 500 at MD 1500.
-    close2(Developed.place(&axis, 1500.0, 10.0).unwrap(), [500.0, 990.0], 1e-6);
+    close2(
+        Developed.place(&axis, 1500.0, 10.0).unwrap(),
+        [500.0, 990.0],
+        1e-6,
+    );
 }
 // break: a wrong `dn` term in the abscissa of `developed`.
 
@@ -242,8 +250,17 @@ fn vertical_section_matches_the_witsml_arithmetic() {
     for station in &located {
         let [x, y] = section.place(&axis, station.md, 0.0).unwrap();
         let expected = (station.east - 10.0) * azimuth.sin() + (station.north - 20.0) * azimuth.cos();
-        assert!((x - expected).abs() < 1e-6, "MD {}: {x} against {expected}", station.md);
-        assert!((y - station.tvd).abs() < 1e-6, "MD {}: {y} against {}", station.md, station.tvd);
+        assert!(
+            (x - expected).abs() < 1e-6,
+            "MD {}: {x} against {expected}",
+            station.md
+        );
+        assert!(
+            (y - station.tvd).abs() < 1e-6,
+            "MD {}: {y} against {}",
+            station.md,
+            station.tvd
+        );
     }
 }
 // break: ignore `origin`.
@@ -271,7 +288,11 @@ fn the_click_on_the_line_gives_the_md_back() {
     assert_eq!(pieces[1], Vec::<[f64; 2]>::new());
     assert!(pieces[0].len() >= 2);
     close2(pieces[0][0], Plan.place(&axis, 100.0, 0.0).unwrap(), 0.01);
-    close2(*pieces[0].last().unwrap(), Plan.place(&axis, 200.0, 0.0).unwrap(), 0.01);
+    close2(
+        *pieces[0].last().unwrap(),
+        Plan.place(&axis, 200.0, 0.0).unwrap(),
+        0.01,
+    );
 }
 // break: return the MD of the nearest point without interpolating along its segment.
 
@@ -365,10 +386,7 @@ fn too_many_samples_are_refused_before_any_evaluation() {
     let path = horizontal();
     assert!(matches!(
         WellAxis::new(&path, [0.0, 2000.0], 1e-3),
-        Err(ProjectionRefusal::TooManySamples {
-            max: 1_000_000,
-            ..
-        })
+        Err(ProjectionRefusal::TooManySamples { max: 1_000_000, .. })
     ));
 }
 // break: count after evaluating, or not at all.

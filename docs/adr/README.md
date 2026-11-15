@@ -39,13 +39,11 @@ new record that supersedes the old one, which keeps its text and a status line.
 | [0027](0027-gaps-seams-scales-and-quantiles.md) | Gaps, seams, scales and quantiles: the numbers the views share |
 | [0028](0028-one-drawing-for-every-view.md) | One drawing for every view: `draw` knows no format, one display list, one rule for graduations, a PNG is always the SVG rasterised |
 | [0029](0029-convention-b-links-by-qualifier-facet.md) | A link to a table is one `qualifier` facet holding the uri of the table, read once; the axes of a property come from the table it names |
-
-| [0042](0042-what-a-property-says-of-itself.md) | What a property says of itself: dimensions reduced together, scalars for a wrong declared count, facets of 2.0.1 outside the 2.3 list, the `synthetic` mark, observations beside those of the values |
-
 | [0031](0031-tangent-at-a-knot.md) | The direction of a line at a knot is that of the interval that ends there |
 | [0032](0032-hole-frame-in-a-direct-placed-frame.md) | The frame of a hole is the physical one, whatever hand the placed frame has |
 | [0033](0033-tvd-below-the-md-datum.md) | A true vertical depth along a well is counted below the MD datum |
 | [0041](0041-declared-conventions-and-the-vertical-without-crs.md) | A convention the file does not state is declared by the caller; a vertical without a CRS is signalled |
+| [0042](0042-what-a-property-says-of-itself.md) | What a property says of itself: dimensions reduced together, scalars for a wrong declared count, facets of 2.0.1 outside the 2.3 list, the `synthetic` mark, observations beside those of the values |
 
 Decisions about the ETP protocol implementation are recorded in the
 [`retp`](https://github.com/geosiris-technologies/retp) repository.

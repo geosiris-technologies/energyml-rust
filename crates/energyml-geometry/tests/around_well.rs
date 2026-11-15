@@ -7,23 +7,20 @@
 
 use std::f64::consts::{FRAC_PI_2, PI};
 
-use energyml_geometry::around_well::envelope::{
-    Angles, EnvelopeRefusal, PolarSamples, envelope, ribbon,
-};
+use energyml_geometry::around_well::envelope::{Angles, EnvelopeRefusal, PolarSamples, envelope, ribbon};
 use energyml_geometry::around_well::hole_frame::{
-    FrameOptions, FrameRefusal, Frames, HoleFrame, frames_along, high_side_of, hole_frame,
-    north_in_plane, offset_point,
+    FrameOptions, FrameRefusal, Frames, HoleFrame, frames_along, high_side_of, hole_frame, north_in_plane,
+    offset_point,
 };
 use energyml_geometry::around_well::polar::{
-    AngleConvention, AngleOrigin, AngleSense, PolarRefusal, ViewedFrom, plane_direction,
-    polar_points, regular_sectors, sector_bounds, to_space,
+    AngleConvention, AngleOrigin, AngleSense, PolarRefusal, ViewedFrom, plane_direction, polar_points,
+    regular_sectors, sector_bounds, to_space,
 };
 use energyml_geometry::around_well::transverse::{
     AxisSign, GridAxis, GridRefusal, PlaneAxis, RibbonPlane, TransverseGrid,
 };
 use energyml_geometry::crs::{
-    AxisOrder, AxisReading, CompassAxes, Crs, CrsKind, Handedness, VerticalDirection,
-    VerticalQuantity,
+    AxisOrder, AxisReading, CompassAxes, Crs, CrsKind, Handedness, VerticalDirection, VerticalQuantity,
 };
 use energyml_geometry::parametric::{Path, Vertical};
 use energyml_geometry::well::PlacedPath;
@@ -140,10 +137,7 @@ fn the_threshold_is_one_degree_and_named() {
         Err(FrameRefusal::HighSideUndefined { md, .. }) if md == 7.0
     ));
     assert!(at(1.01).is_ok());
-    assert!(matches!(
-        at(179.5),
-        Err(FrameRefusal::HighSideUndefined { .. })
-    ));
+    assert!(matches!(at(179.5), Err(FrameRefusal::HighSideUndefined { .. })));
 }
 // break: set the threshold to 0.
 
@@ -291,14 +285,7 @@ fn north_in_plane_of_a_hole_heading_east_points_left() {
     };
     let east = right([1.0, 0.0, 0.0]);
     close2(north_in_plane(&east, &compass).unwrap(), [-1.0, 0.0], 1e-12);
-    let north = hole_frame(
-        5.0,
-        [0.0; 3],
-        [0.0, 1.0, 0.0],
-        Handedness::Right,
-        ONE_DEGREE,
-    )
-    .unwrap();
+    let north = hole_frame(5.0, [0.0; 3], [0.0, 1.0, 0.0], Handedness::Right, ONE_DEGREE).unwrap();
     assert_eq!(
         north_in_plane(&north, &compass),
         Err(FrameRefusal::NorthAlongHole { md: 5.0 })
@@ -453,7 +440,7 @@ fn a_nan_or_negative_radius_is_a_counted_hole() {
 fn irregular_sectors_split_at_half_angles() {
     let degrees = |v: &[f64]| v.iter().map(|d| d.to_radians()).collect::<Vec<_>>();
     let bounds = sector_bounds(&degrees(&[0.0, 90.0, 180.0, 300.0])).unwrap();
-    let expected = [[-30.0, 45.0], [45.0, 135.0], [135.0, 240.0], [240.0, 330.0]];
+    let expected: [[f64; 2]; 4] = [[-30.0, 45.0], [45.0, 135.0], [135.0, 240.0], [240.0, 330.0]];
     for (got, want) in bounds.iter().zip(expected) {
         close2(*got, [want[0].to_radians(), want[1].to_radians()], 1e-12);
     }
@@ -464,7 +451,11 @@ fn irregular_sectors_split_at_half_angles() {
 fn decreasing_angles_split_the_other_way() {
     let degrees = |v: &[f64]| v.iter().map(|d| d.to_radians()).collect::<Vec<_>>();
     let bounds = sector_bounds(&degrees(&[0.0, -90.0, -180.0, -270.0])).unwrap();
-    close2(bounds[0], [45.0_f64.to_radians(), (-45.0_f64).to_radians()], 1e-12);
+    close2(
+        bounds[0],
+        [45.0_f64.to_radians(), (-45.0_f64).to_radians()],
+        1e-12,
+    );
 }
 // break: assume increasing angles.
 
@@ -571,7 +562,11 @@ fn lattice_point_matches_the_definition() {
     )
     .unwrap();
     let frame = east_frame(0.0, 0.0);
-    close3(grid.lattice_point(&frame, 2, 1).unwrap(), [0.0, 20.0, -990.0], 1e-12);
+    close3(
+        grid.lattice_point(&frame, 2, 1).unwrap(),
+        [0.0, 20.0, -990.0],
+        1e-12,
+    );
     assert_eq!(grid.slice(&frame).len(), 6);
     assert_eq!(grid.lattice_point(&frame, 3, 0), None);
 }
@@ -666,7 +661,11 @@ fn straight_frames() -> Frames {
 
 const QUARTERS: [f64; 4] = [0.0, FRAC_PI_2, PI, 3.0 * FRAC_PI_2];
 
-fn ring_of(radii: &[f64], frames: &Frames, c: &AngleConvention) -> Result<energyml_geometry::around_well::envelope::EnvelopeMesh, EnvelopeRefusal> {
+fn ring_of(
+    radii: &[f64],
+    frames: &Frames,
+    c: &AngleConvention,
+) -> Result<energyml_geometry::around_well::envelope::EnvelopeMesh, EnvelopeRefusal> {
     envelope(
         frames,
         &PolarSamples {

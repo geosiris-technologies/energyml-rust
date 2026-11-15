@@ -193,7 +193,11 @@ fn a_trajectory_without_a_crs_is_refused_until_one_is_declared() {
     let site = Site(t.clone());
     assert!(matches!(PlacedPath::of(&t, &site), Err(PathRefusal::NoCrs)));
     let path = well::path_of(&t, &site).expect("the line itself reads");
-    let declared = PlacedPath::new(path, crs(VerticalDirection::Up, Some("easting northing"), "m", "m"), "m");
+    let declared = PlacedPath::new(
+        path,
+        crs(VerticalDirection::Up, Some("easting northing"), "m", "m"),
+        "m",
+    );
     assert!(declared.is_ok());
 }
 
@@ -228,7 +232,12 @@ fn feet_across_and_metres_down_tilt_the_direction() {
         Vertical::Up,
     )
     .unwrap();
-    let placed = PlacedPath::new(path, crs(VerticalDirection::Up, Some("easting northing"), "ft", "m"), "ft").unwrap();
+    let placed = PlacedPath::new(
+        path,
+        crs(VerticalDirection::Up, Some("easting northing"), "ft", "m"),
+        "ft",
+    )
+    .unwrap();
     let direction = placed.direction_at(70.0).unwrap();
     assert!(close(direction, unit([0.3048, 0.0, -1.0]), 1e-9), "{direction:?}");
     let h = 1e-4;
@@ -248,7 +257,12 @@ fn an_md_past_the_path_is_extended_and_said() {
         Vertical::Up,
     )
     .unwrap();
-    let placed = PlacedPath::new(path, crs(VerticalDirection::Up, Some("easting northing"), "m", "m"), "m").unwrap();
+    let placed = PlacedPath::new(
+        path,
+        crs(VerticalDirection::Up, Some("easting northing"), "m", "m"),
+        "m",
+    )
+    .unwrap();
     let after = placed.at(150.0);
     assert_eq!(after.range, MdRange::AfterLast { last: 100.0 });
     assert!(close(after.point, [0.0, 0.0, -150.0], 1e-9));
@@ -287,7 +301,11 @@ fn a_survey_is_the_arc_of_its_stations() {
     assert!(
         close(
             placed.at(md).point,
-            [500_000.0 + 1000.0 * (1.0 - half), 6_000_000.0, 100.0 - 1000.0 * half],
+            [
+                500_000.0 + 1000.0 * (1.0 - half),
+                6_000_000.0,
+                100.0 - 1000.0 * half
+            ],
             1e-6
         ),
         "{:?}",
