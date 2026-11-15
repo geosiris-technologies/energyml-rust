@@ -48,6 +48,7 @@
 //! The `png` feature adds `resvg` with its raster images, pure Rust; the PNG is
 //! always the SVG rasterised.
 
+pub mod colour;
 pub mod draw;
 pub mod layout;
 pub mod picture;

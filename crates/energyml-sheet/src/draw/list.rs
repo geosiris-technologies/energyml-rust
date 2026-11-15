@@ -53,26 +53,14 @@ impl Colour {
 
     /// `#rrggbb`, lower case (the alpha is not part of it: see [`Colour::opacity`]).
     pub fn hex(&self) -> String {
-        energyml_domain::color::Rgba::from(*self).to_hex_rgb()
+        // The drawing module names no format crate (tests/draw/no_format.rs): it writes its own bytes, the
+        // same text as `energyml_domain::color::Rgba::to_hex_rgb`, which `crate::colour` pins.
+        format!("#{:02x}{:02x}{:02x}", self.r, self.g, self.b)
     }
 
     /// `a / 255`.
     pub fn opacity(&self) -> f64 {
         f64::from(self.a) / 255.0
-    }
-}
-
-impl From<energyml_domain::color::Rgba> for Colour {
-    /// The bytes of the domain colour (`Rgba::to_bytes`: rounded, clamped).
-    fn from(colour: energyml_domain::color::Rgba) -> Self {
-        let [r, g, b, a] = colour.to_bytes();
-        Colour { r, g, b, a }
-    }
-}
-
-impl From<Colour> for energyml_domain::color::Rgba {
-    fn from(colour: Colour) -> Self {
-        energyml_domain::color::Rgba::from_bytes([colour.r, colour.g, colour.b, colour.a])
     }
 }
 
@@ -750,23 +738,5 @@ fn check_item(item: &Item) -> Result<(), &'static str> {
             }
             Ok(())
         }
-    }
-}
-
-#[cfg(test)]
-mod colour_tests {
-    use super::*;
-    use energyml_domain::color::Rgba;
-
-    /// The SVG text of a colour is unchanged by the move to the domain's writer, and a
-    /// `Colour` and an `Rgba` convert both ways without losing a byte (D3).
-    #[test]
-    fn a_colour_is_written_by_the_one_writer_and_converts_both_ways() {
-        let colour = Colour::rgba(18, 171, 255, 128);
-        assert_eq!(colour.hex(), "#12abff");
-        assert_eq!(Colour::from(Rgba::from(colour)), colour);
-        let read = Rgba::parse("#12abff80").expect("eight digits");
-        assert_eq!(Colour::from(read), colour);
-        // Break it: make `Rgba::to_hex_rgb` write the alpha too (`hex` then ends in `80`).
     }
 }
