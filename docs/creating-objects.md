@@ -41,11 +41,12 @@ written as a triangulated surface"), because *absent* reads as *not written yet*
 
 ### What is refused rather than dropped
 
-An input or a setting a run cannot honour is refused by name, never ignored:
+An input or a setting a run cannot honour is refused by name, or kept and said,
+never ignored:
 
 - a GeoJSON that holds a feature the reader cannot read (null geometry, a
-  `GeometryCollection`, a short ring) is refused and names each one, instead of
-  importing the rest;
+  `GeometryCollection`, a short ring) imports the rest, and each feature left
+  out is named in the warnings of `mesh::read_placed`;
 - a CSV cloud decides its separator once for the whole file, from its first row
   (a semicolon means decimal commas);
 - `interpolate` refuses `faults` with `method = mba`, and `outer` / `inner` with

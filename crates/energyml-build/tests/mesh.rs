@@ -757,16 +757,20 @@ fn a_french_csv_cloud_is_read_with_its_semicolons_and_decimal_commas() {
     // with "`1 | 5` is not a number".
 }
 
-/// `[build-core S6]`: a feature the GeoJSON reader refused is named, not
-/// dropped while the rest of the file imports.
+/// `[build-core S6]`: a feature the GeoJSON reader refused is named in the
+/// warnings while the rest of the file imports, never dropped silently
+/// (decided 15/11: a warning, not a refusal of the file).
 #[test]
-fn a_geojson_with_a_refused_feature_is_refused_by_name() {
+fn a_geojson_with_a_refused_feature_imports_the_rest_and_names_it() {
     let text = r#"{"type":"FeatureCollection","features":[
         {"type":"Feature","geometry":{"type":"Point","coordinates":[2.2953,48.875,58]},"properties":{}},
         {"type":"Feature","geometry":null,"properties":{"name":"empty"}}]}"#;
-    let why = mesh::read_or_ask("mixed.geojson", text, &mesh::Given::default())
-        .expect_err("one feature is unreadable");
-    assert!(why.to_string().contains("1 feature(s)"), "{why}");
-    // Break it: drop the `read.refused` check in `read_geojson_placed`; the
-    // file then imports its single point and says nothing of the other.
+    let read = mesh::read_placed("mixed.geojson", text, &mesh::Given::default())
+        .expect("the readable feature imports");
+    let points: usize = read.geometry.patches.iter().map(|patch| patch.points.len()).sum();
+    assert_eq!(points, 1, "the one point is read");
+    assert_eq!(read.warnings.len(), 1, "{:?}", read.warnings);
+    assert!(read.warnings[0].contains("left out"), "{:?}", read.warnings);
+    // Break it: build `warnings` empty in `read_geojson_placed`; the file
+    // then imports its single point and says nothing of the other.
 }

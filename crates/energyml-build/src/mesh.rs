@@ -184,6 +184,12 @@ pub struct Read {
     pub geometry: Geometry,
     /// Where the degrees went, when the format carried any.
     pub placed: Option<Placed>,
+    /// What was read with a reservation, one sentence each: a GeoJSON
+    /// feature the reader refused is left out of the shape and named here,
+    /// never dropped silently. Only this door carries them: [`read`],
+    /// [`read_given`] and [`read_or_ask`] answer the shape alone, so a caller
+    /// that shows a person what was imported calls [`read_placed`].
+    pub warnings: Vec<String>,
 }
 
 /// What the caller supplies to a format that asks for it.
@@ -586,17 +592,14 @@ pub fn read_geojson_placed(
     height: Option<f64>,
 ) -> Result<Read, Refused> {
     let read = crate::geojson::read(text).map_err(|why| Refused::flat(why.0))?;
-    // A feature the reader refused is not a feature to forget: importing the
-    // rest would hand back a cloud silently short of some places. The refusal
-    // names each one.
-    if !read.refused.is_empty() {
-        return Err(Refused::flat(format!(
-            "{} feature(s) of this collection cannot be read, and importing the rest would leave \
-a cloud silently short of them: {}",
-            read.refused.len(),
-            read.refused.join("; ")
-        )));
-    }
+    // A feature the reader refused is not a feature to forget: the rest is
+    // read, and each one left out is said (a null geometry is common in real
+    // exports, and refusing the whole file for it would refuse the file).
+    let warnings: Vec<String> = read
+        .refused
+        .iter()
+        .map(|why| format!("a feature of this collection is left out: {why}"))
+        .collect();
     let first = read
         .features
         .iter()
@@ -662,6 +665,7 @@ makes optional",
             // refused it, naming it - except 4326 onto itself, which is known.
             degrees: crate::crs::is_geographic(epsg) == Some(true),
         }),
+        warnings,
     })
 }
 
@@ -709,6 +713,7 @@ pub fn read_placed(name: &str, text: &str, given: &Given) -> Result<Read, Refuse
     let unplaced = |geometry: Geometry| Read {
         geometry,
         placed: None,
+        warnings: Vec::new(),
     };
     match format_of(name) {
         Some(format) if format.name == "obj" => read_obj(text).map(unplaced).map_err(Refused::flat),
