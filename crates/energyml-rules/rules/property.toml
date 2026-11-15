@@ -1,0 +1,31 @@
+# Properties. One rule: the order two directional properties of one quantity
+# are expected to keep (ADR-0036). Its `finding` anchor is crossed with
+# `energyml_domain::integrity::checks()` in both directions by a test of this
+# crate.
+
+[[rule]]
+id = "house/property/directional-ratio"
+theme = "property"
+status = "active"
+stance = "silent"
+level = 1
+since = "2026-11-14"
+title = "Two directional properties of one quantity keep the order a layered medium expects"
+text = """
+Two properties of one kind on one support, of one shape, told apart only by a vertical and a lateral `direction` facet, are compared value by value. For a resistivity the vertical value is expected not below the lateral one: when more than 5 % of the pairs have a vertical value below 0.95 times the lateral one, it is a warning. A direction written as an extension value (`nwdf:vertical`) is not read: the rule is then unverifiable, unless the caller declares which property is vertical."""
+why = """
+The specification names the directions and says nothing of the order of their values. The expectation is a reading of the physics of a layered medium (ADR-0036); a package that breaks it may still be right (noise, another model), so it is said and kept, never refused."""
+rulings = [
+  { by = "maintainer", on = "2026-11-14" },
+]
+refs = [
+  { kind = "spec", doc = "common TRG 2.3", at = "§11.1 p. 281", note = "the direction facet: I, J, X, Y lateral, K, Z vertical; nothing on the order of the values" },
+  { kind = "spec", doc = "common TRG 2.3", at = "§11.3 p. 285", note = "FacetKind direction" },
+  { kind = "code", path = "crates/energyml-domain/src/integrity.rs", at = "directional_ratio" },
+  { kind = "design", path = "docs/adr/0036-directional-ratio.md" },
+]
+at = [
+  { type = "finding", key = "house/property/directional-ratio" },
+  { type = "view", key = "object.stats" },
+  { type = "view", key = "check.report" },
+]

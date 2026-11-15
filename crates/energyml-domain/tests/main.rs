@@ -26,6 +26,7 @@ mod compound_crs;
 mod corpus;
 mod crs_axes;
 mod derived_colour;
+mod directional_ratio;
 mod facets;
 mod fixtures;
 mod forest;

@@ -32,3 +32,7 @@ title = "Around the well"
 [[theme]]
 id = "survey"
 title = "Directional surveys"
+
+[[theme]]
+id = "property"
+title = "Properties"

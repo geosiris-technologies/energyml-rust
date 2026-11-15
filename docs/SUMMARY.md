@@ -76,6 +76,7 @@
 - [0033 TVD below the MD datum](adr/0033-tvd-below-the-md-datum.md)
 - [0034 The north of a survey and its stations](adr/0034-survey-north-and-stations.md)
 - [0035 Provenance, written completely and read from four releases](adr/0035-provenance-read-and-written.md)
+- [0036 Directional ratio of two properties](adr/0036-directional-ratio.md)
 - [0040 The members of a wellbore](adr/0040-the-members-of-a-wellbore.md)
 - [0041 Declared conventions, and the vertical without a CRS](adr/0041-declared-conventions-and-the-vertical-without-crs.md)
 - [0042 What a property says of itself](adr/0042-what-a-property-says-of-itself.md)

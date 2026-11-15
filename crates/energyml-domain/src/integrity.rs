@@ -47,7 +47,7 @@
 //! [`ArraySource`] the arrays, and a check that needs arrays with none given
 //! says so rather than passing.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use energyml_core::identity;
 use energyml_core::value::{FieldValue, Reflect};
@@ -157,6 +157,12 @@ const CHECKS: &[Integrity] = &[
         says: "an earth model's WellboreInterpretationSet holds WellboreInterpretations only (RESQML TRG 2.2 §6.19 p. 187: \"the DataobjectCollection must only contain WellboreInterpretation\")",
         gravity: Gravity::Error,
         judge: wellbore_interpretation_set_holds_wellbores,
+    },
+    Integrity {
+        id: "house/property/directional-ratio",
+        says: "two properties of one kind on one support, told apart only by a vertical and a lateral direction facet, keep the vertical value at least 0.95 times the lateral one in 95 % of their pairs, for a resistivity (the reading is ours: common TRG 2.3 §11.1 p. 281 names the directions, not the order of their values; ADR-0036)",
+        gravity: Gravity::Warning,
+        judge: directional_ratio,
     },
 ];
 
@@ -1153,6 +1159,416 @@ fn wellbore_interpretation_set_holds_wellbores(
         }
         if !strangers.is_empty() {
             out.push(violation(check, uuid, strangers.join(", ")));
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Two directional properties of one quantity
+// ---------------------------------------------------------------------------
+
+/// Below this fraction of the lateral value, a vertical value breaks the
+/// expected order (ADR-0036).
+pub const RATIO_TOLERANCE: f64 = 0.95;
+
+/// Beyond this share of the pairs breaking the order, the rule warns
+/// (ADR-0036).
+pub const RATIO_SHARE: f64 = 0.05;
+
+/// What a kind expects of its vertical values against its lateral ones.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DirectionalOrder {
+    /// The vertical value is not below the lateral one (resistivity).
+    VerticalNotBelowLateral,
+}
+
+/// One kind the rule judges: a table, not a `match` (ADR-0006).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct DirectionalExpectation {
+    /// The dictionary uuid of the kind; its descendants are judged too.
+    pub kind_uuid: &'static str,
+    /// Its title, for the report.
+    pub kind_title: &'static str,
+    /// The order its values are expected to keep.
+    pub order: DirectionalOrder,
+}
+
+/// The kinds judged. `resistivity` is the Energistics dictionary's
+/// 7c0d1a5d-483e-4d77-81f3-9883527838d2 (`data/property_kinds.tsv`).
+/// Permeability is not here: its expectation is weaker and unconfirmed
+/// (TODO(verify): ADR-0036).
+pub const DIRECTIONAL_EXPECTATIONS: &[DirectionalExpectation] = &[DirectionalExpectation {
+    kind_uuid: "7c0d1a5d-483e-4d77-81f3-9883527838d2",
+    kind_title: "resistivity",
+    order: DirectionalOrder::VerticalNotBelowLateral,
+}];
+
+/// What a caller says a property's direction is, where its facet does not (an
+/// extension value). Never written into the package.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DeclaredDirection {
+    /// The property, by its full uri.
+    pub property: String,
+    /// The direction the caller says it is.
+    pub role: DirectionRole,
+}
+
+/// A direction, as the rule reads it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DirectionRole {
+    /// Across the layers (`K`, `Z`).
+    Vertical,
+    /// Along the layers (`I`, `J`, `X`, `Y`).
+    Lateral,
+}
+
+/// Which axes a direction facet names: a grid's (`I`, `J`, `K`) or the
+/// coordinates' (`X`, `Y`, `Z`). A grid's vertical is not the coordinates'
+/// lateral, so two families are never paired. A declared direction pairs with
+/// any family.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Axes {
+    Grid,
+    Coordinates,
+    Declared,
+}
+
+/// How a direction facet reads.
+enum DirectionReading {
+    /// A role, in a family of axes.
+    Role(DirectionRole, Axes),
+    /// An extension value nobody declared: not readable.
+    Extension(String),
+    /// A standard value that names no axis.
+    Unknown(String),
+}
+
+/// One property the rule may judge: it has exactly one `direction` facet and a
+/// support.
+struct Directional<'a> {
+    uuid: &'a str,
+    uri: String,
+    support: String,
+    read: property::Property<'a>,
+}
+
+const DIRECTIONAL_RATIO: &str = "house/property/directional-ratio";
+
+/// The rule, with what the caller declared: a view of a property runs it again
+/// once a person said which sibling is vertical. [`run`] calls it with nothing
+/// declared.
+///
+/// A [`DeclaredDirection`] is read for this one run and never written into the
+/// package.
+pub fn directional_ratio_declaring(
+    objects: &[(&str, &dyn Reflect)],
+    source: &dyn ObjectSource,
+    arrays: Option<&dyn ArraySource>,
+    declared: &[DeclaredDirection],
+) -> Vec<Finding> {
+    let context = Context {
+        objects,
+        source,
+        arrays,
+    };
+    let mut out = Vec::new();
+    if let Some(check) = CHECKS.iter().find(|check| check.id == DIRECTIONAL_RATIO) {
+        judge_directional(&context, check, declared, &mut out);
+    }
+    out
+}
+
+fn directional_ratio(context: &Context<'_>, check: &Integrity, out: &mut Vec<Finding>) {
+    judge_directional(context, check, &[], out);
+}
+
+/// Read one direction facet. A standard value is the schema's (`I`, `K+`...,
+/// EML 2.3 `Facet`; common TRG 2.3 §11.1 p. 281); an extension value is the
+/// producer's and is read only when the caller declared it.
+fn direction_reading(facet: &property::Facet, uri: &str, declared: &[DeclaredDirection]) -> DirectionReading {
+    match &facet.value {
+        property::FacetValue::Standard(value) => {
+            let upper = value.trim().to_ascii_uppercase();
+            match upper.trim_end_matches(['+', '-']) {
+                "K" => DirectionReading::Role(DirectionRole::Vertical, Axes::Grid),
+                "Z" => DirectionReading::Role(DirectionRole::Vertical, Axes::Coordinates),
+                "I" | "J" => DirectionReading::Role(DirectionRole::Lateral, Axes::Grid),
+                "X" | "Y" => DirectionReading::Role(DirectionRole::Lateral, Axes::Coordinates),
+                _ => DirectionReading::Unknown(value.clone()),
+            }
+        }
+        property::FacetValue::Extension(value) => {
+            match declared
+                .iter()
+                .find(|declaration| declaration.property.eq_ignore_ascii_case(uri))
+            {
+                Some(declaration) => DirectionReading::Role(declaration.role, Axes::Declared),
+                None => DirectionReading::Extension(value.clone()),
+            }
+        }
+    }
+}
+
+/// Whether two directions can be paired: one family, or one of them declared.
+fn same_axes(a: Axes, b: Axes) -> bool {
+    a == b || a == Axes::Declared || b == Axes::Declared
+}
+
+/// What the kind of a property expects: `Ok(None)` when the rule does not
+/// apply to it, an error when the kind does not resolve.
+fn expectation_of(
+    resolver: &Resolver<'_>,
+    kind: &property::PropertyKindRef,
+    kind_uri: Option<&str>,
+) -> std::result::Result<Option<DirectionalOrder>, String> {
+    let resolution = resolver
+        .resolve_at(kind, kind_uri)
+        .map_err(|why| format!("its kind does not resolve: {why}"))?;
+    Ok(DIRECTIONAL_EXPECTATIONS
+        .iter()
+        .find(|expectation| {
+            resolution
+                .chain
+                .iter()
+                .any(|kind| kind.uuid.eq_ignore_ascii_case(expectation.kind_uuid))
+        })
+        .map(|expectation| expectation.order))
+}
+
+/// The values of a property, every patch in order; the array's `NullValue` and
+/// every non-finite value are `NaN`.
+fn directional_values(
+    read: &property::Property<'_>,
+    arrays: &dyn ArraySource,
+) -> std::result::Result<Vec<f64>, String> {
+    let mut all = Vec::new();
+    for patch in &read.patches {
+        let values = patch
+            .read(arrays)
+            .map_err(|why| format!("patch {} does not read: {why}", patch.position))?;
+        let numbers = values
+            .to_f64()
+            .ok_or_else(|| format!("patch {} does not hold numbers", patch.position))?;
+        let null = crate::values::null_value(patch.array).map(|n| n as f64);
+        all.extend(numbers.into_iter().map(|value| {
+            if !value.is_finite() || Some(value) == null {
+                f64::NAN
+            } else {
+                value
+            }
+        }));
+    }
+    Ok(all)
+}
+
+/// Say once, per property and per reason, that a property cannot be judged.
+fn tell(
+    out: &mut Vec<Finding>,
+    told: &mut BTreeSet<(String, String)>,
+    check: &Integrity,
+    uuid: &str,
+    why: String,
+) {
+    if told.insert((uuid.to_owned(), why.clone())) {
+        out.push(unverifiable(check, uuid, why));
+    }
+}
+
+/// **House rule** (ADR-0036): the specification names the directions of a
+/// property (common TRG 2.3 §11.1 p. 281) and says nothing of the order of
+/// their values; this is a reading of the physics of a layered medium, so it
+/// is a warning and never an error.
+///
+/// The siblings are found by [`property::kinship::kinship`], the one rule; this
+/// function adds what only it knows: which direction is vertical, which kinds
+/// expect an order, and the count of the pairs that break it
+/// ([`crate::stats::tally`], the one counter).
+#[allow(clippy::needless_range_loop)] // `i` and `j` name the pair, not only the element
+fn judge_directional(
+    context: &Context<'_>,
+    check: &Integrity,
+    declared: &[DeclaredDirection],
+    out: &mut Vec<Finding>,
+) {
+    use crate::property::kinship::{KinFacts, Kinship, kinship};
+    use crate::stats::{CellRule, tally};
+
+    let mut candidates: Vec<Directional<'_>> = Vec::new();
+    for (uuid, object) in context.objects {
+        if !concepts_of(*object).contains(&"AbstractProperty") {
+            continue;
+        }
+        let Ok(read) = property::read(*object) else {
+            continue;
+        };
+        let directions = read
+            .facets
+            .iter()
+            .filter(|facet| facet.kind.eq_ignore_ascii_case("direction"))
+            .count();
+        if directions != 1 {
+            continue;
+        }
+        let Some(support) = read
+            .supporting_representation_uri
+            .clone()
+            .or_else(|| read.supporting_representation.clone())
+        else {
+            continue;
+        };
+        let uri = identity::uri_of_reflect(*object).unwrap_or_else(|| (*uuid).to_owned());
+        candidates.push(Directional {
+            uuid: *uuid,
+            uri,
+            support,
+            read,
+        });
+    }
+
+    let resolver = Resolver::new(context.source);
+    let mut orders: BTreeMap<String, std::result::Result<Option<DirectionalOrder>, String>> = BTreeMap::new();
+    let mut values: BTreeMap<usize, std::result::Result<Vec<f64>, String>> = BTreeMap::new();
+    let mut told: BTreeSet<(String, String)> = BTreeSet::new();
+
+    for i in 0..candidates.len() {
+        for j in (i + 1)..candidates.len() {
+            let (a, b) = (&candidates[i], &candidates[j]);
+            let Some(Kinship::Direction { this, other }) = kinship(
+                &KinFacts::of_property(&a.uri, &a.support, &a.read),
+                &KinFacts::of_property(&b.uri, &b.support, &b.read),
+            ) else {
+                continue;
+            };
+            let Some(kind) = &a.read.kind else {
+                continue;
+            };
+            let key = match kind {
+                property::PropertyKindRef::Object { uuid, .. } => uuid.to_ascii_lowercase(),
+                property::PropertyKindRef::Standard { name } => name.to_ascii_lowercase(),
+            };
+            let expectation = orders
+                .entry(key)
+                .or_insert_with(|| expectation_of(&resolver, kind, a.read.kind_uri.as_deref()))
+                .clone();
+            let order = match expectation {
+                Ok(Some(order)) => order,
+                Ok(None) => continue,
+                Err(why) => {
+                    tell(out, &mut told, check, a.uuid, why);
+                    continue;
+                }
+            };
+
+            let reading_a = direction_reading(&this, &a.uri, declared);
+            let reading_b = direction_reading(&other, &b.uri, declared);
+            for (side, reading) in [(a, &reading_a), (b, &reading_b)] {
+                match reading {
+                    DirectionReading::Role(..) => {}
+                    DirectionReading::Extension(value) => tell(
+                        out,
+                        &mut told,
+                        check,
+                        side.uuid,
+                        format!(
+                            "its direction facet `{value}` is an extension value: which direction it names is not in the specification (common TRG 2.3 §11.1 p. 281); declare it to compare"
+                        ),
+                    ),
+                    DirectionReading::Unknown(value) => tell(
+                        out,
+                        &mut told,
+                        check,
+                        side.uuid,
+                        format!(
+                            "its direction facet `{value}` names no axis of the schema's list (common TRG 2.3 §11.1 p. 281)"
+                        ),
+                    ),
+                }
+            }
+            let (DirectionReading::Role(role_a, axes_a), DirectionReading::Role(role_b, axes_b)) =
+                (&reading_a, &reading_b)
+            else {
+                continue;
+            };
+            if role_a == role_b || !same_axes(*axes_a, *axes_b) {
+                continue;
+            }
+            let (v, h) = if *role_a == DirectionRole::Vertical {
+                (i, j)
+            } else {
+                (j, i)
+            };
+            let (vertical, lateral) = (&candidates[v], &candidates[h]);
+
+            let Some(arrays) = context.arrays else {
+                tell(
+                    out,
+                    &mut told,
+                    check,
+                    vertical.uuid,
+                    "its values are an array, and this check was given nothing to read arrays with".into(),
+                );
+                continue;
+            };
+            for index in [v, h] {
+                values
+                    .entry(index)
+                    .or_insert_with(|| directional_values(&candidates[index].read, arrays));
+            }
+            let (vertical_values, lateral_values) = match (&values[&v], &values[&h]) {
+                (Ok(vertical_values), Ok(lateral_values)) => (vertical_values, lateral_values),
+                (Err(why), _) => {
+                    tell(out, &mut told, check, vertical.uuid, why.clone());
+                    continue;
+                }
+                (_, Err(why)) => {
+                    tell(out, &mut told, check, lateral.uuid, why.clone());
+                    continue;
+                }
+            };
+            if vertical_values.len() != lateral_values.len() {
+                tell(
+                    out,
+                    &mut told,
+                    check,
+                    vertical.uuid,
+                    format!("{} values against {}", vertical_values.len(), lateral_values.len()),
+                );
+                continue;
+            }
+
+            let rule = match order {
+                DirectionalOrder::VerticalNotBelowLateral => CellRule::Below(RATIO_TOLERANCE),
+            };
+            let ratios: Vec<f64> = vertical_values
+                .iter()
+                .zip(lateral_values)
+                .map(|(v, h)| {
+                    if v.is_finite() && h.is_finite() && *h != 0.0 {
+                        v / h
+                    } else {
+                        f64::NAN
+                    }
+                })
+                .collect();
+            let counted = tally(&ratios, 1, &rule).expect("the tolerance is a finite number");
+            let pairs = counted.cells - counted.absent;
+            if pairs == 0 {
+                tell(out, &mut told, check, vertical.uuid, "no pair of finite values".into());
+                continue;
+            }
+            let share = counted.matched as f64 / pairs as f64;
+            if share > RATIO_SHARE {
+                out.push(violation(
+                    check,
+                    vertical.uuid,
+                    format!(
+                        "{:.2} % of {pairs} pairs below {RATIO_TOLERANCE} (vertical `{}` against lateral `{}`)",
+                        share * 100.0,
+                        vertical.uri,
+                        lateral.uri
+                    ),
+                ));
+            }
         }
     }
 }

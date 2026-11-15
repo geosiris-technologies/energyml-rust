@@ -50,5 +50,8 @@ fn every_finding_anchor_names_a_check_that_exists() {
             );
         }
     }
-    assert_eq!(seen, 6, "the two published ids and the four table checks");
+    assert_eq!(
+        seen, 7,
+        "the two published ids, the four table checks and the directional ratio"
+    );
 }

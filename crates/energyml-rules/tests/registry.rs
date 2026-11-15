@@ -78,7 +78,7 @@ fn english_is_present_everywhere() {
 /// earlier FIRP rule and the colour cascade are `superseded` by `rank-order`,
 /// in the same commit. The `stats` theme (4 rules) and the `well` theme (4
 /// rules) bring the registry to 43; the five link rules of the `table` theme
-/// (ADR-0030) and the four of the `survey` theme bring it to 52.
+/// (ADR-0030) and the four of the `survey` theme bring it to 52; the directional ratio of the `property` theme (ADR-0036) brings it to 53.
 ///
 /// To break it: put `house/inherit/firp-parents` back to `active` (the test goes
 /// red), or leave it `superseded` without `rank-order` naming it (the build
@@ -103,7 +103,12 @@ fn the_rules_are_complete_and_statuses_follow_the_design() {
         4,
         "the north, the corrections, rejected stations and deviation surveys"
     );
-    assert_eq!(all().len(), 52);
+    assert_eq!(
+        count("property"),
+        1,
+        "the order two directional properties keep (ADR-0036)"
+    );
+    assert_eq!(all().len(), 53);
 
     let coded_by_the_new_walk = [
         id::INHERIT_RANK_ORDER,
