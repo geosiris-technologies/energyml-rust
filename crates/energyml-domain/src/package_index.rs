@@ -71,11 +71,14 @@ use energyml_core::value::Reflect;
 use energyml_storage::graph::{self, Edge, Graph, Node, Pointer};
 use energyml_storage::{EpcStore, ObjectSummary};
 
-use crate::property::{self, IndexableElement, Property, PropertyKindRef, TimeRef};
+use crate::property::shape::{ElementShape, ShapeRefusal};
+use crate::property::{self, Facet, IndexableElement, Instant, Property, PropertyKindRef, TimeRef};
 use crate::source::ObjectSource;
 use crate::values;
 
+mod kinship;
 mod relations;
+pub use kinship::{CandidateNeed, CandidateRole, ShapeCandidate};
 pub use relations::{AssociationRow, GraphicalRow, Membership, ModelRef};
 
 /// A node's position in [`PackageIndex`]. `u32` because a package of 77 090
@@ -297,12 +300,31 @@ pub struct PropertySheet {
     pub has_realization_indices: bool,
     /// Where the first value array sits: `ValuesForPatch[0]`.
     pub values_path: Option<Arc<str>>,
+    /// Qualifiers, as `property::read` gives them.
+    pub facets: Box<[Facet]>,
+    /// `LabelPerComponent`, linearised; empty when the file gives none.
+    pub label_per_component: Box<[Arc<str>]>,
+    /// 2.2 `Time`, for a property dated on its own.
+    pub instant: Option<Box<Instant>>,
 }
 
 impl PropertySheet {
     /// `Property::values_per_element`, on the sheet.
     pub fn values_per_element(&self) -> u64 {
         self.value_count_per_element.iter().product::<u64>().max(1)
+    }
+
+    /// The component shape, as [`ElementShape::of`] reads the property: the
+    /// counts per element and the labels the sheet keeps.
+    pub fn element_shape(&self) -> Result<ElementShape, ShapeRefusal> {
+        let labels: Vec<String> = self.label_per_component.iter().map(|label| label.to_string()).collect();
+        ElementShape::of(&self.value_count_per_element, &labels)
+    }
+
+    /// Whether time is a dimension of the values (see
+    /// [`property::shape::time_is_a_dimension`]).
+    pub fn time_is_a_dimension(&self) -> bool {
+        property::shape::time_is_a_dimension(self.time.as_deref())
     }
 
     /// The kind as a [`PropertyKindRef`], for code written against `property`.
@@ -1378,6 +1400,14 @@ impl PackageIndex {
             realization: read.realization,
             has_realization_indices: read.has_realization_indices,
             values_path,
+            facets: read.facets.clone().into_boxed_slice(),
+            label_per_component: read
+                .label_per_component
+                .iter()
+                .map(|label| self.strings.arc(label))
+                .collect::<Vec<_>>()
+                .into_boxed_slice(),
+            instant: read.instant.clone().map(Box::new),
         }
     }
 

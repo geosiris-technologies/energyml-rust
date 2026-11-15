@@ -170,6 +170,17 @@ fn sheet_difference(
         sheet.has_realization_indices,
         read.has_realization_indices
     );
+    same!("facets", &*sheet.facets, read.facets.as_slice());
+    same!(
+        "label_per_component",
+        sheet
+            .label_per_component
+            .iter()
+            .map(|label| label.to_string())
+            .collect::<Vec<_>>(),
+        read.label_per_component
+    );
+    same!("instant", sheet.instant.as_deref(), read.instant.as_ref());
     let located = values::locate(object);
     same!(
         "values_path",
