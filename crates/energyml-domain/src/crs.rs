@@ -965,9 +965,22 @@ fn from_well_datum(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8) -> 
     {
         return read_with(local.as_reflect(), source).map(Some);
     }
+    // RESQML 2.0.1 proper keeps the `LocalCrs` on the `MdDatum` itself, beside a `Location` that is the
+    // `Point3d`: the same whole CRS.
+    if let Some(local_named) = reference_to(datum, "LocalCrs")
+        && let Some(local) = source.object_of(local_named)
+    {
+        return read_with(local.as_reflect(), source).map(Some);
+    }
 
     let projected = crs_object_kind(datum, "HorizontalCoordinates", source);
     let vertical: CrsKind = crs_object_kind(datum, "VerticalCrs", source);
+
+    // The placed x and y are in the projected system's unit; the elevation has been converted to
+    // metres to meet the measured depths (`place_datum`). The unit is read by `stated_uom`, the one
+    // reading of it.
+    let horizontal_uom = crs_object_of(datum, "HorizontalCoordinates", source)
+        .and_then(|crs| stated_uom(crs.as_reflect()));
 
     let out = Crs {
         uuid: datum_uuid,
@@ -980,8 +993,8 @@ fn from_well_datum(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8) -> 
         // elevations, converting the datum's own convention on the way.
         vertical_direction: VerticalDirection::Up,
         vertical_quantity: VerticalQuantity::Length,
-        horizontal_uom: None,
-        vertical_uom: None,
+        horizontal_uom,
+        vertical_uom: Some("m".to_string()),
         time_uom: None,
         projected,
         vertical,
@@ -995,6 +1008,31 @@ fn from_well_datum(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8) -> 
     // }
 
     Ok(Some(out))
+}
+
+/// The unit a projected or a vertical CRS object (eml 2.3 `ProjectedCrs`, `VerticalCrs`) declares - the one
+/// reading of it: `crs::of`, `place_datum` and the survey reader call this.
+pub fn stated_uom(crs_object: &dyn Reflect) -> Option<String> {
+    measure::enum_value(crs_object, "uom")
+}
+
+/// The CRS object a datum field points at (`HorizontalCoordinates.Crs`, or a `VerticalCrs` reference),
+/// resolved as [`crs_object_kind`] resolves it. `None` when the field is absent or the object is not in
+/// the source.
+fn crs_object_of(
+    datum: &dyn Reflect,
+    field: &str,
+    source: &dyn ObjectSource,
+) -> Option<Box<dyn energyml_core::registry::DynObject>> {
+    let FieldValue::Object(holder) = datum.field(field)? else {
+        return None;
+    };
+    let named = if identity::uuid_of_reflect(holder).is_some() {
+        Some(holder)
+    } else {
+        reference_to(holder, "Crs")
+    }?;
+    source.object_of(named)
 }
 
 /// The EPSG identity of the CRS a datum field points at.

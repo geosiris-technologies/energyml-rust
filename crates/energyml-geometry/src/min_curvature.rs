@@ -78,6 +78,14 @@
 //! no azimuth, an inclination outside [0°, 180°], an azimuth outside
 //! [0°, 360°], and two stations whose directions are opposite - a dogleg of
 //! 180° lies in no one plane, the arc is undefined.
+//!
+//! # Courses
+//!
+//! [`checked_directions`] is the one check of a survey's stations; [`positions`]
+//! and [`courses`] both call it. A [`Course`] is one interval between two
+//! stations with its dogleg, and [`Course::severity`] is the dogleg severity in
+//! radians per unit of measured depth (no 30 m or 100 ft constant lives here:
+//! the display unit is the caller's, through `energyml_domain::units`).
 
 use std::f64::consts::PI;
 
@@ -270,14 +278,16 @@ fn direction_of(station: usize, measured: &Measured) -> Result<[f64; 3], Station
     }
 }
 
-/// Every station placed from the first, by the minimum curvature method.
-pub fn positions(stations: &[Measured]) -> Result<Vec<Located>, StationsError> {
+/// The unit direction of every station - north, east, down - each station checked before any is used:
+/// at least two stations, finite measured depths that increase, then `direction_of` on each.
+/// The one check of this module: [`positions`] and [`courses`] call it, never a copy of it.
+pub fn checked_directions(stations: &[Measured]) -> Result<Vec<[f64; 3]>, StationsError> {
     if stations.len() < 2 {
         return Err(StationsError::TooFewStations {
             given: stations.len(),
         });
     }
-    // -- every station checked before any is placed ----------------------------
+    // -- every station checked before any is used ------------------------------
     let mut directions = Vec::with_capacity(stations.len());
     for (at, measured) in stations.iter().enumerate() {
         let station = at + 1;
@@ -297,6 +307,59 @@ pub fn positions(stations: &[Measured]) -> Result<Vec<Located>, StationsError> {
         }
         directions.push(direction_of(station, measured)?);
     }
+    Ok(directions)
+}
+
+/// One interval between two consecutive stations, as the minimum curvature method joins them.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Course {
+    /// The measured depth of the station that opens it.
+    pub md_top: f64,
+    /// The measured depth of the station that closes it.
+    pub md_base: f64,
+    /// The dogleg, in radians: the angle between the two stations' directions.
+    pub dogleg: f64,
+}
+
+impl Course {
+    /// The dogleg severity, in radians per unit of measured depth (radians per metre when the
+    /// depths are in metres - `crate::stations` gives them so). The display unit is the caller's,
+    /// through `energyml_domain::units::convert(value, "rad/m", ..)`.
+    pub fn severity(&self) -> f64 {
+        self.dogleg / (self.md_base - self.md_top)
+    }
+}
+
+/// The intervals of a checked survey: `directions` are those of [`checked_directions`] on the same
+/// `stations`. The one place the dogleg of an interval is computed and a reversal refused.
+fn courses_of(stations: &[Measured], directions: &[[f64; 3]]) -> Result<Vec<Course>, StationsError> {
+    let mut out = Vec::with_capacity(stations.len().saturating_sub(1));
+    for k in 1..stations.len() {
+        let beta = dogleg(directions[k - 1], directions[k]);
+        if PI - beta < REVERSAL {
+            return Err(StationsError::Reversal { station: k + 1 });
+        }
+        out.push(Course {
+            md_top: stations[k - 1].md,
+            md_base: stations[k].md,
+            dogleg: beta,
+        });
+    }
+    Ok(out)
+}
+
+/// Every interval of a survey, checked by the one check of this module.
+pub fn courses(stations: &[Measured]) -> Result<Vec<Course>, StationsError> {
+    let directions = checked_directions(stations)?;
+    courses_of(stations, &directions)
+}
+
+/// The positions and the directions of every station, the check made once.
+pub(crate) fn positions_with_directions(
+    stations: &[Measured],
+) -> Result<(Vec<Located>, Vec<[f64; 3]>), StationsError> {
+    let directions = checked_directions(stations)?;
+    let courses = courses_of(stations, &directions)?;
 
     // -- the chords, one per interval ------------------------------------------
     let mut out = Vec::with_capacity(stations.len());
@@ -307,24 +370,25 @@ pub fn positions(stations: &[Measured]) -> Result<Vec<Located>, StationsError> {
         east: 0.0,
         tvd: 0.0,
     });
-    for k in 1..stations.len() {
-        let (t1, t2) = (directions[k - 1], directions[k]);
-        let beta = dogleg(t1, t2);
-        if PI - beta < REVERSAL {
-            return Err(StationsError::Reversal { station: k + 1 });
-        }
-        let scale = (stations[k].md - stations[k - 1].md) / 2.0 * ratio_factor(beta);
+    for (k, course) in courses.iter().enumerate() {
+        let (t1, t2) = (directions[k], directions[k + 1]);
+        let scale = (course.md_base - course.md_top) / 2.0 * ratio_factor(course.dogleg);
         for axis in 0..3 {
             at[axis] += scale * (t1[axis] + t2[axis]);
         }
         out.push(Located {
-            md: stations[k].md,
+            md: stations[k + 1].md,
             north: at[0],
             east: at[1],
             tvd: at[2],
         });
     }
-    Ok(out)
+    Ok((out, directions))
+}
+
+/// Every station placed from the first, by the minimum curvature method.
+pub fn positions(stations: &[Measured]) -> Result<Vec<Located>, StationsError> {
+    positions_with_directions(stations).map(|(located, _)| located)
 }
 
 #[cfg(test)]
@@ -505,5 +569,93 @@ mod tests {
         ])
         .unwrap();
         assert!(up[1].tvd < 0.0 && up[1].north > 0.0, "{:?}", up[1]);
+    }
+
+    #[test]
+    fn checked_directions_are_the_directions_of_the_stations() {
+        // To break: swap north and east in `direction` (`azimuth_runs_clockwise_from_north`
+        // breaks too).
+        let found = checked_directions(&[station(0.0, 90.0, 0.0), station(10.0, 90.0, 90.0)]).unwrap();
+        let expected = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]];
+        for (found, expected) in found.iter().zip(expected) {
+            for axis in 0..3 {
+                assert!(near(found[axis], expected[axis], 1e-12), "{found:?}");
+            }
+        }
+        let vertical = checked_directions(&[
+            Measured {
+                md: 0.0,
+                inclination: Some(0.0),
+                azimuth: None,
+            },
+            Measured {
+                md: 10.0,
+                inclination: Some(0.0),
+                azimuth: None,
+            },
+        ])
+        .unwrap();
+        assert_eq!(vertical[0], [0.0, 0.0, 1.0]);
+    }
+
+    #[test]
+    fn a_constant_build_has_its_rate_on_every_course() {
+        // 3 degrees per 30 m toward east, stations unevenly spaced at MD 0, 30, 45, 105, 120, the
+        // inclination being MD / 10 degrees. In a vertical plane the dogleg is the change of
+        // inclination (the minimum curvature method, API D20; Sawaryn & Thorogood, SPE 84246):
+        // 3, 1.5, 6 and 1.5 degrees.
+        // To break: divide by the length of the previous course (the uneven spacing fails it).
+        let stations: Vec<Measured> = [0.0, 30.0, 45.0, 105.0, 120.0]
+            .iter()
+            .map(|&md| station(md, md / 10.0, 90.0))
+            .collect();
+        let found = courses(&stations).unwrap();
+        assert_eq!(found.len(), 4);
+        for (course, degrees) in found.iter().zip([3.0, 1.5, 6.0, 1.5]) {
+            assert!(near(course.dogleg, f64::to_radians(degrees), 1e-12), "{course:?}");
+        }
+        let rate = 3f64.to_radians() / 30.0;
+        for course in &found {
+            assert!(near(course.severity(), rate, 1e-12), "{course:?}");
+        }
+    }
+
+    #[test]
+    fn positions_and_courses_share_one_check() {
+        // To break: write a second check in `courses` that numbers stations from 0.
+        let vertical = |md| Measured {
+            md,
+            inclination: Some(0.0),
+            azimuth: None,
+        };
+        let faulty: Vec<Vec<Measured>> = vec![
+            vec![vertical(0.0)],
+            vec![vertical(0.0), vertical(10.0), vertical(10.0)],
+            vec![
+                vertical(0.0),
+                Measured {
+                    md: 10.0,
+                    inclination: None,
+                    azimuth: Some(0.0),
+                },
+            ],
+            vec![
+                vertical(0.0),
+                Measured {
+                    md: 10.0,
+                    inclination: Some(5.0),
+                    azimuth: None,
+                },
+            ],
+            vec![vertical(0.0), station(10.0, 190.0, 0.0)],
+            vec![vertical(0.0), station(10.0, 10.0, -5.0)],
+            vec![vertical(0.0), vertical(f64::NAN)],
+            vec![station(0.0, 90.0, 0.0), station(10.0, 90.0, 180.0)],
+        ];
+        for input in &faulty {
+            let from_courses = courses(input).unwrap_err();
+            let from_positions = positions(input).unwrap_err();
+            assert_eq!(from_courses, from_positions, "{input:?}");
+        }
     }
 }

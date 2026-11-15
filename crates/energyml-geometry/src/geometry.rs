@@ -17,6 +17,7 @@
 //! | `IjkGridRepresentation` | pillars, split coordinate lines, cells of eight corners |
 //! | `WellboreTrajectoryRepresentation` | the survey stations, joined |
 //! | `Trajectory` (WITSML) | its stations, placed by minimum curvature from its datum |
+//! | `DeviationSurveyRepresentation` (RESQML 2.0.1) | its stations, placed by minimum curvature from its `MdDatum` |
 //! | `UnstructuredGridRepresentation` | cells of explicit faces, faces of explicit nodes |
 //! | `SubRepresentation` | elements picked out of another representation |
 //!
@@ -1028,6 +1029,15 @@ pub(crate) fn builtin_readers() -> Vec<Box<dyn RepresentationReader>> {
         // name, having no `DefaultMdDatum` to count its depths from.
         reader!(
             "Trajectory",
+            crate::stations::read,
+            Some(crate::stations::declared)
+        ),
+        // A RESQML 2.0.1 deviation survey: stations, read by the module that
+        // reads a WITSML trajectory (`crate::stations`, ADR-0034), placed from
+        // its `MdDatum`, and refused by name where that datum names no
+        // projected CRS to turn its grid-north azimuths from.
+        reader!(
+            "DeviationSurveyRepresentation",
             crate::stations::read,
             Some(crate::stations::declared)
         ),

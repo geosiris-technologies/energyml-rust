@@ -568,3 +568,440 @@ fn a_projected_point_that_does_not_state_its_axes_or_unit_is_refused() {
         .to_string();
     assert!(message.contains("no local engineering compound"), "{message}");
 }
+
+// -- stations_of, diagnose, read_declaring --------------------------------------
+
+use energyml_geometry::min_curvature::{Measured, positions};
+use energyml_geometry::stations::{
+    self, BetweenStations, CheckKind, CheckOutcome, DeclaredNorth, Finding, MissingCorrection,
+    NorthReference, NorthSource, RejectedStations, StatedTvd, SurveyDeclarations, TvdReference, UnitFault,
+};
+
+const COMPOUND_DATUM_TYPE: &str = "eml23.ReferencePointInALocalEngineeringCompoundCrs";
+
+fn dega(value: f64) -> eml::PlaneAngleMeasureExt {
+    eml::PlaneAngleMeasureExt {
+        value,
+        uom: eml::PlaneAngleUomExt::Dega,
+    }
+}
+
+fn read_with(
+    trajectory: &witsml::Trajectory,
+    declared: &SurveyDeclarations,
+) -> Result<stations::PlacedSurvey, stations::SurveyRefusal> {
+    stations::read_declaring(trajectory, &site(), declared)
+}
+
+/// The trajectory of the file, azimuth of the last station as given, north as asked.
+fn turned(north: eml::NorthReferenceKind, azimuth: f64) -> witsml::Trajectory {
+    let mut turned = trajectory(Some(north));
+    turned.trajectory_station[2].azi = Some(degrees(azimuth));
+    turned
+}
+
+/// WITSML TRG 2.1 §16.10 p. 356-358: the stations are what the file states, and reading them places
+/// nothing and judges nothing.
+#[test]
+fn stations_of_reads_without_placing() {
+    // To break: run the north check inside `stations_of`.
+    let read = stations::stations_of(&trajectory(None), &site()).expect("the stations are readable");
+    assert_eq!(read.measured.len(), 3);
+    assert_eq!(read.north, None);
+    assert!(
+        read.datums
+            .default
+            .as_deref()
+            .is_some_and(|datum| datum.contains(COLLAR)),
+        "{:?}",
+        read.datums
+    );
+}
+
+/// WITSML TRG 2.1 §16.2 p. 345: the values stated at a station are read in SI units (1 ft is 0.3048 m
+/// exactly, and « 1/30 dega/m » is one degree per 30 m, the spelling of the Energistics dictionary).
+#[test]
+fn stations_of_reads_the_stated_values_in_si_units() {
+    // To break: take the value without converting it.
+    let mut stated = trajectory(None);
+    stated.trajectory_station[2].tvd = Some(eml::AbstractVerticalDepth::ReferencePointVerticalDepth(
+        eml::ReferencePointVerticalDepth {
+            vertical_depth: eml::LengthMeasureExt {
+                value: 100.0,
+                uom: eml::LengthUomExt::Ft,
+            },
+            reference_point: dor(COLLAR, COMPOUND_DATUM_TYPE),
+            trajectory: None,
+        },
+    ));
+    stated.trajectory_station[2].disp_ew = Some(eml::LengthMeasure {
+        value: 3.0,
+        uom: eml::LengthUom::M,
+    });
+    stated.trajectory_station[2].dls = Some(eml::AnglePerLengthMeasure {
+        value: 3.0,
+        uom: eml::AnglePerLengthUom::V1Per30DegaPerM,
+    });
+    let read = stations::stations_of(&stated, &site()).expect("readable");
+    let collar_uri = read.datums.default.clone().expect("a default datum");
+    match &read.stated[2].tvd {
+        Some(Ok(StatedTvd { metres, from })) => {
+            assert!((metres - 30.48).abs() < 1e-12, "{metres}");
+            assert_eq!(from, &TvdReference::Point(collar_uri));
+        }
+        other => panic!("a stated TVD from a reference point: {other:?}"),
+    }
+    assert_eq!(read.stated[2].disp_ew, Some(Ok(3.0)));
+    match &read.stated[2].dls {
+        Some(Ok(rate)) => assert!((rate - 3f64.to_radians() / 30.0).abs() < 1e-15, "{rate}"),
+        other => panic!("a stated dogleg severity: {other:?}"),
+    }
+    assert_eq!(read.stated[0].tvd, None);
+}
+
+/// WITSML TRG 2.1 §16.7 p. 352: `AziVertSect` is the azimuth of the vertical section, in the survey's
+/// own north, beside the origin of the section.
+#[test]
+fn stations_of_reads_the_vertical_section_the_file_states() {
+    // To break: read `AziVertSect` from `AziRef`.
+    let mut stated = trajectory(None);
+    stated.azi_vert_sect = Some(dega(45.0));
+    stated.disp_ns_vert_sect_orig = Some(eml::LengthMeasureExt {
+        value: 10.0,
+        uom: eml::LengthUomExt::M,
+    });
+    let read = stations::stations_of(&stated, &site()).expect("readable");
+    assert_eq!(read.section.azimuth, Some(Ok(45.0)));
+    assert_eq!(read.section.origin_north, Some(Ok(10.0)));
+    assert_eq!(read.section.origin_east, None);
+}
+
+/// A stated value whose unit cannot be read is set aside, never a reason to refuse the reading: nothing
+/// stated is used to place (the unit `x` is outside the angle family).
+#[test]
+fn a_stated_value_without_a_unit_is_set_aside_not_refused() {
+    // To break: refuse the reading on a stated value's unit.
+    let mut stated = trajectory(None);
+    stated.azi_vert_sect = Some(eml::PlaneAngleMeasureExt {
+        value: 1.0,
+        uom: eml::PlaneAngleUomExt::Other("x".into()),
+    });
+    let read = stations::stations_of(&stated, &site()).expect("the stations are still readable");
+    assert_eq!(
+        read.section.azimuth,
+        Some(Err(UnitFault {
+            field: "AziVertSect",
+            unit: Some("x".into())
+        }))
+    );
+}
+
+/// The ten checks of `read`, each with its outcome: a survey that cumulates faults lists them all, and
+/// a check whose input failed is not reached.
+#[test]
+fn diagnose_lists_every_failure_not_only_the_first() {
+    // To break: run `diagnose` in the mode that stops at the first failure.
+    let mut faulty = trajectory(None);
+    faulty.md_interval.as_mut().unwrap().datum = Some(dor(OTHER, COMPOUND_DATUM_TYPE));
+    let diagnosis = stations::diagnose(&faulty, &site(), &SurveyDeclarations::default());
+    assert_eq!(diagnosis.checks.len(), 10);
+    assert!(matches!(
+        diagnosis.outcome(CheckKind::Datum),
+        CheckOutcome::Failed(Finding::IntervalDatumDiffers { .. })
+    ));
+    assert_eq!(
+        diagnosis.outcome(CheckKind::North),
+        &CheckOutcome::Failed(Finding::NorthNotStated {
+            station: 3,
+            md: 1000.0,
+            inclination: 90.0
+        })
+    );
+    assert_eq!(diagnosis.outcome(CheckKind::Path), &CheckOutcome::Passed);
+    assert_eq!(diagnosis.outcome(CheckKind::Placement), &CheckOutcome::NotReached);
+    assert_eq!(diagnosis.outcome(CheckKind::NorthInFrame), &CheckOutcome::NotReached);
+    assert!(!diagnosis.passed());
+    assert_eq!(diagnosis.failures().count(), 2);
+}
+
+/// `read` and `diagnose` are one run: `read` gives the sentence of the first failure that `diagnose`
+/// lists, with the same typed cause.
+#[test]
+fn read_refuses_with_the_first_failure_diagnose_lists() {
+    // To break: change a sentence in one of the two ways only.
+    let mut absent_datum = trajectory(Some(eml::NorthReferenceKind::GridNorth));
+    let absent = "40000000-0000-4000-8000-0000000000ff";
+    absent_datum.default_md_datum = Some(dor(absent, COMPOUND_DATUM_TYPE));
+    absent_datum.md_interval.as_mut().unwrap().datum = Some(dor(absent, COMPOUND_DATUM_TYPE));
+    let mut centesimal = trajectory(Some(eml::NorthReferenceKind::GridNorth));
+    centesimal.trajectory_station[2].incl = Some(eml::PlaneAngleMeasure {
+        value: 90.0,
+        uom: eml::PlaneAngleUom::Ccgr,
+    });
+    for faulty in [trajectory(None), absent_datum, centesimal] {
+        let from_geometry = geometry::of(&faulty, &site()).map(|_| ()).unwrap_err().to_string();
+        let refusal = read_with(&faulty, &SurveyDeclarations::default()).unwrap_err();
+        assert_eq!(from_geometry, refusal.error.to_string());
+        let diagnosis = stations::diagnose(&faulty, &site(), &SurveyDeclarations::default());
+        let (check, first) = diagnosis.failures().next().expect("a failure");
+        assert_eq!(refusal.finding, *first);
+        assert_eq!(refusal.check, check);
+    }
+}
+
+/// The north depends on the stations alone, so it is checked before the datum is placed: a survey that
+/// states no north and names an absent datum is refused for its north.
+#[test]
+fn the_north_check_comes_before_the_datum_placement() {
+    // To break: put the placement of the datum back before the north.
+    let mut both = trajectory(None);
+    let absent = "40000000-0000-4000-8000-0000000000ff";
+    both.default_md_datum = Some(dor(absent, COMPOUND_DATUM_TYPE));
+    both.md_interval.as_mut().unwrap().datum = Some(dor(absent, COMPOUND_DATUM_TYPE));
+    let message = refusal(&both);
+    assert!(message.contains("AziRef"), "{message}");
+}
+
+/// A vertical survey moves no azimuth, so no north is asked (`stations/mod.rs`, « none - refused, unless
+/// no station leaves the vertical below the datum »).
+#[test]
+fn a_vertical_survey_without_north_passes_the_north_check() {
+    // To break: ask for a north always.
+    let mut vertical = trajectory(None);
+    vertical.trajectory_station = vec![station(0.0, Some(0.0), None), station(100.0, Some(0.0), None)];
+    let diagnosis = stations::diagnose(&vertical, &site(), &SurveyDeclarations::default());
+    assert_eq!(diagnosis.outcome(CheckKind::North), &CheckOutcome::Passed);
+    assert_eq!(diagnosis.outcome(CheckKind::NorthInFrame), &CheckOutcome::Passed);
+    let placed = read_with(&vertical, &SurveyDeclarations::default()).expect("placed");
+    assert_eq!(placed.north, NorthSource::NotNeeded);
+}
+
+/// WITSML TRG 2.1 §16.7 p. 352: « To convert a true north referenced azimuth to a grid north azimuth,
+/// the convergence angle must be subtracted from true north ».
+#[test]
+fn a_true_north_survey_with_its_convergence_lands_where_grid_north_does() {
+    // To break: add the convergence instead of subtracting it.
+    let mut true_north = turned(eml::NorthReferenceKind::TrueNorth, 120.0);
+    true_north.grid_con_used = Some(dega(30.0));
+    let placed = read_with(&true_north, &SurveyDeclarations::default()).expect("placed");
+    let [x, y, z] = collar();
+    assert!(
+        close(placed.points[2], [x + R, y, z - 100.0 - R], 1e-6),
+        "{:?}",
+        placed.points[2]
+    );
+    assert_eq!(
+        placed.north,
+        NorthSource::Corrected {
+            stated: NorthReference::True,
+            turn: vec![None, None, Some(-30.0)]
+        }
+    );
+}
+
+/// WITSML TRG 2.1 §16.7 p. 352-353: from magnetic north the declination is added (`MagDeclUsed`), then the
+/// convergence subtracted (`GridConUsed`): 120 + 10 - 40 = 90.
+#[test]
+fn a_magnetic_north_survey_needs_both_corrections() {
+    // To break: subtract the declination.
+    let mut magnetic = turned(eml::NorthReferenceKind::MagneticNorth, 120.0);
+    magnetic.mag_decl_used = Some(dega(10.0));
+    let refused = read_with(&magnetic, &SurveyDeclarations::default()).unwrap_err();
+    assert_eq!(
+        refused.finding,
+        Finding::NorthNotApplied {
+            north: NorthReference::Magnetic,
+            missing: MissingCorrection::Convergence { station: 3 }
+        }
+    );
+    let message = refused.to_string();
+    assert!(
+        message.contains("convergence") && message.contains("magnetic north"),
+        "{message}"
+    );
+    magnetic.grid_con_used = Some(dega(40.0));
+    let placed = read_with(&magnetic, &SurveyDeclarations::default()).expect("placed");
+    let [x, y, z] = collar();
+    assert!(close(placed.points[2], [x + R, y, z - 100.0 - R], 1e-6));
+}
+
+/// WITSML TRG 2.1 §16.2 p. 345: `StnGridConUsed` is the station's own, and « if this value is not
+/// provided, then GridConUsed applies to all grid-north referenced stations »: the station's comes first.
+#[test]
+fn a_station_convergence_overrides_the_trajectory_one() {
+    // To break: take the value of the trajectory first.
+    let mut true_north = turned(eml::NorthReferenceKind::TrueNorth, 120.0);
+    true_north.grid_con_used = Some(dega(99.0));
+    true_north.trajectory_station[2].cor_used = Some(witsml::StnTrajCorUsed {
+        stn_grid_con_used: Some(degrees(30.0)),
+        ..Default::default()
+    });
+    let placed = read_with(&true_north, &SurveyDeclarations::default()).expect("placed");
+    let [x, y, z] = collar();
+    assert!(close(placed.points[2], [x + R, y, z - 100.0 - R], 1e-6));
+}
+
+/// A declaration never replaces what the file says.
+#[test]
+fn a_declared_north_is_never_taken_over_a_stated_one() {
+    // To break: drop the refusal of a declaration over a stated north.
+    let declared = SurveyDeclarations {
+        north: Some(DeclaredNorth::Plant),
+        ..Default::default()
+    };
+    let refused = read_with(&trajectory(Some(eml::NorthReferenceKind::GridNorth)), &declared).unwrap_err();
+    assert_eq!(
+        refused.finding,
+        Finding::NorthAlreadyStated {
+            stated: NorthReference::Grid
+        }
+    );
+}
+
+/// A survey that states no north is placed with the one the caller declares, and the result says so.
+#[test]
+fn a_declared_north_is_carried_in_the_result() {
+    // To break: give back `Stated(Plant)` instead of `Declared(Plant)`.
+    let declared = SurveyDeclarations {
+        north: Some(DeclaredNorth::Plant),
+        ..Default::default()
+    };
+    let placed = read_with(&trajectory(None), &declared).expect("placed with a declared north");
+    assert_eq!(placed.north, NorthSource::Declared(DeclaredNorth::Plant));
+    let [x, y, z] = collar();
+    let (sin, cos) = 30f64.to_radians().sin_cos();
+    assert!(close(
+        placed.points[2],
+        [x + R * cos, y - R * sin, z - 100.0 - R],
+        1e-6
+    ));
+}
+
+/// No field of the file corrects an astronomic north, even with a convergence stated.
+#[test]
+fn astronomic_and_compass_north_are_still_refused() {
+    let mut astronomic = turned(eml::NorthReferenceKind::AstronomicNorth, 90.0);
+    astronomic.grid_con_used = Some(dega(30.0));
+    let refused = read_with(&astronomic, &SurveyDeclarations::default()).unwrap_err();
+    assert_eq!(
+        refused.finding,
+        Finding::NorthNotApplied {
+            north: NorthReference::Astronomic,
+            missing: MissingCorrection::NoRule
+        }
+    );
+}
+
+/// WITSML TRG 2.1 §16.12 p. 363: a rejected station does not influence the positions below it. It is
+/// left out only when the caller declares so; the result lists the stations kept.
+#[test]
+fn a_rejected_station_is_left_out_only_when_declared() {
+    // To break: keep the rejected station in the computation.
+    let mut rejected = trajectory(Some(eml::NorthReferenceKind::GridNorth));
+    rejected.trajectory_station[1].status_traj_station = Some(witsml::TrajStationStatus::Rejected);
+    let refused = read_with(&rejected, &SurveyDeclarations::default()).unwrap_err();
+    assert_eq!(refused.finding, Finding::RejectedStation { station: 2 });
+    let left_out = SurveyDeclarations {
+        rejected: RejectedStations::LeaveOut,
+        ..Default::default()
+    };
+    let placed = read_with(&rejected, &left_out).expect("placed without the rejected station");
+    assert_eq!(placed.kept, vec![1, 3]);
+    assert_eq!(placed.points.len(), 2);
+    // One arc from vertical (MD 0) to horizontal toward east (MD 1000): radius 1000 / (pi / 2).
+    let radius = 1000.0 / std::f64::consts::FRAC_PI_2;
+    let [x, y, z] = collar();
+    assert!(
+        close(placed.points[1], [x + radius, y, z - radius], 1e-6),
+        "{:?}",
+        placed.points[1]
+    );
+}
+
+/// A refusal names a station by its number in the file, even when stations were left out.
+#[test]
+fn a_left_out_station_keeps_the_file_numbering() {
+    // To break: do not renumber (the message would say station 2).
+    let mut rejected = trajectory(Some(eml::NorthReferenceKind::GridNorth));
+    rejected.trajectory_station[1].status_traj_station = Some(witsml::TrajStationStatus::Rejected);
+    rejected.trajectory_station[2].azi = None;
+    let left_out = SurveyDeclarations {
+        rejected: RejectedStations::LeaveOut,
+        ..Default::default()
+    };
+    let refused = read_with(&rejected, &left_out).unwrap_err();
+    assert!(
+        matches!(
+            refused.finding,
+            Finding::Stations(energyml_geometry::min_curvature::StationsError::NoAzimuth { station: 3, .. })
+        ),
+        "{:?}",
+        refused.finding
+    );
+    assert!(refused.to_string().contains("station 3"), "{refused}");
+}
+
+/// Between two stations, the arc of the minimum curvature method (API D20; SPE 84246): a quarter circle
+/// toward north, of radius R, at MD 450 (45 degrees) is at [0, R (1 - cos 45), -R sin 45].
+#[test]
+fn a_point_between_two_stations_lies_on_their_arc() {
+    // To break: build the path as straight segments (`BetweenStations::Straight`): the middle falls on
+    // the chord, about 168 m from the arc.
+    let stations = [
+        Measured {
+            md: 0.0,
+            inclination: Some(0.0),
+            azimuth: None,
+        },
+        Measured {
+            md: 900.0,
+            inclination: Some(90.0),
+            azimuth: Some(0.0),
+        },
+    ];
+    let arc = stations::survey_path(&stations, BetweenStations::Arc).expect("a path");
+    let theta = 45f64.to_radians();
+    let expected = [0.0, R * (1.0 - theta.cos()), -R * theta.sin()];
+    assert!(close(arc.at(450.0), expected, 1e-6), "{:?}", arc.at(450.0));
+    let located = positions(&stations).unwrap();
+    for (at, station) in located.iter().zip(&stations) {
+        assert!(
+            close(arc.at(station.md), [at.east, at.north, -at.tvd], 1e-6),
+            "{:?}",
+            arc.at(station.md)
+        );
+    }
+    let straight = stations::survey_path(&stations, BetweenStations::Straight).expect("a path");
+    let gap = (0..3)
+        .map(|axis| (straight.at(450.0)[axis] - expected[axis]).powi(2))
+        .sum::<f64>()
+        .sqrt();
+    assert!(gap > 100.0, "the chord is far from the arc: {gap}");
+}
+
+/// The placed path goes through every station, where the scene puts it: `crs.to_metres(points[k])`.
+#[test]
+fn the_placed_path_goes_through_every_station() {
+    // To break: build the placement without the datum.
+    let grid = trajectory(Some(eml::NorthReferenceKind::GridNorth));
+    let placed = read_with(&grid, &SurveyDeclarations::default()).expect("placed");
+    let path = placed.placed_path().expect("a placed path");
+    let crs = energyml_domain::crs::of(&grid, &site())
+        .expect("no error")
+        .expect("a CRS through the datum");
+    for (k, md) in [0.0, 100.0, 1000.0].into_iter().enumerate() {
+        let found = path.at(md).point;
+        let expected = crs.to_metres(placed.points[k]).expect("metres");
+        assert!(close(found, expected, 1e-6), "MD {md}: {found:?} against {expected:?}");
+    }
+}
+
+/// With no north, the datum is placed and the grid axes are those of its system.
+#[test]
+fn a_survey_without_north_has_a_frame_without_north() {
+    // To break: refuse a survey that states no north.
+    let placement = stations::placement_without_north(&trajectory(None), &site()).expect("a frame");
+    assert_eq!(placement.axes.east, [1.0, 0.0]);
+    assert_eq!(placement.axes.north, [0.0, 1.0]);
+    assert!(close(placement.datum, collar(), 1e-9), "{:?}", placement.datum);
+}

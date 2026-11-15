@@ -389,7 +389,10 @@ impl PlacedPath {
         stations: &[crate::min_curvature::Measured],
         placement: &SurveyPlacement,
     ) -> std::result::Result<PlacedPath, PathRefusal> {
-        PlacedPath::from_local(arc_of(stations)?, placement)
+        // `survey_path` is the one constructor of a survey's arc (`crate::stations`).
+        let arc = crate::stations::survey_path(stations, crate::stations::BetweenStations::Arc)
+            .map_err(PathRefusal::Stations)?;
+        PlacedPath::from_local(arc, placement)
     }
 
     /// The placed point at `md`, and where `md` falls.
@@ -509,35 +512,6 @@ impl PlacedPath {
             Placing::Survey(placement) => placement.place(local),
         }
     }
-}
-
-/// The arc of a survey's stations in the datum frame (metres, x east, y north, z up): the stations
-/// joined by `Path::new` kind 5, every check of `min_curvature::positions` made first.
-fn arc_of(
-    stations: &[crate::min_curvature::Measured],
-) -> std::result::Result<crate::parametric::Path, PathRefusal> {
-    let located = crate::min_curvature::positions(stations)?;
-    let mut points = Vec::with_capacity(stations.len());
-    let mut tangents = Vec::with_capacity(stations.len());
-    let mut mds = Vec::with_capacity(stations.len());
-    for (station, at) in stations.iter().zip(&located) {
-        // `positions` has refused an inclined station with no azimuth: `unwrap_or(0.0)` only meets
-        // vertical stations, where the azimuth moves nothing.
-        let t = crate::min_curvature::direction(
-            station.inclination.unwrap_or(0.0),
-            station.azimuth.unwrap_or(0.0),
-        );
-        points.push([at.east, at.north, -at.tvd]);
-        tangents.push([t[1], t[0], -t[2]]);
-        mds.push(station.md);
-    }
-    Ok(crate::parametric::Path::new(
-        5,
-        points,
-        mds,
-        Some(tangents),
-        crate::parametric::Vertical::Up,
-    )?)
 }
 
 /// The unit the trajectory's measured depths are in: `MdInterval.Uom` (2.2) or `MdUom` (2.0.1 and the
@@ -1109,6 +1083,9 @@ pub(crate) struct PlacedDatum {
     /// The compound the datum is written in, when it is a
     /// `ReferencePointInALocalEngineeringCompoundCrs` - what placed it.
     pub(crate) compound: Option<energyml_domain::Crs>,
+    /// The datum's coordinates in the frame of the CRS `energyml_domain::crs::of` gives an object that
+    /// counts its depths from it.
+    pub(crate) written: Point,
 }
 
 /// Where a datum is, read once for every well that counts its depths from one:
@@ -1160,19 +1137,54 @@ pub(crate) fn place_datum(datum_uri: &str, source: &dyn ValueSource, at: &str) -
             y,
             elevation,
             compound: Some(compound),
+            // The CRS of `crs::of` is the identity of the compound, with no placement: the placed point.
+            written: [x, y, elevation],
         });
     }
 
-    let elevation = match vertical_sense(datum, source, at)? {
+    let mut elevation = match vertical_sense(datum, source, at)? {
         VerticalSense::Up => vertical,
         VerticalSense::Down => -vertical,
+    };
+    let written = if crate::geometry::field_object(datum, "HorizontalCoordinates").is_some() {
+        // A point in a projected CRS and a vertical CRS (`ReferencePointInACrs`): x and y stay in the
+        // projected system's unit, the elevation goes to metres to meet the measured depths, by the
+        // unit the vertical CRS states.
+        if let Some(unit) = vertical_crs_of(datum, source)
+            .and_then(|crs| energyml_domain::crs::stated_uom(crs.as_reflect()))
+        {
+            elevation = units::metres(elevation, &unit).map_err(Error::Domain)?;
+        }
+        [x, y, elevation]
+    } else {
+        // An `MdDatum`: the `Point3d` as written. The CRS of `crs::of` is the whole `LocalDepth3dCrs`, which
+        // places, flips and converts it itself.
+        [x, y, vertical]
     };
     Ok(PlacedDatum {
         x,
         y,
         elevation,
         compound: None,
+        written,
     })
+}
+
+/// The vertical CRS a datum names: 2.2 on the datum itself, 2.0.1 and the drops through the `Location`'s
+/// `LocalCrs`.
+fn vertical_crs_of(
+    datum: &dyn Reflect,
+    source: &dyn ValueSource,
+) -> Option<Box<dyn energyml_core::registry::DynObject>> {
+    reference_of(datum, "VerticalCrs")
+        .or_else(|| {
+            crate::geometry::field_object(datum, "Location")
+                .and_then(|location| reference_of(location, "LocalCrs"))
+        })
+        // RESQML 2.0.1 proper: the `LocalCrs` sits on the `MdDatum` itself, beside a `Location` that is
+        // the `Point3d`.
+        .or_else(|| reference_of(datum, "LocalCrs"))
+        .and_then(|uri| source.object_at(&uri))
 }
 
 enum VerticalSense {
@@ -1194,13 +1206,7 @@ fn vertical_sense(datum: &dyn Reflect, source: &dyn ValueSource, at: &str) -> Re
     // the datum a `Location` whose `LocalCrs` carries the sense, as a
     // `ZIncreasingDownward` flag - so that is the second place to look, and
     // looking there is what lets a drop's wells stand the right way up.
-    let vertical_crs = reference_of(datum, "VerticalCrs")
-        .or_else(|| {
-            crate::geometry::field_object(datum, "Location")
-                .and_then(|location| reference_of(location, "LocalCrs"))
-        })
-        .and_then(|uri| source.object_at(&uri));
-    let Some(vertical_crs) = vertical_crs else {
+    let Some(vertical_crs) = vertical_crs_of(datum, source) else {
         // No CRS to consult: a bare vertical coordinate has no stated sense,
         // and up-vs-down is the whole well.
         return Err(Error::unsupported(
