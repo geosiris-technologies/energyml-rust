@@ -53,7 +53,7 @@ hdf5 = ["energyml-storage/hdf5", "energyml-geometry/hdf5", "energyml-domain/hdf5
 name = "views"
 path = "tests/main.rs"
 
-# docs.rs builds on Linux with no native HDF5: every feature builds there.
+# docs.rs builds on Linux with no native HDF5: `png` builds there, `hdf5` would not.
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
-all-features = true
+features = ["png"]
