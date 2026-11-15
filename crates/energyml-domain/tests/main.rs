@@ -48,6 +48,8 @@ mod property_counts_in_check;
 mod property_describe;
 mod property_kind;
 mod property_shape;
+mod provenance_graph;
+
 mod provenance_verbatim;
 mod read_block;
 mod reference_follow;
