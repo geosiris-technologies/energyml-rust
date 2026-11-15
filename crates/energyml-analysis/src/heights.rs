@@ -21,6 +21,7 @@
 //! quadrilateral that is not convex in plan - are **set aside** and counted.
 
 use crate::Error;
+use energyml_geostat::buckets::{Bounds, Grid};
 use energyml_geostat::vector::plan;
 
 /// A surface as flat arrays: `[x, y, z, …]`, and its faces as node indices -
@@ -139,14 +140,11 @@ enum Face {
     Quad([usize; 4]),
 }
 
-/// The base's faces, bucketed by their plan-view boxes on a regular grid.
+/// The base's faces, bucketed by their plan-view boxes on the regular grid of
+/// [`energyml_geostat::buckets`].
 struct Index {
     faces: Vec<Face>,
-    /// Face numbers per cell, row after row.
-    cells: Vec<Vec<usize>>,
-    min: [f64; 2],
-    size: [f64; 2],
-    counts: [usize; 2],
+    grid: Grid,
     /// The largest span of the base on any axis, at least one - what the
     /// agreement between two faces is measured against.
     scale: f64,
@@ -189,7 +187,7 @@ impl Index {
 
         let mut min = [f64::INFINITY; 3];
         let mut max = [f64::NEG_INFINITY; 3];
-        let mut boxes = Vec::with_capacity(faces.len());
+        let mut boxes: Vec<Bounds> = Vec::with_capacity(faces.len());
         for face in &faces {
             let corners: &[usize] = match face {
                 Face::Triangle(c) => c,
@@ -214,68 +212,25 @@ impl Index {
             .map(|a| max[a] - min[a])
             .filter(|s| s.is_finite())
             .fold(1.0f64, f64::max);
-        if faces.is_empty() {
-            return Index {
-                faces,
-                cells: Vec::new(),
-                min: [0.0; 2],
-                size: [1.0; 2],
-                counts: [0; 2],
-                scale,
-                set_aside,
-            };
-        }
-        // About one face per cell, the cells as square as the extent allows.
-        let span = [
-            (max[0] - min[0]).max(scale * 1e-12),
-            (max[1] - min[1]).max(scale * 1e-12),
-        ];
-        let per_axis = |mine: f64, other: f64| {
-            ((faces.len() as f64 * mine / other).sqrt().ceil() as usize).clamp(1, 1024)
-        };
-        let counts = [per_axis(span[0], span[1]), per_axis(span[1], span[0])];
-        let size = [span[0] / counts[0] as f64, span[1] / counts[1] as f64];
-        let mut index = Index {
+        // About one face per bucket: the grid is the common one, shared with
+        // every other "what lies near here" of the workspace.
+        Index {
             faces,
-            cells: vec![Vec::new(); counts[0] * counts[1]],
-            min: [min[0], min[1]],
-            size,
-            counts,
+            grid: Grid::new(&boxes),
             scale,
             set_aside,
-        };
-        for (at, (low, high)) in boxes.into_iter().enumerate() {
-            let (i0, j0) = index.cell_of(low[0], low[1]);
-            let (i1, j1) = index.cell_of(high[0], high[1]);
-            for j in j0..=j1 {
-                for i in i0..=i1 {
-                    index.cells[j * counts[0] + i].push(at);
-                }
-            }
         }
-        index
-    }
-
-    /// The cell a plan position falls in, clamped to the grid.
-    fn cell_of(&self, x: f64, y: f64) -> (usize, usize) {
-        let at = |v: f64, axis: usize| {
-            (((v - self.min[axis]) / self.size[axis]).floor().max(0.0) as usize).min(self.counts[axis] - 1)
-        };
-        (at(x, 0), at(y, 1))
     }
 
     /// The heights of every face lying under `(x, y)`.
     fn heights_at(&self, points: &[f64], x: f64, y: f64) -> Vec<f64> {
-        if self.faces.is_empty() {
-            return Vec::new();
-        }
-        // A position past the grid lands in its edge cell, and the faces
+        // A position past the grid lands in its edge bucket, and the faces
         // there say no: the face test is the only one that decides.
         let point = |i: usize| [points[3 * i], points[3 * i + 1], points[3 * i + 2]];
-        let (i, j) = self.cell_of(x, y);
-        self.cells[j * self.counts[0] + i]
+        self.grid
+            .candidates_at(x, y)
             .iter()
-            .filter_map(|&at| match &self.faces[at] {
+            .filter_map(|&at| match &self.faces[at as usize] {
                 Face::Triangle(c) => in_triangle(c.map(point), x, y),
                 Face::Quad(c) => in_quad(c.map(point), x, y),
             })

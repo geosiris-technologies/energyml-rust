@@ -16,7 +16,7 @@
 //! through itself - and the tests below state it again on their own numbers.
 
 use crate::model::{TraceItem, TraceRole};
-use energyml_geostat::polyline::{sample, z_at};
+use energyml_geostat::polyline::sample;
 
 /// A continuous polyline in `(s, z)`, `s` non-decreasing.
 pub type Span = Vec<[f64; 2]>;
@@ -113,9 +113,14 @@ pub fn between(upper: &[Span], lower: &[Span]) -> Vec<Vec<[f64; 2]>> {
             steps.sort_by(f64::total_cmp);
             steps.dedup_by(|a, b| (*a - *b).abs() <= f64::EPSILON * a.abs().max(1.0));
             // (s, z upper, z lower)
+            // One pass over each span: the steps ascend, so `sample` answers what
+            // `z_at` does at each, without rescanning the span from its start
+            // for every step ([section S1]).
+            let (zu, zl) = (sample(up, &steps), sample(low, &steps));
             let samples: Vec<(f64, f64, f64)> = steps
-                .into_iter()
-                .filter_map(|s| Some((s, z_at(up, s)?, z_at(low, s)?)))
+                .iter()
+                .zip(zu.into_iter().zip(zl))
+                .filter_map(|(s, (u, l))| Some((*s, u?, l?)))
                 .collect();
             runs(&samples, &mut out);
         }
@@ -205,10 +210,12 @@ pub fn polygons(mine: &Line<'_>, all: &[Line<'_>], up: bool) -> Vec<Vec<[f64; 2]
     if mine.item.role == TraceRole::Fault {
         return Vec::new();
     }
-    let others: Vec<(String, Vec<Span>)> = all
+    // The spans are borrowed, not copied: a fill reads them and changes nothing
+    // ([section S2]).
+    let others: Vec<&[Span]> = all
         .iter()
         .filter(|o| is_candidate(mine, o))
-        .map(|o| (o.key.to_string(), o.spans.to_vec()))
+        .map(|o| o.spans)
         .collect();
     nearest(mine.spans, &others, up)
 }
@@ -222,7 +229,7 @@ pub fn polygons(mine: &Line<'_>, all: &[Line<'_>], up: bool) -> Vec<Vec<[f64; 2]
 /// is exact - no sampling. Where no candidate lies on that side, nothing is
 /// filled: no floor is invented. A candidate in several spans (a faulted
 /// horizon) is followed span by span, so the fill follows the throw.
-pub fn nearest(mine: &[Span], others: &[(String, Vec<Span>)], up: bool) -> Vec<Vec<[f64; 2]>> {
+pub fn nearest(mine: &[Span], others: &[&[Span]], up: bool) -> Vec<Vec<[f64; 2]>> {
     let mut out = Vec::new();
     for m in mine {
         for env in envelope(m, others, up) {
@@ -239,7 +246,7 @@ pub fn nearest(mine: &[Span], others: &[(String, Vec<Span>)], up: bool) -> Vec<V
 /// The line the fill of one span goes to: the nearest candidate in each
 /// abscissa, as spans - one per run of the same candidate, so a change of
 /// neighbour (or a throw of its own) starts a new span.
-fn envelope(m: &[[f64; 2]], others: &[(String, Vec<Span>)], up: bool) -> Vec<Span> {
+fn envelope(m: &[[f64; 2]], others: &[&[Span]], up: bool) -> Vec<Span> {
     let (Some(first), Some(last)) = (m.first(), m.last()) else {
         return Vec::new();
     };
@@ -247,8 +254,22 @@ fn envelope(m: &[[f64; 2]], others: &[(String, Vec<Span>)], up: bool) -> Vec<Spa
     if !matches!(hi.partial_cmp(&lo), Some(std::cmp::Ordering::Greater)) {
         return Vec::new();
     }
+    // Only the spans that reach `[lo, hi]` can be a neighbour here: one that
+    // lies outside would be sampled to nothing at every step and add no break.
+    let reaching: Vec<Vec<&Span>> = others
+        .iter()
+        .map(|spans| {
+            spans
+                .iter()
+                .filter(|span| match (span.first(), span.last()) {
+                    (Some(a), Some(b)) => b[0] >= lo && a[0] <= hi,
+                    _ => false,
+                })
+                .collect()
+        })
+        .collect();
     let mut steps: Vec<f64> = m.iter().map(|p| p[0]).collect();
-    for (_, spans) in others {
+    for spans in &reaching {
         for span in spans {
             steps.extend(span.iter().map(|p| p[0]));
         }
@@ -260,9 +281,9 @@ fn envelope(m: &[[f64; 2]], others: &[(String, Vec<Span>)], up: bool) -> Vec<Spa
     steps.dedup_by(|a, b| (*a - *b).abs() <= f64::EPSILON * a.abs().max(1.0));
 
     let zm = sample(m, &steps);
-    let samples: Vec<Vec<Vec<Option<f64>>>> = others
+    let samples: Vec<Vec<Vec<Option<f64>>>> = reaching
         .iter()
-        .map(|(_, spans)| spans.iter().map(|sp| sample(sp, &steps)).collect())
+        .map(|spans| spans.iter().map(|sp| sample(sp, &steps)).collect())
         .collect();
 
     // (candidate, start, end) of each stretch where one candidate is the nearest.
@@ -352,4 +373,97 @@ fn envelope(m: &[[f64; 2]], others: &[(String, Vec<Span>)], up: bool) -> Vec<Spa
         }
     }
     runs.into_iter().map(|(_, span)| span).collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use energyml_geostat::polyline::z_at;
+
+    /// `between` as it was written: `z_at` rescanning each span from its start at
+    /// every step. The one-pass version must give the same polygons.
+    fn between_by_scan(up: &[Span], low: &[Span]) -> Vec<Vec<[f64; 2]>> {
+        let mut out = Vec::new();
+        for up in up {
+            for low in low {
+                let (Some(u0), Some(ul), Some(l0), Some(ll)) =
+                    (up.first(), up.last(), low.first(), low.last())
+                else {
+                    continue;
+                };
+                let from = u0[0].max(l0[0]);
+                let to = ul[0].min(ll[0]);
+                if !matches!(to.partial_cmp(&from), Some(std::cmp::Ordering::Greater)) {
+                    continue;
+                }
+                let mut steps: Vec<f64> = up
+                    .iter()
+                    .chain(low.iter())
+                    .map(|p| p[0])
+                    .filter(|s| *s >= from && *s <= to)
+                    .collect();
+                steps.push(from);
+                steps.push(to);
+                steps.sort_by(f64::total_cmp);
+                steps.dedup_by(|a, b| (*a - *b).abs() <= f64::EPSILON * a.abs().max(1.0));
+                let samples: Vec<(f64, f64, f64)> = steps
+                    .into_iter()
+                    .filter_map(|s| Some((s, z_at(up, s)?, z_at(low, s)?)))
+                    .collect();
+                runs(&samples, &mut out);
+            }
+        }
+        out
+    }
+
+    fn wavy(points: usize, from: f64, step: f64, phase: f64, mean: f64) -> Span {
+        (0..points)
+            .map(|i| {
+                let s = from + i as f64 * step;
+                [s, mean + 30.0 * (s * 0.013 + phase).sin()]
+            })
+            .collect()
+    }
+
+    /// [section S1] Two wavy spans that cross many times, with a step and a hole:
+    /// the polygons are those of the scan, and a span of 20 000 points is filled
+    /// at once (the scan would take billions of steps).
+    #[test]
+    fn between_in_one_pass_gives_the_scans_polygons() {
+        let upper = vec![
+            wavy(300, 0.0, 2.5, 0.0, -100.0),
+            wavy(100, 900.0, 3.0, 1.0, -100.0),
+        ];
+        let lower = vec![wavy(500, 10.0, 1.7, 2.0, -105.0)];
+        assert_eq!(between(&upper, &lower), between_by_scan(&upper, &lower));
+        assert!(!between(&upper, &lower).is_empty());
+        let big_up = vec![wavy(20_000, 0.0, 1.0, 0.0, -100.0)];
+        let big_low = vec![wavy(20_000, 0.5, 1.0, 1.0, -100.0)];
+        let start = std::time::Instant::now();
+        let polygons = between(&big_up, &big_low);
+        assert!(!polygons.is_empty());
+        // A pass takes milliseconds; the scan, billions of steps: five seconds is
+        // out of reach of a loaded machine on one side and of the scan on the other.
+        assert!(start.elapsed().as_secs() < 5, "{:?}", start.elapsed());
+        // Break it: sample with `z_at` at each step again and the time passes the bound.
+    }
+
+    /// [section S2] A candidate whose spans lie outside the span being filled is
+    /// ignored: the fill is the same with or without it, and the spans are
+    /// borrowed.
+    #[test]
+    fn a_neighbour_out_of_reach_changes_nothing() {
+        let mine: Vec<Span> = vec![vec![[0.0, -100.0], [100.0, -100.0]]];
+        let near: Vec<Span> = vec![vec![[0.0, -150.0], [100.0, -160.0]]];
+        let far: Vec<Span> = vec![
+            vec![[500.0, -120.0], [900.0, -130.0]],
+            vec![[-90.0, -50.0], [-10.0, -50.0]],
+        ];
+        let alone = nearest(&mine, &[near.as_slice()], false);
+        let with_far = nearest(&mine, &[far.as_slice(), near.as_slice()], false);
+        assert_eq!(alone, with_far);
+        assert!(!alone.is_empty());
+        // Break it: make the overlap test of `envelope` always false and the near
+        // candidate is dropped too, so the fill goes empty.
+    }
 }

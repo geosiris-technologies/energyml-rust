@@ -60,6 +60,7 @@
 
 use std::fmt;
 
+use crate::buckets;
 use crate::vector::distance;
 use crate::vector::plan::cross;
 
@@ -331,6 +332,12 @@ struct Column {
     heights: [[f64; 4]; 2],
     /// The column's box in plan, and its range of heights.
     reach: [[f64; 2]; 3],
+}
+
+/// The column's box in plan has four finite bounds, so the grid of buckets can
+/// file it.
+fn cell_box_is_finite(column: &Column) -> bool {
+    column.reach[..2].iter().all(|r| r.iter().all(|v| v.is_finite()))
 }
 
 fn column(grid: usize, cell: &Hexahedron) -> Result<Column, CellsError> {
@@ -614,13 +621,44 @@ pub fn block(points: &[Point], mds: &[f64], grids: &[Grid]) -> Result<Blocked, C
             .iter()
             .map(|cell| column(rank, cell))
             .collect::<Result<_, _>>()?;
+        // Every column was read above, so a cell no path comes near that is not a
+        // parallelogram still refuses the grid; only the search is indexed. The
+        // columns' plan boxes are filed once in the grid of buckets, and each
+        // segment visits the columns whose box its own box meets, in the order of
+        // `columns` - what the sweep over every column gave, minus the columns
+        // far away. A column with no finite box is not indexable and is always
+        // visited, as the sweep did.
+        let boxes: Vec<buckets::Bounds> = columns
+            .iter()
+            .map(|cell| {
+                (
+                    [cell.reach[0][0], cell.reach[1][0]],
+                    [cell.reach[0][1], cell.reach[1][1]],
+                )
+            })
+            .collect();
+        let index = buckets::Grid::new(&boxes);
+        let unindexed: Vec<usize> = if index.left_out() == 0 {
+            Vec::new()
+        } else {
+            (0..columns.len())
+                .filter(|&at| !cell_box_is_finite(&columns[at]))
+                .collect()
+        };
         let mut pieces: Vec<Piece> = Vec::new();
         for node in 0..points.len() - 1 {
             let (a, b) = (points[node], points[node + 1]);
             let (ma, mb) = (mds[node], mds[node + 1]);
             let low = [a[0].min(b[0]), a[1].min(b[1]), a[2].min(b[2])];
             let high = [a[0].max(b[0]), a[1].max(b[1]), a[2].max(b[2])];
-            for cell in &columns {
+            let mut near = index.query([low[0], low[1]], [high[0], high[1]]);
+            if !unindexed.is_empty() {
+                near.extend_from_slice(&unindexed);
+                near.sort_unstable();
+                near.dedup();
+            }
+            for at in near {
+                let cell = &columns[at];
                 if (0..3).any(|axis| high[axis] < cell.reach[axis][0] || low[axis] > cell.reach[axis][1]) {
                     continue;
                 }
@@ -895,6 +933,50 @@ mod tests {
                 assert_eq!(b.faces[0], Some(opposite), "{a:?} then {b:?}");
             }
         }
+    }
+
+    /// [geostat-proj-roundtrip S2] A path through a grid of 20 000 columns, each
+    /// segment visiting only the columns its box meets (the grid of buckets):
+    /// every interval is held by the cell the arithmetic finds at its middle, and
+    /// a column far from the path that is no parallelogram still refuses the
+    /// grid, as it did when every column was read first.
+    #[test]
+    fn a_path_through_a_large_grid_is_held_by_the_cells_arithmetic_finds() {
+        let (origin, size, counts) = ([5000.0, 7000.0], [10.0, 10.0, 4.0], [100, 100, 2]);
+        let grid = boxes(origin, size, counts);
+        // A wandering path of 120 nodes from the grid's corner to its far side.
+        let points: Vec<Point> = (0..120)
+            .map(|n| {
+                let t = n as f64;
+                [
+                    5003.0 + t * 8.1,
+                    7004.0 + t * 7.3 + 40.0 * (t * 0.21).sin(),
+                    5.0 - t * 0.13,
+                ]
+            })
+            .collect();
+        let mds = chord_mds(&points, 10.0);
+        let blocked = block(&points, &mds, std::slice::from_ref(&grid)).unwrap();
+        assert!(blocked.cell_count() > 100, "{}", blocked.cell_count());
+        for (n, one) in blocked.intervals.iter().enumerate() {
+            let middle = 0.5 * (blocked.node_md[n] + blocked.node_md[n + 1]);
+            let expected = by_arithmetic(origin, size, counts, at_md(&points, &mds, middle));
+            assert_eq!(one.map(|held| held.cell), expected, "interval {n}, MD {middle}");
+        }
+        let mut kite = grid;
+        let last = kite.cells.len() - 1;
+        for n in [2, 6] {
+            kite.cells[last].corners[n][0] += 2.0;
+        }
+        assert_eq!(
+            block(&points, &mds, &[kite]),
+            Err(CellsError::NotParallelogram {
+                grid: 0,
+                cell: last as u64
+            })
+        );
+        // Break it: index only the columns near the path, with an `Err` for the others
+        // dropped, and the far kite is no longer refused.
     }
 
     #[test]

@@ -30,8 +30,8 @@
 
 // Domain-neutral modules, moved to `energyml-geostat` and re-exported.
 pub use energyml_geostat::{
-    barrier, cells, densify, extend, idw, isocontour, isosurface, kriging, loft, mba, mba_frame, measure,
-    nodes, outline, polyline, rbf, resample, triangulate, variogram, vector,
+    barrier, buckets, cells, densify, extend, idw, isocontour, isosurface, kriging, loft, mba, mba_frame,
+    measure, nodes, outline, polyline, rbf, resample, triangulate, variogram, vector,
 };
 
 pub mod combine;

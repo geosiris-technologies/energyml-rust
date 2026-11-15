@@ -76,6 +76,8 @@
 
 use std::collections::HashMap;
 
+use crate::buckets;
+
 use crate::outline::boundary_loops;
 use crate::vector::{add, cross, dot, norm, scale, sub, unit_above};
 
@@ -749,6 +751,11 @@ pub fn extend_surface(
     let at = |i: u32| points[i as usize];
     let mut outward = Vec::with_capacity(count);
     let mut outlier = vec![false; n];
+    // The nodes a triangle names, filed in the grid of buckets by their plan
+    // position: the id of a box is the node's own number, in `named`'s order
+    // (ascending), so a band is found by opening the buckets around the border
+    // node and not by testing every node of the surface for each of them.
+    let named_index = named_grid(points, &used);
     for k in 0..count {
         let i = ring[k];
         let prev = ring[(k + count - 1) % count];
@@ -759,12 +766,7 @@ pub fn extend_surface(
         // The band: the nodes within `band` of this one, and always its
         // neighbours on the border and across, so three are never missing.
         let must = [i, prev, next, across_prev, across_next];
-        let band2 = band * band;
-        let chosen: Vec<usize> = named
-            .iter()
-            .copied()
-            .filter(|j| must.contains(&(*j as u32)) || dot(sub(points[*j], p), sub(points[*j], p)) <= band2)
-            .collect();
+        let chosen = band_nodes(&named_index, points, &used, p, &must, band);
         let local: Vec<[f64; 3]> = chosen.iter().map(|j| points[*j]).collect();
         let fit = fit_plane(&local).ok_or_else(|| {
             ExtendError::Shape(format!("near border node {i}, the band's nodes are on one line - no plane to extend along; widen `band`"))
@@ -904,8 +906,105 @@ pub fn extend_surface(
     })
 }
 
+/// The nodes a triangle names (`used`), filed in the grid of buckets by their
+/// plan position: the id of a box is the node's own number. A node no triangle
+/// names, or with no finite plan position, is left out.
+fn named_grid(points: &[[f64; 3]], used: &[bool]) -> buckets::Grid {
+    let boxes: Vec<buckets::Bounds> = points
+        .iter()
+        .zip(used)
+        .map(|(p, named)| {
+            if *named {
+                ([p[0], p[1]], [p[0], p[1]])
+            } else {
+                ([f64::NAN; 2], [f64::NAN; 2])
+            }
+        })
+        .collect();
+    buckets::Grid::new(&boxes)
+}
+
+/// The band of the border node at `p`: the named nodes within `band` of it, and
+/// always the `must` nodes (its neighbours on the border and across), ascending -
+/// what a sweep of every named node with a distance test gives, found by opening
+/// the buckets around `p`.
+fn band_nodes(
+    index: &buckets::Grid,
+    points: &[[f64; 3]],
+    used: &[bool],
+    p: [f64; 3],
+    must: &[u32],
+    band: f64,
+) -> Vec<usize> {
+    // The window is a hair wider than the band: the exact test below is the
+    // sweep's own, so the rounding of the window decides nothing. A node with no
+    // finite plan position is never near (its distance is `NaN`), as in the sweep.
+    let reach = band * (1.0 + 1e-9);
+    let mut candidates = index.query([p[0] - reach, p[1] - reach], [p[0] + reach, p[1] + reach]);
+    candidates.extend(
+        must.iter()
+            .map(|m| *m as usize)
+            .filter(|m| *m < points.len() && used[*m]),
+    );
+    candidates.sort_unstable();
+    candidates.dedup();
+    let band2 = band * band;
+    candidates
+        .into_iter()
+        .filter(|j| must.contains(&(*j as u32)) || dot(sub(points[*j], p), sub(points[*j], p)) <= band2)
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
+    /// [geostat-proj-roundtrip S1] The band of a border node, found by the grid of
+    /// buckets, is the sweep's: the same nodes in the same order, for border nodes
+    /// inside the cloud and past it, `must` nodes far from the band included, a
+    /// node no triangle names left out.
+    #[test]
+    fn the_band_by_buckets_is_the_sweeps_band() {
+        let mut state = 41u64;
+        let mut next = move || {
+            state = state
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            (state >> 11) as f64 / (1u64 << 53) as f64
+        };
+        let points: Vec<[f64; 3]> = (0..4000)
+            .map(|_| {
+                [
+                    651_000.0 + next() * 900.0,
+                    6_861_000.0 + next() * 500.0,
+                    next() * 30.0,
+                ]
+            })
+            .collect();
+        let used: Vec<bool> = (0..points.len()).map(|i| i % 7 != 3).collect();
+        let index = named_grid(&points, &used);
+        for _ in 0..200 {
+            let p = [
+                651_000.0 - 50.0 + next() * 1000.0,
+                6_861_000.0 - 50.0 + next() * 600.0,
+                next() * 30.0,
+            ];
+            let band = 5.0 + next() * 80.0;
+            let must = [(next() * 4000.0) as u32, 3, 3999, 0, 1];
+            let sweep: Vec<usize> = (0..points.len())
+                .filter(|j| used[*j])
+                .filter(|j| {
+                    must.contains(&(*j as u32)) || dot(sub(points[*j], p), sub(points[*j], p)) <= band * band
+                })
+                .collect();
+            assert_eq!(
+                band_nodes(&index, &points, &used, p, &must, band),
+                sweep,
+                "at {p:?}, band {band}"
+            );
+        }
+        // Break it: leave the `must` nodes out of the candidates and a far `must`
+        // node goes missing; narrow the window and a node at the band's edge does.
+    }
+
     use super::*;
 
     fn close(a: f64, b: f64) -> bool {

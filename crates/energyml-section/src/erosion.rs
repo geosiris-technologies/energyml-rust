@@ -26,7 +26,7 @@
 //! catalogue; nothing is read.
 
 use crate::model::{Catalogue, Item, Note, ObjectId, Section, SectionKey, TraceItem, TraceRole};
-use energyml_geostat::polyline::z_in_any;
+use energyml_geostat::polyline::sample_in_any;
 
 /// The note's code ([`Note::code`]).
 pub const CODE: &str = "erosion";
@@ -169,18 +169,22 @@ fn below(upper: &[Vec<[f64; 2]>], lower: &[Vec<[f64; 2]>]) -> Vec<(f64, f64)> {
     at.sort_by(f64::total_cmp);
     at.dedup();
     let mut found: Vec<(f64, f64)> = Vec::new();
-    for pair in at.windows(2) {
+    // Both lines must run across the whole segment: probe the middle too, so a
+    // gap between two spans is not bridged. The breakpoints and the middles
+    // ascend, so each curve is read in one pass at all of them, not rescanned
+    // from its start for six probes per segment ([section S3]).
+    let middles: Vec<f64> = at.windows(2).map(|pair| 0.5 * (pair[0] + pair[1])).collect();
+    let (upper_at, lower_at) = (sample_in_any(upper, &at), sample_in_any(lower, &at));
+    let (upper_mid, lower_mid) = (sample_in_any(upper, &middles), sample_in_any(lower, &middles));
+    for (i, pair) in at.windows(2).enumerate() {
         let (a, b) = (pair[0], pair[1]);
-        let mid = 0.5 * (a + b);
-        // Both lines must run across the whole segment: probe the middle too,
-        // so a gap between two spans is not bridged.
         let (Some(ua), Some(ub), Some(la), Some(lb), Some(_), Some(_)) = (
-            z_in_any(upper, a),
-            z_in_any(upper, b),
-            z_in_any(lower, a),
-            z_in_any(lower, b),
-            z_in_any(upper, mid),
-            z_in_any(lower, mid),
+            upper_at[i],
+            upper_at[i + 1],
+            lower_at[i],
+            lower_at[i + 1],
+            upper_mid[i],
+            lower_mid[i],
         ) else {
             continue;
         };

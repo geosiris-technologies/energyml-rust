@@ -520,9 +520,12 @@ pub fn cut(
         )
         .map_err(|why| cut_error(why, fault.name, level))?;
         let length = fault_throw::plan_length(&trace);
+        // The trace filed in buckets once: a pillar or a centre opens the buckets
+        // around it, not every segment ([analysis E1]).
+        let index = fault_throw::Trace::new(&trace);
         let amount: Vec<f64> = at_pillar
             .iter()
-            .map(|p| match fault_throw::project(&trace, p) {
+            .map(|p| match index.project_within(p, settings.reach) {
                 Some((s, d, _)) if d < settings.reach && length > 0.0 => {
                     fault.maximum_throw * settings.profile.at(s / length) * (1.0 - d / settings.reach)
                 }
@@ -532,7 +535,7 @@ pub fn cut(
         let mut hanging_wall = vec![false; ni * nj];
         for j in 0..nj {
             for i in 0..ni {
-                if let Some((_, _, side)) = fault_throw::project(&trace, &centre(i, j)) {
+                if let Some((_, _, side)) = index.project(&centre(i, j)) {
                     hanging_wall[j * ni + i] = side * sigma > 0.0;
                 }
             }

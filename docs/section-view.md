@@ -86,7 +86,10 @@ was shown. The crate has no native dependency and compiles to WebAssembly.
   bounds a unit and is never filled. Two surfaces interpreting the same feature
   are one horizon drawn twice and do not fill toward each other.
 - **Grids are cut as envelopes**: roof and floor stacked by column, a fault as a
-  vertical step, a K gap as a hole.
+  vertical step, a K gap as a hole. The plan boxes of the cells are filed once in
+  the grid of buckets of `energyml_geostat::buckets` when the grid is read; each
+  section tries only the cells whose box a segment of its trace passes near, so a
+  grid of millions of cells pays for the few hundred the trace crosses.
 - **The section checks itself.** Where two cut surfaces cross, both must give the
   same elevation; otherwise a `crossingMismatch` note with both values (tolerance
   0.5% of the vertical extent, at least one centimetre). Younger horizons passing

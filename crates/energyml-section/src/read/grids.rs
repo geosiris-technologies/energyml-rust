@@ -13,9 +13,12 @@
 //! surface: its two faces across the layer (the ring of corners with the higher
 //! mean height is the roof, the other the floor) are each two triangles, and
 //! the cut of each is a short polyline in `(s, z)`. A cell the plane misses
-//! gives nothing; a cell is found by its plan box against each segment of the
-//! trace, so a grid of millions of cells pays for the few hundred the trace
-//! passes through.
+//! gives nothing. The plan boxes of the cells are filed once, when the grid is
+//! read, in the grid of buckets of `energyml_geostat::buckets`; a cut asks it,
+//! for each segment of the trace, for the cells whose box the segment's box
+//! meets, and tests those few against the segment exactly ([`crosses_box`]). A
+//! grid of millions of cells so pays, per section, for the few hundred the trace
+//! passes near, not for every cell (and a test counts the cells tried).
 //!
 //! Cells of one column (`i`, `j`) are then stacked, highest first, into **runs** -
 //! consecutive layers with no K gap between them (the floor of one and the roof
@@ -53,6 +56,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use energyml_geometry::geometry::{Patch, Topology};
 use energyml_geometry::section::{self, Cut};
+use energyml_geostat::buckets;
 
 use crate::model::{CutShape, SectionTrace, SurfaceCut};
 use energyml_geostat::polyline::z_at;
@@ -78,6 +82,15 @@ struct Cell {
 pub struct Grid {
     points: Vec<[f64; 3]>,
     cells: Vec<Cell>,
+    /// The cells' plan boxes, filed: the id of a box is the cell's place in
+    /// `cells`.
+    index: buckets::Grid,
+    /// How far [`crosses_box`] pads a cell's box, at most: the window of a
+    /// query is grown by it, so no cell the exact test keeps is missed.
+    pad: f64,
+    /// About one cell's side: the length of the pieces a long segment is cut in
+    /// to be looked up, so that its box is not the whole rectangle it spans.
+    side: f64,
 }
 
 impl Grid {
@@ -128,10 +141,74 @@ impl Grid {
         if out.is_empty() {
             return Err("the grid has no defined cell".to_string());
         }
-        Ok(Grid {
-            points: patch.points.clone(),
-            cells: out,
-        })
+        Ok(Grid::indexed(patch.points.clone(), out))
+    }
+
+    /// The cells filed in the grid of buckets by their plan boxes.
+    fn indexed(points: Vec<[f64; 3]>, cells: Vec<Cell>) -> Grid {
+        let boxes: Vec<buckets::Bounds> = cells
+            .iter()
+            .map(|cell| ([cell.bbox[0], cell.bbox[1]], [cell.bbox[2], cell.bbox[3]]))
+            .collect();
+        // The padding `crosses_box` gives a box grows with its coordinates; the
+        // largest is the one of the cell furthest from the origin.
+        let far = cells
+            .iter()
+            .map(|cell| cell.bbox[2].abs().max(cell.bbox[3].abs()))
+            .filter(|v| v.is_finite())
+            .fold(0.0f64, f64::max);
+        let sides: Vec<f64> = cells
+            .iter()
+            .map(|cell| 0.5 * ((cell.bbox[2] - cell.bbox[0]) + (cell.bbox[3] - cell.bbox[1])))
+            .filter(|v| v.is_finite())
+            .collect();
+        let side = sides.iter().sum::<f64>() / sides.len().max(1) as f64;
+        Grid {
+            points,
+            cells,
+            index: buckets::Grid::new(&boxes),
+            pad: box_pad(far) * 1.000_001,
+            side,
+        }
+    }
+
+    /// The cells the trace may cross - every one [`crosses_box`] keeps, and a few
+    /// more, in the order of `cells`: those whose box meets the box of a segment
+    /// of the trace, grown by the padding.
+    fn near(&self, trace: &[P]) -> Vec<usize> {
+        let mut found: Vec<usize> = Vec::new();
+        for pair in trace.windows(2) {
+            let (p, q) = (pair[0], pair[1]);
+            // A segment is looked up in pieces about a cell long: the box of a
+            // long diagonal segment is the whole rectangle it spans, the box of
+            // a piece only the cells it runs through.
+            let length = (q[0] - p[0]).hypot(q[1] - p[1]);
+            let pieces = if length.is_finite() && self.side > 0.0 {
+                (length / self.side).ceil().clamp(1.0, 65_536.0) as usize
+            } else {
+                1
+            };
+            let along = |k: usize| {
+                if k == 0 {
+                    p
+                } else if k == pieces {
+                    q
+                } else {
+                    let t = k as f64 / pieces as f64;
+                    [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t]
+                }
+            };
+            for k in 0..pieces {
+                let (a, b) = (along(k), along(k + 1));
+                found.extend(self.index.query(
+                    [a[0].min(b[0]) - self.pad, a[1].min(b[1]) - self.pad],
+                    [a[0].max(b[0]) + self.pad, a[1].max(b[1]) + self.pad],
+                ));
+            }
+        }
+        found.sort_unstable();
+        found.dedup();
+        found
     }
 
     /// The grid cut along every section; a section it does not meet has no entry.
@@ -152,7 +229,8 @@ impl Grid {
 
         let mut cut_cells: Vec<CellCut> = Vec::new();
         let mut clipped = 0usize;
-        for cell in &self.cells {
+        for at in self.near(trace) {
+            let cell = &self.cells[at];
             if !crosses_box(trace, cell.bbox) {
                 continue;
             }
@@ -436,10 +514,16 @@ fn join<'a>(chains: impl Iterator<Item = &'a Vec<P>>, tol_s: f64, tol_z: f64) ->
     (spans, steps)
 }
 
+/// How far [`crosses_box`] pads a box whose farthest coordinate (in absolute
+/// value) is `far`: a billionth of the coordinates and of one.
+fn box_pad(far: f64) -> f64 {
+    1e-9 * (1.0 + far)
+}
+
 /// Whether the trace passes through a plan box (the slab test, a hair wider than
 /// the box so a cell the trace only grazes is still cut, and says so itself).
 fn crosses_box(trace: &[P], bbox: [f64; 4]) -> bool {
-    let pad = 1e-9 * (1.0 + bbox[2].abs().max(bbox[3].abs()));
+    let pad = box_pad(bbox[2].abs().max(bbox[3].abs()));
     let (lo, hi) = ([bbox[0] - pad, bbox[1] - pad], [bbox[2] + pad, bbox[3] + pad]);
     trace.windows(2).any(|pair| {
         let (p, q) = (pair[0], pair[1]);
@@ -461,4 +545,69 @@ fn crosses_box(trace: &[P], bbox: [f64; 4]) -> bool {
         }
         true
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A lattice of `n x n` square cells `side` apart, at map coordinates; only the
+    /// plan boxes matter to the lookup, so the corners are left at zero.
+    fn lattice(n: usize, side: f64) -> Grid {
+        let (x0, y0) = (651_000.0, 6_861_000.0);
+        let mut cells = Vec::new();
+        for j in 0..n {
+            for i in 0..n {
+                let (x, y) = (x0 + i as f64 * side, y0 + j as f64 * side);
+                cells.push(Cell {
+                    corners: [0; 8],
+                    column: (i as u32, j as u32),
+                    layer: 0,
+                    bbox: [x, y, x + side, y + side],
+                    mean_z: 0.0,
+                });
+            }
+        }
+        Grid::indexed(Vec::new(), cells)
+    }
+
+    /// [section S5] The cells the cut tries are those the scan keeps, in the same
+    /// order, and they are few: a trace across a grid of 90 000 cells tries a few
+    /// hundred (the count is the evidence, no clock is involved).
+    #[test]
+    fn a_trace_tries_the_cells_it_crosses_and_not_every_cell() {
+        let grid = lattice(300, 10.0);
+        let (x0, y0) = (651_000.0, 6_861_000.0);
+        let traces: Vec<Vec<P>> = vec![
+            vec![
+                [x0 + 5.0, y0 + 5.0],
+                [x0 + 1500.0, y0 + 900.0],
+                [x0 + 2990.0, y0 + 2990.0],
+            ],
+            // along cell edges, so the padding matters
+            vec![[x0 + 100.0, y0 - 50.0], [x0 + 100.0, y0 + 3050.0]],
+            // outside the grid altogether, and a point
+            vec![[x0 - 500.0, y0 - 500.0], [x0 - 100.0, y0 - 100.0]],
+            vec![[x0 + 50.0, y0 + 50.0]],
+        ];
+        for trace in &traces {
+            let by_scan: Vec<usize> = (0..grid.cells.len())
+                .filter(|&at| crosses_box(trace, grid.cells[at].bbox))
+                .collect();
+            let tried = grid.near(trace);
+            let by_buckets: Vec<usize> = tried
+                .iter()
+                .copied()
+                .filter(|&at| crosses_box(trace, grid.cells[at].bbox))
+                .collect();
+            assert_eq!(by_buckets, by_scan, "trace {trace:?}");
+            assert!(
+                tried.len() < 5000,
+                "{} cells tried of {}",
+                tried.len(),
+                grid.cells.len()
+            );
+        }
+        // Break it: have `near` return every cell index and the count passes the bound.
+    }
 }

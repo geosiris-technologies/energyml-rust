@@ -428,3 +428,37 @@ fn the_age_a_horizon_interpretation_states_is_read_as_it_is() {
     };
     assert_eq!(age(&interval), Some([30.0, 25.0]));
 }
+
+/// [section S3] Two horizons of 20 001 vertices each: the detection reads each curve in one pass, not once per
+/// probe from its start. The portions are exact (the young line zigzags across the old one at every vertex, so each
+/// odd vertex is the middle of a portion one unit long), and the time bound is far above what a pass takes (a few
+/// milliseconds) and far below the quadratic scan (billions of steps): a loaded machine cannot cross it.
+#[test]
+fn horizons_of_twenty_thousand_vertices_are_read_in_one_pass() {
+    let n = 20_000usize;
+    let old = dated(
+        "Old",
+        Some([30.0, 30.0]),
+        (0..=n).map(|i| [i as f64, -200.0]).collect(),
+    );
+    let young = dated(
+        "Young",
+        Some([10.0, 10.0]),
+        (0..=n)
+            .map(|i| [i as f64, if i % 2 == 0 { -150.0 } else { -250.0 }])
+            .collect(),
+    );
+    let start = std::time::Instant::now();
+    let found = detect(SectionKey::Long, &[&old, &young]);
+    let took = start.elapsed();
+    assert_eq!(found.len(), n / 2, "one portion per odd vertex");
+    assert!(
+        (found[0].s0 - 0.5).abs() < 1e-9 && (found[0].s1 - 1.5).abs() < 1e-9,
+        "{:?}",
+        found[0]
+    );
+    let last = &found[n / 2 - 1];
+    assert!((last.s0 - (n as f64 - 1.5)).abs() < 1e-9 && (last.s1 - (n as f64 - 0.5)).abs() < 1e-9);
+    assert!(took.as_secs() < 5, "{took:?}");
+    // Break it: probe with `z_in_any` from the start of the curve for each breakpoint again and the time passes the bound.
+}

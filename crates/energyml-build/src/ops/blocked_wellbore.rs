@@ -66,7 +66,8 @@
 //!
 //! A frame whose depths the package does not state, or that names no
 //! trajectory; a grid that is no IJK grid, in another frame than the path, or
-//! whose pillars lean (`energyml_analysis::cells`); a stretch two cells of one
+//! whose pillars lean (`energyml_analysis::cells`) - in the cells the path's box
+//! reaches: the others are never read (`hexahedra_near`); a stretch two cells of one
 //! grid both hold; a path through no cell - a blocked wellbore with no cell
 //! could not state its `CellCount`, which is 1 or more.
 //!
@@ -117,8 +118,87 @@ pub struct BlockedWellboreInputs {
     pub grids: Vec<Shape>,
 }
 
-/// A grid's cells in index order - see the module header.
-fn grid_of(shape: &Shape) -> Result<(Grid, usize), Refusal> {
+/// The path's box, grown a hair: a cell whose box misses it is crossed by no
+/// segment of the path.
+fn path_box(path: &[[f64; 3]]) -> ([f64; 3], [f64; 3]) {
+    let mut low = [f64::INFINITY; 3];
+    let mut high = [f64::NEG_INFINITY; 3];
+    for p in path {
+        for axis in 0..3 {
+            low[axis] = low[axis].min(p[axis]);
+            high[axis] = high[axis].max(p[axis]);
+        }
+    }
+    let far = low.iter().chain(high.iter()).fold(0.0f64, |m, v| m.max(v.abs()));
+    let pad = 1e-9 * (1.0 + far);
+    (low.map(|v| v - pad), high.map(|v| v + pad))
+}
+
+/// The cells of a hexahedral topology that the path's box can touch, in index
+/// order - see the module header.
+///
+/// A cell is judged by its box, read from its eight corners **before** a
+/// [`Hexahedron`] is built for it: a reservoir grid of ten million cells would
+/// otherwise be copied corner by corner (about 200 bytes a cell, on every plan)
+/// to follow a wellbore through a few hundred. A cell whose box misses the path's
+/// is crossed by no segment of it - `cells::block` skips it by the same box test -
+/// so what is kept gives the same blocking; what is left out is never read, so a
+/// leaning pillar nobody's path comes near refuses nothing.
+fn hexahedra_near(
+    cells: &[[u32; 8]],
+    index: &[u32],
+    points: &[[f64; 3]],
+    path: &[[f64; 3]],
+) -> Result<Vec<Hexahedron>, String> {
+    if !index.is_empty() && index.len() != cells.len() {
+        return Err(format!(
+            "{} cell(s) and {} cell number(s) - one number per cell, or none",
+            cells.len(),
+            index.len()
+        ));
+    }
+    let (low, high) = path_box(path);
+    let mut out = Vec::new();
+    for (at, cell) in cells.iter().enumerate() {
+        let number = if index.is_empty() {
+            at as u64
+        } else {
+            u64::from(index[at])
+        };
+        // The smaller node number is the smaller K: VTK's swap undone.
+        let order: [u32; 8] = if cell[0] > cell[4] {
+            [
+                cell[4], cell[5], cell[6], cell[7], cell[0], cell[1], cell[2], cell[3],
+            ]
+        } else {
+            *cell
+        };
+        let mut reach = [[f64::INFINITY, f64::NEG_INFINITY]; 3];
+        for n in order {
+            let Some(p) = points.get(n as usize) else {
+                return Err(format!(
+                    "cell {number} names node {n} where the grid has {}",
+                    points.len()
+                ));
+            };
+            for axis in 0..3 {
+                reach[axis][0] = reach[axis][0].min(p[axis]);
+                reach[axis][1] = reach[axis][1].max(p[axis]);
+            }
+        }
+        if (0..3).any(|axis| high[axis] < reach[axis][0] || low[axis] > reach[axis][1]) {
+            continue;
+        }
+        out.push(Hexahedron {
+            index: number,
+            corners: order.map(|n| points[n as usize]),
+        });
+    }
+    Ok(out)
+}
+
+/// A grid's cells in index order, those near `path` - see the module header.
+fn grid_of(shape: &Shape, path: &[[f64; 3]]) -> Result<(Grid, usize), Refusal> {
     let [
         Patch {
             topology:
@@ -140,26 +220,8 @@ fn grid_of(shape: &Shape) -> Result<(Grid, usize), Refusal> {
             ),
         ));
     };
-    let mut out = Vec::with_capacity(cells.len());
-    for (at, cell) in cells.iter().enumerate() {
-        let number = if index.is_empty() {
-            at as u64
-        } else {
-            u64::from(index[at])
-        };
-        // The smaller node number is the smaller K: VTK's swap undone.
-        let order: [u32; 8] = if cell[0] > cell[4] {
-            [
-                cell[4], cell[5], cell[6], cell[7], cell[0], cell[1], cell[2], cell[3],
-            ]
-        } else {
-            *cell
-        };
-        out.push(Hexahedron {
-            index: number,
-            corners: order.map(|n| points[n as usize]),
-        });
-    }
+    let out = hexahedra_near(cells, index, points, path)
+        .map_err(|why| Refusal::on("grids", format!("`{}`: {why}", shape.title())))?;
     let [ni, nj, nk] = *dimensions;
     let undefined = (ni * nj * nk).saturating_sub(cells.len());
     Ok((Grid { cells: out }, undefined))
@@ -320,7 +382,7 @@ impl Operation for BlockedWellbore {
                     ),
                 ));
             }
-            let (cells, holes) = grid_of(grid)?;
+            let (cells, holes) = grid_of(grid, &points)?;
             blocks.push(cells);
             undefined.push(holes);
         }
@@ -584,5 +646,101 @@ impl Operation for BlockedWellbore {
                 "the largest shortfall of a chord against its MD step, as a fraction",
             ),
         ]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A lattice of `n x n x 2` unit cells, smaller K first, its points level by
+    /// level, cells numbered by position.
+    fn lattice(n: usize) -> (Vec<[u32; 8]>, Vec<[f64; 3]>) {
+        let side = n + 1;
+        let mut points = Vec::new();
+        for k in 0..3 {
+            for j in 0..side {
+                for i in 0..side {
+                    points.push([i as f64, j as f64, -(k as f64)]);
+                }
+            }
+        }
+        let node = |i: usize, j: usize, k: usize| (k * side * side + j * side + i) as u32;
+        let mut cells = Vec::new();
+        for k in 0..2 {
+            for j in 0..n {
+                for i in 0..n {
+                    cells.push([
+                        node(i, j, k),
+                        node(i + 1, j, k),
+                        node(i + 1, j + 1, k),
+                        node(i, j + 1, k),
+                        node(i, j, k + 1),
+                        node(i + 1, j, k + 1),
+                        node(i + 1, j + 1, k + 1),
+                        node(i, j + 1, k + 1),
+                    ]);
+                }
+            }
+        }
+        (cells, points)
+    }
+
+    /// [build-ops-1 S4] Only the cells the path's box reaches become hexahedra: a
+    /// short path in a lattice of 20 000 cells keeps a handful, in index order, and
+    /// they are the cells a scan of every cell with the same box test keeps. A
+    /// missing node number or a short index array is refused by name.
+    #[test]
+    fn only_the_cells_near_the_path_are_built() {
+        let (cells, points) = lattice(100);
+        let path = [[10.5, 20.5, 0.5], [12.5, 22.5, -1.5]];
+        let kept = hexahedra_near(&cells, &[], &points, &path).unwrap();
+        assert!(!kept.is_empty() && kept.len() < 100, "{} cells kept", kept.len());
+        assert!(kept.windows(2).all(|pair| pair[0].index < pair[1].index));
+        let (low, high) = path_box(&path);
+        let by_scan: Vec<u64> = (0..cells.len() as u64)
+            .filter(|&at| {
+                let c = &cells[at as usize];
+                (0..3).all(|axis| {
+                    let lo = c
+                        .iter()
+                        .map(|&n| points[n as usize][axis])
+                        .fold(f64::INFINITY, f64::min);
+                    let hi = c
+                        .iter()
+                        .map(|&n| points[n as usize][axis])
+                        .fold(f64::NEG_INFINITY, f64::max);
+                    hi >= low[axis] && lo <= high[axis]
+                })
+            })
+            .collect();
+        assert_eq!(kept.iter().map(|h| h.index).collect::<Vec<_>>(), by_scan);
+        // The cell the middle of the path is in is among them.
+        let middle = [11.5, 21.5, -0.5];
+        let holds = |h: &&Hexahedron| {
+            (0..3).all(|axis| {
+                let lo = h.corners.iter().map(|c| c[axis]).fold(f64::INFINITY, f64::min);
+                let hi = h
+                    .corners
+                    .iter()
+                    .map(|c| c[axis])
+                    .fold(f64::NEG_INFINITY, f64::max);
+                lo <= middle[axis] && middle[axis] <= hi
+            })
+        };
+        assert!(kept.iter().any(|h| holds(&h)));
+        assert!(
+            hexahedra_near(&cells, &[0, 1], &points, &path)
+                .unwrap_err()
+                .contains("one number per cell")
+        );
+        let mut broken = cells.clone();
+        broken[0][3] = 1_000_000;
+        assert!(
+            hexahedra_near(&broken, &[], &points, &[[0.5, 0.5, 0.5]])
+                .unwrap_err()
+                .contains("names node 1000000")
+        );
+        // Break it: build every cell before the box test and `kept.len()` is 20 000.
     }
 }

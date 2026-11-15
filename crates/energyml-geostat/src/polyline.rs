@@ -54,6 +54,21 @@ pub fn sample(span: &[[f64; 2]], steps: &[f64]) -> Vec<Option<f64>> {
         .collect()
 }
 
+/// [`z_in_any`] at each of the ascending `steps`: one pass over each span, not a
+/// rescan of the spans from their start for every step.
+pub fn sample_in_any(spans: &[Vec<[f64; 2]>], steps: &[f64]) -> Vec<Option<f64>> {
+    let mut out: Vec<Option<f64>> = vec![None; steps.len()];
+    for span in spans {
+        let here = sample(span, steps);
+        for (slot, z) in out.iter_mut().zip(here) {
+            if slot.is_none() {
+                *slot = z;
+            }
+        }
+    }
+    out
+}
+
 /// `z` at `s` on the segment `a b`; `a`'s `z` for a segment of no width.
 fn lerp_z(a: [f64; 2], b: [f64; 2], s: f64) -> f64 {
     let ds = b[0] - a[0];
@@ -95,6 +110,18 @@ mod tests {
             assert_eq!(got, z_at(&SPAN, *s), "at {s}");
         }
         // Break it: let `sample` step `j` past a vertex that is exactly `s` and it answers with the next segment, not the first.
+    }
+
+    #[test]
+    fn the_one_pass_sample_in_any_agrees_with_the_first_span_that_covers() {
+        // Two spans that overlap on 0.5..1.0: the first answers there.
+        let spans = vec![vec![[0.0, 1.0], [1.0, 1.0]], vec![[0.5, 5.0], [3.0, 5.0]], vec![]];
+        let steps = [-1.0, 0.0, 0.5, 0.7, 1.0, 1.5, 3.0, 3.5];
+        for (s, got) in steps.iter().zip(sample_in_any(&spans, &steps)) {
+            assert_eq!(got, z_in_any(&spans, *s), "at {s}");
+        }
+        // Break it: let a later span overwrite the answer of an earlier one
+        // (drop the `is_none` test) and the overlap answers 5, not 1.
     }
 
     #[test]

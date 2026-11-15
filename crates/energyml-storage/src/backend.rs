@@ -241,6 +241,22 @@ pub enum Origin {
     Neighbour,
 }
 
+/// The candidates being listed, and the paths already in the list.
+#[derive(Default)]
+struct Chosen {
+    list: Vec<Candidate>,
+    seen: std::collections::HashSet<PathBuf>,
+}
+
+impl Chosen {
+    /// Lists the path, unless it already is.
+    fn add(&mut self, origin: Origin, path: PathBuf) {
+        if self.seen.insert(path.clone()) {
+            self.list.push(Candidate { origin, path });
+        }
+    }
+}
+
 /// Arrays that were read from a file the document did not name, counted per
 /// pair of (the name the document wrote, the file actually read).
 ///
@@ -404,10 +420,32 @@ impl ExternalFiles {
     /// [`Origin::Companion`] is derived from and what is excluded from
     /// [`Origin::Neighbour`].
     pub fn candidates(&self, declared: &str, package: Option<&Path>) -> Vec<Candidate> {
-        let mut out: Vec<Candidate> = Vec::new();
-        let push = |origin: Origin, path: PathBuf, out: &mut Vec<Candidate>| {
-            if path.exists() && !out.iter().any(|c| c.path == path) {
-                out.push(Candidate { origin, path });
+        self.gather(declared, package, true)
+    }
+
+    /// The places someone **stated** - what the caller declared present, pinned
+    /// or offered, and what the document wrote - and no more: the first three
+    /// [`Origin`]s of [`candidates`][Self::candidates], in the same order, with
+    /// neither the companion nor the neighbours.
+    ///
+    /// What the optimistic first guess of a read needs. The recovery places cost
+    /// a directory read and a `stat` per file of the folder, and a read that
+    /// finds its file among the stated places throws them away; they are built
+    /// only by the search ([`candidates`][Self::candidates]), which asks each one
+    /// before it answers.
+    pub fn stated_candidates(&self, declared: &str, package: Option<&Path>) -> Vec<Candidate> {
+        self.gather(declared, package, false)
+    }
+
+    /// The list of [`candidates`][Self::candidates], its recovery part (companion
+    /// and neighbours) included only when `recovery` is asked for.
+    fn gather(&self, declared: &str, package: Option<&Path>, recovery: bool) -> Vec<Candidate> {
+        // A path appears once: a set answers "already listed" in constant time,
+        // where a scan of the list made a folder of thousands of files quadratic.
+        let mut chosen = Chosen::default();
+        let push = |origin: Origin, path: PathBuf, chosen: &mut Chosen| {
+            if path.exists() {
+                chosen.add(origin, path);
             }
         };
         // A name someone declared present is a candidate as it stands: there is
@@ -416,11 +454,8 @@ impl ExternalFiles {
         // chain keeps the property that decides everything - the file that
         // holds the dataset wins, whether it lives on a disk or in another
         // process's memory.
-        let declare = |origin: Origin, name: &str, out: &mut Vec<Candidate>| {
-            let path = PathBuf::from(name);
-            if !out.iter().any(|c| c.path == path) {
-                out.push(Candidate { origin, path });
-            }
+        let declare = |origin: Origin, name: &str, chosen: &mut Chosen| {
+            chosen.add(origin, PathBuf::from(name));
         };
         let bare_declared = bare_name(declared);
         for (rank, name) in self.present.iter().enumerate() {
@@ -431,40 +466,44 @@ impl ExternalFiles {
                 true => Origin::Pinned,
                 false => Origin::Offered(rank),
             };
-            declare(origin, name, &mut out);
+            declare(origin, name, &mut chosen);
         }
-        out.sort_by_key(|candidate| candidate.origin);
+        chosen.list.sort_by_key(|candidate| candidate.origin);
 
         // 1. Pinned by name, spelled either way: a package may write the whole
         //    URI or the bare file name for the same file.
         let bare = bare_declared;
         for key in [declared, bare] {
             if let Some(path) = self.overrides.get(key) {
-                push(Origin::Pinned, path.clone(), &mut out);
+                push(Origin::Pinned, path.clone(), &mut chosen);
             }
         }
 
         // 2. Offered, in the order offered.
         for (rank, path) in self.offered.iter().enumerate() {
-            push(Origin::Offered(rank), path.clone(), &mut out);
+            push(Origin::Offered(rank), path.clone(), &mut chosen);
         }
 
         // 3. What the document says, absolute or relative to the folder.
         if !declared.is_empty() {
             let written = Path::new(declared);
             if written.is_absolute() {
-                push(Origin::Declared, written.to_path_buf(), &mut out);
+                push(Origin::Declared, written.to_path_buf(), &mut chosen);
             }
             if let Some(root) = &self.root {
                 for relative in [declared, bare] {
-                    push(Origin::Declared, root.join(relative), &mut out);
+                    push(Origin::Declared, root.join(relative), &mut chosen);
                 }
             }
         }
 
+        if !recovery {
+            return chosen.list;
+        }
+
         // 4. The package's own name with the other extension.
         if let Some(package) = package {
-            push(Origin::Companion, package.with_extension("h5"), &mut out);
+            push(Origin::Companion, package.with_extension("h5"), &mut chosen);
         }
 
         // 5. Everything else in the folder, in a stable order. Not filtered by
@@ -486,11 +525,12 @@ impl ExternalFiles {
                 .collect();
             neighbours.sort();
             for path in neighbours {
-                push(Origin::Neighbour, path, &mut out);
+                // `is_file` above has already found it on the disk.
+                chosen.add(Origin::Neighbour, path);
             }
         }
 
-        out
+        chosen.list
     }
 
     /// The folder relative names resolve against.

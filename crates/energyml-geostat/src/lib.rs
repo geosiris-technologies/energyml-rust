@@ -9,7 +9,8 @@
 //! Contents: interpolation (`idw`, `kriging`, `variogram`, `rbf`, `mba`,
 //! `mba_frame`), meshing (`triangulate`, `isocontour`, `isosurface`, `resample`, `densify`,
 //! `loft`, `outline`, `cells`, `nodes`, `extend`) and tools (`measure`, `polyline`,
-//! `barrier`, `vector`, the private `solve`).
+//! `barrier`, `vector`, `buckets` - the one grid of buckets that finds what lies near a position
+//! without a sweep of everything - and the private `solve`).
 //!
 //! House rules, applied:
 //! - **A `NaN` sample is set aside, never averaged** - it is how the data
@@ -26,6 +27,7 @@
 //! no published source carry a `TODO(reference): verify` line.
 
 pub mod barrier;
+pub mod buckets;
 pub mod cells;
 pub mod densify;
 pub mod extend;

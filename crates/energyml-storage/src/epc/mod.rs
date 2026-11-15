@@ -2387,7 +2387,9 @@ impl EpcStore {
         // neighbour is a *recovery*, and handing one back unopened would be the
         // silent-wrong-file mistake this whole design is arranged against (ADR-0005) -
         // those go through the search, which asks before it answers.
-        let candidates = self.external.candidates(&declared, self.path.as_deref());
+        // `stated_candidates`: the folder is not read for a guess that is thrown
+        // away at the first stated file ([storage-1 S1]).
+        let candidates = self.external.stated_candidates(&declared, self.path.as_deref());
         // Kept so that "nothing can read this format" does not come out as
         // "the file is not there". A build with no HDF5 cannot read the array
         // whether or not the file is on the disk, and sending someone to look
