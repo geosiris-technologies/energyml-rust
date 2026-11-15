@@ -439,6 +439,15 @@ pub struct EpcStore {
     /// PDF should not have that turned into `application/octet-stream` because
     /// the name ended in `.PDF`.
     attachment_types: std::collections::BTreeMap<String, String>,
+    /// `(declared_files, attachment_types)` as they were when the open
+    /// transaction started, put back by a rollback. Both are bookkeeping the
+    /// overlay does not layer, so a rollback that ignored them would leave the
+    /// names of files and the content types of attachments the transaction had
+    /// changed (`[storage-2 S14]`). `None` outside a transaction.
+    transaction_snapshot: Option<(
+        std::collections::BTreeMap<String, String>,
+        std::collections::BTreeMap<String, String>,
+    )>,
     /// In-place edits whose `LINKS_OUT` is **provisional**: the journal said the
     /// references may have moved because the path could not say otherwise, and
     /// the references the object held *before* the edit are kept here so the
@@ -592,6 +601,7 @@ impl EpcStore {
             backends: crate::backend::Backends::compiled_in(),
             declared_files: std::collections::BTreeMap::new(),
             attachment_types: std::collections::BTreeMap::new(),
+            transaction_snapshot: None,
             pending_edits: Mutex::new(Vec::new()),
             unsettled: BTreeSet::new(),
             lenient: false,
@@ -1939,9 +1949,32 @@ impl EpcStore {
         // the writer can see its references and rebuild its `.rels` - and where
         // it is placed under the part name its type and uuid dictate, which for
         // a part the inventory had lost is not the name it arrived under.
+        //
+        // The bytes are let go **before** the put, so that a save the put
+        // triggers (`SavePolicy::OnChange`) does not write the wreck beside the
+        // object. But the put can refuse the object (a uuid no part can carry,
+        // a container's contained object, a version clash) and a refusal that
+        // left the bytes cleared and the part superseded made the part vanish
+        // from the saved package, silently. So a refusal puts both back
+        // (`[storage-2 S1]`). A put that **did** write the object and failed
+        // only in the save after it is not undone: the object is there.
+        let was_superseded = self.overlay.is_superseded(part);
         self.overlay.clear_raw(part);
         self.overlay.supersede(part);
-        self.put(object)?;
+        // After the two above: clearing the bytes is itself journaled, and what
+        // has to be told apart is whether the *put* wrote anything.
+        let revision = self.overlay.revision();
+        if let Err(refusal) = self.put(object) {
+            if self.overlay.revision() == revision {
+                if let Some(bytes) = previous {
+                    self.overlay.set_raw(part, bytes);
+                }
+                if !was_superseded {
+                    self.overlay.unsupersede(part);
+                }
+            }
+            return Err(refusal);
+        }
         Ok(info.qualified_type.unwrap_or(info.name).to_string())
     }
 
@@ -3327,7 +3360,11 @@ impl EpcStore {
                 .get(uuid)
                 .into_iter()
                 .flatten()
-                .any(|made| made.slot == uuid);
+                // A removed entry no longer holds its slot (`remove` leaves its
+                // `made` record, which a rollback needs).
+                .any(|made| {
+                    made.slot == uuid && matches!(self.overlay.get(&made.slot), Some(Change::Put(_)))
+                });
         if taken {
             slot_key(uuid, qualified_type, version)
         } else {
@@ -3423,9 +3460,10 @@ impl EpcStore {
             .iter()
             .map(|one| (one.slot.to_string(), one.summary.uri.clone()))
             .collect();
-        if let Some(list) = self.made.get_mut(&uuid) {
-            list.retain(|made| made.slot != slot);
-        }
+        // **`made` is left alone.** It is not rolled back with a transaction,
+        // and `live_of` already ignores an entry whose layer says `Removed`:
+        // dropping it here made a rollback bring the object back into the layer
+        // without the entry that lets a lookup find it (`[storage-2 S2]`).
         self.overlay
             .set_what(&slot, Some(uri), Change::Removed, What::REMOVED);
         self.moved_uris(&uuid, &slot, &before);
@@ -3466,12 +3504,15 @@ impl EpcStore {
     /// One layer more on the in-memory stack, and nothing on disk. ETP v1.2
     /// forbids nesting, so a second call is an error.
     pub fn start_transaction(&mut self) -> Result<()> {
-        self.overlay.start_transaction()
+        self.overlay.start_transaction()?;
+        self.transaction_snapshot = Some((self.declared_files.clone(), self.attachment_types.clone()));
+        Ok(())
     }
 
     /// Merge the transaction into the changes below it.
     pub fn commit_transaction(&mut self) -> Result<()> {
         self.overlay.commit_transaction()?;
+        self.transaction_snapshot = None;
         self.after_change()
     }
 
@@ -3497,6 +3538,10 @@ impl EpcStore {
             .collect();
         self.unsettled.extend(held);
         self.overlay.rollback_transaction()?;
+        if let Some((declared_files, attachment_types)) = self.transaction_snapshot.take() {
+            self.declared_files = declared_files;
+            self.attachment_types = attachment_types;
+        }
         for uuid in touched {
             self.reconcile_uris(&uuid);
         }

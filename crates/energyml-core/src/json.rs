@@ -270,16 +270,7 @@ fn write_scalar(scalar: Scalar<'_>) -> Value {
     }
 }
 
-/// The `xsd:double` lexical form of a value JSON cannot hold.
-fn xsd_double(value: f64) -> String {
-    if value.is_nan() {
-        "NaN".to_string()
-    } else if value.is_sign_positive() {
-        "INF".to_string()
-    } else {
-        "-INF".to_string()
-    }
-}
+use crate::xml::xsd_double;
 
 /// The three lexical doubles JSON has no number for, read back.
 fn parse_xsd_double(text: &str) -> Option<f64> {

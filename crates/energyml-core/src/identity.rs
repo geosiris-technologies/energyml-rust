@@ -1132,8 +1132,48 @@ impl<'a> Visitor<'a> for Refs<'a> {
     fn untyped(&mut self, path: &str, any: &'a crate::any_xml::AnyXml) {
         // The model could not type this subtree, so its references are in the
         // text. Read them rather than lose them.
-        refs_in_source(&any.content, path, &mut self.out);
+        // A fault is not lost: `unreadable_subtrees` reports it by path, which
+        // a visitor of this walk has no way to return.
+        let _ = refs_in_source(&any.content, path, &mut self.out);
     }
+}
+
+/// A kept-verbatim subtree whose source could not be read to its end.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct UnreadableSubtree {
+    /// Dotted path of the subtree in the object, as for a reference.
+    pub path: String,
+    /// What the reader said, with the byte it stopped at.
+    pub reason: String,
+}
+
+/// The kept-verbatim subtrees of `root` whose references cannot be listed
+/// completely, because their source is malformed or truncated.
+///
+/// [`collect_refs`] returns the references it could read; this is the other half
+/// of the answer, so that a reduced list is never taken for the whole one (the
+/// `.rels` regenerated from it would quietly lose links). A caller that builds a
+/// relationship index calls both, and names each item here as a defect.
+pub fn unreadable_subtrees(root: &dyn Reflect) -> Vec<UnreadableSubtree> {
+    struct Unreadable {
+        out: Vec<UnreadableSubtree>,
+    }
+    impl<'a> Visitor<'a> for Unreadable {
+        fn reference(&mut self, _: &str, _: &'a dyn Reflect, _: Option<&'static TypeInfo>) {}
+
+        fn untyped(&mut self, path: &str, any: &'a crate::any_xml::AnyXml) {
+            let mut found = Vec::new();
+            if let Err(reason) = refs_in_source(&any.content, path, &mut found) {
+                self.out.push(UnreadableSubtree {
+                    path: path.to_string(),
+                    reason,
+                });
+            }
+        }
+    }
+    let mut visitor = Unreadable { out: Vec::new() };
+    walk(root, &mut visitor);
+    visitor.out
 }
 
 /// What a reflection walk meets.
@@ -1300,7 +1340,18 @@ impl<'a> Visitor<'a> for Nested<'a> {
 ///
 /// Everything borrows from `source`, which belongs to the object being walked,
 /// so this allocates nothing but the paths.
-pub(crate) fn refs_in_source<'a>(source: &'a str, prefix: &str, out: &mut Vec<RefEdge<'a>>) {
+///
+/// # A subtree that does not read
+///
+/// The references found before the fault are pushed, and the fault is **returned**
+/// - a malformed or truncated source, or an element never closed - never
+/// swallowed into a shorter list. The visitors of the walk cannot return it, so
+/// [`unreadable_subtrees`] is the door that reports it, by path.
+pub(crate) fn refs_in_source<'a>(
+    source: &'a str,
+    prefix: &str,
+    out: &mut Vec<RefEdge<'a>>,
+) -> std::result::Result<(), String> {
     use quick_xml::events::Event;
 
     /// One open element: where it is, and what its children have said so far.
@@ -1329,7 +1380,23 @@ pub(crate) fn refs_in_source<'a>(source: &'a str, prefix: &str, out: &mut Vec<Re
 
     loop {
         match reader.read_event() {
-            Err(_) | Ok(Event::Eof) => break,
+            Err(why) => {
+                return Err(format!(
+                    "{why} (at byte {} of the kept source)",
+                    reader.buffer_position()
+                ));
+            }
+            Ok(Event::Eof) => {
+                // `quick_xml` does not call an element left open at the end an
+                // error; it is a truncation all the same.
+                return match stack.last() {
+                    Some(frame) => Err(format!(
+                        "the element at `{}` is not closed: the kept source ends first",
+                        frame.path
+                    )),
+                    None => Ok(()),
+                };
+            }
             Ok(Event::Start(e)) => {
                 let name = local_name_of(e.name().as_ref());
                 let counter = match stack.last_mut() {
@@ -1441,7 +1508,7 @@ mod tests {
             r#"<eml23:Silent><eml23:Uuid>cccc</eml23:Uuid><eml23:QualifiedType>resqml22.Fault</eml23:QualifiedType></eml23:Silent>"#,
         );
         let mut out = Vec::new();
-        refs_in_source(source, "GraphicalInformation[0]", &mut out);
+        refs_in_source(source, "GraphicalInformation[0]", &mut out).expect("the source reads");
         let by_uuid = |uuid: &str| {
             out.iter()
                 .find(|e| e.target.uuid == uuid)
@@ -1457,6 +1524,59 @@ mod tests {
         assert_eq!(by_uuid("aaaa").path, "GraphicalInformation[0].TargetObject");
         assert_eq!(by_uuid("bbbb").target.object_version, Some("7"));
         assert_eq!(by_uuid("cccc").target.object_version, None);
+    }
+
+    /// An object holding kept-verbatim subtrees, to walk.
+    #[derive(Debug, Default, Clone, PartialEq, crate::prelude::EnergymlObject)]
+    #[energyml(package = "eml", version = "2.3", xml_name = "Holder")]
+    pub struct Holder {
+        /// The subtrees.
+        #[energyml(elem, xml_name = "Kept")]
+        pub kept: Vec<crate::any_xml::AnyXml>,
+    }
+
+    fn subtree(content: &str) -> crate::any_xml::AnyXml {
+        crate::any_xml::AnyXml {
+            content: content.to_string(),
+            ..Default::default()
+        }
+    }
+
+    /// `[core-derive-schemas S15]`: a kept subtree whose source is malformed or
+    /// truncated is **named**, with its path, rather than ending the scan
+    /// silently on a shorter list. The references before the fault are kept.
+    ///
+    /// Break it: turn the `Err` arm of `refs_in_source` back into a `break` (or
+    /// drop the open-element check at `Eof`); both assertions on the unreadable
+    /// paths fail.
+    #[test]
+    fn a_subtree_that_does_not_read_is_named_not_swallowed() {
+        let good = "<t><Uuid>aaaa</Uuid></t>";
+        let holder = Holder {
+            kept: vec![
+                subtree(good),
+                // A mismatched end tag, after one reference that reads.
+                subtree("<t><Uuid>bbbb</Uuid></t><u></v>"),
+                // Truncated: the element is never closed.
+                subtree("<t><Uuid>cccc</Uuid></t><u><x>"),
+            ],
+        };
+
+        let mut found = Vec::new();
+        let outcome = refs_in_source(&holder.kept[1].content, "Kept[1]", &mut found);
+        assert!(outcome.is_err(), "a mismatched end tag is a fault");
+        assert_eq!(found.len(), 1, "what was read before the fault is kept");
+
+        let unreadable = unreadable_subtrees(&holder);
+        let paths: Vec<&str> = unreadable.iter().map(|item| item.path.as_str()).collect();
+        assert_eq!(paths, ["Kept[1]", "Kept[2]"], "{unreadable:?}");
+        assert!(
+            unreadable[1].reason.contains("not closed"),
+            "a truncation says so: {}",
+            unreadable[1].reason
+        );
+        // The good one is not reported.
+        assert!(!paths.contains(&"Kept[0]"));
     }
 
     #[test]

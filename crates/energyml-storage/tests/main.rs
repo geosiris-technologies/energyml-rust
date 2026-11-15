@@ -21,6 +21,7 @@ mod change_journal;
 mod contract_epc;
 mod contract_witsml;
 mod corpus;
+mod data_safety;
 mod discovery;
 mod drops;
 mod empty_package;

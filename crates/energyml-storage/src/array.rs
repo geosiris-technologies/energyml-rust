@@ -331,11 +331,43 @@ fn walk_value(
     match value {
         FieldValue::Object(child) => walk(*child, path, resolver, out, depth + 1),
         FieldValue::List(items) => {
+            let first = out.len();
             for (i, item) in items.iter().enumerate() {
                 walk_value(item, format!("{path}[{i}]"), resolver, out, depth);
             }
+            mark_split_parts(items, &mut out[first..]);
         }
         _ => {}
+    }
+}
+
+/// An array **split across parts**: `ExternalFileProxy` repeats, each
+/// `ExternalDatasetPart` carrying the flat `StartIndex` and `Count` of its
+/// share of one array.
+///
+/// With one part, empty `start`/`count` ("the whole dataset") is right. With
+/// several, it was **wrong and silent**: every part came back naming the whole
+/// dataset, so reading them gave the same values several times over
+/// (`[storage-1 S12]`). Here each part carries its own flat range, as one
+/// dimension. A reader that can take it reads the slice of a one-dimensional
+/// dataset exactly; over a multi-dimensional dataset the range does not fit the
+/// rank and the read is **refused by name** ("the object asks for 1
+/// dimension(s) but the dataset has N") - never the whole dataset N times.
+fn mark_split_parts(items: &[FieldValue<'_>], found: &mut [ArrayLocation]) {
+    if items.len() < 2 || found.len() != items.len() {
+        return;
+    }
+    let mut parts: Vec<&dyn Reflect> = Vec::with_capacity(items.len());
+    for item in items {
+        match item {
+            FieldValue::Object(part) if part.type_info().name == MID_FORM => parts.push(*part),
+            // A list of anything else is not a list of parts of one array.
+            _ => return,
+        }
+    }
+    for (part, location) in parts.into_iter().zip(found.iter_mut()) {
+        location.start = int_list(part, "start_index");
+        location.count = int_list(part, "count");
     }
 }
 
@@ -413,10 +445,11 @@ fn from_mid_form(object: &dyn Reflect, path: &str, resolver: &dyn ProxyResolver)
         // which is what the old form has always done and what a single part
         // means anyway.
         //
-        // A genuinely *split* array would need flat-range reading, which no
-        // backend here offers; it would come back as one location per part,
-        // each naming the whole dataset. No package in the corpus splits one,
-        // so that is a gap named rather than a guess made.
+        // A genuinely *split* array (several parts in one list) is marked by
+        // `mark_split_parts`, which gives each part its own flat range: no
+        // backend reads a flat range of a multi-dimensional dataset, so that
+        // read is refused by name rather than answered with the whole dataset
+        // once per part.
         start: Vec::new(),
         count: Vec::new(),
         proxy_uuid,
@@ -592,9 +625,28 @@ impl ArrayValues {
         self.len() == 0
     }
 
-    /// The element type, named the way [`ArrayMetadata`] names it.
+    /// Every element widened to `f64`, or `None` for **text**, which has no
+    /// numeric reading. **This copies.**
+    ///
+    /// The refusing form, and the one a caller should use: `NaN` is the "no
+    /// data" value downstream (a `NullValue`), so [`ArrayValues::to_f64`]'s
+    /// column of `NaN` for strings reads as a column of missing values
+    /// (`[cross-duplication C3]`). The same answer as `Values::to_f64` of the
+    /// domain crate.
+    pub fn try_to_f64(&self) -> Option<Vec<f64>> {
+        match self {
+            ArrayValues::Text(_) => None,
+            numbers => Some(numbers.to_f64()),
+        }
+    }
+
     /// Every element widened to `f64` - see [`ArrayData::to_f64`], which is
     /// this with the shape beside it. **This copies.**
+    ///
+    /// **Text becomes a `NaN` per string**, which cannot refuse (it returns a
+    /// `Vec`) and which a caller can take for missing data: prefer
+    /// [`ArrayValues::try_to_f64`], which answers `None` for text. Kept as it
+    /// is because it is published and its callers count on the length.
     pub fn to_f64(&self) -> Vec<f64> {
         match self {
             ArrayValues::F64(v) => v.clone(),
@@ -743,6 +795,12 @@ impl ArrayData {
     pub fn to_f64(&self) -> Vec<f64> {
         self.values.to_f64()
     }
+
+    /// [`ArrayData::to_f64`] that **refuses text**: `None` for a string array,
+    /// where `to_f64` answers a `NaN` per string. See [`ArrayValues::try_to_f64`].
+    pub fn try_to_f64(&self) -> Option<Vec<f64>> {
+        self.values.try_to_f64()
+    }
 }
 
 /// A buffer the caller owns, for a backend to decode straight into.
@@ -802,12 +860,18 @@ impl ArrayBuffer<'_> {
     }
 }
 
-/// Whether a type is one of the two array pointers.
+/// Whether a type is one of the three array pointers [`locate`] reads from a
+/// type alone: `ExternalDataArrayPart` (eml 2.3), `ExternalDatasetPart` (eml
+/// 2.1 and 2.2) and `Hdf5Dataset` (eml 2.0).
 ///
 /// Useful to a UI that wants to show "this field holds data elsewhere" without
-/// walking into it.
+/// walking into it. **Not `ChannelData`**: it points at a dataset only when its
+/// `FileUri` and `Data` say so ([`is_channel_data_in_file`]), which a type alone
+/// cannot tell - a `ChannelData` with its rows inline holds its data right there.
+/// The function used to miss the middle form, so a UI relying on it missed every
+/// eml 2.1/2.2 array.
 pub fn is_array_pointer(info: &energyml_core::reflect::TypeInfo) -> bool {
-    info.kind == TypeKind::Struct && (info.name == NEW_FORM || info.name == OLD_FORM)
+    info.kind == TypeKind::Struct && (info.name == NEW_FORM || info.name == MID_FORM || info.name == OLD_FORM)
 }
 
 /// Where an array's numbers were actually found, and why there.

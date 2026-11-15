@@ -998,11 +998,27 @@ pub fn split_list<T: XmlText>(text: &str) -> Result<Vec<T>> {
 // Scalars
 // ---------------------------------------------------------------------------
 
+/// The `xsd:double` lexical form of a value Rust spells otherwise: `NaN`,
+/// `INF` and `-INF` (XML Schema Part 2, 3.3.5). Rust prints `inf` and `-inf`,
+/// which a strict validator refuses. The one writer, shared with the JSON form.
+pub(crate) fn xsd_double(value: f64) -> String {
+    if value.is_nan() {
+        "NaN".to_string()
+    } else if value.is_sign_positive() {
+        "INF".to_string()
+    } else {
+        "-INF".to_string()
+    }
+}
+
 macro_rules! impl_xml_scalar {
     ($ty:ty, $name:literal) => {
+        impl_xml_scalar!($ty, $name, |v: &$ty| v.to_string());
+    };
+    ($ty:ty, $name:literal, $render:expr) => {
         impl XmlText for $ty {
             fn to_xml_text(&self) -> Cow<'_, str> {
-                Cow::Owned(self.to_string())
+                Cow::Owned(($render)(self))
             }
             fn from_xml_text(s: &str) -> Result<Self> {
                 s.trim()
@@ -1032,8 +1048,18 @@ impl_xml_scalar!(u8, "unsignedByte");
 impl_xml_scalar!(u16, "unsignedShort");
 impl_xml_scalar!(u32, "unsignedInt");
 impl_xml_scalar!(u64, "unsignedLong");
-impl_xml_scalar!(f32, "float");
-impl_xml_scalar!(f64, "double");
+// A finite float keeps Rust's shortest round-trip form; a non-finite one is
+// written as `xsd:double` spells it (`[core-derive-schemas S11]`).
+impl_xml_scalar!(f32, "float", |v: &f32| if v.is_finite() {
+    v.to_string()
+} else {
+    xsd_double(f64::from(*v))
+});
+impl_xml_scalar!(f64, "double", |v: &f64| if v.is_finite() {
+    v.to_string()
+} else {
+    xsd_double(*v)
+});
 
 impl XmlText for bool {
     fn to_xml_text(&self) -> Cow<'_, str> {
@@ -1150,5 +1176,41 @@ mod escape_tests {
         assert!(unescape("&bogus;").unwrap_err().contains("bogus"));
         assert!(unescape("&#0;").is_err(), "U+0000 is not an XML 1.0 character");
         assert!(unescape("&#x1;").is_err());
+    }
+}
+
+#[cfg(test)]
+mod float_text_tests {
+    use super::XmlText;
+
+    /// `[core-derive-schemas S11]`, XML Schema Part 2 section 3.3.5 (`double`):
+    /// the lexical forms of the special values are `INF`, `-INF` and `NaN`.
+    /// Rust prints `inf` and `-inf`, which a strict validator refuses.
+    ///
+    /// Break it: render every float with `to_string()` again; `inf` fails the
+    /// first assertion.
+    #[test]
+    fn a_non_finite_float_is_written_as_xsd_spells_it() {
+        assert_eq!(f64::INFINITY.to_xml_text(), "INF");
+        assert_eq!(f64::NEG_INFINITY.to_xml_text(), "-INF");
+        assert_eq!(f64::NAN.to_xml_text(), "NaN");
+        assert_eq!(f32::INFINITY.to_xml_text(), "INF");
+        assert_eq!(f32::NEG_INFINITY.to_xml_text(), "-INF");
+
+        // And what is written reads back.
+        assert_eq!(f64::from_xml_text("INF").unwrap(), f64::INFINITY);
+        assert_eq!(f64::from_xml_text("-INF").unwrap(), f64::NEG_INFINITY);
+        assert!(f32::from_xml_text("NaN").unwrap().is_nan());
+    }
+
+    /// A finite float keeps its shortest round-trip form, f32 included (it is
+    /// not widened to f64 first: `0.1f32` is not `0.10000000149`).
+    ///
+    /// Break it: widen the f32 to f64 before `to_string`.
+    #[test]
+    fn a_finite_float_is_unchanged() {
+        assert_eq!(0.1f32.to_xml_text(), "0.1");
+        assert_eq!(2.5f64.to_xml_text(), "2.5");
+        assert_eq!((-0.0f64).to_xml_text(), "-0");
     }
 }

@@ -102,6 +102,10 @@ close, bytes that are not UTF-8, an empty part): bytes out, fix, bytes back, and
 `--apply` says for each part whether it now parses. `--lenient` makes the read
 levels a ladder: what `repair` lists is what **that mode** cannot read.
 `rename` and `extract` always quote first (`--dry-run` / no `--apply`).
+`extract` never writes onto the package it reads (the output is refused when it
+is the source), and builds its output beside the final name, moving it into
+place only once it is complete: a failure leaves whatever was at the output as
+it was.
 
 ## Selecting by region
 

@@ -329,11 +329,58 @@ pub fn extract(
     let graph = crate::graph::build(objects.iter().map(|(s, o)| (*s, o.as_reflect())));
     let made = plan(&resources, &graph, wanted);
 
+    // **Nothing is written before it is known to be safe.** The output used to
+    // be truncated to an empty package first, and the objects read afterwards:
+    // an output that was the source itself destroyed the package before one
+    // object was copied, and the failures were swallowed into `unreadable`
+    // (`[storage-2 S5]`). So the source is refused as an output, and the new
+    // package is built beside its final name and moved onto it only once it is
+    // complete: a failure leaves whatever was at `out` exactly as it was.
+    if let Some(from) = source.path()
+        && same_file(from, out)
+    {
+        return Err(Error::Package(format!(
+            "{} is the package being read: extracting onto it would destroy it. Choose another \
+             output",
+            out.display()
+        )));
+    }
+    let staging = staging_path(out);
+    let written = write_extraction(source, &made, &staging, arrays, options);
+    let (copied, missed, unreadable) = match written {
+        Ok(done) => done,
+        Err(why) => {
+            let _ = std::fs::remove_file(&staging);
+            return Err(why);
+        }
+    };
+    if let Err(why) = std::fs::rename(&staging, out) {
+        let _ = std::fs::remove_file(&staging);
+        return Err(why.into());
+    }
+
+    Ok(Extraction {
+        plan: made,
+        arrays: copied,
+        arrays_missed: missed,
+        unreadable,
+    })
+}
+
+/// Build the extracted package at `staging`: how many arrays were copied, which
+/// could not be, and which kept objects the source could not hand over.
+fn write_extraction(
+    source: &EpcStore,
+    made: &Plan,
+    staging: &std::path::Path,
+    arrays: Arrays,
+    options: &SaveOptions,
+) -> Result<(usize, Vec<String>, Vec<String>)> {
     // The destination is opened as a package before anything is put in it, so
     // the store's external root is the output folder and a copied array lands
     // beside the package rather than beside the source.
-    std::fs::write(out, empty_package(None)?)?;
-    let mut target = EpcStore::open(out, source.registry_arc())?;
+    std::fs::write(staging, empty_package(None)?)?;
+    let mut target = EpcStore::open(staging, source.registry_arc())?;
 
     let filled = fill(source, &mut target, &made.kept)?;
     let mut copied = 0usize;
@@ -353,13 +400,27 @@ pub fn extract(
         }
     }
     target.save(options)?;
+    Ok((copied, missed, filled.unreadable))
+}
 
-    Ok(Extraction {
-        plan: made,
-        arrays: copied,
-        arrays_missed: missed,
-        unreadable: filled.unreadable,
-    })
+/// Whether two paths are the same file on the disk. A path that does not exist
+/// yet is not the same as one that does.
+fn same_file(a: &std::path::Path, b: &std::path::Path) -> bool {
+    match (std::fs::canonicalize(a), std::fs::canonicalize(b)) {
+        (Ok(a), Ok(b)) => a == b,
+        _ => false,
+    }
+}
+
+/// Where a package is built before it takes its name: beside it, so that the
+/// move is a rename within one folder.
+fn staging_path(out: &std::path::Path) -> std::path::PathBuf {
+    let mut name = out
+        .file_name()
+        .map(std::ffi::OsStr::to_os_string)
+        .unwrap_or_default();
+    name.push(".partial");
+    out.with_file_name(name)
 }
 
 /// What [`fill`] put into a target, and what the objects it put point at.
@@ -730,6 +791,11 @@ pub fn copy_into(from: &EpcStore, into: &mut EpcStore, wanted: &[String], arrays
     // the same bargain `extract` strikes, and found the same way: by running
     // the command and reading `energyml check` afterwards.
     let mut files: std::collections::BTreeMap<String, String> = Default::default();
+    // The same two guards as `fill`, which is the same walk: a dataset two
+    // objects name (a grid and its sub-representation) is copied **once**, and
+    // a proxy no file resolves to is not declared (an empty name would write a
+    // relationship that points nowhere) - `[storage-2 S4]`.
+    let mut seen: std::collections::HashSet<(String, String)> = Default::default();
     for uri in &closed.needed {
         let object = match from.get_object(uri) {
             Ok(object) => object,
@@ -739,10 +805,13 @@ pub fn copy_into(from: &EpcStore, into: &mut EpcStore, wanted: &[String], arrays
             }
         };
         for location in from.arrays_of(object.as_reflect()) {
-            if let Some(proxy) = location.proxy_uuid.clone() {
+            if let Some(proxy) = location.proxy_uuid.as_ref().filter(|_| !location.file.is_empty()) {
                 files.insert(proxy.to_ascii_lowercase(), location.file.clone());
             }
             if arrays != Arrays::Copy {
+                continue;
+            }
+            if !seen.insert((location.file.clone(), location.path_in_file.clone())) {
                 continue;
             }
             match from.read_array(&location) {

@@ -246,6 +246,12 @@ package: `[Content_Types].xml`, every `.rels` file in both directions and
 `docProps/core.xml`. A description that no longer matches the contents is worse
 than none.
 
+A transaction (`start_transaction`, then `commit_transaction` or
+`rollback_transaction`) is a layer over everything the package holds that a
+save would write: the objects, the bytes staged for a part, the media links,
+the parts removed or superseded, the names of data files and the content types
+of attachments. A rollback restores all of them, not only the objects.
+
 ## Value arrays
 
 An object does not contain its numbers: it names a file and a path inside it.

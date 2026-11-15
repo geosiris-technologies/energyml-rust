@@ -92,6 +92,18 @@ the next reader does not pay for the search again.
 To rename on purpose, use `energyml rename`, which changes the fields, the
 relationships and the file together.
 
+A rename never replaces a file: if a file named like the new name already sits
+beside the package and the package does not name it, the rename is refused (in
+the quote, and again when it is applied, since a quote can be stale), because
+moving a file onto another destroys the other. And it does nothing by halves:
+every object is rewritten on a copy first, so a rename that cannot be carried
+out leaves the package exactly as it was.
+
+An array split over several `ExternalFileProxy` parts (eml 2.1 and 2.2) comes
+back as one location per part, each carrying its own flat `StartIndex` and
+`Count`. A reader that cannot take a flat range of a multi-dimensional dataset
+refuses by name; it never reads the whole dataset once per part.
+
 ## From the library
 
 - `ExternalFiles::offer(path)` and `ExternalFiles::set(name, path)` (through

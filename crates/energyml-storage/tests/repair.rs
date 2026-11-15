@@ -470,3 +470,43 @@ fn a_repaired_part_regains_its_proper_name() {
         "and the object is addressable at last"
     );
 }
+
+/// `[storage-2 S1]`: a repaired part whose object the store then refuses is not
+/// lost.
+///
+/// The bytes parse, but their uuid is not one a part can carry, so `put`
+/// refuses the object. The part used to have been let go (bytes cleared, part
+/// superseded) before that refusal, so the save skipped it and it vanished from
+/// the package while the doc promised *nothing is staged*.
+///
+/// Break it: in `stage_repaired_part`, drop the restore after a refused `put`
+/// (the `unsupersede` and the `set_raw`); the saved package then lacks `PART`.
+#[test]
+fn a_repair_the_store_refuses_does_not_lose_the_part() {
+    let path = package("lost", PART, &truncated(), true);
+    let mut store = EpcStore::open(&path, registry()).expect("opens");
+
+    let refusal = store
+        .stage_repaired_part(PART, object("not-a-uuid", None).into_bytes())
+        .expect_err("the put refuses an object whose uuid no part can carry");
+    assert!(refusal.to_string().contains("uuid"), "{refusal}");
+
+    assert!(!store.is_dirty(), "a refused repair leaves a clean store");
+    assert_eq!(
+        store.raw_part(PART).expect("still readable as bytes"),
+        truncated(),
+        "the bytes are the ones that were there"
+    );
+
+    let out = path.with_file_name("lost-saved.epc");
+    store.save_as(&out, &SaveOptions::default()).expect("it saves");
+    let file = std::fs::File::open(&out).unwrap();
+    let mut zip = zip::ZipArchive::new(file).unwrap();
+    let names: Vec<String> = (0..zip.len())
+        .map(|i| zip.by_index(i).unwrap().name().expect("a part name").into_owned())
+        .collect();
+    assert!(
+        names.contains(&PART.to_string()),
+        "the part is still in the saved package: {names:?}"
+    );
+}

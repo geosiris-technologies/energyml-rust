@@ -112,7 +112,8 @@ impl<'a> Visitor<'a> for ByOwner<'a> {
         // text; they are the owner's, as the subtree is.
         let (group, relative) = self.current(path);
         let relative = relative.to_string();
-        refs_in_source(&any.content, &relative, &mut self.groups[group].refs);
+        // The fault, if any, is reported by `identity::unreadable_subtrees`.
+        let _ = refs_in_source(&any.content, &relative, &mut self.groups[group].refs);
     }
 
     fn enter(&mut self, path: &str, child: &'a dyn Reflect) {

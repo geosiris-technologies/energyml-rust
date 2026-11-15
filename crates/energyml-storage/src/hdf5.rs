@@ -392,10 +392,20 @@ impl Selection {
             // dataset of points, counting points where the schema counts
             // values. Unambiguous when it equals the leading dimension
             // exactly.
-            if start.iter().all(|s| *s == 0)
-                && (count.iter().sum::<i64>() >= shape.iter().product::<i64>()
-                    || (count.len() == 1 && count[0] == shape[0]))
-            {
+            //
+            // **Checked arithmetic, and `first`**: the counts come from the
+            // document, so a sum or a product can overflow, and a scalar
+            // dataset has no leading dimension to index (`[storage-2 S6]`).
+            let flat = count.iter().all(|c| *c >= 0)
+                && match (
+                    count.iter().try_fold(0i64, |sum, c| sum.checked_add(*c)),
+                    shape.iter().try_fold(1i64, |product, d| product.checked_mul(*d)),
+                ) {
+                    (Some(counted), Some(held)) => counted >= held,
+                    _ => false,
+                };
+            let rows = count.len() == 1 && shape.first() == Some(&count[0]);
+            if start.iter().all(|s| *s == 0) && (flat || rows) {
                 return Ok(Self {
                     start: vec![0; shape.len()],
                     count: shape.to_vec(),
@@ -409,7 +419,7 @@ impl Selection {
             )));
         }
         for (axis, ((s, c), extent)) in start.iter().zip(&count).zip(shape).enumerate() {
-            if *s < 0 || *c < 0 || s + c > *extent {
+            if *s < 0 || *c < 0 || s.checked_add(*c).is_none_or(|end| end > *extent) {
                 return Err(bad(format!(
                     "dimension {axis}: the object asks for {c} element(s) from {s}, \
                      the dataset holds {extent}"
@@ -899,5 +909,51 @@ fn external(file: &Path, path_in_file: &str, reason: ExternalDataReason) -> Erro
     Error::ExternalData {
         location: format!("{}:{path_in_file}", file.display()),
         reason,
+    }
+}
+
+#[cfg(test)]
+mod selection_tests {
+    use super::Selection;
+    use std::path::Path;
+
+    fn of(shape: &[i64], start: &[i64], count: &[i64]) -> crate::error::Result<Selection> {
+        Selection::of(shape, start, count, Path::new("f.h5"), "/p")
+    }
+
+    /// `[storage-2 S6]`: a scalar dataset has no leading dimension, so a count
+    /// naming one is refused by name, not an index out of bounds.
+    ///
+    /// Break it: index `shape[0]` again in the rank-mismatch branch; this panics.
+    #[test]
+    fn a_scalar_dataset_refuses_a_count_without_panicking() {
+        assert!(of(&[], &[], &[0]).is_err());
+        // A flat count that covers the one element is the whole dataset.
+        assert!(of(&[], &[], &[1]).is_ok_and(|selection| selection.whole));
+    }
+
+    /// Bounds from the document are not trusted to fit an `i64`: an overflowing
+    /// sum is a refusal, never a wrapped value that passes the check.
+    ///
+    /// Break it: use `s + c` and `sum()` again; this panics in debug and wraps
+    /// (and accepts) in release.
+    #[test]
+    fn hostile_bounds_are_refused_not_wrapped() {
+        assert!(of(&[10], &[i64::MAX], &[1]).is_err(), "start + count overflows");
+        assert!(
+            of(&[2, 3], &[0], &[i64::MAX, i64::MAX]).is_err(),
+            "the counts' sum overflows"
+        );
+        assert!(
+            of(&[i64::MAX, 2], &[0], &[1]).is_err(),
+            "a one-dimensional count over a huge shape"
+        );
+    }
+
+    /// What was accepted stays accepted: the count as the number of rows.
+    #[test]
+    fn the_row_count_of_a_flattened_array_is_still_the_whole_dataset() {
+        assert!(of(&[70, 3], &[0], &[70]).is_ok_and(|selection| selection.whole));
+        assert!(of(&[70, 3], &[0], &[210]).is_ok_and(|selection| selection.whole));
     }
 }
