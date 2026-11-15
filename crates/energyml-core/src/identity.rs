@@ -1343,9 +1343,9 @@ impl<'a> Visitor<'a> for Nested<'a> {
 ///
 /// # A subtree that does not read
 ///
-/// The references found before the fault are pushed, and the fault is **returned**
-/// - a malformed or truncated source, or an element never closed - never
-/// swallowed into a shorter list. The visitors of the walk cannot return it, so
+/// The references found before the fault are pushed, and the fault is
+/// **returned** (a malformed or truncated source, or an element never closed),
+/// never swallowed into a shorter list. The visitors of the walk cannot return it, so
 /// [`unreadable_subtrees`] is the door that reports it, by path.
 pub(crate) fn refs_in_source<'a>(
     source: &'a str,

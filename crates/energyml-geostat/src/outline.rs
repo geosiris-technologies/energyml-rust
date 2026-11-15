@@ -220,10 +220,10 @@ pub fn simplify(points: &[[f64; 3]], ring: &[u32], tolerance: f64) -> Loop {
         let (a, b) = (at(first + lo), at(first + hi));
         let mut worst = lo + 1;
         let mut worst_distance = f64::NEG_INFINITY;
-        for k in lo + 1..hi {
+        for (k, slot) in deviation.iter_mut().enumerate().take(hi).skip(lo + 1) {
             let d = distance_to_segment(at(first + k), a, b);
             let d = if d.is_nan() { f64::INFINITY } else { d };
-            deviation[k] = d;
+            *slot = d;
             if d > worst_distance {
                 worst = k;
                 worst_distance = d;
