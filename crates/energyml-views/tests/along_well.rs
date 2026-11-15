@@ -16,7 +16,7 @@ use energyml_views::along_well::{AlongWell, ID};
 use energyml_views::{ViewAsk, ViewKind, ViewKinds, ViewRefusal, draw_list, draw_svg, read_ask, redraw};
 use serde_json::json;
 
-use crate::fixtures::{FRAME, NO_MAPS, Opened, frame_uri, package, polylines, uri};
+use crate::fixtures::{FRAME, NO_MAPS, Opened, frame_uri, package, polylines, texts, uri};
 
 const MATRIX: &str = "55555555-5555-4555-8555-555555555555";
 
@@ -187,6 +187,15 @@ fn in_md_against_tvd_the_hole_runs_from_its_first_to_its_last_node() {
         .place(&model.axis, 80.0, 0.0)
         .expect("placed");
     near(last, placed);
+    // The projection drawn is the one asked. A straight hole lays out linearly in MD as in plan length, so the
+    // fitted lines match: the graduations of the abscissa (MD 20 to 80, against 10 to 40 m on the ground) differ.
+    let md_tvd = draw(&hole(), &base().set("projection", json!("md_tvd"))).expect("drawn");
+    let developed = draw(&hole(), &base().set("projection", json!("developed"))).expect("drawn");
+    assert_ne!(
+        texts(&md_tvd),
+        texts(&developed),
+        "the two projections are drawn alike"
+    );
     // Break it: draw the hole in `developed` whatever the projection asked.
 }
 
