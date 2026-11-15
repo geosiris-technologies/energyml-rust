@@ -131,6 +131,412 @@ pub fn path_of(trajectory: &dyn Reflect, source: &dyn ValueSource) -> Result<cra
     Ok(path)
 }
 
+/// Where a measured depth falls against the depths a path states.
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum MdRange {
+    /// Between the first and the last knot, both included.
+    Within,
+    /// Above the first knot: the point is the first interval extended (`Path::at`), and says so.
+    BeforeFirst {
+        /// The first knot.
+        first: f64,
+    },
+    /// Below the last knot: the last interval extended.
+    AfterLast {
+        /// The last knot.
+        last: f64,
+    },
+    /// The depth asked is not a number.
+    NotANumber,
+}
+
+/// A placed point at a measured depth, with where that depth falls.
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub struct PointAtMd {
+    /// The measured depth asked, in the path's MD unit.
+    pub md: f64,
+    /// Placed, in metres, z up.
+    pub point: Point,
+    /// Within the stated depths, or extended past them.
+    pub range: MdRange,
+}
+
+/// Where a WITSML survey stands: what `stations` reads from the file or the caller declares.
+/// The one placement type of a survey.
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub struct SurveyPlacement {
+    /// MD 0 - the datum - placed: first and second projected coordinates and the elevation, all in metres.
+    pub datum: Point,
+    /// Where the survey's azimuth 90 degrees and 0 degrees point in the placed plane (grid, plant or declared north).
+    pub axes: energyml_domain::crs::CompassAxes,
+}
+
+impl SurveyPlacement {
+    /// From the datum frame (metres, x east and y north of the survey's north, z up, origin at the
+    /// datum) to the placed frame: `datum + x * east + y * north` horizontally, `datum.z + z` vertically.
+    pub fn place(&self, local: Point) -> Point {
+        let (east, north) = (self.axes.east, self.axes.north);
+        [
+            self.datum[0] + local[0] * east[0] + local[1] * north[0],
+            self.datum[1] + local[0] * east[1] + local[1] * north[1],
+            self.datum[2] + local[2],
+        ]
+    }
+
+    /// The inverse; `None` when east and north are parallel (never for a placement `from_local`
+    /// accepts, checked all the same).
+    pub fn to_local(&self, placed: Point) -> Option<Point> {
+        let (e, n) = (self.axes.east, self.axes.north);
+        let det = e[0] * n[1] - n[0] * e[1];
+        if !det.is_finite() || det.abs() < 1e-12 {
+            return None;
+        }
+        let (dx, dy) = (placed[0] - self.datum[0], placed[1] - self.datum[1]);
+        // [[e0, n0], [e1, n1]] [x, y] = [dx, dy], by Cramer's rule.
+        let x = (dx * n[1] - n[0] * dy) / det;
+        let y = (e[0] * dy - e[1] * dx) / det;
+        Some([x, y, placed[2] - self.datum[2]])
+    }
+}
+
+/// Why a path cannot be placed. Each variant names what is missing.
+#[derive(Debug, thiserror::Error)]
+pub enum PathRefusal {
+    /// `path_of` refused, or the CRS could not be read.
+    #[error("the trajectory's line cannot be read: {0}")]
+    Read(#[from] Error),
+    /// The trajectory names no CRS.
+    #[error(
+        "the trajectory names no coordinate system: which way is up and where the well stands are not stated - declare one (`PlacedPath::new`)"
+    )]
+    NoCrs,
+    /// A time CRS.
+    #[error("the trajectory is written in the time CRS {crs}: a measured depth is a length")]
+    TimeCrs {
+        /// The uuid of the CRS.
+        crs: String,
+    },
+    /// A unit of the CRS that is not a length this build converts.
+    #[error("a unit of the CRS {crs} is not a length this build converts to metres: {source}")]
+    Unit {
+        /// The uuid of the CRS.
+        crs: String,
+        /// The refusal of `units::metres`.
+        source: energyml_domain::Error,
+    },
+    /// No parameters along the line.
+    #[error("the line states no parameters: no parameter along it is a measured depth")]
+    NotParametrised,
+    /// The survey's stations.
+    #[error("the survey's stations cannot be joined: {0}")]
+    Stations(#[from] crate::min_curvature::StationsError),
+    /// A survey that does not start at its datum.
+    #[error("the first station is at MD {md}, not at the datum: where the hole runs above it is not stated")]
+    FirstStationNotAtDatum {
+        /// The first station's MD.
+        md: f64,
+    },
+    /// A placement that is no placement.
+    #[error("the survey placement cannot be used: {why}")]
+    BadPlacement {
+        /// What is wrong with it.
+        why: &'static str,
+    },
+}
+
+/// How a path is placed in metres, z up.
+#[derive(Clone, Debug)]
+enum Placing {
+    /// A RESQML line, local to its CRS: placed at each evaluation, `to_projected` then the unit factors.
+    Crs {
+        crs: energyml_domain::Crs,
+        horizontal: f64,
+        vertical: f64,
+    },
+    /// A line in a survey's datum frame (metres, x east, y north, z up), placed by
+    /// `SurveyPlacement::place` at each evaluation.
+    Survey(SurveyPlacement),
+}
+
+/// A trajectory placed in metres, z up, evaluable at any measured depth: the one door from a
+/// RESQML trajectory or a WITSML survey to where the hole is and where it points.
+///
+/// Positions, directions and offsets are in the placed frame of [`energyml_domain::Crs::to_projected`]
+/// converted to metres. That frame may be left-handed (see [`PlacedPath::handedness`]): nothing here
+/// computes a cross product on its coordinates.
+#[derive(Clone, Debug)]
+pub struct PlacedPath {
+    path: crate::parametric::Path,
+    placing: Placing,
+    knots: Vec<f64>,
+    md_uom: String,
+    axes: energyml_domain::crs::AxisReading,
+    compass: Option<energyml_domain::crs::CompassAxes>,
+    handedness: Option<energyml_domain::crs::Handedness>,
+    datum: Option<Point>,
+}
+
+impl PlacedPath {
+    /// A RESQML `WellboreTrajectoryRepresentation`, placed through the CRS its geometry names.
+    pub fn of(
+        trajectory: &dyn Reflect,
+        source: &dyn ValueSource,
+    ) -> std::result::Result<PlacedPath, PathRefusal> {
+        let path = path_of(trajectory, source)?;
+        let crs = match energyml_domain::crs::of(trajectory, source) {
+            Err(error) => return Err(PathRefusal::Read(Error::Domain(error))),
+            Ok(None) => return Err(PathRefusal::NoCrs),
+            Ok(Some(crs)) => crs,
+        };
+        PlacedPath::new(path, crs, &md_unit(trajectory))
+    }
+
+    /// A line and the CRS it is written in - the file's, or one the caller declares (S2): the line's
+    /// vertical reading is set to that CRS's (`Path::with_vertical`).
+    pub fn new(
+        path: crate::parametric::Path,
+        crs: energyml_domain::Crs,
+        md_uom: &str,
+    ) -> std::result::Result<PlacedPath, PathRefusal> {
+        if crs.is_time() {
+            return Err(PathRefusal::TimeCrs { crs: crs.uuid.clone() });
+        }
+        let factor = |unit: &Option<String>| -> std::result::Result<f64, PathRefusal> {
+            match unit {
+                Some(unit) => units::metres(1.0, unit).map_err(|source| PathRefusal::Unit {
+                    crs: crs.uuid.clone(),
+                    source,
+                }),
+                None => Ok(1.0),
+            }
+        };
+        let horizontal = factor(&crs.horizontal_uom)?;
+        let vertical = factor(&crs.vertical_uom)?;
+        let knots = match path.knots() {
+            Some(knots) if !knots.is_empty() => knots.to_vec(),
+            _ => return Err(PathRefusal::NotParametrised),
+        };
+        let path = path.with_vertical(crate::parametric::Vertical::reading(Some(&crs)));
+        let axes = crs.axes.clone();
+        let compass = axes.stated().map(energyml_domain::crs::AxisOrder::compass);
+        let handedness = axes.stated().map(energyml_domain::crs::AxisOrder::handedness);
+        let mut placed = PlacedPath {
+            path,
+            placing: Placing::Crs {
+                crs,
+                horizontal,
+                vertical,
+            },
+            knots,
+            md_uom: md_uom.to_string(),
+            axes,
+            compass,
+            handedness,
+            datum: None,
+        };
+        // A trajectory that starts below MD 0 has no datum readable here: the projections in TVD
+        // refuse `NoDatum`, never an extrapolation.
+        if placed.knots[0] <= 0.0 && 0.0 <= placed.knots[placed.knots.len() - 1] {
+            placed.datum = Some(placed.at(0.0).point);
+        }
+        Ok(placed)
+    }
+
+    /// A line already in a survey's datum frame (metres, x east, y north, z up, MD as parameter,
+    /// MD 0 at the datum), placed by `placement`.
+    pub fn from_local(
+        local: crate::parametric::Path,
+        placement: &SurveyPlacement,
+    ) -> std::result::Result<PlacedPath, PathRefusal> {
+        if !placement.datum.iter().all(|c| c.is_finite()) {
+            return Err(PathRefusal::BadPlacement {
+                why: "the datum is not a finite point",
+            });
+        }
+        let Some(handedness) = placement.axes.handedness() else {
+            return Err(PathRefusal::BadPlacement {
+                why: "east and north must be unit vectors at right angles",
+            });
+        };
+        let knots = match local.knots() {
+            Some(knots) if !knots.is_empty() => knots.to_vec(),
+            _ => return Err(PathRefusal::NotParametrised),
+        };
+        if knots[0] != 0.0 {
+            return Err(PathRefusal::FirstStationNotAtDatum { md: knots[0] });
+        }
+        Ok(PlacedPath {
+            path: local,
+            placing: Placing::Survey(*placement),
+            knots,
+            // The MDs of `Measured` are in metres.
+            md_uom: "m".to_string(),
+            axes: energyml_domain::crs::AxisReading::NotStated,
+            compass: Some(placement.axes),
+            handedness: Some(handedness),
+            datum: Some(placement.datum),
+        })
+    }
+
+    /// A WITSML survey: its stations (MD in metres, angles in degrees) joined by the minimum-curvature
+    /// arc (`Path::new` kind 5), placed by `placement`: `from_local` of the survey's arc.
+    pub fn from_stations(
+        stations: &[crate::min_curvature::Measured],
+        placement: &SurveyPlacement,
+    ) -> std::result::Result<PlacedPath, PathRefusal> {
+        PlacedPath::from_local(arc_of(stations)?, placement)
+    }
+
+    /// The placed point at `md`, and where `md` falls.
+    pub fn at(&self, md: f64) -> PointAtMd {
+        PointAtMd {
+            md,
+            point: self.place(self.path.at(md)),
+            range: self.range_of(md),
+        }
+    }
+
+    /// The unit direction of the hole at `md`, placed, towards increasing MD. `None` where the line has none.
+    pub fn direction_at(&self, md: f64) -> Option<[f64; 3]> {
+        let local = self.path.direction_at(md)?;
+        let scaled = match &self.placing {
+            Placing::Crs {
+                crs,
+                horizontal,
+                vertical,
+            } => {
+                // Scaled before it is normalised: a CRS in feet across and metres down tilts it.
+                let v = crs.direction_to_projected(local);
+                [v[0] * horizontal, v[1] * horizontal, v[2] * vertical]
+            }
+            Placing::Survey(placement) => {
+                let (e, n) = (placement.axes.east, placement.axes.north);
+                [
+                    local[0] * e[0] + local[1] * n[0],
+                    local[0] * e[1] + local[1] * n[1],
+                    local[2],
+                ]
+            }
+        };
+        crate::vector::unit(scaled)
+    }
+
+    /// Where `md` falls against the knots.
+    pub fn range_of(&self, md: f64) -> MdRange {
+        let (first, last) = (self.knots[0], self.knots[self.knots.len() - 1]);
+        if md.is_nan() {
+            MdRange::NotANumber
+        } else if md < first {
+            MdRange::BeforeFirst { first }
+        } else if md > last {
+            MdRange::AfterLast { last }
+        } else {
+            MdRange::Within
+        }
+    }
+
+    /// The knots, ascending.
+    pub fn knots(&self) -> &[f64] {
+        &self.knots
+    }
+
+    /// `[first knot, last knot]`.
+    pub fn md_extent(&self) -> [f64; 2] {
+        [self.knots[0], self.knots[self.knots.len() - 1]]
+    }
+
+    /// The unit the MDs are in, as the file spells it (`m` for a survey).
+    pub fn md_uom(&self) -> &str {
+        &self.md_uom
+    }
+
+    /// What the CRS says of its horizontal axes (`NotStated` for a survey: see [`PlacedPath::compass`]).
+    pub fn axes(&self) -> &energyml_domain::crs::AxisReading {
+        &self.axes
+    }
+
+    /// East and north in the placed plane, when known.
+    pub fn compass(&self) -> Option<energyml_domain::crs::CompassAxes> {
+        self.compass
+    }
+
+    /// Whether the placed frame is direct, when known.
+    pub fn handedness(&self) -> Option<energyml_domain::crs::Handedness> {
+        self.handedness
+    }
+
+    /// MD 0 placed, when the path covers it.
+    pub fn datum(&self) -> Option<Point> {
+        self.datum
+    }
+
+    /// True vertical depth below the MD datum (S6): `datum.z - at(md).z`. `None` without a datum, or
+    /// where the point has no position.
+    pub fn tvd(&self, md: f64) -> Option<f64> {
+        let datum = self.datum?;
+        Some(datum[2] - self.at(md).point[2]).filter(|tvd| tvd.is_finite())
+    }
+
+    /// The line itself (local to its CRS for a RESQML path).
+    pub fn path(&self) -> &crate::parametric::Path {
+        &self.path
+    }
+
+    /// The CRS, for a RESQML path.
+    pub fn crs(&self) -> Option<&energyml_domain::Crs> {
+        match &self.placing {
+            Placing::Crs { crs, .. } => Some(crs),
+            Placing::Survey(_) => None,
+        }
+    }
+
+    /// A local point of the line, placed in metres, z up.
+    fn place(&self, local: Point) -> Point {
+        match &self.placing {
+            Placing::Crs {
+                crs,
+                horizontal,
+                vertical,
+            } => {
+                let [x, y, z] = crs.to_projected(local);
+                [x * horizontal, y * horizontal, z * vertical]
+            }
+            Placing::Survey(placement) => placement.place(local),
+        }
+    }
+}
+
+/// The arc of a survey's stations in the datum frame (metres, x east, y north, z up): the stations
+/// joined by `Path::new` kind 5, every check of `min_curvature::positions` made first.
+fn arc_of(stations: &[crate::min_curvature::Measured]) -> std::result::Result<crate::parametric::Path, PathRefusal> {
+    let located = crate::min_curvature::positions(stations)?;
+    let mut points = Vec::with_capacity(stations.len());
+    let mut tangents = Vec::with_capacity(stations.len());
+    let mut mds = Vec::with_capacity(stations.len());
+    for (station, at) in stations.iter().zip(&located) {
+        // `positions` has refused an inclined station with no azimuth: `unwrap_or(0.0)` only meets
+        // vertical stations, where the azimuth moves nothing.
+        let t = crate::min_curvature::direction(station.inclination.unwrap_or(0.0), station.azimuth.unwrap_or(0.0));
+        points.push([at.east, at.north, -at.tvd]);
+        tangents.push([t[1], t[0], -t[2]]);
+        mds.push(station.md);
+    }
+    Ok(crate::parametric::Path::new(
+        5,
+        points,
+        mds,
+        Some(tangents),
+        crate::parametric::Vertical::Up,
+    )?)
+}
+
+/// The unit the trajectory's measured depths are in: `MdInterval.Uom` (2.2) or `MdUom` (2.0.1 and the
+/// drops), `m` when neither is written - the reading `Anchor::of` has always made.
+fn md_unit(trajectory: &dyn Reflect) -> String {
+    let interval = crate::geometry::field_object(trajectory, MD_INTERVAL).unwrap_or(trajectory);
+    string_any(interval, MD_UOM).unwrap_or_else(|| "m".to_string())
+}
+
 /// A `WellboreFrameRepresentation`: its measured depths, placed on the well.
 ///
 /// The frame is where the logs hang - one property value per node - so
@@ -665,7 +1071,7 @@ impl Anchor {
                 format!("MdMin {md_min} is greater than MdMax {md_max}"),
             ));
         }
-        let uom = string_any(interval, MD_UOM).unwrap_or_else(|| "m".to_string());
+        let uom = md_unit(trajectory);
         let md_to_metres = units::metres(1.0, &uom).map_err(Error::Domain)?;
 
         let Some(datum_uri) = reference_any(interval, MD_DATUM) else {

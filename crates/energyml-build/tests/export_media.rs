@@ -55,6 +55,7 @@ fn lambert93() -> Crs {
         time_uom: None,
         projected: CrsKind::Epsg(2154),
         vertical: CrsKind::Epsg(5720),
+        axes: energyml_domain::crs::AxisReading::NotStated,
     }
 }
 

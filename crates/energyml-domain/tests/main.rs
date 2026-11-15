@@ -21,6 +21,7 @@ mod color_log_mapping;
 mod color_scopes;
 mod color_versions;
 mod compound_crs;
+mod crs_axes;
 mod corpus;
 mod derived_colour;
 mod facets;

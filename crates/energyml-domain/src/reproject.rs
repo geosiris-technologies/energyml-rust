@@ -257,7 +257,7 @@ impl Reprojector for NoReprojection {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::crs::{CrsKind, VerticalDirection, VerticalQuantity};
+    use crate::crs::{AxisReading, CrsKind, VerticalDirection, VerticalQuantity};
 
     fn crs(projected: CrsKind) -> Crs {
         Crs {
@@ -274,6 +274,7 @@ mod tests {
             time_uom: None,
             projected,
             vertical: CrsKind::Absent,
+            axes: AxisReading::NotStated,
         }
     }
 

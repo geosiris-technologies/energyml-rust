@@ -945,6 +945,139 @@ impl Line {
         }
     }
 
+    /// The unit derivative of `at` at `parameter`, in the line's own frame. `None` where the derivative
+    /// vanishes, is not finite, or the line does not exist.
+    ///
+    /// Every branch follows the fallbacks of [`Line::at`], so the direction is the derivative of the
+    /// very interpolant `at` evaluates, never of a second curve. At an interior knot the interval
+    /// that ends there is used (`segment`), the one `at` evaluates that parameter in (S5).
+    pub(crate) fn direction_at(&self, parameter: f64) -> Option<Point> {
+        if !parameter.is_finite() || self.kind == Kind::Null || self.control.is_empty() {
+            return None;
+        }
+        if self.kind == Kind::Vertical || self.control.len() == 1 {
+            return Some(match self.vertical {
+                Vertical::Down => [0.0, 0.0, 1.0],
+                Vertical::Up => [0.0, 0.0, -1.0],
+            });
+        }
+        let t = parameter;
+        let slope = match self.kind {
+            Kind::Linear => self.linear_slope(t),
+            Kind::NaturalCubic => self.cubic_slope(t),
+            Kind::ZLinearCubic => match (self.cubic_slope(t), self.linear_slope(t)) {
+                (Some(curved), Some(straight)) => Some([curved[0], curved[1], straight[2]]),
+                _ => None,
+            },
+            Kind::TangentialCubic => self.hermite_slope(t),
+            Kind::MinimumCurvature => self.arc_slope(t),
+            // Handled above, listed so that a new kind cannot land in a catch-all.
+            Kind::Null | Kind::Vertical => None,
+        };
+        unit(slope?)
+    }
+
+    /// The chord of the interval `t` falls in, per unit of parameter.
+    fn linear_slope(&self, t: f64) -> Option<Point> {
+        let index = self.segment(t);
+        let span = self.knots[index] - self.knots[index - 1];
+        if span.abs() < TINY {
+            return None;
+        }
+        Some(mul(sub(self.control[index], self.control[index - 1]), 1.0 / span))
+    }
+
+    /// The derivative of the natural cubic that `cubic` evaluates (not normalised).
+    fn cubic_slope(&self, t: f64) -> Option<Point> {
+        if self.moments.len() != self.control.len() {
+            return self.linear_slope(t);
+        }
+        let index = self.segment(t);
+        let span = self.knots[index] - self.knots[index - 1];
+        if span.abs() < TINY {
+            return None;
+        }
+        let a = (self.knots[index] - t) / span;
+        let b = (t - self.knots[index - 1]) / span;
+        let (p0, p1) = (self.control[index - 1], self.control[index]);
+        let (m0, m1) = (self.moments[index - 1], self.moments[index]);
+        let mut out = [0.0; 3];
+        for axis in 0..3 {
+            out[axis] = (p1[axis] - p0[axis]) / span
+                + (-(3.0 * a * a - 1.0) * m0[axis] + (3.0 * b * b - 1.0) * m1[axis]) * span / 6.0;
+        }
+        Some(out)
+    }
+
+    /// The derivative of the cubic Hermite that `hermite` evaluates (not normalised).
+    fn hermite_slope(&self, t: f64) -> Option<Point> {
+        if self.tangents.len() != self.control.len() {
+            return self.linear_slope(t);
+        }
+        let index = self.segment(t);
+        let span = self.knots[index] - self.knots[index - 1];
+        if span.abs() < TINY {
+            return None;
+        }
+        let s = (t - self.knots[index - 1]) / span;
+        let s2 = s * s;
+        let (p0, p1) = (self.control[index - 1], self.control[index]);
+        let (m0, m1) = (self.tangents[index - 1], self.tangents[index]);
+        let mut out = [0.0; 3];
+        for axis in 0..3 {
+            out[axis] = ((6.0 * s2 - 6.0 * s) * p0[axis] + (-6.0 * s2 + 6.0 * s) * p1[axis]) / span
+                + (3.0 * s2 - 4.0 * s + 1.0) * m0[axis]
+                + (3.0 * s2 - 2.0 * s) * m1[axis];
+        }
+        Some(out)
+    }
+
+    /// The derivative of the minimum-curvature arc that `arc` evaluates (not normalised), branch by
+    /// branch as `arc` falls back: the chord wherever `arc` returns the straight reading.
+    fn arc_slope(&self, t: f64) -> Option<Point> {
+        if self.tangents.len() != self.control.len() {
+            return self.linear_slope(t);
+        }
+        let (index, fraction) = self.place(t);
+        let span = self.knots[index] - self.knots[index - 1];
+        if span.abs() < TINY {
+            return None;
+        }
+        let (p0, p1) = (self.control[index - 1], self.control[index]);
+        let chord = mul(sub(p1, p0), 1.0 / span);
+        let (Some(t0), Some(t1)) = (unit(self.tangents[index - 1]), unit(self.tangents[index])) else {
+            return Some(chord);
+        };
+        let alpha = dot(t0, t1).clamp(-1.0, 1.0).acos();
+        if alpha < STRAIGHT || (std::f64::consts::PI - alpha) < 1e-9 {
+            return Some(chord);
+        }
+        let scale = 1.0 / (alpha * alpha.sin());
+        let cos = alpha.cos();
+        let integral = |f: f64| -> Point {
+            add(
+                mul(t0, scale * ((1.0 - f) * alpha).cos() - scale * cos),
+                mul(t1, scale * (1.0 - (f * alpha).cos())),
+            )
+        };
+        let whole = integral(1.0);
+        let length = norm(whole);
+        if length < TINY {
+            return Some(chord);
+        }
+        let arc_length = norm(sub(p1, p0)) / length;
+        let closing = sub(sub(p1, p0), mul(whole, arc_length));
+        // The rotated tangent: d(f) = (t0 sin((1 - f) alpha) + t1 sin(f alpha)) / sin(alpha).
+        let rotated = mul(
+            add(
+                mul(t0, ((1.0 - fraction) * alpha).sin()),
+                mul(t1, (fraction * alpha).sin()),
+            ),
+            1.0 / alpha.sin(),
+        );
+        Some(mul(add(mul(rotated, arc_length), closing), 1.0 / span))
+    }
+
     /// The interval `t` falls in, as the index of its upper knot.
     fn segment(&self, t: f64) -> usize {
         let mut index = 1;
@@ -1157,6 +1290,26 @@ impl Path {
     /// extended, as the standard reads an unbounded line.
     pub fn at(&self, parameter: f64) -> Point {
         self.0.at(parameter)
+    }
+
+    /// The unit direction of the line at `parameter`, in the line's own frame: the derivative of the
+    /// very interpolant [`Path::at`] evaluates (linear: the interval a knot ends; arc: the rotated
+    /// tangent). Past either end, the derivative of the extended interval, as `at` extends it.
+    /// `None` where the line has no direction there.
+    pub fn direction_at(&self, parameter: f64) -> Option<[f64; 3]> {
+        self.0.direction_at(parameter)
+    }
+
+    /// The same line, its depth-to-z conversion read in `reading` - what a caller declaring a CRS
+    /// for a line read without one needs (`well::PlacedPath::new`). Only the vertical kind and a
+    /// single-control-point line use the sense (module doc, "Vertical"); the basis travels with
+    /// the line, so `vertical_note` (S21) stays true.
+    pub fn with_vertical(self, reading: VerticalReading) -> Path {
+        Path(Line {
+            vertical: reading.vertical,
+            vertical_basis: reading.basis,
+            ..self.0
+        })
     }
 
     /// Where the sense of the vertical of this line came from.
@@ -1482,6 +1635,7 @@ mod tests {
             time_uom: None,
             projected: CrsKind::Absent,
             vertical: CrsKind::Absent,
+            axes: energyml_domain::crs::AxisReading::NotStated,
         };
         assert_eq!(Vertical::of(Some(&crs(VerticalDirection::Down))), Vertical::Down);
         assert_eq!(Vertical::of(Some(&crs(VerticalDirection::Up))), Vertical::Up);
@@ -1507,6 +1661,7 @@ mod tests {
             time_uom: None,
             projected: CrsKind::Absent,
             vertical: CrsKind::Absent,
+            axes: energyml_domain::crs::AxisReading::NotStated,
         }
     }
 

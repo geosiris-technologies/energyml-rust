@@ -659,6 +659,7 @@ fn frame(uuid: &str, kind: &str, down: bool) -> Known {
         time_uom: None,
         projected: CrsKind::Epsg(2154),
         vertical: CrsKind::Epsg(5720),
+        axes: energyml_domain::crs::AxisReading::NotStated,
     };
     let reference = Ref::new(uuid, kind, format!("frame {uuid}"));
     Known {

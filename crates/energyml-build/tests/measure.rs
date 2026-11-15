@@ -41,6 +41,7 @@ fn frame(horizontal: &str, vertical: &str, quantity: VerticalQuantity) -> Crs {
         time_uom: None,
         projected: CrsKind::Epsg(2154),
         vertical: CrsKind::Absent,
+        axes: energyml_domain::crs::AxisReading::NotStated,
     }
 }
 
