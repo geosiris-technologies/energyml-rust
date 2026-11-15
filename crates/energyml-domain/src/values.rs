@@ -50,6 +50,7 @@
 use energyml_core::value::{FieldValue, Reflect, Scalar};
 
 use crate::error::{Error, Result};
+use crate::property::shape::{NarrowedPick, PropertyShape, StoredLayout};
 use crate::source::ArraySource;
 
 pub use energyml_storage::array::{ArrayBuffer, ArrayData, ArrayMetadata, ArrayValues};
@@ -461,6 +462,387 @@ pub fn count(array: &dyn Reflect, source: &dyn ArraySource, at: &str) -> Result<
     // Everything else is cheap enough to evaluate, and evaluating it is the
     // only way to be right about a lattice or a mask.
     Ok(read(array, source, at)?.len())
+}
+
+// ---------------------------------------------------------------------------
+// Reading a block
+// ---------------------------------------------------------------------------
+
+/// A block of an array, per **stored** dimension (what `ArraySource::metadata`
+/// gives). Empty `start` and `count`: the whole array.
+#[derive(Clone, PartialEq, Eq, Debug, Default)]
+pub struct Block {
+    /// Where the block starts, per stored dimension, slowest first.
+    pub start: Vec<u64>,
+    /// How much it holds, per stored dimension, slowest first.
+    pub count: Vec<u64>,
+}
+
+/// The stored dimensions of an array, reading no value: the dataset's header
+/// for a file-backed form, the computed shape otherwise (`[len]`; a lattice's
+/// `[count + 1, ...]`, slowest first).
+pub fn stored_dims(array: &dyn Reflect, source: &dyn ArraySource, at: &str) -> Result<Vec<u64>> {
+    if is_external(array) {
+        let (location, dimensions) = single_part(array, source, at)?;
+        return Ok(window(&location, &dimensions, at)?.1);
+    }
+    match lattice_dims(array) {
+        Some(dims) => Ok(dims),
+        None => Ok(vec![read(array, source, at)?.len() as u64]),
+    }
+}
+
+/// The values of one block of an array, in the family the schema declares.
+///
+/// A file-backed array is read by the window of the block alone: a source that
+/// answers with more than the block is refused by name, never trusted. A
+/// computed array is evaluated and cut.
+pub fn read_block(array: &dyn Reflect, source: &dyn ArraySource, at: &str, block: &Block) -> Result<Values> {
+    let name = array.type_info().name;
+    let Some(family) = family(array) else {
+        return Err(Error::unsupported(
+            format!("`{name}` is not a value array"),
+            at.to_string(),
+        ));
+    };
+    if block.start.is_empty() && block.count.is_empty() {
+        return read(array, source, at);
+    }
+    if block.start.len() != block.count.len() {
+        return Err(Error::unsupported(
+            "a block whose start and count differ in rank",
+            at.to_string(),
+        ));
+    }
+
+    if is_external(array) {
+        let (location, dimensions) = single_part(array, source, at)?;
+        let (base_start, base_count) = window(&location, &dimensions, at)?;
+        check_bounds(block, &base_count, at)?;
+        let mut part = location.clone();
+        part.start = base_start
+            .iter()
+            .zip(&block.start)
+            .map(|(base, start)| (base + start) as i64)
+            .collect();
+        part.count = block.count.iter().map(|c| *c as i64).collect();
+        let data = source.read(&part)?;
+        let wanted: u64 = block.count.iter().product();
+        if data.values.len() as u64 != wanted {
+            return Err(Error::malformed(
+                at,
+                format!(
+                    "the source returned {} value(s) for a block of {wanted}: it does not read by block",
+                    data.values.len()
+                ),
+            ));
+        }
+        return widen(data.values, family, at);
+    }
+
+    // A computed form: evaluate, then cut like a stored one.
+    let values = read(array, source, at)?;
+    let dims = lattice_dims(array).unwrap_or_else(|| vec![values.len() as u64]);
+    check_bounds(block, &dims, at)?;
+    Ok(cut(&values, &dims, block))
+}
+
+/// The one external part of an array, and the dimensions its dataset holds.
+fn single_part(
+    array: &dyn Reflect,
+    source: &dyn ArraySource,
+    at: &str,
+) -> Result<(energyml_storage::array::ArrayLocation, Vec<i64>)> {
+    let name = array.type_info().name;
+    let mut parts = source.locate(array);
+    match parts.len() {
+        0 => Err(Error::malformed(
+            at,
+            format!("`{name}` declares no external data at all"),
+        )),
+        1 => {
+            let location = parts.remove(0);
+            let dimensions = source.metadata(&location)?.dimensions;
+            Ok((location, dimensions))
+        }
+        n => Err(Error::unsupported(
+            format!("a block of an array in {n} external parts"),
+            at.to_string(),
+        )),
+    }
+}
+
+/// The window a part already designates in its dataset, as `(start, count)`
+/// per dataset dimension.
+///
+/// An eml 2.3 `ExternalDataArrayPart` carries a `StartIndex` and a `Count`
+/// (EML TRG 2.3, `ExternalDataArrayPart`): a window in the dataset, and a block
+/// asked of the array is relative to that window. eml 2.1 and 2.2 never carry
+/// one. A one-dimensional count over a dataset of more dimensions is the case
+/// the storage layer reads whole (the whole dataset is meant).
+fn window(
+    location: &energyml_storage::array::ArrayLocation,
+    dimensions: &[i64],
+    at: &str,
+) -> Result<(Vec<u64>, Vec<u64>)> {
+    let dims: Vec<u64> = dimensions.iter().map(|d| (*d).max(0) as u64).collect();
+    if location.count.is_empty() {
+        return Ok((vec![0; dims.len()], dims));
+    }
+    if location.count.len() == dims.len() {
+        let start = if location.start.is_empty() {
+            vec![0; dims.len()]
+        } else if location.start.len() == dims.len() {
+            location.start.iter().map(|s| (*s).max(0) as u64).collect()
+        } else {
+            return Err(Error::unsupported(
+                "a part whose start and count do not match the dataset's rank",
+                at.to_string(),
+            ));
+        };
+        let count = location.count.iter().map(|c| (*c).max(0) as u64).collect();
+        return Ok((start, count));
+    }
+    let total: u64 = dims.iter().product();
+    let sum: i64 = location.count.iter().sum();
+    let whole = location.start.iter().all(|s| *s == 0)
+        && (sum.max(0) as u64 >= total
+            || (location.count.len() == 1 && Some(&location.count[0]) == dimensions.first()));
+    if whole {
+        Ok((vec![0; dims.len()], dims))
+    } else {
+        Err(Error::unsupported(
+            "a part whose start and count do not match the dataset's rank",
+            at.to_string(),
+        ))
+    }
+}
+
+/// A block against the dimensions it is read from: same rank, inside.
+fn check_bounds(block: &Block, dims: &[u64], at: &str) -> Result<()> {
+    if block.start.len() != dims.len() {
+        return Err(Error::unsupported(
+            format!(
+                "a block of rank {} on an array stored with {} dimension(s)",
+                block.start.len(),
+                dims.len()
+            ),
+            at.to_string(),
+        ));
+    }
+    for (k, ((start, count), dim)) in block.start.iter().zip(&block.count).zip(dims).enumerate() {
+        if start.saturating_add(*count) > *dim {
+            return Err(Error::malformed(
+                at,
+                format!("dimension {k}: a block of {count} from {start} where the array holds {dim}"),
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// The dimensions of a lattice, slowest first: `[count + 1, ...]` in the order
+/// of its `Offset`s. `None` for any other form.
+fn lattice_dims(array: &dyn Reflect) -> Option<Vec<u64>> {
+    if !array.type_info().name.ends_with("LatticeArray") {
+        return None;
+    }
+    let counts: Vec<i64> = match array.field("Offset") {
+        Some(FieldValue::List(offsets)) => offsets
+            .iter()
+            .filter_map(|offset| offset.as_object())
+            .map(|offset| scalar_i64(offset, "Count").unwrap_or(0).max(0))
+            .collect(),
+        Some(FieldValue::Object(offset)) => vec![scalar_i64(offset, "Count").unwrap_or(0).max(0)],
+        _ => Vec::new(),
+    };
+    if counts.is_empty() {
+        return Some(vec![1]);
+    }
+    Some(counts.into_iter().map(|c| c as u64 + 1).collect())
+}
+
+/// The block of a flat array of the given dimensions, row-major.
+fn cut(values: &Values, dims: &[u64], block: &Block) -> Values {
+    let rank = dims.len();
+    let mut strides = vec![1usize; rank];
+    for k in (0..rank.saturating_sub(1)).rev() {
+        strides[k] = strides[k + 1] * dims[k + 1] as usize;
+    }
+    let total: u64 = block.count.iter().product();
+    let mut picked: Vec<usize> = Vec::with_capacity(total as usize);
+    if total > 0 {
+        let mut at = vec![0u64; rank];
+        'cells: loop {
+            let linear: usize = (0..rank)
+                .map(|k| (block.start[k] + at[k]) as usize * strides[k])
+                .sum();
+            picked.push(linear);
+            for k in (0..rank).rev() {
+                at[k] += 1;
+                if at[k] < block.count[k] {
+                    continue 'cells;
+                }
+                at[k] = 0;
+            }
+            break;
+        }
+    }
+    gather(values, &picked)
+}
+
+fn gather(values: &Values, picked: &[usize]) -> Values {
+    match values {
+        Values::Floating(v) => Values::Floating(picked.iter().map(|i| v[*i]).collect()),
+        Values::Integer(v) => Values::Integer(picked.iter().map(|i| v[*i]).collect()),
+        Values::Boolean(v) => Values::Boolean(picked.iter().map(|i| v[*i]).collect()),
+        Values::Text(v) => Values::Text(picked.iter().map(|i| v[*i].clone()).collect()),
+    }
+}
+
+/// The block holding elements `first .. first + count`, all their components,
+/// for a property of this shape stored as `layout` says.
+///
+/// Only a property with neither time nor realizations (read the others by
+/// [`slab_block`] and [`read_block`]). When the elements sit on one declared
+/// dimension the block is [`slab_block`]'s; the two other cases are the whole
+/// store flattened, and a first stored dimension that holds all the element
+/// dimensions (with, possibly, their components).
+pub fn element_block(shape: &PropertyShape, layout: &StoredLayout, first: u64, count: u64) -> Result<Block> {
+    if shape.realizations.is_some() || shape.time.is_some() {
+        return Err(Error::unsupported(
+            "an element block of a property with a time or realization dimension: read it with read_block",
+            "",
+        ));
+    }
+    let elements = shape.elements.count();
+    if count == 0 || first.saturating_add(count) > elements {
+        return Err(Error::malformed(
+            "element block",
+            format!("{count} element(s) from {first} where the property holds {elements}"),
+        ));
+    }
+    let element_dims = match &shape.elements {
+        crate::property::shape::ElementAxes::Ordered(dims) => dims.len(),
+        crate::property::shape::ElementAxes::Unordered(_) => 1,
+    };
+    if element_dims == 1 {
+        return Ok(slab_block(shape, layout, &[], first, count, None)?.block);
+    }
+    let per = shape.components.len() as u64;
+    if layout.groups.len() == 1 {
+        return Ok(Block {
+            start: vec![first * per],
+            count: vec![count * per],
+        });
+    }
+    let declared = shape.declared_dims();
+    let head = &layout.groups[0];
+    if element_dims > 1 && head.start == 0 && head.end >= element_dims {
+        let p0: u64 = declared[element_dims..head.end].iter().product();
+        let mut start = vec![0u64; layout.stored.len()];
+        start[0] = first * p0;
+        let mut counts = layout.stored.clone();
+        counts[0] = count * p0;
+        return Ok(Block { start, count: counts });
+    }
+    Err(Error::unsupported("a run of elements over several stored dimensions", ""))
+}
+
+/// A block of stored values, and whether it holds only the components a
+/// narrowed pick reads.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct SlabBlock {
+    /// The block, per stored dimension.
+    pub block: Block,
+    /// `true`: each element row holds `NarrowedPick::shape.len()` values;
+    /// `false`: every component.
+    pub narrowed: bool,
+}
+
+/// The stored block of slabs `first .. first + count` of the first declared
+/// dimension not in `fixed` (`fixed` gives the indices of the slowest declared
+/// dimensions, in order: a realization, then a time step), every faster
+/// dimension whole, or only the components of `components` when each component
+/// dimension has its own stored dimension.
+///
+/// The values read arrive in the order `[slab][faster elements][components
+/// read]` (Usage Guide 2.2 §4.2.2 p. 39: the 1D order is the same whatever the
+/// grouping of the stored dimensions).
+pub fn slab_block(
+    shape: &PropertyShape,
+    layout: &StoredLayout,
+    fixed: &[u64],
+    first: u64,
+    count: u64,
+    components: Option<&NarrowedPick>,
+) -> Result<SlabBlock> {
+    let declared = shape.declared_dims();
+    let p = fixed.len();
+    let component_dims = if shape.components.is_scalar() {
+        0
+    } else {
+        shape.components.rank()
+    };
+    let c0 = declared.len().saturating_sub(component_dims);
+    if p >= c0 {
+        return Err(Error::unsupported(
+            "a slab of components: fix the slower dimensions only",
+            "",
+        ));
+    }
+    for (i, index) in fixed.iter().enumerate() {
+        if *index >= declared[i] {
+            return Err(Error::malformed(
+                "slab block",
+                format!("dimension {i}: index {index} where it holds {}", declared[i]),
+            ));
+        }
+    }
+    if count == 0 {
+        return Err(Error::unsupported("a block of no slab", ""));
+    }
+    if first.saturating_add(count) > declared[p] {
+        return Err(Error::malformed(
+            "slab block",
+            format!(
+                "dimension {p}: {count} slab(s) from {first} where it holds {}",
+                declared[p]
+            ),
+        ));
+    }
+
+    let narrow = components.is_some() && (c0..declared.len()).all(|c| layout.groups.contains(&(c..c + 1)));
+    // The product of the declared dimensions after `i`, inside a group ending at `b`.
+    let stride = |b: usize, i: usize| -> u64 { declared[i + 1..b].iter().product() };
+
+    let mut start: Vec<u64> = Vec::with_capacity(layout.groups.len());
+    let mut counts: Vec<u64> = Vec::with_capacity(layout.groups.len());
+    for (k, group) in layout.groups.iter().enumerate() {
+        let (a, b) = (group.start, group.end);
+        if a == b {
+            start.push(0);
+            counts.push(1);
+        } else if b <= p {
+            start.push((a..b).map(|i| fixed[i] * stride(b, i)).sum());
+            counts.push(1);
+        } else if a <= p {
+            let before: u64 = (a..p).map(|i| fixed[i] * stride(b, i)).sum();
+            start.push(before + first * stride(b, p));
+            counts.push(count * stride(b, p));
+        } else if narrow && b == a + 1 && a >= c0 {
+            let n = components.expect("narrow implies components");
+            start.push(n.start[a - c0]);
+            counts.push(n.count[a - c0]);
+        } else {
+            start.push(0);
+            counts.push(layout.stored[k]);
+        }
+    }
+    Ok(SlabBlock {
+        block: Block { start, count: counts },
+        narrowed: narrow,
+    })
 }
 
 /// A jagged array: rows of differing length, flattened with a cumulative index.

@@ -57,6 +57,25 @@ use crate::error::{Error, Result};
 use crate::source::ArraySource;
 use crate::values::{self, Values};
 
+/// A property read slab by slab, for the statistics.
+pub mod chunks;
+/// Whether two properties are kin: the same quantity along other directions or
+/// times.
+pub mod kinship;
+/// The one reading of the link a column or a property makes to a table
+/// (convention B).
+pub mod link;
+/// What the file says of a property, as typed findings.
+pub mod observe;
+/// The shape of a property's values: components, elements, time, realizations.
+pub mod shape;
+
+/// The one rule "does the count read fit the shape?", kept here under its
+/// first path (`property::count_fit`); it lives in [`shape`].
+pub use shape::{CountFit, count_fit};
+/// The one reading of convention B on a list of facets (see [`link`]).
+pub use link::{QualifierRefusal, qualifier_link};
+
 /// What the values of a property hang on.
 ///
 /// The eml 2.3 list, which is the RESQML 2.0.1 list of 27 plus `triangles` and
@@ -238,6 +257,15 @@ pub struct TimeRef {
     pub use_interval: bool,
 }
 
+/// When a 2.2 property applies, as its `Time` (eml `GeologicTime`) states it.
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
+pub struct Instant {
+    /// `DateTime`, as written (`xsd:dateTime`).
+    pub date_time: String,
+    /// `AgeOffsetAttribute`, when present: a geologic offset in years.
+    pub age_offset: Option<i64>,
+}
+
 /// One qualifier on a property or on a table column - `PropertyKindFacet`.
 ///
 /// The two releases swap the element names, which is why a reader that knows
@@ -368,6 +396,13 @@ pub struct Property<'a> {
     pub has_realization_indices: bool,
     /// Qualifiers.
     pub facets: Vec<Facet>,
+    /// `LabelPerComponent`, linearised like the values (RESQML TRG 2.2 §7.1
+    /// p. 222): empty when the file gives none (always, in 2.0.1, which has no
+    /// such field).
+    pub label_per_component: Vec<String>,
+    /// 2.2 `Time/DateTime`, verbatim: the instant of a property dated on its own
+    /// (not a series). `None` in 2.0.1, which dates by `TimeIndex` (see `time`).
+    pub instant: Option<Instant>,
     /// The value arrays, one per patch.
     pub patches: Vec<Patch<'a>>,
 }
@@ -446,47 +481,6 @@ pub enum Discrepancy {
     },
 }
 
-/// What the count of values read says against the declared shape - the one
-/// rule, for `Property::check`, the scene, and any reader.
-///
-/// RESQML TRG 2.2 §7.1 p. 222: *"The size of the vector is constant on all
-/// elements"*; `ValueCountPerIndexableElement` is the count per element.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum CountFit {
-    /// Exactly `elements x values per element`.
-    Fits,
-    /// Declares several values per element and holds exactly one per element:
-    /// usable as scalars, and the declaration is what is wrong.
-    OnePerElement {
-        /// The count the document declares.
-        declared: u64,
-    },
-    /// Anything else, a zero count included: never lined up.
-    Mismatch {
-        /// `elements x per_element`.
-        expected: u64,
-        /// What was read.
-        actual: u64,
-    },
-}
-
-/// The one rule: `element_count` elements of `per_element` values, against `actual`.
-pub fn count_fit(element_count: u64, per_element: u64, actual: u64) -> CountFit {
-    let expected = element_count.saturating_mul(per_element.max(1));
-    if element_count == 0 || expected == 0 {
-        return CountFit::Mismatch { expected: 0, actual };
-    }
-    if actual == expected {
-        CountFit::Fits
-    } else if per_element > 1 && actual == element_count {
-        CountFit::OnePerElement {
-            declared: per_element,
-        }
-    } else {
-        CountFit::Mismatch { expected, actual }
-    }
-}
-
 impl std::fmt::Display for Discrepancy {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -558,6 +552,8 @@ pub fn read(object: &dyn Reflect) -> Result<Property<'_>> {
         realization: integer(object, "RealizationIndex"),
         has_realization_indices: object.field("RealizationIndices").is_some_and(|f| !f.is_empty()),
         facets: read_facets(object),
+        label_per_component: strings(object, "LabelPerComponent"),
+        instant: read_instant(object),
         patches,
     })
 }
@@ -674,6 +670,17 @@ fn read_time(object: &dyn Reflect) -> Option<TimeRef> {
         index: Some(index),
         series: None,
         use_interval: false,
+    })
+}
+
+/// The 2.2 `Time` of a property, which is an instant and not an index into a
+/// series; `read_time` does not read it.
+fn read_instant(object: &dyn Reflect) -> Option<Instant> {
+    let inner = object.field("Time")?.as_object()?;
+    let date_time = text(inner, "DateTime")?;
+    Some(Instant {
+        date_time,
+        age_offset: signed(inner, "AgeOffsetAttribute"),
     })
 }
 
@@ -1319,6 +1326,29 @@ fn integer(object: &dyn Reflect, field: &str) -> Option<u64> {
         Scalar::Double(v) if v >= 0.0 => Some(v as u64),
         _ => None,
     }
+}
+
+/// A signed integer field.
+fn signed(object: &dyn Reflect, field: &str) -> Option<i64> {
+    match object.field(field)?.as_scalar()? {
+        Scalar::Int(v) => Some(v),
+        Scalar::UInt(v) => i64::try_from(v).ok(),
+        _ => None,
+    }
+}
+
+/// The strings of a field, in document order (any other scalar by its text).
+fn strings(object: &dyn Reflect, field: &str) -> Vec<String> {
+    let Some(value) = object.field(field) else {
+        return Vec::new();
+    };
+    flatten(value)
+        .into_iter()
+        .filter_map(|item| match item.as_scalar()? {
+            Scalar::Str(s) => Some(s.to_string()),
+            other => Some(other.to_string()),
+        })
+        .collect()
 }
 
 fn integers(object: &dyn Reflect, field: &str) -> Vec<u64> {
