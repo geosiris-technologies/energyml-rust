@@ -179,7 +179,7 @@ fn bag(geometry: Geometry, qualified_type: &str, from: &Known, to: &Known) -> Pi
         .with(
             "shape",
             Source::Shape {
-                geometry,
+                geometry: Arc::new(geometry),
                 closed: None,
             },
         )

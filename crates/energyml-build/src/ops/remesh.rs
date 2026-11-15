@@ -30,6 +30,7 @@
 //!   TODO(reference): verify - cite the underlying references (as documented by the `spade` crate) once checked.
 
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
+use std::sync::Arc;
 
 use crate::declare::{Inputs, Shape, Suggestions};
 use crate::operation::{About, Category, Context, Operation, Plan, Refusal, Slot};
@@ -112,7 +113,7 @@ impl Operation for Remesh {
         // not to see in order to agree to decide.
         let cloud = Shape {
             name: "shape".to_string(),
-            geometry: Geometry {
+            geometry: Arc::new(Geometry {
                 kind: "remesh",
                 patches: vec![Patch {
                     index: 0,
@@ -121,7 +122,7 @@ impl Operation for Remesh {
                     topology: Topology::Points,
                     closed: Vec::new(),
                 }],
-            },
+            }),
             closed: None,
             known: inputs.shape.known.clone(),
         };

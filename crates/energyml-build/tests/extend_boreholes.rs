@@ -7,6 +7,7 @@
 //! at coordinates near the reference model's own (x ≈ 651 000, y ≈ 6 861 000).
 
 use serde_json::{Value, json};
+use std::sync::Arc;
 
 use energyml_build::operation::{Choices, Identity, Numbers, Plan, Registry, When};
 use energyml_build::pieces::{Known, Pieces, Ref, Source};
@@ -108,7 +109,7 @@ fn frame_in_unit(
         .with(
             "frames",
             Source::Shape {
-                geometry,
+                geometry: Arc::new(geometry),
                 closed: None,
             },
         )

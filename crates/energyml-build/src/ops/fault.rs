@@ -99,6 +99,7 @@
 //!   TODO(reference): verify - both citations are given without title, venue or DOI; complete and check them.
 
 use serde_json::json;
+use std::sync::Arc;
 
 use energyml_analysis::fault_sticks::{self, Orientation};
 use energyml_analysis::loft::{LoftLine, loft};
@@ -719,10 +720,10 @@ impl Operation for FaultFromSticks {
         };
         let surface = Shape {
             name: title.clone(),
-            geometry: Geometry {
+            geometry: Arc::new(Geometry {
                 kind: "fault",
                 patches: made,
-            },
+            }),
             closed: None,
             known: None,
         };
@@ -865,7 +866,7 @@ impl Operation for FaultFromSticks {
                 .collect();
             let lines = Shape {
                 name: format!("{title} - sticks"),
-                geometry: Geometry {
+                geometry: Arc::new(Geometry {
                     kind: "sticks",
                     patches: vec![Patch {
                         index: 0,
@@ -877,7 +878,7 @@ impl Operation for FaultFromSticks {
                         topology: Topology::Polylines(runs.clone()),
                         closed: vec![false; runs.len()],
                     }],
-                },
+                }),
                 closed: None,
                 known: None,
             };

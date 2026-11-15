@@ -97,7 +97,7 @@ fn pieces() -> Pieces {
         ..Known::default()
     };
     let shape = Source::Shape {
-        geometry: Geometry {
+        geometry: std::sync::Arc::new(Geometry {
             kind: "polyline",
             patches: vec![Patch {
                 index: 0,
@@ -106,7 +106,7 @@ fn pieces() -> Pieces {
                 topology: Topology::Polylines(vec![MDS.len() as u32]),
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     };
     Pieces::empty()

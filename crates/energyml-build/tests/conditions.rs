@@ -13,6 +13,7 @@ use energyml_build::operation::{Applies, Category, Choices, Identity, Need, Purp
 use energyml_build::pieces::{Known, Pieces, Ref, Source};
 use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
+use std::sync::Arc;
 
 fn when() -> When {
     When {
@@ -30,7 +31,7 @@ fn samples() -> Pieces {
         .with(
             "shape",
             Source::Shape {
-                geometry: Geometry {
+                geometry: Arc::new(Geometry {
                     kind: "cloud",
                     patches: vec![Patch {
                         index: 0,
@@ -39,7 +40,7 @@ fn samples() -> Pieces {
                         topology: Topology::Points,
                         closed: Vec::new(),
                     }],
-                },
+                }),
                 closed: None,
             },
         )

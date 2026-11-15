@@ -25,6 +25,7 @@
 //! `differs` assertions are what keep them from passing on an empty comparison.
 
 use serde_json::{Value, json};
+use std::sync::Arc;
 
 use energyml_build::operation::{Choices, Identity, NewObject, Plan, Registry, When};
 use energyml_build::pieces::{Known, Pieces, Ref, Source};
@@ -129,7 +130,7 @@ fn vertical_frame(title: &str, mds: &[f64]) -> Pieces {
         .with(
             "frames",
             Source::Shape {
-                geometry,
+                geometry: Arc::new(geometry),
                 closed: None,
             },
         )

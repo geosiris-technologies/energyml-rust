@@ -246,7 +246,7 @@ impl Operation for SigeolBoreholes {
         let mut features = 0usize;
         let mut boreholes = 0usize;
         for collection in &inputs.features {
-            for feature in &collection.features {
+            for feature in collection.features.iter() {
                 features += 1;
                 if borehole::is_borehole(&feature.properties) {
                     boreholes += 1;
@@ -343,7 +343,7 @@ impl Operation for SigeolBoreholes {
             if source.is_empty() {
                 source = collection.file.clone();
             }
-            for feature in &collection.features {
+            for feature in collection.features.iter() {
                 if !borehole::is_borehole(&feature.properties) {
                     aside.add(
                         "not a `Borehole`: the feature is of another kind",

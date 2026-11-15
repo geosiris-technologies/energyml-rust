@@ -10,6 +10,7 @@
 //! What each one needs to break is said on each.
 
 use serde_json::{Value, json};
+use std::sync::Arc;
 
 use energyml_build::geojson;
 use energyml_build::operation::{Choices, Identity, Plan, Registry, When};
@@ -64,7 +65,7 @@ fn files(named: &[(&str, Vec<geojson::Feature>)]) -> Pieces {
             format!("export{at}"),
             Source::Features {
                 name: (*name).into(),
-                features: items.clone(),
+                features: Arc::new(items.clone()),
             },
         );
     }
@@ -311,7 +312,7 @@ fn imported(passes: &[(f64, f64)]) -> Plan {
         "features",
         Source::Features {
             name: "Borehole.json".into(),
-            features: read.features,
+            features: Arc::new(read.features),
         },
     );
     Registry::new()
@@ -426,7 +427,7 @@ fn enrich(csv: &str, known: Known) -> Plan {
             "table",
             Source::Table {
                 name: "passes.csv".into(),
-                table,
+                table: Arc::new(table),
                 template: osdu::from_json(&template).expect("a template"),
             },
         )

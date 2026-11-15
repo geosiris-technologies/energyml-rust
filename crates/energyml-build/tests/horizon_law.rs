@@ -21,6 +21,7 @@
 //! the object after something other than what it is.
 
 use serde_json::json;
+use std::sync::Arc;
 
 use energyml_build::operation::{Choices, Fitness, Identity, Numbers, Plan, Registry, When};
 use energyml_build::pieces::{Known, Pieces, Ref, Source};
@@ -108,7 +109,7 @@ fn reference(z: impl Fn(f64, f64) -> f64, up: bool) -> Pieces {
         .with(
             "reference",
             Source::Shape {
-                geometry: lattice(z),
+                geometry: Arc::new(lattice(z)),
                 closed: None,
             },
         )
@@ -139,7 +140,7 @@ fn with_cut(pieces: Pieces, cut: Geometry, up: bool) -> Pieces {
         .with(
             "cuts",
             Source::Shape {
-                geometry: cut,
+                geometry: Arc::new(cut),
                 closed: None,
             },
         )
@@ -503,7 +504,7 @@ fn a_reference_that_is_not_a_grid_is_refused_at_the_offer() {
     let pieces = Pieces::empty().with(
         "reference",
         Source::Shape {
-            geometry: cloud,
+            geometry: Arc::new(cloud),
             closed: None,
         },
     );
@@ -548,7 +549,7 @@ fn a_single_frame_that_of_the_reference() {
         .with(
             "cuts",
             Source::Shape {
-                geometry: plate(990.0, 1060.0, |_| -20.0),
+                geometry: Arc::new(plate(990.0, 1060.0, |_| -20.0)),
                 closed: None,
             },
         )
@@ -563,7 +564,7 @@ fn a_single_frame_that_of_the_reference() {
         .with(
             "cuts",
             Source::Shape {
-                geometry: plate(990.0, 1060.0, |_| -20.0),
+                geometry: Arc::new(plate(990.0, 1060.0, |_| -20.0)),
                 closed: None,
             },
         )
@@ -585,7 +586,7 @@ fn a_single_frame_that_of_the_reference() {
         .with(
             "reference",
             Source::Shape {
-                geometry: lattice(dipping),
+                geometry: Arc::new(lattice(dipping)),
                 closed: None,
             },
         )
@@ -629,7 +630,7 @@ fn what_is_not_a_law_is_not_laid() {
         .with(
             "reference",
             Source::Shape {
-                geometry: moved,
+                geometry: Arc::new(moved),
                 closed: None,
             },
         )

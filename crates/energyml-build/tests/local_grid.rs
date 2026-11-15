@@ -194,7 +194,7 @@ fn bag_of(geometry: Geometry) -> Pieces {
         .with(
             "parent",
             Source::Shape {
-                geometry,
+                geometry: std::sync::Arc::new(geometry),
                 closed: None,
             },
         )

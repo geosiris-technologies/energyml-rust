@@ -141,7 +141,7 @@ fn lines_of(
     }
     if let Some(collection) = &inputs.features {
         let mut group = Vec::new();
-        for feature in &collection.features {
+        for feature in collection.features.iter() {
             let said = match feature.shape {
                 Shape::Lines => Some(false),
                 Shape::Areas => Some(true),
@@ -244,8 +244,12 @@ impl Operation for Polylines {
         // `intersect`), already in the frame, which nothing may move again.
         let frame = support::frame_in(&cx.known(), &params.written.frame, cx.identity, cx.when, &mut 0)?;
         for shape in &mut inputs.shape {
-            shape.geometry =
-                support::geometry_placed(&shape.name, &shape.geometry, shape.known.as_ref(), &frame)?;
+            shape.geometry = std::sync::Arc::new(support::geometry_placed(
+                &shape.name,
+                &shape.geometry,
+                shape.known.as_ref(),
+                &frame,
+            )?);
         }
         let seed = cx.seed(&params.written.naming.title());
         write(&inputs, &params.written, params.closed, &seed, cx)

@@ -11,6 +11,7 @@
 //! in the grid; measuring in degrees; adding metres and feet.
 
 use serde_json::json;
+use std::sync::Arc;
 
 use energyml_build::operation::{Choices, Identity, Numbers, Plan, Registry, When};
 use energyml_build::pieces::{Known, Pieces, Ref, Source};
@@ -67,7 +68,7 @@ fn bag(topology: Topology, points: Vec<[f64; 3]>, closed: Vec<bool>, known: Know
         .with(
             "shape",
             Source::Shape {
-                geometry: Geometry {
+                geometry: Arc::new(Geometry {
                     kind: "x",
                     patches: vec![Patch {
                         index: 0,
@@ -76,7 +77,7 @@ fn bag(topology: Topology, points: Vec<[f64; 3]>, closed: Vec<bool>, known: Know
                         topology,
                         closed,
                     }],
-                },
+                }),
                 closed: None,
             },
         )

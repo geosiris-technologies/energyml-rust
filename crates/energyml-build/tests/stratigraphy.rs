@@ -617,7 +617,7 @@ fn bag(text: &str) -> Pieces {
         "table",
         Source::Table {
             name: "essai.csv".into(),
-            table,
+            table: Arc::new(table),
             template,
         },
     )
@@ -721,7 +721,7 @@ fn a_mapping_without_passes_is_refused_towards_the_top_depth() {
         "table",
         Source::Table {
             name: "essai.csv".into(),
-            table,
+            table: Arc::new(table),
             template: osdu::from_json(&columns).expect("a template"),
         },
     );

@@ -38,7 +38,7 @@ fn bag_in(points: Vec<[f64; 3]>, vertical_up: Option<bool>, with_vertical_crs: b
         .with(
             "path",
             Source::Shape {
-                geometry: Geometry {
+                geometry: std::sync::Arc::new(Geometry {
                     kind: "polyline",
                     patches: vec![Patch {
                         index: 0,
@@ -47,7 +47,7 @@ fn bag_in(points: Vec<[f64; 3]>, vertical_up: Option<bool>, with_vertical_crs: b
                         topology: Topology::Polylines(vec![n]),
                         closed: Vec::new(),
                     }],
-                },
+                }),
                 closed: None,
             },
         )
@@ -542,7 +542,7 @@ fn a_wellbore_in_degrees_is_refused_naming_what_to_set() {
         "well.geojson",
         Source::Features {
             name: "well.geojson".into(),
-            features: collection.features,
+            features: std::sync::Arc::new(collection.features),
         },
     );
     let why = Registry::new()
@@ -636,7 +636,7 @@ fn two_polylines_or_a_surface_are_refused_by_name() {
     let two = Pieces::empty().with(
         "two",
         Source::Shape {
-            geometry: Geometry {
+            geometry: std::sync::Arc::new(Geometry {
                 kind: "x",
                 patches: vec![Patch {
                     index: 0,
@@ -645,7 +645,7 @@ fn two_polylines_or_a_surface_are_refused_by_name() {
                     topology: Topology::Polylines(vec![2, 2]),
                     closed: Vec::new(),
                 }],
-            },
+            }),
             closed: None,
         },
     );
@@ -663,7 +663,7 @@ fn two_polylines_or_a_surface_are_refused_by_name() {
     let surface = Pieces::empty().with(
         "s",
         Source::Shape {
-            geometry: Geometry {
+            geometry: std::sync::Arc::new(Geometry {
                 kind: "x",
                 patches: vec![Patch {
                     index: 0,
@@ -672,7 +672,7 @@ fn two_polylines_or_a_surface_are_refused_by_name() {
                     topology: Topology::Triangles(vec![[0, 1, 2]]),
                     closed: Vec::new(),
                 }],
-            },
+            }),
             closed: None,
         },
     );
@@ -700,7 +700,7 @@ fn a_geojson_line_makes_a_well_in_a_crs_created_here() {
         "well.geojson",
         Source::Features {
             name: "well.geojson".into(),
-            features: collection.features,
+            features: std::sync::Arc::new(collection.features),
         },
     );
     let plan = Registry::new()
@@ -765,7 +765,7 @@ fn read_back(line: &str, ground: f64, tag: &str) -> (Vec<[f64; 3]>, Vec<[f64; 3]
         "well.geojson",
         Source::Features {
             name: "well.geojson".into(),
-            features: collection.features,
+            features: std::sync::Arc::new(collection.features),
         },
     );
     let plan = Registry::new()

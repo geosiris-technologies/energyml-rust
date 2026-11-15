@@ -113,7 +113,7 @@ fn slope() -> Source {
         [651_000.0, 6_862_000.0, 40.0],
     ];
     Source::Shape {
-        geometry: Geometry {
+        geometry: std::sync::Arc::new(Geometry {
             kind: "triangles",
             patches: vec![Patch {
                 index: 0,
@@ -122,7 +122,7 @@ fn slope() -> Source {
                 topology: Topology::Triangles(vec![[0, 1, 2], [0, 2, 3]]),
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     }
 }
@@ -565,7 +565,7 @@ fn parent(bent: bool) -> Pieces {
         .with(
             "parent",
             Source::Shape {
-                geometry: Geometry {
+                geometry: std::sync::Arc::new(Geometry {
                     kind: "polyline",
                     patches: vec![Patch {
                         index: 0,
@@ -574,7 +574,7 @@ fn parent(bent: bool) -> Pieces {
                         topology: Topology::Polylines(vec![count]),
                         closed: Vec::new(),
                     }],
-                },
+                }),
                 closed: None,
             },
         )

@@ -9,6 +9,7 @@
 use energyml_build::operation::{AnyOperation, Choices, Fitness, Identity, Registry, When};
 use energyml_build::pieces::{Pieces, Source};
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
+use std::sync::Arc;
 
 fn when() -> When {
     When {
@@ -25,7 +26,7 @@ fn operation() -> &'static dyn AnyOperation {
 
 fn surface(kind: &'static str, points: Vec<[f64; 3]>, triangles: Vec<[u32; 3]>) -> Source {
     Source::Shape {
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind,
             patches: vec![Patch {
                 index: 0,
@@ -34,7 +35,7 @@ fn surface(kind: &'static str, points: Vec<[f64; 3]>, triangles: Vec<[u32; 3]>) 
                 topology: Topology::Triangles(triangles),
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     }
 }

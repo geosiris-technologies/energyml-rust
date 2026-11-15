@@ -24,6 +24,7 @@
 use energyml_analysis::Heights;
 use energyml_analysis::project::{Onto, project};
 use energyml_geometry::geometry::{Geometry, Patch};
+use std::sync::Arc;
 
 use crate::declare::{Inputs, Params, Shape, Suggestions};
 use crate::operation::{About, Category, Context, Need, Note, Operation, Plan, Refusal, Slot};
@@ -220,10 +221,10 @@ impl Operation for Project {
             .collect();
         let result = Shape {
             name: shape.name.clone(),
-            geometry: Geometry {
+            geometry: Arc::new(Geometry {
                 kind: "project",
                 patches,
-            },
+            }),
             closed: shape.closed.clone(),
             known: shape.known.clone(),
         };

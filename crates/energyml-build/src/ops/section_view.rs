@@ -76,6 +76,7 @@
 use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 use energyml_section::model::SectionKey;
+use std::sync::Arc;
 
 use super::attach::{Attach, AttachInputs, AttachParams, Form};
 use super::media::Document;
@@ -904,7 +905,7 @@ impl Operation for SectionView {
         let frame = support::frame_in(&cx.known(), &written.frame, cx.identity, cx.when, &mut 0)?;
         let shape = Shape {
             name: inputs.svg.name.clone(),
-            geometry: support::geometry_placed(
+            geometry: Arc::new(support::geometry_placed(
                 &inputs.svg.name,
                 &Geometry {
                     kind: "polylines",
@@ -912,7 +913,7 @@ impl Operation for SectionView {
                 },
                 None,
                 &frame,
-            )?,
+            )?),
             closed: None,
             known: None,
         };

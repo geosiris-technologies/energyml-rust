@@ -246,7 +246,7 @@ fn bag_with(faults: &[(&str, Geometry)], fault_frame: &Ref) -> Pieces {
             .with(
                 slot_name("horizons", rank),
                 Source::Shape {
-                    geometry,
+                    geometry: std::sync::Arc::new(geometry),
                     closed: None,
                 },
             )
@@ -265,7 +265,7 @@ fn bag_with(faults: &[(&str, Geometry)], fault_frame: &Ref) -> Pieces {
             .with(
                 slot_name("faults", rank),
                 Source::Shape {
-                    geometry: geometry.clone(),
+                    geometry: std::sync::Arc::new(geometry.clone()),
                     closed: None,
                 },
             )
@@ -815,7 +815,7 @@ fn the_reader_draws_the_split_nodes_and_not_the_removed_cells() {
         pieces = pieces.with(
             slot_name("horizons", rank),
             Source::Shape {
-                geometry,
+                geometry: std::sync::Arc::new(geometry),
                 closed: None,
             },
         );
@@ -824,7 +824,7 @@ fn the_reader_draws_the_split_nodes_and_not_the_removed_cells() {
         pieces = pieces.with(
             slot_name("faults", rank),
             Source::Shape {
-                geometry,
+                geometry: std::sync::Arc::new(geometry),
                 closed: None,
             },
         );

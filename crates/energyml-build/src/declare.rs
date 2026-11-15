@@ -16,6 +16,8 @@
 //! - [`Input`], [`InputParam`], [`Inputs`] - the same for what an operation
 //!   **takes**, and [`Binder`], the one place that knows how pieces are named.
 
+use std::sync::Arc;
+
 use energyml_domain::color::Hsv;
 use energyml_geometry::geometry::Geometry;
 
@@ -626,8 +628,10 @@ macro_rules! input_param {
 pub struct Shape {
     /// Its name in the bag.
     pub name: String,
-    /// The patches.
-    pub geometry: Geometry,
+    /// The patches. Shared with the bag the shape was bound from: binding
+    /// never copies the points, and two slots bound to one entry hold the
+    /// same allocation. An operation that changes them clones them itself.
+    pub geometry: Arc<Geometry>,
     /// The closure of its polylines, when the producer said.
     pub closed: Option<Vec<bool>>,
     /// What is known of the object it came from.
@@ -654,7 +658,7 @@ impl Input for Shape {
         match piece.source {
             Source::Shape { geometry, closed } => Ok(Shape {
                 name: piece.name.to_string(),
-                geometry: geometry.clone(),
+                geometry: Arc::clone(geometry),
                 closed: closed.clone(),
                 known: piece.known.cloned(),
             }),
@@ -674,8 +678,8 @@ pub struct Features {
     pub name: String,
     /// The file it came from, for a suggested stage or title.
     pub file: String,
-    /// The features, in the producer's order.
-    pub features: Vec<Feature>,
+    /// The features, in the producer's order. Shared with the bag.
+    pub features: Arc<Vec<Feature>>,
 }
 
 impl Input for Features {
@@ -685,7 +689,7 @@ impl Input for Features {
             Source::Features { name, features } => Ok(Features {
                 name: piece.name.to_string(),
                 file: name.clone(),
-                features: features.clone(),
+                features: Arc::clone(features),
             }),
             other => Err(format!(
                 "`{}` is {}, and features are wanted",
@@ -703,8 +707,8 @@ pub struct TableIn {
     pub name: String,
     /// The file it comes from.
     pub file: String,
-    /// The rows.
-    pub table: crate::tabular::Table,
+    /// The rows. Shared with the bag.
+    pub table: Arc<crate::tabular::Table>,
     /// What its columns mean.
     pub template: crate::osdu::Template,
 }
@@ -720,7 +724,7 @@ impl Input for TableIn {
             } => Ok(TableIn {
                 name: piece.name.to_string(),
                 file: name.clone(),
-                table: table.clone(),
+                table: Arc::clone(table),
                 template: template.clone(),
             }),
             other => Err(format!(

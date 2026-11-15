@@ -112,8 +112,12 @@ impl Operation for Triangles {
         // `cross-section`), already in the frame, which nothing may move again.
         let frame = support::frame_in(&cx.known(), &params.written.frame, cx.identity, cx.when, &mut 0)?;
         for shape in &mut inputs.shape {
-            shape.geometry =
-                support::geometry_placed(&shape.name, &shape.geometry, shape.known.as_ref(), &frame)?;
+            shape.geometry = std::sync::Arc::new(support::geometry_placed(
+                &shape.name,
+                &shape.geometry,
+                shape.known.as_ref(),
+                &frame,
+            )?);
         }
         let seed = cx.seed(&params.written.naming.title());
         write(&inputs, &params.written, &seed, cx)

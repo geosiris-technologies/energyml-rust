@@ -169,7 +169,7 @@ fn bag_in(horizons: &[(&str, Geometry)], frame: &Ref, up: bool) -> Pieces {
             .with(
                 slot_name(rank),
                 Source::Shape {
-                    geometry: geometry.clone(),
+                    geometry: std::sync::Arc::new(geometry.clone()),
                     closed: None,
                 },
             )
@@ -773,7 +773,7 @@ fn the_grid_is_in_the_frame_of_its_horizons_or_refused() {
             .with(
                 slot_name(rank),
                 Source::Shape {
-                    geometry: geometry.clone(),
+                    geometry: std::sync::Arc::new(geometry.clone()),
                     closed: None,
                 },
             )
@@ -795,7 +795,7 @@ fn the_grid_is_in_the_frame_of_its_horizons_or_refused() {
             .with(
                 slot_name(rank),
                 Source::Shape {
-                    geometry: geometry.clone(),
+                    geometry: std::sync::Arc::new(geometry.clone()),
                     closed: None,
                 },
             )
@@ -841,7 +841,7 @@ fn the_geometry_reader_reads_the_nodes_and_the_cells_planned() {
         pieces = pieces.with(
             slot_name(rank),
             Source::Shape {
-                geometry: geometry.clone(),
+                geometry: std::sync::Arc::new(geometry.clone()),
                 closed: None,
             },
         );

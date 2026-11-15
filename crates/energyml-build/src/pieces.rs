@@ -16,6 +16,8 @@
 //! store, does the looking. This is what keeps `plan()` pure and testable
 //! without a package, the rule every deciding module of the workspace follows.
 
+use std::sync::Arc;
+
 use energyml_domain::color::Hsv;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 
@@ -380,7 +382,11 @@ pub enum Source {
     /// artefact of the scene.
     Shape {
         /// The patches and their topology.
-        geometry: Geometry,
+        ///
+        /// Shared: binding the entry to a slot, or to several, hands out the
+        /// same allocation and never copies the points. An operation that has
+        /// to change them clones them itself (`Arc::unwrap_or_clone`).
+        geometry: Arc<Geometry>,
         /// Whether each polyline is closed, when the producer knows.
         ///
         /// RESQML states closure in a separate boolean array, and
@@ -396,8 +402,8 @@ pub enum Source {
     Features {
         /// Where they came from - a file name - for a suggested stage or title.
         name: String,
-        /// The features, in the producer's order.
-        features: Vec<Feature>,
+        /// The features, in the producer's order. Shared like a shape's geometry.
+        features: Arc<Vec<Feature>>,
     },
     /// A scalar field laid over a named piece of the bag.
     Field {
@@ -426,8 +432,8 @@ pub enum Source {
     Table {
         /// Where it comes from - a file name.
         name: String,
-        /// The rows, as the lexer read them.
-        table: crate::tabular::Table,
+        /// The rows, as the lexer read them. Shared like a shape's geometry.
+        table: Arc<crate::tabular::Table>,
         /// What its columns mean.
         template: crate::osdu::Template,
     },
@@ -475,7 +481,7 @@ impl Source {
                 }
                 let points = geometry.nodes_at(ranks)?;
                 Ok(Source::Shape {
-                    geometry: Geometry {
+                    geometry: Arc::new(Geometry {
                         kind: "nodes",
                         patches: vec![Patch {
                             index: 0,
@@ -484,7 +490,7 @@ impl Source {
                             topology: Topology::Points,
                             closed: Vec::new(),
                         }],
-                    },
+                    }),
                     closed: None,
                 })
             }
@@ -574,7 +580,7 @@ impl Pieces {
                 name,
                 table,
                 template,
-            } => Some((n.as_str(), name.as_str(), table, template)),
+            } => Some((n.as_str(), name.as_str(), &**table, template)),
             _ => None,
         })
     }
@@ -582,7 +588,7 @@ impl Pieces {
     /// The shapes in the bag: `(piece name, geometry, closed)`.
     pub fn shapes(&self) -> impl Iterator<Item = (&str, &Geometry, Option<&[bool]>)> {
         self.entries.iter().filter_map(|(n, s)| match s {
-            Source::Shape { geometry, closed } => Some((n.as_str(), geometry, closed.as_deref())),
+            Source::Shape { geometry, closed } => Some((n.as_str(), &**geometry, closed.as_deref())),
             _ => None,
         })
     }

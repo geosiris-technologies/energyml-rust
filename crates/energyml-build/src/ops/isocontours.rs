@@ -53,6 +53,7 @@ use energyml_domain::color::{self, Decorated, Scaling};
 use energyml_domain::provenance::Parameter;
 use energyml_eml_2_3 as eml;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
+use std::sync::Arc;
 
 use crate::declare::{
     Field as FieldIn, Inputs, ObjectIn, Params, PropertyKindRef, Ramp, Shape, Suggestions, Title,
@@ -304,7 +305,7 @@ impl Operation for Isocontours {
         let shape = Shape {
             name: name.clone(),
             known: None,
-            geometry: Geometry {
+            geometry: Arc::new(Geometry {
                 kind: "isocontours",
                 patches: vec![Patch {
                     index: 0,
@@ -313,7 +314,7 @@ impl Operation for Isocontours {
                     topology: Topology::Polylines(runs),
                     closed: Vec::new(),
                 }],
-            },
+            }),
             // **Closure comes from the chaining, never from a choice.** A contour
             // line that goes round a dome is closed, one that leaves
             // through the edge is not, and both are in the same set.

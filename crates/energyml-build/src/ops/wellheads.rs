@@ -55,6 +55,7 @@
 use crate::declare::{Epsg, Inputs, Params, Shape, Suggestions};
 use crate::operation::{About, Category, Context, Note, Operation, Output, Plan, Refusal};
 use crate::pieces::Pieces;
+use std::sync::Arc;
 
 use super::pointset::{Pointset, PointsetInputs, PointsetParams};
 use super::written::{FrameParams, Written};
@@ -249,7 +250,7 @@ impl Operation for Wellheads {
         // The scattering, and the writing delegated to `pointset` by its typed door.
         let semis = Shape {
             name: "wellheads".to_string(),
-            geometry: energyml_geometry::geometry::Geometry {
+            geometry: Arc::new(energyml_geometry::geometry::Geometry {
                 kind: "wellheads",
                 patches: vec![energyml_geometry::geometry::Patch {
                     index: 0,
@@ -258,7 +259,7 @@ impl Operation for Wellheads {
                     topology: energyml_geometry::geometry::Topology::Points,
                     closed: Vec::new(),
                 }],
-            },
+            }),
             closed: None,
             // What `pointset` reads of an input object - the frame, what is
             // represented - is that of the boreholes, and it is the same for all:

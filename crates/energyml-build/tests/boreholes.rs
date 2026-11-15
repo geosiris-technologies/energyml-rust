@@ -97,7 +97,7 @@ fn pieces_of(text: &str) -> Pieces {
         "features",
         Source::Features {
             name: "Borehole_indent.json".into(),
-            features: read.features,
+            features: std::sync::Arc::new(read.features),
         },
     )
 }
@@ -166,7 +166,7 @@ fn a_borehole_import_into_degrees_is_refused_by_name() {
                 features: vec![energyml_build::declare::Features {
                     name: "features".into(),
                     file: "Borehole_indent.json".into(),
-                    features: collection.features,
+                    features: std::sync::Arc::new(collection.features),
                 }],
             },
             energyml_build::ops::sigeol_boreholes::BoreholeParams {

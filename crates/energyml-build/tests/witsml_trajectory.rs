@@ -309,7 +309,7 @@ fn frame_of(hole: &Hole, frame: Frame) -> (Source, Known) {
     let points: Vec<[f64; 3]> = hole.nodes.iter().map(|(_, at)| frame.local(*at)).collect();
     let count = points.len() as u32;
     let shape = Source::Shape {
-        geometry: Geometry {
+        geometry: std::sync::Arc::new(Geometry {
             kind: "polyline",
             patches: vec![Patch {
                 index: 0,
@@ -318,7 +318,7 @@ fn frame_of(hole: &Hole, frame: Frame) -> (Source, Known) {
                 topology: Topology::Polylines(vec![count]),
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     };
     let known = Known {

@@ -12,11 +12,12 @@ use energyml_build::ops::blocks;
 use energyml_build::pieces::{Known, Ref};
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 use serde_json::{Value, json};
+use std::sync::Arc;
 
 fn shape(name: &str, title: Option<&str>, points: Vec<[f64; 3]>) -> Shape {
     Shape {
         name: name.to_string(),
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind: "test",
             patches: vec![Patch {
                 index: 0,
@@ -25,7 +26,7 @@ fn shape(name: &str, title: Option<&str>, points: Vec<[f64; 3]>) -> Shape {
                 topology: Topology::Points,
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
         known: title.map(|title| Known {
             reference: Some(Ref::new("u", "resqml22.PointSetRepresentation", title)),
@@ -166,13 +167,13 @@ fn a_ring_of_several_runs_is_refused_not_flattened() {
             [2.0, 2.0, 0.0],
         ],
     );
-    two_runs.geometry.patches[0].topology = Topology::Polylines(vec![3, 3]);
+    Arc::make_mut(&mut two_runs.geometry).patches[0].topology = Topology::Polylines(vec![3, 3]);
     let why = blocks::ring_corners("outer", &two_runs).expect_err("two runs");
     assert_eq!(why.slot.as_deref(), Some("outer"));
     assert!(why.message.contains("2 polyline runs"), "{}", why.message);
 
     // One run in one polyline stays a ring.
     let mut one_run = two_runs.clone();
-    one_run.geometry.patches[0].topology = Topology::Polylines(vec![6]);
+    Arc::make_mut(&mut one_run.geometry).patches[0].topology = Topology::Polylines(vec![6]);
     assert!(blocks::ring_corners("outer", &one_run).is_ok());
 }

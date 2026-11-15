@@ -82,6 +82,7 @@
 //!   TODO(reference): verify - no publication is cited; if the law follows one, add it (authors, year, title, venue, DOI) once checked.
 
 use serde_json::json;
+use std::sync::Arc;
 
 use energyml_analysis::fault_throw::{self, Fault, Sense, Settings, TearError};
 use energyml_domain::provenance::Parameter;
@@ -466,7 +467,7 @@ impl Operation for FaultThrow {
         };
         let surface = Shape {
             name: title.clone(),
-            geometry: Geometry {
+            geometry: Arc::new(Geometry {
                 kind: "fault-throw",
                 patches: vec![Patch {
                     index: 0,
@@ -475,7 +476,7 @@ impl Operation for FaultThrow {
                     topology: Topology::Triangles(torn.triangles.clone()),
                     closed: Vec::new(),
                 }],
-            },
+            }),
             closed: None,
             known: None,
         };
@@ -646,10 +647,10 @@ impl Operation for FaultThrow {
         }
         let lips = Shape {
             name: format!("{title} - lips"),
-            geometry: Geometry {
+            geometry: Arc::new(Geometry {
                 kind: "lips",
                 patches,
-            },
+            }),
             closed: None,
             known: None,
         };

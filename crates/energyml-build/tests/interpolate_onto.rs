@@ -20,6 +20,7 @@
 //! node out of reach; moving the uuid of a grid written without `onto`.
 
 use serde_json::{Value, json};
+use std::sync::Arc;
 
 use energyml_build::operation::{Applies, Choices, Identity, Numbers, Plan, Registry, When};
 use energyml_build::pieces::{Known, Pieces, Ref, Source};
@@ -128,7 +129,7 @@ fn bag(samples: Geometry, samples_frame: &Ref, onto: Option<(Geometry, &Ref)>) -
         .with(
             "shape",
             Source::Shape {
-                geometry: samples,
+                geometry: Arc::new(samples),
                 closed: None,
             },
         )
@@ -146,7 +147,7 @@ fn bag(samples: Geometry, samples_frame: &Ref, onto: Option<(Geometry, &Ref)>) -
             .with(
                 "onto",
                 Source::Shape {
-                    geometry: grid,
+                    geometry: Arc::new(grid),
                     closed: None,
                 },
             )
@@ -355,14 +356,14 @@ fn a_grid_in_another_frame_is_refused_naming_both() {
         .with(
             "shape",
             Source::Shape {
-                geometry: samples.clone(),
+                geometry: Arc::new(samples.clone()),
                 closed: None,
             },
         )
         .with(
             "onto",
             Source::Shape {
-                geometry: ground(),
+                geometry: Arc::new(ground()),
                 closed: None,
             },
         )

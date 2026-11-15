@@ -60,7 +60,7 @@ fn bag_named(name: &str, text: &str, template: &Value) -> Pieces {
         "table",
         Source::Table {
             name: name.into(),
-            table,
+            table: std::sync::Arc::new(table),
             template,
         },
     )
@@ -425,7 +425,7 @@ F1,2.3,48.9,120,25
                 table: vec![TableIn {
                     name: "table".into(),
                     file: "essai.csv".into(),
-                    table,
+                    table: std::sync::Arc::new(table),
                     template,
                 }],
                 wells: Vec::new(),
@@ -1192,10 +1192,10 @@ F1,650000,6800000,120,26.16
         .with(
             "wells",
             Source::Shape {
-                geometry: energyml_geometry::Geometry {
+                geometry: std::sync::Arc::new(energyml_geometry::Geometry {
                     kind: "wellbore",
                     patches: Vec::new(),
-                },
+                }),
                 closed: None,
             },
         )

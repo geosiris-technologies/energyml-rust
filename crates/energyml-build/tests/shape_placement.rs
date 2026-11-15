@@ -19,6 +19,7 @@
 //! million metres.
 
 use serde_json::json;
+use std::sync::Arc;
 
 use energyml_build::operation::{Choices, Identity, Numbers, Plan, Registry, When};
 use energyml_build::pieces::{Known, Pieces, Ref, Source};
@@ -55,10 +56,10 @@ fn from_a_file(topology: Topology) -> Pieces {
     Pieces::empty().with(
         "trace.csv",
         Source::Shape {
-            geometry: Geometry {
+            geometry: Arc::new(Geometry {
                 kind: "mesh",
                 patches: vec![patch(cc49_nodes(), topology)],
-            },
+            }),
             closed: None,
         },
     )
@@ -70,10 +71,10 @@ fn from_the_package() -> Pieces {
         .with(
             "horizon",
             Source::Shape {
-                geometry: Geometry {
+                geometry: Arc::new(Geometry {
                     kind: "pointset",
                     patches: vec![patch(cc49_nodes(), Topology::Points)],
-                },
+                }),
                 closed: None,
             },
         )

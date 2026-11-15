@@ -61,6 +61,7 @@ use energyml_analysis::extend::{Dip, ExtendError, Reach, Setting, extend_line, e
 use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 use serde_json::json;
+use std::sync::Arc;
 
 use crate::declare::{Choice, Inputs, Params, Shape, Suggestions, known_of};
 use crate::operation::{About, Category, Context, Made, Need, Note, Operation, Plan, Refusal, Slot};
@@ -468,7 +469,7 @@ impl Operation for Extend {
         let written_kind = matches!(kind, Kind::Lines);
         let result = Shape {
             name: shape.name.clone(),
-            geometry: result,
+            geometry: Arc::new(result),
             closed: shape.closed.clone(),
             known: shape.known.clone(),
         };

@@ -58,6 +58,7 @@ use energyml_analysis::nodes::flipped;
 use energyml_domain::provenance::Parameter;
 use energyml_domain::units::Dimension;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
+use std::sync::Arc;
 
 use crate::declare::{Choice, Inputs, Params, Shape, Suggestions};
 use crate::operation::{About, Category, Context, Need, Note, Operation, Plan, Refusal, Slot};
@@ -390,8 +391,12 @@ pub(crate) fn write_as(
     // the new CRS's label with its original numbers.
     if !matches!(kind, Kind::Points) {
         let frame = support::frame_in(&cx.known(), &written.frame, cx.identity, cx.when, &mut 0)?;
-        result.geometry =
-            support::geometry_placed(&result.name, &result.geometry, result.known.as_ref(), &frame)?;
+        result.geometry = std::sync::Arc::new(support::geometry_placed(
+            &result.name,
+            &result.geometry,
+            result.known.as_ref(),
+            &frame,
+        )?);
     }
     match kind {
         Kind::Points => Pointset.plan(
@@ -637,7 +642,7 @@ impl Operation for Transform {
         }
         let result = Shape {
             name: shape.name.clone(),
-            geometry,
+            geometry: Arc::new(geometry),
             closed: shape.closed.clone(),
             known: shape.known.clone(),
         };

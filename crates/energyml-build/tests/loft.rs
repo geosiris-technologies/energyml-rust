@@ -11,6 +11,7 @@
 use energyml_build::operation::{Choices, Identity, Plan, Purpose, Registry, When};
 use energyml_build::pieces::{Pieces, Source};
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
+use std::sync::Arc;
 
 fn when() -> When {
     When {
@@ -22,7 +23,7 @@ fn when() -> When {
 fn stick(points: Vec<[f64; 3]>) -> Source {
     let runs = vec![points.len() as u32];
     Source::Shape {
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind: "test",
             patches: vec![Patch {
                 index: 0,
@@ -31,7 +32,7 @@ fn stick(points: Vec<[f64; 3]>) -> Source {
                 topology: Topology::Polylines(runs),
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     }
 }
@@ -91,7 +92,7 @@ fn two_sticks_of_opposite_sense_are_refused_naming_them() {
 #[test]
 fn a_piece_of_several_polylines_is_refused() {
     let two = Source::Shape {
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind: "test",
             patches: vec![Patch {
                 index: 0,
@@ -100,7 +101,7 @@ fn a_piece_of_several_polylines_is_refused() {
                 topology: Topology::Polylines(vec![2, 2]),
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     };
     let bag = Pieces::empty()

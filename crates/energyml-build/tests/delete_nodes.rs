@@ -12,6 +12,7 @@ use energyml_build::operation::{Choices, Identity, Plan, Purpose, Registry, When
 use energyml_build::pieces::{Pieces, Source};
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 use serde_json::json;
+use std::sync::Arc;
 
 fn when() -> When {
     When {
@@ -24,10 +25,10 @@ fn bag(patches: Vec<Patch>, closed: Option<Vec<bool>>) -> Pieces {
     Pieces::empty().with(
         "shape",
         Source::Shape {
-            geometry: Geometry {
+            geometry: Arc::new(Geometry {
                 kind: "test",
                 patches,
-            },
+            }),
             closed,
         },
     )

@@ -70,6 +70,7 @@ use energyml_analysis::mba::{Domain, Mba};
 use energyml_analysis::mba_frame::{Frame as MeanFrame, check_not_folded};
 use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
+use std::sync::Arc;
 
 use crate::declare::{Inputs, Params, Shape, Suggestions};
 use crate::operation::{About, Category, Context, Note, Operation, Plan, Refusal, Slot};
@@ -465,7 +466,7 @@ impl Operation for Resurface {
             Kind::Triangles(triangles) => {
                 let new_shape = Shape {
                     name: inputs.shape.name.clone(),
-                    geometry: Geometry {
+                    geometry: Arc::new(Geometry {
                         kind: "triangles",
                         patches: vec![Patch {
                             index: 0,
@@ -474,7 +475,7 @@ impl Operation for Resurface {
                             topology: Topology::Triangles(triangles),
                             closed: Vec::new(),
                         }],
-                    },
+                    }),
                     closed: None,
                     known: None,
                 };

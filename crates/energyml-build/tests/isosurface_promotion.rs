@@ -16,6 +16,7 @@ use energyml_build::pieces::{Known, Pieces, Ref, Source};
 use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 use serde_json::{Value, json};
+use std::sync::Arc;
 
 const SURFACE: &str = "bbbbbbbb-0000-4000-8000-000000000002";
 const CUBE: &str = "dddddddd-0000-4000-8000-000000000001";
@@ -63,7 +64,7 @@ fn surface(geometry: Geometry) -> Pieces {
         .with(
             "shape",
             Source::Shape {
-                geometry,
+                geometry: Arc::new(geometry),
                 closed: None,
             },
         )

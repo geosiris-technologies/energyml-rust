@@ -233,7 +233,7 @@ pub(crate) fn polylines_of(trace: Option<&ShapeIn>, features: Option<&Features>)
         }
     }
     if let Some(collection) = features {
-        for feature in &collection.features {
+        for feature in collection.features.iter() {
             if matches!(feature.shape, Shape::Lines) {
                 for part in &feature.parts {
                     found.push(Found::Foreign(part.clone()));

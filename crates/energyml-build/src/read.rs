@@ -199,7 +199,13 @@ pub fn pieces_of_object_in(
         .geometry_in(placement)
         .map_err(|e| format!("{}: {e}", summary.uri))?;
     Ok(vec![
-        (name.clone(), Source::Shape { geometry, closed }),
+        (
+            name.clone(),
+            Source::Shape {
+                geometry: std::sync::Arc::new(geometry),
+                closed,
+            },
+        ),
         (
             format!("{name} (object)"),
             Source::Object(Known {

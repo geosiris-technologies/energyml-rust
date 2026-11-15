@@ -105,7 +105,7 @@ impl Operation for SigeolUnits {
         let mut features = 0usize;
         let mut units = 0usize;
         for collection in &inputs.features {
-            for feature in &collection.features {
+            for feature in collection.features.iter() {
                 features += 1;
                 if crate::sigeol::unit_of(&feature.properties).is_some() {
                     units += 1;

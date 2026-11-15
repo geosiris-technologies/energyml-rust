@@ -25,6 +25,7 @@
 use energyml_analysis::outline as analysis;
 use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
+use std::sync::Arc;
 
 use crate::declare::{Inputs, Params, Shape, Suggestions};
 use crate::operation::{About, Category, Context, Need, Note, Operation, Plan, Refusal, Slot};
@@ -152,7 +153,7 @@ impl Operation for Outline {
         let runs: Vec<u32> = found.rings.iter().map(|r| r.len() as u32).collect();
         let rings = Shape {
             name: name.clone(),
-            geometry: Geometry {
+            geometry: Arc::new(Geometry {
                 kind: "outline",
                 patches: vec![Patch {
                     index: 0,
@@ -161,7 +162,7 @@ impl Operation for Outline {
                     topology: Topology::Polylines(runs),
                     closed: Vec::new(),
                 }],
-            },
+            }),
             closed: Some(vec![true; found.rings.len()]),
             known: None,
         };

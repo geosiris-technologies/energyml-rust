@@ -20,6 +20,7 @@
 //! reinventing one.
 
 use serde_json::json;
+use std::sync::Arc;
 
 use energyml_build::operation::{Choices, Identity, Numbers, Plan, Registry, When};
 use energyml_build::pieces::{Known, Pieces, Ref, Source};
@@ -90,7 +91,7 @@ fn interpolate_with_mba_reproduces_a_constant_field() {
         .with(
             "shape",
             Source::Shape {
-                geometry: samples,
+                geometry: Arc::new(samples),
                 closed: None,
             },
         )
@@ -151,7 +152,7 @@ fn resurface_keeps_a_grids_lattice_bit_for_bit() {
         .with(
             "shape",
             Source::Shape {
-                geometry: grid,
+                geometry: Arc::new(grid),
                 closed: None,
             },
         )
@@ -240,7 +241,7 @@ fn resurface_keeps_a_triangulated_surfaces_indices_line_for_line() {
         .with(
             "shape",
             Source::Shape {
-                geometry: surface,
+                geometry: Arc::new(surface),
                 closed: None,
             },
         )
@@ -311,7 +312,7 @@ fn estimate_reads_the_z_of_a_cloud_the_caller_gives() {
         .with(
             "samples",
             Source::Shape {
-                geometry: samples,
+                geometry: Arc::new(samples),
                 closed: None,
             },
         )
@@ -326,7 +327,7 @@ fn estimate_reads_the_z_of_a_cloud_the_caller_gives() {
         .with(
             "at",
             Source::Shape {
-                geometry: at,
+                geometry: Arc::new(at),
                 closed: None,
             },
         );
@@ -422,7 +423,7 @@ fn an_inner_ring_removes_exactly_the_samples_it_should() {
         .with(
             "samples",
             Source::Shape {
-                geometry: samples_geom,
+                geometry: Arc::new(samples_geom),
                 closed: None,
             },
         )
@@ -437,14 +438,14 @@ fn an_inner_ring_removes_exactly_the_samples_it_should() {
         .with(
             "at",
             Source::Shape {
-                geometry: at,
+                geometry: Arc::new(at),
                 closed: None,
             },
         )
         .with(
             "inner",
             Source::Shape {
-                geometry: ring_geom,
+                geometry: Arc::new(ring_geom),
                 closed: Some(vec![true]),
             },
         );
@@ -497,7 +498,7 @@ fn estimate_with_a_field_estimates_the_field() {
         .with(
             "samples",
             Source::Shape {
-                geometry: samples,
+                geometry: Arc::new(samples),
                 closed: None,
             },
         )
@@ -521,7 +522,7 @@ fn estimate_with_a_field_estimates_the_field() {
         .with(
             "at",
             Source::Shape {
-                geometry: at,
+                geometry: Arc::new(at),
                 closed: None,
             },
         );
@@ -583,7 +584,7 @@ fn the_rings_cut_the_grids_nodes_too() {
         .with(
             "shape",
             Source::Shape {
-                geometry: plane_cloud(10, 1.0, |x, y| 1.0 + x + 2.0 * y),
+                geometry: Arc::new(plane_cloud(10, 1.0, |x, y| 1.0 + x + 2.0 * y)),
                 closed: None,
             },
         )
@@ -598,14 +599,14 @@ fn the_rings_cut_the_grids_nodes_too() {
         .with(
             "outer",
             Source::Shape {
-                geometry: ring_shape(&outer, "outer"),
+                geometry: Arc::new(ring_shape(&outer, "outer")),
                 closed: Some(vec![true]),
             },
         )
         .with(
             "inner",
             Source::Shape {
-                geometry: ring_shape(&inner, "inner"),
+                geometry: Arc::new(ring_shape(&inner, "inner")),
                 closed: Some(vec![true]),
             },
         );
@@ -667,7 +668,7 @@ fn the_rings_cut_the_grids_nodes_too() {
 #[test]
 fn an_input_the_method_cannot_honour_is_refused_not_dropped() {
     let line = |name: &'static str| Source::Shape {
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind: name,
             patches: vec![Patch {
                 index: 0,
@@ -676,7 +677,7 @@ fn an_input_the_method_cannot_honour_is_refused_not_dropped() {
                 topology: Topology::Polylines(vec![4]),
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     };
     let bag = |extra: &'static str| {
@@ -684,7 +685,7 @@ fn an_input_the_method_cannot_honour_is_refused_not_dropped() {
             .with(
                 "shape",
                 Source::Shape {
-                    geometry: plane_cloud(5, 3.0, |x, y| x + y),
+                    geometry: Arc::new(plane_cloud(5, 3.0, |x, y| x + y)),
                     closed: None,
                 },
             )
@@ -742,7 +743,7 @@ fn grid_pieces(
         .with(
             "shape",
             Source::Shape {
-                geometry: Geometry {
+                geometry: Arc::new(Geometry {
                     kind: "grid",
                     patches: vec![Patch {
                         index: 0,
@@ -754,7 +755,7 @@ fn grid_pieces(
                         },
                         closed: Vec::new(),
                     }],
-                },
+                }),
                 closed: None,
             },
         )

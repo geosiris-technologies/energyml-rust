@@ -23,6 +23,7 @@
 //! and say so when it is empty.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::sync::Arc;
 
 use serde_json::{Value, json};
 
@@ -215,7 +216,7 @@ fn table_bag(text: &str, template: &Value) -> Pieces {
         "table",
         Source::Table {
             name: "essai.csv".into(),
-            table,
+            table: Arc::new(table),
             template,
         },
     )
@@ -389,7 +390,7 @@ fn frame(bag: Pieces, at: usize, title: &str, mds: &[f64]) -> Pieces {
     bag.with(
         name.clone(),
         Source::Shape {
-            geometry,
+            geometry: Arc::new(geometry),
             closed: None,
         },
     )
@@ -616,7 +617,7 @@ fn unit_frame(bag: Pieces, at: usize, title: &str, units: Vec<Option<Ref>>) -> P
     bag.with(
         name.clone(),
         Source::Shape {
-            geometry,
+            geometry: Arc::new(geometry),
             closed: None,
         },
     )
@@ -762,7 +763,7 @@ fn well(bag: Pieces, name: &str, nodes: &[[f64; 3]], head: [f64; 3], frame: &Ref
     bag.with(
         name,
         Source::Shape {
-            geometry,
+            geometry: Arc::new(geometry),
             closed: None,
         },
     )

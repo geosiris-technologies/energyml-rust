@@ -24,6 +24,7 @@
 //! second time sticks already in the package.
 
 use std::collections::BTreeSet;
+use std::sync::Arc;
 
 use serde_json::json;
 
@@ -176,7 +177,7 @@ fn number(plan: &Plan, title: &str) -> f64 {
 fn line(points: Vec<[f64; 3]>) -> Source {
     let runs = vec![points.len() as u32];
     Source::Shape {
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind: "test",
             patches: vec![Patch {
                 index: 0,
@@ -185,7 +186,7 @@ fn line(points: Vec<[f64; 3]>) -> Source {
                 topology: Topology::Polylines(runs),
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     }
 }

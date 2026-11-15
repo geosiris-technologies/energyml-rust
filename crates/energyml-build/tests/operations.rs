@@ -68,7 +68,7 @@ fn sigeol_pieces() -> Pieces {
         "export",
         Source::Features {
             name: "GeologicUnit_Bartonien_pretty.json".into(),
-            features: collection.features,
+            features: Arc::new(collection.features),
         },
     )
 }
@@ -126,10 +126,10 @@ fn a_bag_of_the_wrong_kind_is_refused_naming_both_ends() {
     let pieces = Pieces::empty().with(
         "mesh",
         Source::Shape {
-            geometry: energyml_geometry::geometry::Geometry {
+            geometry: Arc::new(energyml_geometry::geometry::Geometry {
                 kind: "obj",
                 patches: vec![],
-            },
+            }),
             closed: None,
         },
     );
@@ -155,7 +155,7 @@ fn a_polyline() -> Pieces {
     Pieces::empty().with(
         "line",
         Source::Shape {
-            geometry: Geometry {
+            geometry: Arc::new(Geometry {
                 kind: "polylines",
                 patches: vec![Patch {
                     index: 0,
@@ -164,7 +164,7 @@ fn a_polyline() -> Pieces {
                     topology: Topology::Polylines(vec![3]),
                     closed: Vec::new(),
                 }],
-            },
+            }),
             closed: None,
         },
     )
@@ -752,7 +752,7 @@ fn a_written_point_set_names_a_frame_whose_two_codes_read_back() {
         "points.geojson",
         Source::Features {
             name: "points.geojson".into(),
-            features: collection.features,
+            features: Arc::new(collection.features),
         },
     );
     let plan = Registry::new()
@@ -996,7 +996,7 @@ fn no_unfitness_names_a_release() {
         .with(
             "shape",
             Source::Shape {
-                geometry: energyml_geometry::geometry::Geometry {
+                geometry: Arc::new(energyml_geometry::geometry::Geometry {
                     kind: "triangles",
                     patches: vec![energyml_geometry::geometry::Patch {
                         index: 0,
@@ -1005,7 +1005,7 @@ fn no_unfitness_names_a_release() {
                         topology: energyml_geometry::geometry::Topology::Triangles(vec![[0, 1, 2]]),
                         closed: Vec::new(),
                     }],
-                },
+                }),
                 closed: None,
             },
         )
@@ -1271,7 +1271,7 @@ fn bag_for(takes: &[energyml_build::operation::Slot]) -> Pieces {
                     _ => (square(), Topology::Points),
                 };
                 Source::Shape {
-                    geometry: Geometry {
+                    geometry: Arc::new(Geometry {
                         kind: "x",
                         patches: vec![Patch {
                             index: 0,
@@ -1280,7 +1280,7 @@ fn bag_for(takes: &[energyml_build::operation::Slot]) -> Pieces {
                             topology,
                             closed: Vec::new(),
                         }],
-                    },
+                    }),
                     closed: None,
                 }
             }
@@ -1289,7 +1289,7 @@ fn bag_for(takes: &[energyml_build::operation::Slot]) -> Pieces {
                     {"type":"Feature","geometry":{"type":"LineString","coordinates":[[2.0,48.0,10],[2.1,48.0,11]]},"properties":{}}]}"#;
                 Source::Features {
                     name: "essai.geojson".to_string(),
-                    features: geojson::read(text).expect("a collection").features,
+                    features: Arc::new(geojson::read(text).expect("a collection").features),
                 }
             }
             // **A plausible table, not an empty one.** The bag that this
@@ -1319,7 +1319,7 @@ F1,650000,6800000,120,25
                 .expect("a template");
                 Source::Table {
                     name: "essai.csv".to_string(),
-                    table,
+                    table: Arc::new(table),
                     template,
                 }
             }
@@ -1439,7 +1439,7 @@ fn what_a_slot_declares_it_creates_is_what_the_plan_writes() {
         .expect("the sourceEpsg slot");
 
     let cloud = Source::Shape {
-        geometry: energyml_geometry::Geometry {
+        geometry: Arc::new(energyml_geometry::Geometry {
             kind: "cloud",
             patches: vec![energyml_geometry::Patch {
                 index: 0,
@@ -1448,7 +1448,7 @@ fn what_a_slot_declares_it_creates_is_what_the_plan_writes() {
                 topology: energyml_geometry::Topology::Points,
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     };
     // **Three paths since 24/09**, and each writes what it should: a

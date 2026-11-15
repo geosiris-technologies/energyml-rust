@@ -34,6 +34,7 @@
 use energyml_analysis::fake::{self, vertical_polylines};
 use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
+use std::sync::Arc;
 
 use crate::declare::{Inputs, Params, Shape, Suggestions};
 use crate::operation::{About, Category, Context, Need, Note, Operation, Plan, Refusal, Slot};
@@ -309,7 +310,7 @@ impl Operation for PolylinesFromCloud {
         let shape = Shape {
             name: format!("{title} - cloud"),
             known: None,
-            geometry: Geometry {
+            geometry: Arc::new(Geometry {
                 kind: "polylines-from-cloud",
                 patches: vec![Patch {
                     index: 0,
@@ -318,7 +319,7 @@ impl Operation for PolylinesFromCloud {
                     topology: Topology::Polylines(runs),
                     closed: Vec::new(),
                 }],
-            },
+            }),
             closed: None,
         };
         let seed = cx.seed(&title);

@@ -17,6 +17,7 @@
 
 use energyml_analysis::nodes::{erase_from_cloud, erase_from_lines, erase_from_surface};
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
+use std::sync::Arc;
 
 use crate::declare::{Inputs, Params, Shape, Suggestions};
 use crate::operation::{About, Category, Context, Need, Note, Operation, Plan, Refusal, Slot};
@@ -265,10 +266,10 @@ pub(crate) fn erase(shape: &Shape, gone: &[bool], kind_name: &'static str) -> Re
     // the lines before the cut.
     let result = Shape {
         name: shape.name.clone(),
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind: kind_name,
             patches,
-        },
+        }),
         closed: None,
         known: shape.known.clone(),
     };

@@ -27,6 +27,7 @@
 //! uuid of a given list.
 
 use serde_json::json;
+use std::sync::Arc;
 
 use energyml_build::operation::{Choices, Identity, Numbers, Plan, Registry, When};
 use energyml_build::pieces::{Known, Pieces, Ref, Source};
@@ -191,7 +192,7 @@ fn put(bag: Pieces, name: &str, well: &Well, up: bool, known: Known) -> Pieces {
     bag.with(
         name,
         Source::Shape {
-            geometry,
+            geometry: Arc::new(geometry),
             closed: None,
         },
     )
@@ -228,7 +229,7 @@ fn ground(bag: Pieces, up: bool, frame: Ref) -> Pieces {
     bag.with(
         "ground",
         Source::Shape {
-            geometry,
+            geometry: Arc::new(geometry),
             closed: None,
         },
     )

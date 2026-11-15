@@ -17,6 +17,7 @@ use energyml_build::pieces::{Known, Pieces, Ref, Source};
 use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 use serde_json::{Value, json};
+use std::sync::Arc;
 
 const FRAME: &str = "aaaaaaaa-0000-4000-8000-000000000001";
 const PARENT_A: &str = "dddddddd-0000-4000-8000-00000000000a";
@@ -61,7 +62,7 @@ fn bag(a: Vec<f64>, b: Vec<f64>, over_b: &str) -> Pieces {
         .with(
             "frame",
             Source::Shape {
-                geometry,
+                geometry: Arc::new(geometry),
                 closed: None,
             },
         )

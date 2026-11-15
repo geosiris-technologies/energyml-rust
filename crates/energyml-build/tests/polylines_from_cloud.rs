@@ -4,6 +4,7 @@
 use energyml_build::operation::{Choices, Fitness, Identity, Numbers, Registry, When};
 use energyml_build::pieces::{Known, Pieces, Ref, Source};
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
+use std::sync::Arc;
 
 fn when() -> When {
     When {
@@ -18,7 +19,7 @@ fn cloud(points: Vec<[f64; 3]>, vertical_up: Option<bool>) -> Pieces {
         .with(
             "shape",
             Source::Shape {
-                geometry: Geometry {
+                geometry: Arc::new(Geometry {
                     kind: "cloud",
                     patches: vec![Patch {
                         index: 0,
@@ -27,7 +28,7 @@ fn cloud(points: Vec<[f64; 3]>, vertical_up: Option<bool>) -> Pieces {
                         topology: Topology::Points,
                         closed: Vec::new(),
                     }],
-                },
+                }),
                 closed: None,
             },
         )
@@ -254,7 +255,7 @@ fn a_frame_in_degrees_is_refused() {
         .with(
             "shape",
             Source::Shape {
-                geometry: Geometry {
+                geometry: Arc::new(Geometry {
                     kind: "cloud",
                     patches: vec![Patch {
                         index: 0,
@@ -263,7 +264,7 @@ fn a_frame_in_degrees_is_refused() {
                         topology: Topology::Points,
                         closed: Vec::new(),
                     }],
-                },
+                }),
                 closed: None,
             },
         )

@@ -111,6 +111,7 @@
 //!   TODO(reference): verify - no publication is cited for the law; add one if it follows a published source.
 
 use serde_json::{Value, json};
+use std::sync::Arc;
 
 use energyml_analysis::t2d::LinearVelocity;
 use energyml_domain::crs::{Crs, CrsKind, VerticalDirection};
@@ -980,10 +981,10 @@ impl Operation for ChangeFrame {
             Form::Other(kind) => {
                 let result = Shape {
                     name: shape.name.clone(),
-                    geometry: Geometry {
+                    geometry: Arc::new(Geometry {
                         kind: "change-frame",
                         patches,
-                    },
+                    }),
                     closed: shape.closed.clone(),
                     known: shape.known.clone(),
                 };

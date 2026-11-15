@@ -20,6 +20,7 @@
 use energyml_build::operation::{AnyOperation, Choices, Fitness, Identity, Registry, When};
 use energyml_build::pieces::{Pieces, Source};
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
+use std::sync::Arc;
 
 fn when() -> When {
     When {
@@ -31,7 +32,7 @@ fn when() -> When {
 /// A straight trace from west to east, at y = 5.
 fn trace() -> Source {
     Source::Shape {
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind: "trace",
             patches: vec![Patch {
                 index: 0,
@@ -40,7 +41,7 @@ fn trace() -> Source {
                 topology: Topology::Polylines(vec![2]),
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     }
 }
@@ -48,7 +49,7 @@ fn trace() -> Source {
 /// A horizontal square at altitude `z`, two triangles.
 fn plate(z: f64) -> Source {
     Source::Shape {
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind: "plate",
             patches: vec![Patch {
                 index: 0,
@@ -57,7 +58,7 @@ fn plate(z: f64) -> Source {
                 topology: Topology::Triangles(vec![[0, 1, 2], [0, 2, 3]]),
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     }
 }
@@ -65,7 +66,7 @@ fn plate(z: f64) -> Source {
 /// An inclined plane that goes down towards the east, from `high` to `low`.
 fn ramp(high: f64, low: f64) -> Source {
     Source::Shape {
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind: "ramp",
             patches: vec![Patch {
                 index: 0,
@@ -79,7 +80,7 @@ fn ramp(high: f64, low: f64) -> Source {
                 topology: Topology::Triangles(vec![[0, 1, 2], [0, 2, 3]]),
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     }
 }
@@ -146,7 +147,7 @@ fn without_a_named_trace_the_operation_refuses_saying_so() {
 #[test]
 fn one_more_polyline_does_not_become_the_trace() {
     let elsewhere = Source::Shape {
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind: "decoy",
             patches: vec![Patch {
                 index: 0,
@@ -155,7 +156,7 @@ fn one_more_polyline_does_not_become_the_trace() {
                 topology: Topology::Polylines(vec![2]),
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     };
     let pieces = bag().with("decoy", elsewhere);
@@ -292,7 +293,7 @@ fn a_panel_without_material_is_counted_and_the_others_stay() {
     // The third plate is off the trace: the pair 2→3 gives nothing, the
     // pair 1→2 does.
     let off_trace = Source::Shape {
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind: "plate",
             patches: vec![Patch {
                 index: 0,
@@ -301,7 +302,7 @@ fn a_panel_without_material_is_counted_and_the_others_stay() {
                 topology: Topology::Triangles(vec![[0, 1, 2]]),
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     };
     let pieces = bag().with("surfaces 3", off_trace);
@@ -325,7 +326,7 @@ fn a_panel_without_material_is_counted_and_the_others_stay() {
 #[test]
 fn no_panel_at_all_is_a_refusal_that_counts_the_pairs() {
     let far_plate = Source::Shape {
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind: "plate",
             patches: vec![Patch {
                 index: 0,
@@ -334,7 +335,7 @@ fn no_panel_at_all_is_a_refusal_that_counts_the_pairs() {
                 topology: Topology::Triangles(vec![[0, 1, 2]]),
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     };
     let pieces = Pieces::empty()

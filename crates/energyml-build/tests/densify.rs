@@ -12,6 +12,7 @@ use energyml_build::operation::{Choices, Fitness, Identity, Plan, Purpose, Regis
 use energyml_build::pieces::{Pieces, Source};
 use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
+use std::sync::Arc;
 
 fn when() -> When {
     When {
@@ -24,7 +25,7 @@ fn lines(points: Vec<[f64; 3]>, runs: Vec<u32>, closed: Option<Vec<bool>>) -> Pi
     Pieces::empty().with(
         "shape",
         Source::Shape {
-            geometry: Geometry {
+            geometry: Arc::new(Geometry {
                 kind: "test",
                 patches: vec![Patch {
                     index: 0,
@@ -33,7 +34,7 @@ fn lines(points: Vec<[f64; 3]>, runs: Vec<u32>, closed: Option<Vec<bool>>) -> Pi
                     topology: Topology::Polylines(runs),
                     closed: Vec::new(),
                 }],
-            },
+            }),
             closed,
         },
     )
@@ -146,7 +147,7 @@ fn a_surface_is_unfit_saying_so() {
     let surface = Pieces::empty().with(
         "shape",
         Source::Shape {
-            geometry: Geometry {
+            geometry: Arc::new(Geometry {
                 kind: "test",
                 patches: vec![Patch {
                     index: 0,
@@ -155,7 +156,7 @@ fn a_surface_is_unfit_saying_so() {
                     topology: Topology::Triangles(vec![[0, 1, 2]]),
                     closed: Vec::new(),
                 }],
-            },
+            }),
             closed: None,
         },
     );
