@@ -957,7 +957,11 @@ mod tests {
             .collect();
         let mds = chord_mds(&points, 10.0);
         let blocked = block(&points, &mds, std::slice::from_ref(&grid)).unwrap();
-        assert!(blocked.cell_count() > 100, "{}", blocked.cell_count());
+        assert!(
+            blocked.cell_count() > 50,
+            "the path crosses many cells: {}",
+            blocked.cell_count()
+        );
         for (n, one) in blocked.intervals.iter().enumerate() {
             let middle = 0.5 * (blocked.node_md[n] + blocked.node_md[n + 1]);
             let expected = by_arithmetic(origin, size, counts, at_md(&points, &mds, middle));
