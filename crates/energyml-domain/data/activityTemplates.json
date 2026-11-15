@@ -9077,6 +9077,29 @@
       {
         "$type": "eml23.ParameterTemplate",
         "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "Title": "crsEpsg",
+        "MinOccurs": 0,
+        "MaxOccurs": 1,
+        "Constraint": "an EPSG code"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "Title": "verticalCrs",
+        "MinOccurs": 0,
+        "MaxOccurs": 1
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
           "dataObject"
         ],
         "IsInput": true,
@@ -9573,6 +9596,29 @@
         "MaxOccurs": 1,
         "MinOccurs": 0,
         "Title": "everything"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "Title": "crsEpsg",
+        "MinOccurs": 0,
+        "MaxOccurs": 1,
+        "Constraint": "an EPSG code"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "Title": "verticalCrs",
+        "MinOccurs": 0,
+        "MaxOccurs": 1
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -13854,7 +13900,7 @@
         "IsInput": false,
         "IsOutput": true,
         "MaxOccurs": -1,
-        "MinOccurs": 1,
+        "MinOccurs": 0,
         "Title": "output"
       }
     ]
@@ -13956,7 +14002,7 @@
         "IsInput": false,
         "IsOutput": true,
         "MaxOccurs": -1,
-        "MinOccurs": 1,
+        "MinOccurs": 0,
         "Title": "output"
       }
     ]

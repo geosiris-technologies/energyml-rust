@@ -250,7 +250,8 @@ impl Operation for WellsAndProperties {
 
     /// What its two halves report, under the same titles.
     fn reports(&self) -> Vec<crate::operation::Slot> {
-        properties_from_table::PropertiesFromTable.reports()
+        // The frame `wells-from-table` may create, then what the properties count.
+        super::support::frame_reports(properties_from_table::PropertiesFromTable.reports())
     }
 
     /// The content of the table, judged by `wells-from-table`: without the roles

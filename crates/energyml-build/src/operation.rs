@@ -1654,6 +1654,13 @@ pub trait AnyOperation: Send + Sync {
     fn reports(&self) -> Vec<Slot> {
         Vec::new()
     }
+    /// Whether a run writes at least one data object. `false` for an operation
+    /// that only writes a part of the package (a media file): its template then
+    /// declares `output` from 0, never a promise its activity cannot keep
+    /// (common TRG 2.3 section 3.1, p. 40).
+    fn writes_objects(&self) -> bool {
+        true
+    }
     /// **What it writes, by role** - see [`Output`]. Empty by default, which
     /// means *not declared yet*, never *writes nothing*: a caller that chains
     /// steps falls back to the roles the plan carries.

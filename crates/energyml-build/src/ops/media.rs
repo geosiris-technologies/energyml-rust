@@ -132,6 +132,11 @@ impl Operation for Media {
         }
     }
 
+    fn writes_objects(&self) -> bool {
+        // A part of the package, not a data object.
+        false
+    }
+
     fn reports(&self) -> Vec<Slot> {
         vec![
             Slot::required("part", Need::Text, "the part name the file was given"),

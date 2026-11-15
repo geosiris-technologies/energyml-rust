@@ -160,6 +160,14 @@ pub trait Operation: Send + Sync + 'static {
         Vec::new()
     }
 
+    /// Whether a run writes at least one data object. `false` for an operation
+    /// that only writes a part of the package (a media file): its template then
+    /// declares `output` from 0, never a promise its activity cannot keep
+    /// (common TRG 2.3 section 3.1, p. 40).
+    fn writes_objects(&self) -> bool {
+        true
+    }
+
     /// What it writes, by role - [`AnyOperation::gives`]. Empty: not declared yet.
     fn gives(&self) -> Vec<Output> {
         Vec::new()
@@ -240,6 +248,10 @@ impl<T: Operation> AnyOperation for Typed<T> {
 
     fn reports(&self) -> Vec<Slot> {
         self.0.reports()
+    }
+
+    fn writes_objects(&self) -> bool {
+        self.0.writes_objects()
     }
 
     fn gives(&self) -> Vec<Output> {

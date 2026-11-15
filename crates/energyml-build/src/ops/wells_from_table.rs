@@ -539,6 +539,11 @@ impl Operation for WellsFromTable {
     type Params = TableParams;
     type Inputs = TableInputs;
 
+    /// The frame, when the table's coordinates make one here (`frame_in`).
+    fn reports(&self) -> Vec<crate::operation::Slot> {
+        support::frame_reports(Vec::new())
+    }
+
     fn gives(&self) -> Vec<Output> {
         outputs()
     }

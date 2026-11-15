@@ -160,7 +160,7 @@ pub fn template_of(operation: &dyn AnyOperation) -> Value {
         "IsInput": false,
         "IsOutput": true,
         "Title": "output",
-        "MinOccurs": 1,
+        "MinOccurs": if operation.writes_objects() { 1 } else { 0 },
         "MaxOccurs": -1,
     }));
     json!({
