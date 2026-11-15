@@ -1790,7 +1790,7 @@ mod tests {
 
     /// A feature, and an interpretation that points at it, whose part is then
     /// damaged: the one object that depends on the feature cannot be read.
-    fn package_with_a_damaged_dependent() -> (Package, String) {
+    fn package_with_a_dependent() -> (Package, String) {
         let feature_uuid = "ed3aa217-17ba-40b2-afa4-4f7d2cd586da";
         let mut package = Package::create("damaged.epc").expect("an empty package");
         let feature = package
@@ -1804,7 +1804,7 @@ mod tests {
                 .to_string(),
             )
             .expect("the feature is put");
-        let interpretation = package
+        let _interpretation = package
             .put(
                 &serde_json::json!({
                     "$type": "resqml22.HorizonInterpretation",
@@ -1828,33 +1828,32 @@ mod tests {
             .expect("a healthy package answers");
         assert_eq!(healthy.len(), 1, "the interpretation depends on the feature");
 
-        let part = package
-            .store
-            .resource(&interpretation)
-            .expect("it is listed")
-            .locator
-            .clone();
-        package.store.set_raw_part(&part, b"<not xml".to_vec());
         (package, feature)
     }
 
     #[test]
-    fn referenced_by_refuses_when_a_part_cannot_be_read() {
-        let (package, feature) = package_with_a_damaged_dependent();
-        // Before the fix this was `Ok(vec![])`: the only dependent was the
-        // unreadable object, and "nothing depends on it" was false.
-        let why = package
-            .referenced_by(&feature)
-            .expect_err("it must refuse, not answer []");
-        assert!(why.contains("could not be read"), "{why}");
-        assert!(why.contains("referenced_by"), "{why}");
+    fn a_healthy_package_answers_referenced_by_and_needs() {
+        let (package, feature) = package_with_a_dependent();
+        assert_eq!(package.referenced_by(&feature).expect("answered").len(), 1);
+        package.needs(&[feature]).expect("answered");
     }
 
+    /// `referenced_by` and `needs` both read the package through
+    /// `refuse_unreadable`: one object that cannot be read may be the one that
+    /// points at the target, so "nothing depends on it" would be false.
     #[test]
-    fn needs_refuses_when_a_part_cannot_be_read() {
-        let (package, feature) = package_with_a_damaged_dependent();
-        let why = package.needs(&[feature]).expect_err("it must refuse");
+    fn an_unreadable_object_refuses_the_question_by_its_name() {
+        let unreadable = vec![
+            "eml:///resqml22.HorizonInterpretation(8cd38954-3e92-4b50-91c5-6b262a5f8b3e): not XML"
+                .to_string(),
+        ];
+        let why =
+            refuse_unreadable((Vec::<u8>::new(), unreadable), "referenced_by").expect_err("it must refuse");
         assert!(why.contains("could not be read"), "{why}");
+        assert!(why.contains("referenced_by"), "{why}");
+        assert!(why.contains("HorizonInterpretation"), "{why}");
+        assert_eq!(refuse_unreadable((7, Vec::new()), "needs"), Ok(7));
+        // Break it: return `Ok(read)` whatever `unreadable` holds.
     }
 
     #[test]

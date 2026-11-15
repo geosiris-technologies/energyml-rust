@@ -635,12 +635,13 @@ impl<'a> Held<'a> {
         self.pick(uuid, identity::object_version_of_reflect(reference))
     }
 
-    /// The object an **address** names (a uri, which carries its version; a bare
-    /// uuid names none): [`Held::of`]'s rule, for the sites that hold a
-    /// [`Named`] and no longer the reference it was made from.
-    fn at(&self, address: &str) -> Option<&'a dyn Reflect> {
-        let (uuid, version) = identity::parse_address(address);
-        self.pick(&uuid, version.as_deref())
+    /// The object a [`Named`] names: its uuid as it stands, and the version
+    /// its uri carries (a uri names one, a bare uuid none): [`Held::of`]'s
+    /// rule, for the sites that hold a `Named` and no longer the reference it
+    /// was made from.
+    fn at(&self, named: &Named) -> Option<&'a dyn Reflect> {
+        let (_, version) = identity::parse_address(&named.uri);
+        self.pick(&named.uuid, version.as_deref())
     }
 
     fn pick(&self, uuid: &str, wanted: Option<&str>) -> Option<&'a dyn Reflect> {
@@ -774,7 +775,7 @@ fn read_unconformities(
         let horizon = contact
             .part_of
             .as_ref()
-            .and_then(|part| held.at(&part.uri).map(|object| (part, object)));
+            .and_then(|part| held.at(part).map(|object| (part, object)));
         if let (Some((part, horizon)), Some(position)) = (horizon, position) {
             let at = |named: &Named| position.get(&named.uuid).copied();
             if let (Some(a), Some(b)) = (at(&contact.subject), at(&contact.object)) {
@@ -1494,7 +1495,7 @@ fn measure(object: &dyn Reflect, name: &str) -> Option<String> {
 /// Read a fault interpretation - the object when the package holds it, the
 /// reference alone otherwise.
 fn read_fault(reference: Named, held: &Held<'_>) -> Fault {
-    let object = held.at(&reference.uri);
+    let object = held.at(&reference);
     let mut throws: Vec<String> = Vec::new();
     let mut active = None;
     if let Some(object) = object {
