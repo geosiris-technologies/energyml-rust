@@ -51,7 +51,10 @@ written as a triangulated surface"), because *absent* reads as *not written yet*
 The same declaration generates the command-line help, the web form, the
 [Galaxy tool](galaxy.md) and the canonical `ActivityTemplate` of the operation.
 Every run records an `Activity` against that template, so the form and the record
-are one declaration.
+are one declaration. Every canonical template declares `input` (the objects the run
+read) and `inputFile` (a file it read, written `<slot>: <path>`), and a whole number
+a run recorded is an `IntegerQuantityParameter`, as the template says; see
+[Provenance](provenance.md).
 
 ## The operations
 
@@ -104,7 +107,9 @@ A recipe is a versioned TOML file of ordered steps, each an operation with its
 settings and its inputs. `energyml create --recipe` plays every step through the
 same door into one package and writes it at the end. Played, the recipe is also a
 workflow: an `ActivityTemplate` with one sub-activity per step, and a root
-`Activity` that every step's activity names as its parent.
+`Activity` that every step's activity names as its parent. A step that took a file
+records it as an `inputFile` parameter, so the workflow can be read back (and a
+recipe drafted from it) without the original recipe; see [Provenance](provenance.md).
 
 ```sh
 energyml create --recipe recipe.toml --plan               # what each step would make; writes nothing

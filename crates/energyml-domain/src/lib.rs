@@ -103,6 +103,9 @@ pub mod property_kind;
 /// the activity built from one. See the module for why it is here rather than
 /// in the JavaScript face.
 pub mod provenance;
+/// Provenance a package records outside its activities (the NWDF tables of the
+/// UDAR converter), shown as written and compared with the activities.
+pub mod provenance_verbatim;
 pub mod reproject;
 pub mod rules;
 pub mod select;
