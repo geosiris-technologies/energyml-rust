@@ -114,6 +114,7 @@ fn text_style() -> TextStyle {
         colour: BLUE,
         anchor: Anchor::Middle,
         rotate: 0.0,
+        weight: Default::default(),
     }
 }
 

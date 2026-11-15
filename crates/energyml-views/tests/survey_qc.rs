@@ -594,3 +594,17 @@ fn with_no_north_the_gap_is_measured_after_a_fitted_turn_that_is_said() {
     );
     // Break it: apply the fitted turn to the survey without saying so, or draw the plan in the fitted north.
 }
+
+#[test]
+fn no_text_of_the_picture_leaves_the_page() {
+    let stations = [
+        (0.0, 0.0, None),
+        (100.0, 30.0, Some(90.0)),
+        (200.0, 45.0, Some(90.0)),
+    ];
+    for ask in [ask(), ask().sized(300.0, 800.0)] {
+        let result = drawn(package(survey(&stations, grid()), None), ask);
+        crate::fixtures::assert_texts_in_page(&result.list, "survey-qc");
+    }
+    // Break it: take `fit_to_page` out of `draw_list`; the title then runs past a 300 wide page.
+}

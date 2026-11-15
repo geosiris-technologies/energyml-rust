@@ -141,6 +141,8 @@ pub fn draw_list(
         drawn.list.size = size;
         drawn.list.layers.push(layer);
     }
+    // The net under every view: a title, a label or a legend name that would leave the page is broken into lines.
+    energyml_sheet::draw::text::fit_to_page(&mut drawn.list);
     Ok((drawn, completed))
 }
 

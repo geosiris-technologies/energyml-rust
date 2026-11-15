@@ -98,6 +98,19 @@ is clamped to a drawing area: the caller compares the result to its own height.
 (`string_width_pt`, `wrap`); `energyml_sheet::text` re-exports it. It works in the
 unit of the size it is given.
 
+A text has a weight (`TextStyle::weight`, `FontWeight::Normal` by default, `Bold`
+written as `font-weight="bold"`; the PNG follows because it rasterises the SVG, and
+embeds the regular face only). The table holds regular advances, so a bold text is
+measured `BOLD_WIDTH_FACTOR` (1.1) times wider: it errs toward a line too short.
+
+`fit_to_page(&mut list)` breaks every unrotated text that would leave the page
+(past `list.size[0]` or before 0, against its anchor) into lines that fit, with
+`wrap`; the first line keeps its baseline, the next ones are 1.25 sizes lower. A text
+that fits is untouched. `max_text_x(&list)` is the measure a test holds a view to.
+`energyml-views` applies it at the one door of a picture (`draw_list`), and breaks
+the band of notes under the picture itself, so the page grows by its lines.
+Rotated texts (axis titles) are not broken.
+
 ## Rasters
 
 `draw::raster` paints value grids and quadrilaterals into an RGBA image through a

@@ -170,6 +170,16 @@ pub enum Anchor {
     End,
 }
 
+/// The weight of a text: the only face change a display list carries (no slant).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum FontWeight {
+    /// The regular face.
+    #[default]
+    Normal,
+    /// The bold face (`font-weight="bold"`): a header, a title.
+    Bold,
+}
+
 /// How a text is drawn.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct TextStyle {
@@ -181,6 +191,21 @@ pub struct TextStyle {
     pub anchor: Anchor,
     /// Rotation about the anchor point, degrees, clockwise on the page (y down).
     pub rotate: f64,
+    /// The weight of the face; [`FontWeight::Normal`] by default.
+    pub weight: FontWeight,
+}
+
+impl Default for TextStyle {
+    /// 12 user units, black, starting at the anchor, upright, normal weight.
+    fn default() -> Self {
+        TextStyle {
+            size: 12.0,
+            colour: Colour::rgb(0, 0, 0),
+            anchor: Anchor::Start,
+            rotate: 0.0,
+            weight: FontWeight::Normal,
+        }
+    }
 }
 
 /// A marker's shape, centred on its point, drawn as paths.

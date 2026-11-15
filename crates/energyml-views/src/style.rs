@@ -46,6 +46,7 @@ pub fn text(size: f64, colour: Colour, anchor: Anchor) -> TextStyle {
         colour,
         anchor,
         rotate: 0.0,
+        weight: Default::default(),
     }
 }
 
@@ -259,18 +260,25 @@ pub fn notes_layer(size: &mut [f64; 2], unit: PageUnit, notes: &[ViewNote]) -> O
     let line = text_size * 1.36;
     let mut layer = Layer::new("notes");
     let top = size[1];
-    let items = notes
+    // A note wider than the page is broken into lines (the sheet's own `wrap`, measured in the page's unit), and
+    // every line is a row of the band: the band grows by the lines, not by the notes.
+    let room = (size[0] - 2.0 * margin).max(text_size);
+    let lines: Vec<String> = notes
+        .iter()
+        .flat_map(|note| energyml_sheet::draw::text::wrap(&note.says, room, text_size).lines)
+        .collect();
+    let items = lines
         .iter()
         .enumerate()
-        .map(|(at, note)| {
+        .map(|(at, words)| {
             label_item(
                 [margin, top + margin / 3.0 + line * (at as f64 + 1.0)],
-                note.says.clone(),
+                words.clone(),
                 text(text_size, NOTE, Anchor::Start),
             )
         })
         .collect();
     layer.elements.push(Element::new(items));
-    size[1] = top + margin + line * notes.len() as f64;
+    size[1] = top + margin + line * lines.len() as f64;
     Some(layer)
 }

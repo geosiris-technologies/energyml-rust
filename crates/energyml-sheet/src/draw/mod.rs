@@ -28,8 +28,8 @@ pub mod ticks;
 
 pub use hit::{Hit, hit};
 pub use list::{
-    Anchor, Colour, DisplayList, Element, Hatch, Item, Layer, LineCap, LineJoin, PageUnit, Paint, PathData,
-    Rect, Segment, Stroke, SymbolKind, TextStyle,
+    Anchor, Colour, DisplayList, Element, FontWeight, Hatch, Item, Layer, LineCap, LineJoin, PageUnit, Paint,
+    PathData, Rect, Segment, Stroke, SymbolKind, TextStyle,
 };
 pub use raster::Raster;
 pub use svg::{DrawError, Metadata, MetadataError};

@@ -730,3 +730,54 @@ fn a_drawing_is_made_again_from_its_own_metadata() {
     assert_eq!(first.svg, again.svg);
     // Break it: leave `bins` out of the metadata, and a later default would change the figure.
 }
+
+#[test]
+fn no_text_of_the_picture_leaves_the_page() {
+    let (opened, uris) = world(vec![property(RH, "Rh", vec![1], spread(), None)]);
+    for ask in [ask(&uris[0]), ask(&uris[0]).sized(260.0, 500.0)] {
+        let list = drawn(&opened, &ask).list;
+        crate::fixtures::assert_texts_in_page(&list, "property-insight");
+    }
+    // Break it: take `fit_to_page` out of `draw_list`; the title then runs past a 260 wide page.
+}
+
+/// Nine seams along the one axis: the steps alternate between 1 and `1000 * k` (k the position), so the median step
+/// is 1 and each even position is a seam, the strongest at the greatest position.
+fn seamy() -> Vec<f64> {
+    let mut values = vec![0.0];
+    for k in 1..FRAME_NODES {
+        let step = if k % 2 == 1 { 1.0 } else { 1000.0 * k as f64 };
+        values.push(values[k - 1] + step);
+    }
+    values
+}
+
+#[test]
+fn the_seams_are_the_strongest_few_and_the_rest_are_counted() {
+    let (opened, uris) = world(vec![property(RH, "Rh", vec![1], seamy(), None)]);
+    let list = drawn(&opened, &ask(&uris[0])).list;
+    let words = texts(&list);
+    let seams: Vec<&String> = words
+        .iter()
+        .filter(|text| text.starts_with("a seam along"))
+        .collect();
+    assert_eq!(
+        seams.len(),
+        energyml_views::property_insight::MAX_SEAMS_WRITTEN,
+        "{seams:?}"
+    );
+    assert!(
+        seams[0].contains("at position 18:"),
+        "strongest first: {}",
+        seams[0]
+    );
+    assert!(
+        !seams.iter().any(|text| text.contains("at position 2:")),
+        "the weakest seam is the one left out: {seams:?}"
+    );
+    assert!(
+        words.iter().any(|text| text == "and 1 more seams"),
+        "the seam left out is counted: {words:?}"
+    );
+    // Break it: write every seam (drop the `truncate`), and the count and the last assertion fail.
+}

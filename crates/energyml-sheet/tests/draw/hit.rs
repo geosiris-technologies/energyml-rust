@@ -210,6 +210,7 @@ fn a_text_is_hit_inside_its_measured_width() {
             colour: RED,
             anchor: Anchor::Start,
             rotate: 0.0,
+            weight: Default::default(),
         },
     };
     let list = list_of(vec![

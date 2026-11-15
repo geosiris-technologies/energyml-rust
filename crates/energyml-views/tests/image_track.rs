@@ -675,3 +675,14 @@ fn what_cannot_be_shown_is_refused_by_name_never_drawn_empty() {
     assert!(matches!(frame, ViewRefusal::ObjectNotTaken { .. }), "{frame}");
     // Break it: let a one-column plane through (`cols == 1` is a curve), or draw the window empty.
 }
+
+#[test]
+fn no_text_of_the_picture_leaves_the_page() {
+    // A plot 100 wide: the page is 280 wide and the title, the unit and the source line are wider.
+    let opened = standard();
+    let list = render(&opened, ask_sized(PROP, 100.0, 100.0))
+        .expect("drawn")
+        .list;
+    crate::fixtures::assert_texts_in_page(&list, "image-track");
+    // Break it: take `fit_to_page` out of `draw_list`; the title then runs past the 280 pixels.
+}

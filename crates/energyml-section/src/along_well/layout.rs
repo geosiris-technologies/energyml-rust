@@ -266,6 +266,7 @@ fn text(at: [f64; 2], text: String, anchor: Anchor) -> Item {
             colour: black(),
             anchor,
             rotate: 0.0,
+            weight: Default::default(),
         },
     }
 }

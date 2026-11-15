@@ -478,3 +478,34 @@ fn keys_are_full_uris_with_what_tells_two_elements_apart() {
     assert!(svg.contains(&format!("data-key=\"{unit}#col=1&amp;md=0&amp;row=12\"")));
     // Break it: build the cell key from the depth alone.
 }
+
+/// **The title and the column headers are bold again; the mode note and the cells are not.**
+///
+/// A display list's text had no weight, so the sheet lost the bold of its headers. The count below is read from
+/// the list (title, one header per column) and then from the written SVG.
+/// To break it: write the headers with the normal weight in `picture::of_layout`.
+#[test]
+fn the_title_and_the_column_headers_are_bold() {
+    let layout = laid(&sample_board(), "readable", HeightGoal::Total(150.0));
+    let list = of_layout(&layout, &PictureStyle::default());
+    let mut bold = 0;
+    for layer in &list.layers {
+        for element in &layer.elements {
+            let want = matches!(element.kind.as_str(), "title" | "column-header");
+            for item in &element.items {
+                if let draw::Item::Text { style, .. } = item {
+                    assert_eq!(
+                        style.weight == draw::FontWeight::Bold,
+                        want,
+                        "an element `{}` is bold only if it is a title or a header",
+                        element.kind
+                    );
+                    bold += usize::from(want);
+                }
+            }
+        }
+    }
+    assert!(bold >= 2, "a title and a header were found: {bold}");
+    let svg = energyml_sheet::svg::write(&layout).expect("an SVG");
+    assert_eq!(svg.matches("font-weight=\"bold\"").count(), bold);
+}

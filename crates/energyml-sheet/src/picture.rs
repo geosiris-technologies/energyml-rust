@@ -50,13 +50,14 @@
 //!
 //! # What the list cannot say
 //!
-//! A [`TextStyle`] has a size, a colour, an anchor and a rotation, and no weight or slant: the header texts and the
-//! mode note, once bold and italic, are plain. TODO(verify): whether a weight belongs in the shared [`TextStyle`].
+//! A [`TextStyle`] has a size, a colour, an anchor, a rotation and a weight, and no slant: the title and the column
+//! headers are bold, the mode note, once italic, is upright.
 
 use energyml_domain::color::Rgba;
 
 use crate::draw::{
-    Anchor, Colour, DisplayList, Element, Item, Layer, LineCap, PageUnit, Paint, Rect, Stroke, TextStyle,
+    Anchor, Colour, DisplayList, Element, FontWeight, Item, Layer, LineCap, PageUnit, Paint, Rect, Stroke,
+    TextStyle,
 };
 use crate::layout::{LaidCell, LaidTrack, Layout, PT_TO_MM, line_height_mm};
 use crate::text;
@@ -156,8 +157,18 @@ fn text_item(at: [f64; 2], words: &str, size: f64, ink: Colour, anchor: Anchor) 
             colour: ink,
             anchor,
             rotate: 0.0,
+            weight: Default::default(),
         },
     }
+}
+
+/// A text item in bold: the title and the column headers.
+fn bold_item(at: [f64; 2], words: &str, size: f64, ink: Colour, anchor: Anchor) -> Item {
+    let mut item = text_item(at, words, size, ink, anchor);
+    if let Item::Text { style, .. } = &mut item {
+        style.weight = FontWeight::Bold;
+    }
+    item
 }
 
 fn element(
@@ -248,7 +259,7 @@ pub fn of_layout(layout: &Layout, style: &PictureStyle) -> DisplayList {
             "title",
             "",
             Vec::new(),
-            vec![text_item(
+            vec![bold_item(
                 [row_right / 2.0, row_y],
                 title,
                 text_size,
@@ -285,7 +296,7 @@ pub fn of_layout(layout: &Layout, style: &PictureStyle) -> DisplayList {
             .iter()
             .enumerate()
             .map(|(at, line)| {
-                text_item(
+                bold_item(
                     [x0, row_y + line_height * at as f64],
                     line,
                     text_size,

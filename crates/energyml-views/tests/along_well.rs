@@ -358,3 +358,14 @@ fn a_redraw_makes_the_same_bytes_and_the_metadata_is_this_crates() {
     );
     // Break it: write the metadata of `energyml_section::along_well::draw` (the element `along-well-view`).
 }
+
+#[test]
+fn no_text_of_the_picture_leaves_the_page() {
+    // A page 240 wide: the title and the legend names are wider than it, and are broken into lines.
+    let opened = hole();
+    for ask in [base(), base().sized(240.0, 400.0)] {
+        let list = draw(&opened, &ask).expect("drawn");
+        crate::fixtures::assert_texts_in_page(&list, "along-well");
+    }
+    // Break it: take `fit_to_page` out of `draw_list`; the 240 wide page then has a text past its edge.
+}

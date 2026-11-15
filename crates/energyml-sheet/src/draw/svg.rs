@@ -555,6 +555,9 @@ fn write_item(out: &mut String, item: &Item, hatches: &[Hatch], d: usize) -> Res
                 num(at[1], d),
                 num(style.size, d)
             );
+            if style.weight == crate::draw::list::FontWeight::Bold {
+                out.push_str(" font-weight=\"bold\"");
+            }
             colour_attr(out, "fill", style.colour);
             if style.rotate != 0.0 {
                 let _ = write!(

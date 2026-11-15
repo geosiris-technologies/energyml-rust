@@ -15,7 +15,8 @@
 //!   `ruler`, `tracks`, whose coordinates are the page's own (no translation);
 //! - `data-md-top`, `data-md-base`, `data-uri`, `data-row` and `data-blank` are kept on every cell group, and a
 //!   `data-key` joins them; the depth labels carry `data-md`;
-//! - the header texts and the mode note are no longer bold and italic: a display list's text has no weight.
+//! - the title and the column headers are bold again (`font-weight="bold"`, [`crate::draw::FontWeight`]); the mode note is
+//!   upright, no longer italic: a display list's text has a weight and no slant.
 
 use crate::draw::DrawError;
 use crate::layout::Layout;

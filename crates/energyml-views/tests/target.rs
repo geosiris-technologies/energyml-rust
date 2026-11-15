@@ -623,3 +623,14 @@ fn a_drawing_is_made_again_from_its_own_metadata() {
     assert_eq!(first.svg, again.svg);
     // Break it: leave the convention out of the metadata.
 }
+
+#[test]
+fn no_text_of_the_picture_leaves_the_page() {
+    let (opened, uris) = world(50.0, vec![sectors_property([10.0, 20.0, 30.0, 40.0])]);
+    let base = ask(&uris[0], 20.0, "high_side", "clockwise", "looking_downhole");
+    for ask in [base.clone(), base.sized(260.0, 500.0)] {
+        let list = drawn(&opened, &ask).list;
+        crate::fixtures::assert_texts_in_page(&list, "target");
+    }
+    // Break it: take `fit_to_page` out of `draw_list`; the title then runs past a 260 wide page.
+}

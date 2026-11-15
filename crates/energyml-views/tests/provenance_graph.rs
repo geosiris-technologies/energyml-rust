@@ -695,3 +695,11 @@ fn the_same_request_draws_the_same_bytes_and_a_redraw_agrees() {
     assert_eq!(again.svg, first.svg);
     // Break it: iterate a hash map when placing the boxes.
 }
+
+#[test]
+fn no_text_of_the_picture_leaves_the_page() {
+    let opened = recipe();
+    let list = drawn(&opened, ViewAsk::new(ID)).list;
+    crate::fixtures::assert_texts_in_page(&list, "provenance-graph");
+    // Break it: let a box line or the legend leave the page (widen a box's text past its width).
+}

@@ -150,3 +150,17 @@ fn a_vertical_section_needs_its_azimuth_and_never_guesses_one() {
     assert!(line[line.len() - 1][0] > line[0][0], "the section runs east");
     // Break it: take an azimuth of 0 when none is given.
 }
+
+#[test]
+fn no_text_of_the_picture_leaves_the_page() {
+    for ask in [
+        ViewAsk::new("well-locator").object(frame_uri()),
+        ViewAsk::new("well-locator")
+            .object(frame_uri())
+            .sized(150.0, 400.0),
+    ] {
+        let list = drawn(50.0, ask).list;
+        crate::fixtures::assert_texts_in_page(&list, "well-locator");
+    }
+    // Break it: take `fit_to_page` out of `draw_list`; the title then runs past a 150 wide page.
+}

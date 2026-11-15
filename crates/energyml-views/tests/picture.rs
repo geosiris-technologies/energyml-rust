@@ -136,3 +136,87 @@ fn the_png_is_the_svg_rasterised_at_its_scale() {
     assert_eq!((word(16), word(20)), (840, 1280), "twice the 420 x 640 page");
     // Break it: rasterise at scale 1 whatever is asked.
 }
+
+/// A view that draws a title, a label in the right part and a legend name, each longer than its 200 pixel page,
+/// and states a note just as long.
+struct Overlong;
+
+const LONG_TITLE: &str = "A very long title which could never be carried by a page two hundred pixels wide";
+
+impl energyml_views::ViewKind for Overlong {
+    fn id(&self) -> &'static str {
+        "overlong"
+    }
+    fn about(&self) -> &'static str {
+        "a fabricated view whose texts are too long"
+    }
+    fn objects(&self) -> Vec<energyml_views::ObjectSlot> {
+        Vec::new()
+    }
+    fn settings(&self) -> Vec<energyml_views::ViewSetting> {
+        Vec::new()
+    }
+    fn size(&self) -> [f64; 2] {
+        [200.0, 100.0]
+    }
+    fn offers(&self, _: &energyml_domain::package_index::PackageIndex) -> Vec<energyml_views::Offer> {
+        Vec::new()
+    }
+    fn draw(
+        &self,
+        _: &energyml_views::Request,
+        _: &energyml_views::ViewContext<'_>,
+    ) -> Result<energyml_views::Drawn, ViewRefusal> {
+        use energyml_sheet::draw::{Anchor, Element, Layer};
+        use energyml_views::style;
+        let mut list =
+            energyml_sheet::draw::DisplayList::new([200.0, 100.0], energyml_sheet::draw::PageUnit::Pixel);
+        let mut layer = Layer::new("texts");
+        layer.elements.push(Element::new(vec![
+            style::label_item(
+                [8.0, 20.0],
+                LONG_TITLE,
+                style::text(style::TITLE, style::INK, Anchor::Start),
+            ),
+            style::label_item(
+                [160.0, 50.0],
+                LONG_TITLE,
+                style::text(style::TEXT, style::INK, Anchor::Start),
+            ),
+            style::label_item(
+                [100.0, 80.0],
+                LONG_TITLE,
+                style::text(style::TEXT, style::INK, Anchor::Middle),
+            ),
+        ]));
+        list.layers.push(layer);
+        Ok(energyml_views::Drawn {
+            list,
+            notes: vec![energyml_views::ViewNote {
+                key: "overlong",
+                says: LONG_TITLE.to_string(),
+            }],
+        })
+    }
+}
+
+#[test]
+fn a_title_a_label_and_a_note_longer_than_the_page_are_broken_inside_it() {
+    let opened = Opened::of(package(50.0, &[20.0, 80.0]));
+    let mut kinds = ViewKinds::empty();
+    kinds.register(Box::new(Overlong));
+    let (drawn, _) = energyml_views::draw_list(&kinds, &ViewAsk::new("overlong"), &opened.context(&NO_MAPS))
+        .expect("drawn");
+    crate::fixtures::assert_texts_in_page(&drawn.list, "a view of overlong texts");
+    let lines = crate::fixtures::texts(&drawn.list);
+    assert!(
+        lines.len() > 4,
+        "the three texts and the note are broken into lines: {lines:?}"
+    );
+    assert!(
+        drawn.list.size[1] > 100.0,
+        "the band of notes grew the page by its lines"
+    );
+    // Break it: take `fit_to_page` out of `draw_list` (the title and the labels run out), or make `notes_layer`
+    // write a note on one line (the last line of the band, wider than the page, fails the same assertion).
+}

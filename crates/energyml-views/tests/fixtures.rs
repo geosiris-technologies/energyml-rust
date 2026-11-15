@@ -226,3 +226,15 @@ pub fn distance_to_line(point: [f64; 2], line: &[[f64; 2]]) -> f64 {
         .map(|pair| energyml_geometry::vector::plan::distance_to_segment(point, pair[0], pair[1]))
         .fold(f64::INFINITY, f64::min)
 }
+
+/// The largest abscissa a text of the list reaches (its position plus its width measured by the sheet's own door)
+/// must stay inside the page: nothing a view writes leaves the image.
+#[allow(dead_code)] // each view's test file calls it, a build of one file alone would not
+pub fn assert_texts_in_page(list: &DisplayList, what: &str) {
+    let widest = energyml_sheet::draw::text::max_text_x(list).expect("the picture has a text");
+    assert!(
+        widest <= list.size[0] + 1e-6,
+        "{what}: a text reaches x = {widest:.2} on a page {} wide",
+        list.size[0]
+    );
+}

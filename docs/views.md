@@ -45,6 +45,14 @@ itself asks `draw_list`; a view of the caller's is registered with `ViewKinds::r
 |---|---|---|
 | `well-locator` | a wellbore frame or trajectory | the well laid flat (`md_tvd`, `md_bar`, `developed`, `plan`, `vertical_section` with its `azimuth`), the interval the frame carries data over, and a mark at `md` |
 
+## Text stays on the page
+
+No text of a view leaves its picture: `draw_list` breaks a title, a label or a legend name wider than the page into
+lines (`energyml_sheet::draw::text::fit_to_page`), and the notes under the picture are broken to the page's width,
+the band growing by its lines. `md-coverage` writes the name of a bar too short for it beside the bar, above it when
+the band has the room, else below. `property-insight` writes the eight strongest seams of an array (the step over the
+median step) and counts the rest in one line, `and K more seams`.
+
 ## Colours
 
 The map the package gives the object comes first, by the same walk as `energyml colors`. When it gives none, the

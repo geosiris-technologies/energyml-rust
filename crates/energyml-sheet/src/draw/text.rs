@@ -19,6 +19,8 @@
 #[path = "../text/widths.rs"]
 mod widths;
 
+use crate::draw::list::{Anchor, DisplayList, FontWeight, Item, TextStyle};
+
 /// The font's ascent, per em: `hhea.ascent` 1854 over `unitsPerEm` 2048 of
 /// Liberation Sans 2.1.5 (`fonts/LiberationSans-Regular.ttf`, read with
 /// fontTools). Where a text's box starts above its baseline.
@@ -35,9 +37,8 @@ pub const FONT_FAMILY: &str = "Liberation Sans";
 /// The `font-family` every SVG of this module writes.
 pub const FONT_STACK: &str = "Liberation Sans, Arial, Helvetica, sans-serif";
 
-/// A single text style: only the size matters for measuring, since this
-/// crate ships one weight of one font (bold headers are a BSS
-/// convention this increment does not reproduce).
+/// A single text style: only the size matters for measuring, since the table holds the regular advances only
+/// (a bold text is measured through [`BOLD_WIDTH_FACTOR`], see [`styled_width`]).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Style {
     /// The font size, in points.
@@ -204,6 +205,117 @@ fn split_word(word: &str, max_width_pt: f64, size_pt: f64, hard_cuts: &mut usize
         start = cut;
     }
     fragments
+}
+
+/// How much wider the bold face is than the measured regular one, as a safety factor: the table holds the regular
+/// advances only, and Liberation Sans Bold runs about 5 to 10 percent wider. A bold text is measured and wrapped as
+/// if its size were this much larger, so it errs toward a line too short, never one too long.
+pub const BOLD_WIDTH_FACTOR: f64 = 1.1;
+/// The distance between two baselines of a wrapped text, per unit of its size.
+pub const LINE_STEP_PER_SIZE: f64 = 1.25;
+
+/// The width of a text in the style it is drawn in: the measured width, times [`BOLD_WIDTH_FACTOR`] when bold.
+pub fn styled_width(text: &str, style: &TextStyle) -> f64 {
+    let factor = if style.weight == FontWeight::Bold {
+        BOLD_WIDTH_FACTOR
+    } else {
+        1.0
+    };
+    string_width_pt(text, style.size) * factor
+}
+
+/// The horizontal span `[left, right]` of a text of `width` anchored at abscissa `x`.
+pub fn x_span(x: f64, anchor: Anchor, width: f64) -> [f64; 2] {
+    match anchor {
+        Anchor::Start => [x, x + width],
+        Anchor::Middle => [x - width / 2.0, x + width / 2.0],
+        Anchor::End => [x - width, x],
+    }
+}
+
+/// The widest a text anchored at `x` may be and stay in a page `page_width` wide.
+pub fn room(x: f64, anchor: Anchor, page_width: f64) -> f64 {
+    match anchor {
+        Anchor::Start => page_width - x,
+        Anchor::Middle => 2.0 * x.min(page_width - x),
+        Anchor::End => x,
+    }
+}
+
+/// The largest abscissa any unrotated text of the list reaches: its position plus its measured width. `None` for a
+/// list with no such text. The measure a test of "nothing leaves the page" holds a view to.
+pub fn max_text_x(list: &DisplayList) -> Option<f64> {
+    let mut out: Option<f64> = None;
+    for item in list
+        .layers
+        .iter()
+        .flat_map(|l| &l.elements)
+        .flat_map(|e| &e.items)
+    {
+        let Item::Text { at, text, style } = item else {
+            continue;
+        };
+        if style.rotate != 0.0 {
+            continue;
+        }
+        let right = x_span(at[0], style.anchor, styled_width(text, style))[1];
+        out = Some(out.map_or(right, |m| m.max(right)));
+    }
+    out
+}
+
+/// Break every unrotated text that leaves the page (past `list.size[0]`, or before 0) into lines that fit, one
+/// [`Item::Text`] a line, the lines [`LINE_STEP_PER_SIZE`] times the size apart below the first (the first keeps
+/// its baseline). A text that fits is not touched. A text whose anchor leaves less than one character of room is
+/// left alone (there is nothing to break it against).
+///
+/// The lines below the first take the room of what is under the text: a view that places a long title with
+/// something close underneath should break it itself, with a room of its own, before this pass. This is the net
+/// under every view, not a layout.
+pub fn fit_to_page(list: &mut DisplayList) {
+    let page = list.size[0];
+    for layer in &mut list.layers {
+        for element in &mut layer.elements {
+            if !element.items.iter().any(|item| overflows(item, page)) {
+                continue;
+            }
+            let items = std::mem::take(&mut element.items);
+            for item in items {
+                if !overflows(&item, page) {
+                    element.items.push(item);
+                    continue;
+                }
+                let Item::Text { at, text, style } = item else {
+                    continue;
+                };
+                let factor = if style.weight == FontWeight::Bold {
+                    BOLD_WIDTH_FACTOR
+                } else {
+                    1.0
+                };
+                let wrapped = wrap(&text, room(at[0], style.anchor, page), style.size * factor);
+                for (n, line) in wrapped.lines.into_iter().enumerate() {
+                    element.items.push(Item::Text {
+                        at: [at[0], at[1] + style.size * LINE_STEP_PER_SIZE * n as f64],
+                        text: line,
+                        style,
+                    });
+                }
+            }
+        }
+    }
+}
+
+/// Whether this item is an unrotated text that leaves the page and has room to be broken.
+fn overflows(item: &Item, page: f64) -> bool {
+    let Item::Text { at, text, style } = item else {
+        return false;
+    };
+    if style.rotate != 0.0 || !at[0].is_finite() || !page.is_finite() {
+        return false;
+    }
+    let room = room(at[0], style.anchor, page);
+    room >= style.size && styled_width(text, style) > room
 }
 
 /// A number written short: `decimals` decimals at most, no trailing zeros and

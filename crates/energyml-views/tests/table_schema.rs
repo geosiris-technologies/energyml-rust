@@ -732,3 +732,11 @@ fn the_same_request_draws_the_same_bytes_and_a_redraw_agrees() {
     assert_eq!(again.svg, first.svg);
     // Break it: iterate a hash map when grouping the objects that name a table.
 }
+
+#[test]
+fn no_text_of_the_picture_leaves_the_page() {
+    let opened = opened();
+    let list = drawn(&opened, ViewAsk::new(ID)).list;
+    crate::fixtures::assert_texts_in_page(&list, "table-schema");
+    // Break it: let a box line leave its box and the page (widen a line past the room of its box).
+}

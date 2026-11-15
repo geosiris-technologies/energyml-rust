@@ -169,6 +169,7 @@ mod with_png {
                 colour: Colour::rgb(0, 0, 0),
                 anchor: Anchor::Start,
                 rotate: 0.0,
+                weight: Default::default(),
             },
         }]));
         let meta = svg::Metadata {

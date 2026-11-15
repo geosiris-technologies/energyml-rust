@@ -591,3 +591,54 @@ fn bands_that_do_not_fit_the_page_are_refused_not_squeezed() {
     assert!(refused.contains("bands do not fit"), "{refused}");
     // Break it: shrink the plot width below 16 pixels instead of refusing.
 }
+
+#[test]
+fn no_text_of_the_picture_leaves_the_page() {
+    let opened = package();
+    for ask in [well_ask(), well_ask().sized(260.0, 500.0)] {
+        let list = drawn(&opened, ask).expect("drawn").list;
+        crate::fixtures::assert_texts_in_page(&list, "md-coverage");
+    }
+    // Break it: take `fit_to_page` out of `draw_list`; the band headers then run past a 260 wide page.
+}
+
+#[test]
+fn the_name_of_a_bar_too_short_for_it_is_written_beside_it() {
+    use energyml_views::md_coverage::bar_label;
+    let area = Rect {
+        x: 0.0,
+        y: 40.0,
+        w: 300.0,
+        h: 300.0,
+    };
+    let at = |item: Item| match item {
+        Item::Text { at, style, .. } => (at, style.rotate),
+        other => panic!("a text: {other:?}"),
+    };
+    let name = "a long object name";
+    // A tall bar carries its name inside, from its foot upward.
+    let tall = Rect {
+        x: 90.0,
+        y: 100.0,
+        w: 20.0,
+        h: 200.0,
+    };
+    assert_eq!(at(bar_label(name, 100.0, &tall, &area)), ([103.5, 297.0], -90.0));
+    // A short bar low in the band: the name is above it, reading upward, ending just over the bar.
+    let short = Rect {
+        x: 90.0,
+        y: 200.0,
+        w: 20.0,
+        h: 5.0,
+    };
+    assert_eq!(at(bar_label(name, 100.0, &short, &area)), ([103.5, 197.0], -90.0));
+    // A short bar at the top of the band: no room above, the name is below it, reading downward.
+    let top = Rect {
+        x: 90.0,
+        y: 45.0,
+        w: 20.0,
+        h: 5.0,
+    };
+    assert_eq!(at(bar_label(name, 100.0, &top, &area)), ([96.5, 53.0], 90.0));
+    // Break it: put the label of every bar at its foot (the old place); the short bar's name then starts inside it.
+}

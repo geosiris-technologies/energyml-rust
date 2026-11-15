@@ -383,3 +383,14 @@ fn the_picture_is_written_and_drawn_again_from_its_own_metadata() {
     assert_eq!(again.svg, picture.svg);
     // Break it: let the view read something other than the request (a clock, a random id).
 }
+
+#[test]
+fn no_text_of_the_picture_leaves_the_page() {
+    let list = drawn(
+        sheet_package(false),
+        ViewAsk::new("well-sheet").object(frame_uri()),
+    )
+    .list;
+    crate::fixtures::assert_texts_in_page(&list, "well-sheet");
+    // Break it: widen the title past the page (a title longer than the page's width in millimetres).
+}

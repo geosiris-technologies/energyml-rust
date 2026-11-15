@@ -544,3 +544,13 @@ fn a_redraw_makes_the_same_bytes() {
     assert_eq!(first.svg, again.svg);
     // Break it: let a default that moved change the drawing.
 }
+
+#[test]
+fn no_text_of_the_picture_leaves_the_page() {
+    let opened = opened();
+    for ask in [ask(&opened, 1), ask(&opened, 1).sized(260.0, 500.0)] {
+        let list = drawn(&opened, ask).list;
+        crate::fixtures::assert_texts_in_page(&list, "table-curve");
+    }
+    // Break it: take `fit_to_page` out of `draw_list`; the title and the legend then run past a 260 wide page.
+}

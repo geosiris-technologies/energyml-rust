@@ -523,14 +523,7 @@ pub fn coverage_list(spec: &CoverageSpec<'_>) -> Result<DisplayList, String> {
                     fill: Some(fill),
                     stroke: Some(stroke),
                 },
-                Item::Text {
-                    at: [centre + 3.5, (rect.y + rect.h - 3.0).max(area.y + 3.0)],
-                    text: name.clone(),
-                    style: TextStyle {
-                        rotate: -90.0,
-                        ..style::text(style::SMALL, style::INK, Anchor::Start)
-                    },
-                },
+                bar_label(&name, centre, &rect, &area),
             ];
             if reversed {
                 items.push(Item::Symbol {
@@ -608,6 +601,45 @@ pub fn coverage_list(spec: &CoverageSpec<'_>) -> Result<DisplayList, String> {
     }
     list.validate().map_err(|why| why.to_string())?;
     Ok(list)
+}
+
+/// The padding between a bar's end and its label, pixels.
+const LABEL_PAD: f64 = 3.0;
+
+/// The name of a bar, written along it, turned. Inside the bar, from its foot upward, when it fits there (the
+/// bar's height less a padding at each end). A bar too short for its name carries it **beside** it instead: above
+/// the bar, reading upward, when the band has the room up there; else below, reading downward; else (the band is
+/// too short for either) inside, clipped by the band, as before.
+pub fn bar_label(name: &str, centre: f64, rect: &Rect, area: &Rect) -> Item {
+    let length = energyml_sheet::draw::text::string_width_pt(name, style::SMALL);
+    let upward = TextStyle {
+        rotate: -90.0,
+        ..style::text(style::SMALL, style::INK, Anchor::Start)
+    };
+    let downward = TextStyle {
+        rotate: 90.0,
+        ..style::text(style::SMALL, style::INK, Anchor::Start)
+    };
+    let (at, style) = if length + 2.0 * LABEL_PAD <= rect.h {
+        ([centre + 3.5, rect.y + rect.h - LABEL_PAD], upward)
+    } else if rect.y - LABEL_PAD - length >= area.y {
+        ([centre + 3.5, rect.y - LABEL_PAD], upward)
+    } else if rect.y + rect.h + LABEL_PAD + length <= area.y + area.h {
+        ([centre - 3.5, rect.y + rect.h + LABEL_PAD], downward)
+    } else {
+        (
+            [
+                centre + 3.5,
+                (rect.y + rect.h - LABEL_PAD).max(area.y + LABEL_PAD),
+            ],
+            upward,
+        )
+    };
+    Item::Text {
+        at,
+        text: name.to_string(),
+        style,
+    }
 }
 
 /// The frame of a band, its horizontal grid and its graduated MD axis, by `style::graduated_layer`. (A band has no

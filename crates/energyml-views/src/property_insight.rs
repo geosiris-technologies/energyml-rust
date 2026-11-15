@@ -829,11 +829,43 @@ fn facts_of(
             ),
         );
     }
+    // The seams are written strongest first, at most `MAX_SEAMS_WRITTEN` of them, where the first seam stood; the
+    // others are counted in one line. Every other observation is written where it stands.
+    let mut seams: Vec<(usize, &Observation, f64)> = description
+        .observations
+        .iter()
+        .enumerate()
+        .filter_map(|(at, observation)| match observation {
+            Observation::Jump(jump) => Some((at, observation, jump.ratio_to_median)),
+            _ => None,
+        })
+        .collect();
+    // Strongest first (the ratio to the median step); a tie keeps the order of the description.
+    seams.sort_by(|a, b| b.2.total_cmp(&a.2));
+    let unwritten = seams.len().saturating_sub(MAX_SEAMS_WRITTEN);
+    seams.truncate(MAX_SEAMS_WRITTEN);
+    let mut seams_done = false;
     for (at, observation) in description.observations.iter().enumerate() {
+        if matches!(observation, Observation::Jump(_)) {
+            if !seams_done {
+                seams_done = true;
+                for (at, observation, _) in &seams {
+                    fact(&format!("observation-{at}"), observation_words(observation, axis));
+                }
+                if unwritten > 0 {
+                    fact("seams-more", format!("and {unwritten} more seams"));
+                }
+            }
+            continue;
+        }
         fact(&format!("observation-{at}"), observation_words(observation, axis));
     }
     facts
 }
+
+/// How many seams the shape block writes, strongest first (the ratio of the step to the median step); the others
+/// are counted in one line, `and K more seams`. A noisy array can hold hundreds: the page holds a few lines.
+pub const MAX_SEAMS_WRITTEN: usize = 8;
 
 /// The facts written beside the density.
 fn facts_of_relation(relation: &Relation, rule: Option<CellRule>) -> Vec<String> {
