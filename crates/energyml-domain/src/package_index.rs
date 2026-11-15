@@ -363,10 +363,12 @@ pub struct PackageIndex {
     inn: Vec<Vec<(NodeId, PathId)>>,
     strings: Interner,
     sheets: HashMap<NodeId, PropertySheet>,
+    /// One sheet per table: what lists and classifies the tables without reading an array.
+    tables: HashMap<NodeId, crate::table::TableSheet>,
     /// Objects that could not be read: uuid and reason.
     unreadable: Vec<(String, String)>,
-    /// Properties that read but whose sheet could not be taken: uuid and reason -
-    /// `property::read` refused them (an indexable element this build does not
+    /// Properties and tables that read but whose sheet could not be taken: uuid and reason -
+    /// `property::read` (or `Table::read`) refused them (an indexable element this build does not
     /// know). Named rather than skipped, like `property::Index::build`'s refused.
     unsheeted: Vec<(String, String)>,
     /// Nodes whose absence/presence must be re-decided at the end of a pass or
@@ -441,6 +443,7 @@ impl PackageIndex {
             inn: Vec::new(),
             strings: Interner::default(),
             sheets: HashMap::new(),
+            tables: HashMap::new(),
             unreadable: Vec::new(),
             unsheeted: Vec::new(),
             to_settle: Vec::new(),
@@ -624,6 +627,19 @@ impl PackageIndex {
     pub fn sheet(&self, property: &str) -> Option<&PropertySheet> {
         let id = self.find(property)?;
         self.sheets.get(&id)
+    }
+
+    /// The sheet of a table, by its address (a uri, or a bare uuid at the entry).
+    pub fn table_sheet(&self, table: &str) -> Option<&crate::table::TableSheet> {
+        let id = self.find(table)?;
+        self.tables.get(&id)
+    }
+
+    /// Every table sheet, with the table's uri. Unordered.
+    pub fn tables(&self) -> impl Iterator<Item = (&str, &crate::table::TableSheet)> {
+        self.tables
+            .iter()
+            .map(|(id, sheet)| (&*self.nodes[*id as usize].uri, sheet))
     }
 
     /// Every sheet, with the property's uri. Unordered.
@@ -1153,6 +1169,7 @@ impl PackageIndex {
         targets.sort_unstable();
         targets.dedup();
         self.sheets.remove(&id);
+        self.tables.remove(&id);
         // The rows this node laid in the relation tables go with its edges -
         // the same place a re-read puts them back.
         self.relations.forget(id, &outgoing, &self.strings);
@@ -1345,6 +1362,23 @@ impl PackageIndex {
                 }
             }
         }
+        // A table keeps its sheet (titles, kinds, facets, counts), never an array.
+        if matches!(
+            &*self.nodes[id as usize].type_key,
+            "ColumnBasedTable" | "StringTableLookup" | "DoubleTableLookup"
+        ) {
+            match crate::table::Table::read(object) {
+                Ok(table) => {
+                    let sheet =
+                        crate::table::TableSheet::of_table(&table, &self.nodes[id as usize].uri);
+                    self.tables.insert(id, sheet);
+                }
+                Err(why) => {
+                    let uuid = self.nodes[id as usize].uuid.to_string();
+                    self.unsheeted.push((uuid, why.to_string()));
+                }
+            }
+        }
     }
 
     fn absent_node(&mut self, edge: &identity::RefEdge<'_>, seen: u64) -> IndexNode {
@@ -1467,6 +1501,7 @@ impl PackageIndex {
             self.by_uuid.remove(key.as_str());
         }
         self.sheets.remove(&id);
+        self.tables.remove(&id);
         let node = &mut self.nodes[id as usize];
         node.state = NodeState::Gone;
         node.title = None;

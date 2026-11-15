@@ -50,6 +50,51 @@
 //! serialized last in the XML and stored first in the file. Deriving the
 //! dataset order from the document order gets every value wrong while looking
 //! perfectly healthy.
+//!
+//! # Layout
+//!
+//! This file keeps the table itself (`Table`, `Column`, `Rows`, `Cell`,
+//! `Lookup`) and the reading of the two shapes. The rest is split by trade, and
+//! every public name is re-exported here, so `energyml_domain::table::X` is the
+//! path whichever file holds `X`:
+//!
+//! | file | what it holds |
+//! |---|---|
+//! | `cells` | a cell's four states, `ValueCountPerRow`, the row count |
+//! | `sheet` | a table without its values, kept by the package index |
+//! | `class` | the class of a column, the MD columns, the curve pairs |
+//! | `links` | the link a column declares, by convention |
+//! | `keys` | the key index, the one rule "by the key, else by the rank" |
+//! | `resolve` | a link cell resolved to a row |
+//! | `check` | the links of a table or a set, checked |
+//! | `window` | sort, filter and page a big table |
+
+pub mod cells;
+pub mod check;
+pub mod class;
+pub mod keys;
+pub mod links;
+pub mod resolve;
+pub mod sheet;
+pub mod window;
+
+pub use cells::{CellState, ColumnCells, TableRefusal, row_count};
+pub use check::{ColumnReport, LinkReport, UriColumnReport, check_links, check_links_of_set};
+pub use class::{
+    ColumnClass, DESCRIPTION, DepthKind, EXPLICIT_INDEX, IDENTIFIER, IntervalColumns,
+    MEASURED_DEPTH, TRUE_VERTICAL_DEPTH, classify_column, curve_pairs, descends_from, md_columns,
+    resolve_kinds,
+};
+pub use keys::{KeyIndex, NamingRefusal, RowMatch, row_named_by};
+pub use links::{
+    Convention, LinkDeclaration, LinkReader, LinkReaders, LinkRefusal, LinkTarget, LinkWarning,
+    UriColumn, uri_column,
+};
+pub use resolve::{DanglingWhy, Resolved, TableSet, TargetIndexes, TargetTable, resolve};
+pub use sheet::{ColumnSheet, TableSheet};
+pub use window::{
+    ColumnAccess, RowFilter, SortKey, SortOrder, TableWindow, WindowRefusal,
+};
 
 use energyml_core::identity;
 use energyml_core::value::{FieldValue, Reflect, Scalar};
@@ -58,6 +103,8 @@ use crate::error::{Error, Result};
 use crate::property::{Facet, PropertyKindRef, read_facets};
 use crate::source::ArraySource;
 use crate::values::{self, Values};
+// The one arithmetic of "the values of a row", written in `cells`.
+use cells::span;
 
 /// One column of a table.
 pub struct Column<'a> {
@@ -246,9 +293,15 @@ impl<'a> Table<'a> {
                     .join(", ")
             ));
         }
+        let nulls: Vec<Option<i64>> = self
+            .columns
+            .iter()
+            .map(|column| column.array.and_then(values::null_value))
+            .collect();
         Ok(Rows {
             columns,
             per_row,
+            nulls,
             rows,
             notes,
         })
@@ -264,23 +317,29 @@ pub struct Rows {
     /// Values per row of each column, in the same order - `ValueCountPerRow`,
     /// 1 for a scalar column and for both columns of a 2.0.1 lookup.
     pub per_row: Vec<u64>,
+    /// The `NullValue` each column's array declares, in the same order: `None`
+    /// for a column in line, a floating-point or text column, or one that did
+    /// not read. [`Rows::cells`] gives it to [`ColumnCells`].
+    pub nulls: Vec<Option<i64>>,
     /// How many rows can be read across every column **that read**.
     pub rows: usize,
     /// What did not line up, and what could not be read.
     pub notes: Vec<String>,
 }
 
-/// The values of row `row` in a column of `per_row` values per row:
-/// `row*per_row .. row*per_row + per_row` (the row's values are the fastest
-/// dimension, common TRG 2.3 §9.1 p. 190). The one place this arithmetic is
-/// written.
-pub(crate) fn span(per_row: u64, row: usize) -> std::ops::Range<usize> {
-    let n = per_row.max(1) as usize;
-    let start = row.saturating_mul(n);
-    start..start.saturating_add(n)
-}
-
 impl Rows {
+    /// One column as cells, borrowing its values: what [`ColumnCells`] cuts
+    /// into rows with `ValueCountPerRow` and the array's `NullValue`. `None` for
+    /// a column that could not be read and for one past the table.
+    pub fn cells(&self, column: usize) -> Option<ColumnCells<'_>> {
+        let values = self.columns.get(column)?.as_ref()?;
+        Some(ColumnCells {
+            values: std::borrow::Cow::Borrowed(values),
+            per_row: self.per_row_of(column),
+            null: self.nulls.get(column).copied().flatten(),
+        })
+    }
+
     /// Values per row of a column; 1 when the column is not known.
     fn per_row_of(&self, column: usize) -> u64 {
         self.per_row.get(column).copied().unwrap_or(1).max(1)
@@ -344,11 +403,14 @@ impl Cell {
     /// Whether two cells are the same key.
     ///
     /// Numbers are compared as numbers whatever they were stored as - a key
-    /// column of `int32` and a query of `3.0` are the same key - and text is
-    /// compared exactly, because a facies name is a name.
+    /// column of `int32` and a query of `3.0` are the same key - and **exactly**:
+    /// `-0.0` is `0.0` and a `NaN` is never a key. A hashed index needs an
+    /// equivalence relation, and a tolerance is not transitive (the former
+    /// `f64::EPSILON` window only ever applied under 1 in absolute value).
+    /// Text is compared exactly, because a facies name is a name.
     pub fn matches(&self, other: &Cell) -> bool {
         match (self, other) {
-            (Cell::Number(a), Cell::Number(b)) => a == b || (a - b).abs() < f64::EPSILON,
+            (Cell::Number(a), Cell::Number(b)) => a == b,
             (Cell::Boolean(a), Cell::Boolean(b)) => a == b,
             (Cell::Text(a), Cell::Text(b)) => a == b,
             // A number against text is not a mismatch of value but of column;
@@ -411,19 +473,11 @@ impl Lookup {
     ///
     /// A key column of several values per row finds nothing: a key is one
     /// value per row.
+    ///
+    /// A caller that looks up several keys builds the index once
+    /// ([`Lookup::key_index`]) and asks it.
     pub fn find(&self, key: &[Cell]) -> Vec<usize> {
-        if self.key_columns.is_empty() || key.len() != self.key_columns.len() {
-            return Vec::new();
-        }
-        (0..self.rows.rows)
-            .filter(|row| {
-                self.key_columns.iter().zip(key).all(|(column, wanted)| {
-                    self.rows
-                        .cell(*row, *column)
-                        .is_some_and(|cell| cell.matches(wanted))
-                })
-            })
-            .collect()
+        self.key_index().rows_of(key).to_vec()
     }
 
     /// What a single-key lookup maps a number to: the other columns of the
@@ -448,26 +502,7 @@ impl Lookup {
     /// answers arbitrarily, and an application that cares should be able to
     /// find out before it does.
     pub fn duplicate_keys(&self) -> Vec<(Vec<Cell>, Vec<usize>)> {
-        let mut seen: Vec<(Vec<Cell>, Vec<usize>)> = Vec::new();
-        for row in 0..self.rows.rows {
-            let key: Vec<Cell> = self
-                .key_columns
-                .iter()
-                .filter_map(|column| self.rows.cell(row, *column))
-                .collect();
-            if key.len() != self.key_columns.len() {
-                continue;
-            }
-            match seen
-                .iter_mut()
-                .find(|(known, _)| known.iter().zip(&key).all(|(a, b)| a.matches(b)))
-            {
-                Some((_, rows)) => rows.push(row),
-                None => seen.push((key, vec![row])),
-            }
-        }
-        seen.retain(|(_, rows)| rows.len() > 1);
-        seen
+        self.key_index().duplicates()
     }
 }
 
@@ -661,6 +696,7 @@ mod tests {
                 rows: keys.len().min(values.len()),
                 columns: vec![Some(keys), Some(values)],
                 per_row: vec![1, 1],
+                nulls: vec![None, None],
                 notes: Vec::new(),
             },
             notes: Vec::new(),
@@ -768,6 +804,7 @@ mod tests {
                 Some(Values::Floating(vec![0.1, 0.2])),
             ],
             per_row: vec![1, 1],
+            nulls: vec![None, None],
             rows: 2,
             notes: Vec::new(),
         };

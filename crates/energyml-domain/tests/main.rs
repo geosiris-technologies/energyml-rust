@@ -61,7 +61,10 @@ mod subtree;
 mod table;
 mod text_arrays;
 
+mod table_cells;
+mod table_keys;
 mod table_rows;
+mod table_sheet;
 mod trg_2_2;
 mod units_families;
 mod uri_follow;
