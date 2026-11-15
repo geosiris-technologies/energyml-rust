@@ -478,3 +478,17 @@ fn a_release_version_spelling_resolves_like_its_schema_version_spelling() {
             .is_none()
     );
 }
+
+/// `shared()` is `all()` built once: the same registry on every call, holding
+/// what `all()` holds.
+#[test]
+fn the_shared_registry_is_built_once_and_holds_what_all_holds() {
+    let first = energyml_schemas::shared();
+    let second = energyml_schemas::shared();
+    assert!(
+        std::sync::Arc::ptr_eq(&first, &second),
+        "a second call must not rebuild"
+    );
+    assert_eq!(first.types().count(), energyml_schemas::all().types().count());
+    // Break it: make `shared` return `Arc::new(all())` on every call; `ptr_eq` fails.
+}

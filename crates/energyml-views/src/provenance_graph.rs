@@ -194,6 +194,14 @@ impl ViewKind for ProvenanceView {
             .collect();
         let columns = columns_of(&graph.nodes, &graph.edges, &at);
         let mut accent_error: Option<String> = None;
+        // The package's colours are asked **once** for all the nodes that take an accent, not once per node:
+        // each question reads the package's colour sets again.
+        let accent_uris: Vec<&str> = if settings.flag("accent") {
+            graph.nodes.iter().filter_map(coloured_uri).collect()
+        } else {
+            Vec::new()
+        };
+        let mut accents = cx.colours.paint_all(&accent_uris).into_iter();
         let boxes: Vec<BoxLook> = graph
             .nodes
             .iter()
@@ -202,14 +210,12 @@ impl ViewKind for ProvenanceView {
                 if subject.as_ref() == Some(&node.key()) {
                     look.frame = Frame::Subject;
                 }
-                if settings.flag("accent")
-                    && let Some(uri) = coloured_uri(node)
-                {
-                    match cx.colours.paint(uri) {
-                        Ok(Some(FilePaint::Constant(rgba))) => look.accent = Some(colour_of(rgba)),
+                if settings.flag("accent") && coloured_uri(node).is_some() {
+                    match accents.next() {
+                        Some(Ok(Some(FilePaint::Constant(rgba)))) => look.accent = Some(colour_of(rgba)),
                         // A map colours values, and nothing here is a value.
-                        Ok(_) => {}
-                        Err(why) => {
+                        Some(Ok(_)) | None => {}
+                        Some(Err(why)) => {
                             accent_error.get_or_insert(why);
                         }
                     }

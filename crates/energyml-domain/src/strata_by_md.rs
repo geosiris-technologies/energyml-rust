@@ -846,6 +846,26 @@ pub fn of_representation(
     source: &dyn ArraySource,
     known: &Known<'_>,
 ) -> Result<Painting, Refusal> {
+    of_representation_cached(
+        target,
+        frames_of,
+        rank,
+        source,
+        known,
+        &well_strata::StrataCache::new(),
+    )
+}
+
+/// [`of_representation`] for a caller painting **many representations of one package**: the ranks and the merged
+/// colours go through `cache` ([`well_strata::StrataCache`]) and are read once, not once per frame.
+pub fn of_representation_cached(
+    target: &dyn Reflect,
+    frames_of: &dyn Fn(&str) -> Vec<Box<dyn DynObject>>,
+    rank: Option<&str>,
+    source: &dyn ArraySource,
+    known: &Known<'_>,
+    cache: &well_strata::StrataCache,
+) -> Result<Painting, Refusal> {
     let wanted = Wanted::IntervalUnits { rank };
     let key = target.type_info().type_key;
     // A frame that states units says for itself; anything that is neither a
@@ -853,7 +873,7 @@ pub fn of_representation(
     // A frame that states none is not read here: its `NodeMd` is read below,
     // once there is something to look it up in.
     if key != TRAJECTORY && (key != FRAME || well_strata::states_units(target)) {
-        match well_strata::of_frame(target, &wanted, source, known) {
+        match well_strata::of_frame_cached(target, &wanted, source, known, cache) {
             Ok(strata) => return Ok(Painting::Own(strata)),
             Err(refusal) if refusal.is_absence() && key == FRAME => {}
             Err(refusal) => return Err(refusal),
@@ -887,7 +907,7 @@ pub fn of_representation(
         {
             continue;
         }
-        match well_strata::of_frame(frame, &wanted, source, known) {
+        match well_strata::of_frame_cached(frame, &wanted, source, known, cache) {
             Ok(strata) => read.push((strata, md_reference(frame, source)?)),
             Err(refusal) if refusal.is_absence() => {}
             Err(refusal) => return Err(refusal),

@@ -919,3 +919,48 @@ fn what_is_not_a_frame_is_refused_by_name() {
     assert!(matches!(refused, Refusal::Unsupported { .. }), "{refused:?}");
     assert!(refused.to_string().contains("NodeMd"), "{refused}");
 }
+
+/// **A rank and its units are read once for many frames of one package**, through a `StrataCache`: a front end
+/// painting thousands of frames of one rank used to fetch and parse the rank and each of its units for every
+/// one. The answers are those `of_frame` gives, frame by frame.
+///
+/// Break it: make `read_rank` skip `cache.ranks` (or `of_frame_cached` build `StrataCache::new()` itself);
+/// the rank and its units are then read once per frame and this fails.
+#[test]
+fn a_rank_and_its_units_are_read_once_for_many_frames() {
+    use crate::reads_once::Counting;
+    use energyml_domain::well_strata::StrataCache;
+
+    let the_rank = rank(RANK, &[PRIABONIAN, BARTONIAN]);
+    let well = frame(&[0.0, 10.0, 25.0], vec![mapping(RANK, &[0, 1], &[1, 2])]);
+    let package = held(vec![
+        unit(BARTONIAN, "Bartonian"),
+        unit(PRIABONIAN, "Priabonian"),
+        boxed(the_rank),
+        boxed(well.clone()),
+    ]);
+    // Both units coloured on themselves: the colour walk then stops at the unit and reads nothing of its feature.
+    let set = graphics(&[(PRIABONIAN, RED), (BARTONIAN, BLUE)]);
+    let known = Known {
+        graphics: &set,
+        units: &[],
+    };
+    let wanted = Wanted::IntervalUnits { rank: None };
+    let alone = well_strata::of_frame(&well, &wanted, &package, &known).expect("the frame reads");
+
+    let counting = Counting::new(&package);
+    let cache = StrataCache::new();
+    for _ in 0..4 {
+        let strata =
+            well_strata::of_frame_cached(&well, &wanted, &counting, &known, &cache).expect("the frame reads");
+        assert_eq!(units_of(&strata), units_of(&alone));
+        assert_eq!(node_hex(&strata, BLUE), node_hex(&alone, BLUE));
+    }
+    assert_eq!(
+        counting.reads_of(RANK),
+        1,
+        "the rank is read once for four frames"
+    );
+    assert_eq!(counting.reads_of(PRIABONIAN), 1, "and so is each of its units");
+    assert_eq!(counting.reads_of(BARTONIAN), 1);
+}

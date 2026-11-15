@@ -47,7 +47,9 @@
 //! [`ArraySource`] the arrays, and a check that needs arrays with none given
 //! says so rather than passing.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::cell::RefCell;
+use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::rc::Rc;
 
 use energyml_core::identity;
 use energyml_core::value::{FieldValue, Reflect};
@@ -84,6 +86,53 @@ struct Context<'a> {
     objects: &'a [(&'a str, &'a dyn Reflect)],
     source: &'a dyn ObjectSource,
     arrays: Option<&'a dyn ArraySource>,
+    /// What the checks of one run read, kept for the next check that needs it.
+    memory: Memory,
+}
+
+/// What the table checks of **one run** read, so that a table is read once however many checks ask.
+///
+/// A `Context` lives for one [`run`] (or one [`directional_ratio_declaring`]) over a fixed set of objects, a source
+/// and arrays: nothing it remembers can go stale, and a new run starts empty. Keyed by the table's uuid.
+#[derive(Default)]
+struct Memory {
+    /// A table's sheet and link declarations (`None`: the table does not read).
+    linked: RefCell<HashMap<String, Option<Rc<LinkedTable>>>>,
+    /// A table's links checked against its targets.
+    checked: RefCell<HashMap<String, Rc<std::result::Result<LinksChecked, String>>>>,
+    /// A table's cells, read with the run's arrays (or with nothing, when it was given none).
+    cells: RefCell<HashMap<String, Rc<TableCells>>>,
+}
+
+/// Every column of a table as cells (an unreadable column is an `Err`, named).
+type TableCells = Vec<std::result::Result<ColumnCells<'static>, TableRefusal>>;
+
+impl Context<'_> {
+    /// The sheet and declarations of a table, built once per run.
+    fn linked(&self, uuid: &str, object: &dyn Reflect) -> Option<Rc<LinkedTable>> {
+        if let Some(held) = self.memory.linked.borrow().get(uuid) {
+            return held.clone();
+        }
+        let built = table_context(object, self.source).map(Rc::new);
+        self.memory
+            .linked
+            .borrow_mut()
+            .insert(uuid.to_string(), built.clone());
+        built
+    }
+
+    /// The cells of a table, read once per run.
+    fn cells(&self, uuid: &str, table: &Table<'_>, arrays: &dyn ArraySource) -> Rc<TableCells> {
+        if let Some(held) = self.memory.cells.borrow().get(uuid) {
+            return Rc::clone(held);
+        }
+        let read = Rc::new(table.read_cells(arrays));
+        self.memory
+            .cells
+            .borrow_mut()
+            .insert(uuid.to_string(), Rc::clone(&read));
+        read
+    }
 }
 
 /// The shipped checks - the list `check` runs and counts.
@@ -190,6 +239,7 @@ pub fn run(
         objects,
         source,
         arrays,
+        memory: Memory::default(),
     };
     let mut out = Vec::new();
     for check in CHECKS {
@@ -396,7 +446,7 @@ fn value_at(
 /// What the links of one table were checked against.
 struct LinksChecked {
     report: LinkReport,
-    cells: Vec<std::result::Result<ColumnCells<'static>, TableRefusal>>,
+    cells: Rc<TableCells>,
     targets: TableSet,
     /// The declared targets that could not be read, with why.
     unread: Vec<(String, String)>,
@@ -404,14 +454,37 @@ struct LinksChecked {
 
 /// Read the table, its targets, and run `check_links`. `Err` is the reason the
 /// table could not be checked: an *uncheckable*, never a pass.
+///
+/// **Once per table and run**: the two link checks (`house/table/link-resolves` and
+/// `house/table/link-target-key-unique`) judge the same reading, and it is made by whichever asks first.
 fn check_table_links(
     context: &Context<'_>,
+    uuid: &str,
+    object: &dyn Reflect,
+    links: &LinkedTable,
+    arrays: &dyn ArraySource,
+) -> Rc<std::result::Result<LinksChecked, String>> {
+    if let Some(held) = context.memory.checked.borrow().get(uuid) {
+        return Rc::clone(held);
+    }
+    let made = Rc::new(read_table_links(context, uuid, object, links, arrays));
+    context
+        .memory
+        .checked
+        .borrow_mut()
+        .insert(uuid.to_string(), Rc::clone(&made));
+    made
+}
+
+fn read_table_links(
+    context: &Context<'_>,
+    uuid: &str,
     object: &dyn Reflect,
     links: &LinkedTable,
     arrays: &dyn ArraySource,
 ) -> std::result::Result<LinksChecked, String> {
     let table = Table::read(object).map_err(|why| format!("it does not read: {why}"))?;
-    let cells = table.read_cells(arrays);
+    let cells = context.cells(uuid, &table, arrays);
 
     let mut declared: Vec<String> = Vec::new();
     let mut by_title = false;
@@ -456,7 +529,13 @@ fn check_table_links(
         .into_iter()
         .filter(|(uri, _)| declared.contains(uri))
         .collect();
-    let report = check_links(&links.sheet, &cells, &links.declarations, &targets, None);
+    let report = check_links(
+        &links.sheet,
+        cells.as_slice(),
+        &links.declarations,
+        &targets,
+        None,
+    );
     Ok(LinksChecked {
         report,
         cells,
@@ -468,12 +547,12 @@ fn check_table_links(
 /// The tables of the package that declare at least one link they can follow.
 fn tables_with_links<'a>(
     context: &'a Context<'a>,
-) -> impl Iterator<Item = (&'a str, &'a dyn Reflect, LinkedTable)> {
+) -> impl Iterator<Item = (&'a str, &'a dyn Reflect, Rc<LinkedTable>)> {
     context.objects.iter().filter_map(move |(uuid, object)| {
         if object.type_info().type_key != TABLE_TYPE {
             return None;
         }
-        let links = table_context(*object, context.source)?;
+        let links = context.linked(uuid, *object)?;
         if links
             .declarations
             .iter()
@@ -500,10 +579,11 @@ fn table_link_resolves(context: &Context<'_>, check: &Integrity, out: &mut Vec<F
             ));
             continue;
         };
-        let checked = match check_table_links(context, object, &links, arrays) {
+        let checked = check_table_links(context, uuid, object, &links, arrays);
+        let checked = match &*checked {
             Ok(checked) => checked,
             Err(why) => {
-                out.push(unverifiable(check, uuid, why));
+                out.push(unverifiable(check, uuid, why.clone()));
                 continue;
             }
         };
@@ -578,10 +658,11 @@ fn table_link_target_key_unique(context: &Context<'_>, check: &Integrity, out: &
             ));
             continue;
         };
-        let checked = match check_table_links(context, object, &links, arrays) {
+        let checked = check_table_links(context, uuid, object, &links, arrays);
+        let checked = match &*checked {
             Ok(checked) => checked,
             Err(why) => {
-                out.push(unverifiable(check, uuid, why));
+                out.push(unverifiable(check, uuid, why.clone()));
                 continue;
             }
         };
@@ -659,7 +740,7 @@ fn table_link_declared_by_facet(context: &Context<'_>, check: &Integrity, out: &
         if object.type_info().type_key != TABLE_TYPE {
             continue;
         }
-        let Some(links) = table_context(*object, context.source) else {
+        let Some(links) = context.linked(uuid, *object) else {
             continue;
         };
         let mut read: Vec<String> = Vec::new();
@@ -697,14 +778,15 @@ fn table_uri_value_resolves(context: &Context<'_>, check: &Integrity, out: &mut 
         if object.type_info().type_key != TABLE_TYPE {
             continue;
         }
-        let Some(links) = table_context(*object, context.source) else {
+        let Some(links) = context.linked(uuid, *object) else {
             continue;
         };
         let Ok(table) = Table::read(*object) else {
             continue;
         };
         let mut missing: Vec<String> = Vec::new();
-        for (column, cells) in table.read_cells(arrays).into_iter().enumerate() {
+        let all_cells = context.cells(uuid, &table, arrays);
+        for (column, cells) in all_cells.iter().enumerate() {
             let name = column_name(&links.sheet, column);
             let cells = match cells {
                 Ok(cells) => cells,
@@ -1286,6 +1368,7 @@ pub fn directional_ratio_declaring(
         objects,
         source,
         arrays,
+        memory: Memory::default(),
     };
     let mut out = Vec::new();
     if let Some(check) = CHECKS.iter().find(|check| check.id == DIRECTIONAL_RATIO) {
@@ -1446,8 +1529,21 @@ fn judge_directional(
     let mut values: BTreeMap<usize, std::result::Result<Vec<f64>, String>> = BTreeMap::new();
     let mut told: BTreeSet<(String, String)> = BTreeSet::new();
 
+    // `kinship` pairs two properties of **one support** only (the uuid of the support, compared as written): the
+    // pairs are searched inside each support's group, not among all candidates. The outer loop still runs in the
+    // candidates' order and each group lists its members in that order, so the findings come out in the order
+    // the all-pairs loop gave.
+    let supports: Vec<String> = candidates
+        .iter()
+        .map(|candidate| identity::parse_address(&candidate.support).0)
+        .collect();
+    let mut groups: BTreeMap<&str, Vec<usize>> = BTreeMap::new();
+    for (at, support) in supports.iter().enumerate() {
+        groups.entry(support.as_str()).or_default().push(at);
+    }
+
     for i in 0..candidates.len() {
-        for j in (i + 1)..candidates.len() {
+        for &j in groups[supports[i].as_str()].iter().filter(|&&j| j > i) {
             let (a, b) = (&candidates[i], &candidates[j]);
             let Some(Kinship::Direction { this, other }) = kinship(
                 &KinFacts::of_property(&a.uri, &a.support, &a.read),

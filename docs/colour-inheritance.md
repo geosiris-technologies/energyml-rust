@@ -91,3 +91,10 @@ walk does not follow the edge that closes it. The same collection named in two
 associations of one set counts once, as does an object listed twice in an
 association, as the common schema's rules on collections require; both cases are
 counted in the notes.
+
+## Reading a colour map once
+
+A colour map shared by thousands of properties is read and validated once by a `Cascade`, then kept for the
+life of that cascade (and for the one source it was read from). Nothing invalidates it: a caller whose package
+changed builds a new cascade, as it already does for the set. The stops of a map are sorted by index, and
+sampling a value bisects them instead of walking them from the first.

@@ -108,10 +108,24 @@ impl ViewKind for WellSheet {
         let settings = &request.settings;
 
         // The package's own listing, from the index: the identity of every object it holds, nothing read again.
+        //
+        // The properties are narrowed to the ones that hang on this frame (the index already knows which:
+        // `PackageIndex::properties_of`), so the reading does not parse every property of the package to find
+        // them. `board_of_frame` still confirms each one by the reference itself.
+        let on_frame: Option<std::collections::HashSet<&str>> = cx.index.node(uri).map(|node| {
+            cx.index
+                .properties_of(&node.uuid)
+                .map(|(property, _)| property)
+                .collect()
+        });
         let resources: Vec<ObjectSummary> = cx
             .index
             .nodes()
             .filter(|node| node.state == NodeState::Present)
+            .filter(|node| {
+                !node.qualified_type.ends_with("Property")
+                    || on_frame.as_ref().is_none_or(|held| held.contains(&*node.uri))
+            })
             .map(|node| {
                 ObjectSummary::new(
                     node.uri.to_string(),

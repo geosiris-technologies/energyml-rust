@@ -23,7 +23,6 @@
 //! does already.
 
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 
 use energyml_geometry::geometry as geom;
 use energyml_geometry::scene::{self, AttributeScope, Placement};
@@ -306,7 +305,7 @@ pub struct Format {
 /// development drop (`resqml 2.2_dev3`) is read, never offered. Without the
 /// flag the whole registry comes back, the drop included, as an inventory.
 pub fn model_types(package: Option<&str>, top_level_only: bool) -> Vec<TypeSummary> {
-    let registry = energyml_schemas::all();
+    let registry = energyml_schemas::shared();
     let mut out: Vec<TypeSummary> = registry
         .types()
         .filter(|info| !top_level_only || (info.is_top_level && energyml_schemas::may_create(info)))
@@ -326,7 +325,7 @@ pub fn model_types(package: Option<&str>, top_level_only: bool) -> Vec<TypeSumma
 pub fn describe_type(name: &str) -> Result<TypeDescription, String> {
     use energyml_core::reflect::TypeKind;
 
-    let registry = energyml_schemas::all();
+    let registry = energyml_schemas::shared();
     let info = registry
         .by_qualified_type(name)
         .map(|entry| entry.info)
@@ -409,7 +408,7 @@ pub fn describe_type(name: &str) -> Result<TypeDescription, String> {
 /// does, and `tests/model.rs` says so out loud rather than pretending to cover
 /// it.
 pub fn template(qualified_type: &str, uuid: Option<&str>) -> Result<String, String> {
-    let registry = energyml_schemas::all();
+    let registry = energyml_schemas::shared();
     if let Some(entry) = registry.by_qualified_type(qualified_type)
         && entry.info.is_abstract
     {
@@ -776,7 +775,7 @@ impl Package {
     /// by a bare file name, not by a path.
     pub fn open(path: impl AsRef<Path>) -> Result<Self, String> {
         let path = path.as_ref();
-        let registry = Arc::new(energyml_schemas::all());
+        let registry = energyml_schemas::shared();
         // **The refusal names the path.** What comes up from the I/O layer is
         // `The system cannot find the file specified. (os error 2)` - the operating
         // system's own sentence, in the operating system's own language, and
@@ -806,7 +805,7 @@ impl Package {
     /// [`Package::set_data_root`] says, and until then in the working
     /// directory.
     pub fn create(name: &str) -> Result<Self, String> {
-        let registry = Arc::new(energyml_schemas::all());
+        let registry = energyml_schemas::shared();
         let bytes = energyml_storage::extract::empty_package(None).map_err(|why| format!("{why}"))?;
         #[allow(unused_mut)]
         let mut store = EpcStore::from_reader(Box::new(std::io::Cursor::new(bytes)), name, registry)

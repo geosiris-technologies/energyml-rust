@@ -138,6 +138,20 @@ pub fn all() -> Registry {
     registry
 }
 
+/// The registry of [`all`], **built once** and shared.
+///
+/// [`all`] registers thousands of generated types on every call (each
+/// registration normalises its keys and fills five maps), which a face that
+/// answers many requests should not pay per request. The compiled-in crates
+/// cannot change during a run, so the shared registry never goes stale and
+/// needs no invalidation; it is immutable behind the `Arc`. A caller that
+/// needs to add to the registry keeps calling [`all`], which still returns a
+/// fresh, owned one.
+pub fn shared() -> std::sync::Arc<Registry> {
+    static SHARED: std::sync::OnceLock<std::sync::Arc<Registry>> = std::sync::OnceLock::new();
+    std::sync::Arc::clone(SHARED.get_or_init(|| std::sync::Arc::new(all())))
+}
+
 /// Tell `registry` which shipped versions it does not hold, each with the
 /// refusal that names its feature.
 ///
@@ -160,7 +174,7 @@ pub fn declare_absent_versions(registry: &mut Registry, compiled: &[&str]) {
 /// Derived rather than written down, so it cannot disagree with what `all`
 /// actually did - which is the whole point of the test that consumes it.
 pub fn registered() -> Vec<(&'static str, &'static str)> {
-    let registry = all();
+    let registry = shared();
     let mut pairs: Vec<(&'static str, &'static str)> = registry
         .top_level_types()
         .map(|info| (info.package, info.version))

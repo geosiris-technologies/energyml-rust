@@ -79,6 +79,7 @@
 //! **by name** rather than read into sections nobody can show.
 
 use std::collections::{BTreeSet, HashMap};
+use std::sync::{Mutex, OnceLock};
 
 use energyml_core::identity;
 use energyml_core::registry::DynObject;
@@ -472,6 +473,37 @@ pub struct Known<'a> {
     pub units: &'a [(String, String)],
 }
 
+/// What a front end painting many frames of one package pays **once**, not per frame.
+///
+/// Three things were read again at each call: a stratigraphic rank (its object, then each of its units, parsed by
+/// [`crate::stratigraphy::columns`]), the package's colour sets read as one ([`GraphicalSet::merged`], a deep copy
+/// of every set), and a frame's `NodeMd` array (read again for each property and each rank asked of one frame). A
+/// cache holds all three for the frames it is passed to ([`of_frame_cached`]); [`of_frame`] builds an empty one per call, so it reads what it needs once per
+/// call, as before.
+///
+/// **It is tied to one state of the package**, the one `source` and `known` describe: nothing invalidates it, so
+/// a caller that changes the package (or hands another [`Known`]) builds a new cache. Only a rank that was read
+/// successfully is kept: a refusal is read again, so a rank added later is found.
+#[derive(Default)]
+pub struct StrataCache {
+    ranks: Mutex<HashMap<String, stratigraphy::ColumnRank>>,
+    merged: OnceLock<GraphicalSet>,
+    /// A frame's measured depths, by `uuid|version`.
+    node_mds: Mutex<HashMap<String, Vec<f64>>>,
+}
+
+impl StrataCache {
+    /// An empty cache.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The package's colour sets read as one, merged on the first ask.
+    fn merged(&self, known: &Known<'_>) -> &GraphicalSet {
+        self.merged.get_or_init(|| merged_graphics(known))
+    }
+}
+
 /// `&dyn ArraySource` seen as an [`ObjectSource`].
 ///
 /// Spelled out rather than upcast: trait upcasting is stable from Rust 1.86,
@@ -523,6 +555,18 @@ pub fn of_frame(
     source: &dyn ArraySource,
     known: &Known<'_>,
 ) -> Result<Strata, Refusal> {
+    of_frame_cached(frame, wanted, source, known, &StrataCache::new())
+}
+
+/// [`of_frame`] for a caller that reads **many frames of one package**: the ranks and the merged colours are read
+/// through `cache` and so once, not once per frame (see [`StrataCache`]). Same answer as [`of_frame`].
+pub fn of_frame_cached(
+    frame: &dyn Reflect,
+    wanted: &Wanted<'_>,
+    source: &dyn ArraySource,
+    known: &Known<'_>,
+    cache: &StrataCache,
+) -> Result<Strata, Refusal> {
     let info = frame.type_info();
     let title = identity::title_of_reflect(frame)
         .filter(|title| !title.is_empty())
@@ -542,10 +586,41 @@ pub fn of_frame(
             "states no NodeMd, so it is not a wellbore frame and has no measured-depth interval to colour",
         ));
     };
-    let mds: Vec<f64> = match values::read(node_md, source, NODE_MD)? {
-        Values::Floating(values) => values,
-        Values::Integer(values) => values.into_iter().map(|value| value as f64).collect(),
-        _ => return Err(Refusal::defect(format!("`{title}`.NodeMd"), "holds no numbers")),
+    // The array is read once per frame (and version) through the cache; a frame with no uuid is not kept.
+    let md_key = identity::uuid_of_reflect(frame)
+        .filter(|uuid| !uuid.is_empty())
+        .map(|uuid| {
+            format!(
+                "{}|{}",
+                uuid.to_ascii_lowercase(),
+                identity::object_version_of_reflect(frame).unwrap_or_default()
+            )
+        });
+    let held_mds = md_key.as_ref().and_then(|key| {
+        cache
+            .node_mds
+            .lock()
+            .expect("the depth memory is never held across a panic")
+            .get(key)
+            .cloned()
+    });
+    let mds: Vec<f64> = match held_mds {
+        Some(mds) => mds,
+        None => {
+            let read: Vec<f64> = match values::read(node_md, source, NODE_MD)? {
+                Values::Floating(values) => values,
+                Values::Integer(values) => values.into_iter().map(|value| value as f64).collect(),
+                _ => return Err(Refusal::defect(format!("`{title}`.NodeMd"), "holds no numbers")),
+            };
+            if let Some(key) = md_key {
+                cache
+                    .node_mds
+                    .lock()
+                    .expect("the depth memory is never held across a panic")
+                    .insert(key, read.clone());
+            }
+            read
+        }
     };
     if mds.len() < 2 {
         return Err(Refusal::absent(
@@ -563,9 +638,11 @@ pub fn of_frame(
     let mut notes = Vec::new();
     let read = match wanted {
         Wanted::IntervalUnits { rank } => {
-            interval_units(frame, &title, &mds, *rank, source, known, &mut notes)?
+            interval_units(frame, &title, &mds, *rank, source, known, cache, &mut notes)?
         }
-        Wanted::Category { property } => category(*property, &uuid, &title, &mds, source, known, &mut notes)?,
+        Wanted::Category { property } => {
+            category(*property, &uuid, &title, &mds, source, known, cache, &mut notes)?
+        }
     };
 
     let sections: Vec<Section> = read
@@ -674,6 +751,7 @@ fn interval(title: &str, mds: &[f64], at: usize) -> String {
 }
 
 /// The frame's `IntervalStratigraphicUnits`, merged - or only the rank asked.
+#[allow(clippy::too_many_arguments)]
 fn interval_units(
     frame: &dyn Reflect,
     title: &str,
@@ -681,6 +759,7 @@ fn interval_units(
     rank: Option<&str>,
     source: &dyn ArraySource,
     known: &Known<'_>,
+    cache: &StrataCache,
     notes: &mut Vec<String>,
 ) -> Result<Read, Refusal> {
     let intervals = mds.len() - 1;
@@ -752,8 +831,7 @@ fn interval_units(
     }
 
     let objects = Objects(source);
-    let merged = merged_graphics(known);
-    let cascade = Cascade::new(&merged);
+    let cascade = Cascade::new(cache.merged(known));
     let mut units: Vec<Unit> = Vec::new();
     let mut position_of: HashMap<String, usize> = HashMap::new();
     // Per interval, each unit it is given and the mapping that gave it.
@@ -761,7 +839,7 @@ fn interval_units(
     let mut ranks: Vec<String> = Vec::new();
 
     for (which, (rank_uuid, rank_uri, runs)) in kept.iter().enumerate() {
-        let ranked = read_rank(rank_uuid, rank_uri.as_deref(), title, source)?;
+        let ranked = read_rank(rank_uuid, rank_uri.as_deref(), title, source, cache)?;
         notes.extend(ranked.notes.iter().cloned());
         ranks.push(rank_uuid.clone());
 
@@ -856,6 +934,33 @@ fn interval_units(
 /// about itself over what a reference cached, and says which units it could
 /// not find.
 fn read_rank(
+    rank_uuid: &str,
+    rank_uri: Option<&str>,
+    title: &str,
+    source: &dyn ArraySource,
+    cache: &StrataCache,
+) -> Result<stratigraphy::ColumnRank, Refusal> {
+    // Keyed by what the mapping names the rank by: its uri (version included), else its uuid.
+    let key = rank_uri.unwrap_or(rank_uuid).to_string();
+    if let Some(known) = cache
+        .ranks
+        .lock()
+        .expect("the rank memory is never held across a panic")
+        .get(&key)
+    {
+        return Ok(known.clone());
+    }
+    let read = read_rank_uncached(rank_uuid, rank_uri, title, source)?;
+    cache
+        .ranks
+        .lock()
+        .expect("the rank memory is never held across a panic")
+        .insert(key, read.clone());
+    Ok(read)
+}
+
+/// [`read_rank`] without the memory: the rank object, then its units, through the source.
+fn read_rank_uncached(
     rank_uuid: &str,
     rank_uri: Option<&str>,
     title: &str,
@@ -1012,6 +1117,7 @@ fn numbers(array: &dyn Reflect, source: &dyn ArraySource, at: &str) -> Result<Ve
 }
 
 /// A category property on the frame's intervals, and the rows its codes name.
+#[allow(clippy::too_many_arguments)]
 fn category(
     property: &dyn Reflect,
     frame: &str,
@@ -1019,6 +1125,7 @@ fn category(
     mds: &[f64],
     source: &dyn ArraySource,
     known: &Known<'_>,
+    cache: &StrataCache,
     notes: &mut Vec<String>,
 ) -> Result<Read, Refusal> {
     let intervals = mds.len() - 1;
@@ -1165,8 +1272,7 @@ fn category(
     // The colours: the property's own map first - the author's word about
     // these codes - then the unit a row was matched to.
     let objects = Objects(source);
-    let merged = merged_graphics(known);
-    let cascade = Cascade::new(&merged);
+    let cascade = Cascade::new(cache.merged(known));
     let map = property_map(&read, frame, &objects, known, &cascade, notes);
     for unit in &mut units {
         if let Some((map, scaling, from)) = &map

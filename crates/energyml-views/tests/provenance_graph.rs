@@ -644,6 +644,44 @@ fn the_colour_a_file_gives_an_object_is_a_stripe_and_never_invented() {
     // Break it: fall back to a palette colour for an object the file does not colour.
 }
 
+/// **The file is asked for its colours once per draw**, for every node together, not once per node: each question
+/// reads the package's colour sets again.
+///
+/// Break it: in `provenance_graph.rs`, call `cx.colours.paint(uri)` inside the per-node `map` again; `asked_one_by_one`
+/// then counts one question per node and this fails.
+#[test]
+fn the_colours_of_all_the_nodes_are_asked_in_one_question() {
+    struct Counting {
+        one_by_one: std::cell::Cell<usize>,
+        together: std::cell::Cell<usize>,
+        asked: std::cell::Cell<usize>,
+    }
+    impl ColourDoor for Counting {
+        fn paint(&self, _object_uri: &str) -> Result<Option<FilePaint>, String> {
+            self.one_by_one.set(self.one_by_one.get() + 1);
+            Ok(None)
+        }
+        fn paint_all(&self, object_uris: &[&str]) -> Vec<Result<Option<FilePaint>, String>> {
+            self.together.set(self.together.get() + 1);
+            self.asked.set(self.asked.get() + object_uris.len());
+            object_uris.iter().map(|_| Ok(None)).collect()
+        }
+    }
+    let opened = recipe();
+    let door = Counting {
+        one_by_one: Default::default(),
+        together: Default::default(),
+        asked: Default::default(),
+    };
+    draw_list(&kinds(), &ViewAsk::new(ID), &opened.context(&door)).expect("drawn");
+    assert_eq!(door.together.get(), 1, "one batched question per draw");
+    assert!(
+        door.asked.get() > 1,
+        "the batch names every node that takes an accent"
+    );
+    assert_eq!(door.one_by_one.get(), 0, "no question per node");
+}
+
 #[test]
 fn the_same_request_draws_the_same_bytes_and_a_redraw_agrees() {
     let opened = recipe_with_trouble();

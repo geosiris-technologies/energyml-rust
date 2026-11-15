@@ -8,7 +8,7 @@
 //! transparent.
 
 use energyml_cache::Cache;
-use energyml_cache::colours::{Wanted, of_package};
+use energyml_cache::colours::{Options, Wanted, decisions_of, of_package};
 use energyml_domain::color::{ColorMap, Paint, Rgba, Scaling};
 use energyml_domain::palettes::Reading;
 use energyml_storage::EpcStore;
@@ -25,6 +25,15 @@ pub trait ColourDoor {
     ///
     /// A package whose graphical information does not read, by its words.
     fn paint(&self, object_uri: &str) -> Result<Option<Paint>, String>;
+
+    /// [`ColourDoor::paint`] for several objects at once: one entry per uri, in order, each what `paint` would
+    /// have answered for it alone.
+    ///
+    /// A door that pays a cost per question (the package's sets read, an index built) overrides it to pay once;
+    /// this default asks one by one.
+    fn paint_all(&self, object_uris: &[&str]) -> Vec<Result<Option<Paint>, String>> {
+        object_uris.iter().map(|uri| self.paint(uri)).collect()
+    }
 }
 
 /// A door that knows no map: every colour comes from a palette (tests, and a package read without its colours).
@@ -56,6 +65,18 @@ impl ColourDoor for PackageColours<'_> {
             .into_iter()
             .find_map(|row| row.decision)
             .map(|decision| decision.paint))
+    }
+
+    /// One walk for every object: the package's sets are read once, not once per object
+    /// ([`energyml_cache::colours::decisions_of`]).
+    fn paint_all(&self, object_uris: &[&str]) -> Vec<Result<Option<Paint>, String>> {
+        match decisions_of(self.cache, self.store, object_uris, &Options::default()) {
+            Ok(decided) => decided
+                .into_iter()
+                .map(|answer| answer.map(|decision| decision.map(|decision| decision.paint)))
+                .collect(),
+            Err(why) => object_uris.iter().map(|_| Err(why.to_string())).collect(),
+        }
     }
 }
 

@@ -279,6 +279,103 @@ fn decide_in(
     }))
 }
 
+/// What the walk decides for one object of the package: `None` for an object that is neither a representation nor a
+/// property (it has no row), and for a property that does not read (left out, as it always was).
+///
+/// The one place a package object becomes a walk, for [`of_package`] and [`decisions_of`].
+fn decide_summary(
+    index: &PackageIndex,
+    store: &EpcStore,
+    set: &GraphicalSet,
+    summary: &ObjectSummary,
+    options: &Options,
+) -> Option<Result<Option<Decision>, Error>> {
+    let is_representation = summary.qualified_type.contains("Representation");
+    let is_property = summary.qualified_type.ends_with("Property");
+    if !is_representation && !is_property {
+        return None;
+    }
+    if is_property {
+        let object = store.get_object(&summary.uri).ok()?;
+        let read = property::read(object.as_reflect()).ok()?;
+        let chain = kind_chain(store, &read);
+        // By the uri the property names, so the version it names is the
+        // one whose colour it inherits.
+        let representation = read
+            .supporting_representation_uri
+            .clone()
+            .or_else(|| read.supporting_representation.clone())
+            .unwrap_or_default();
+        Some(decide_in(
+            index,
+            store,
+            set,
+            &representation,
+            Some(&summary.uri),
+            &chain,
+            options,
+        ))
+    } else {
+        Some(decide_in(index, store, set, &summary.uri, None, &[], options))
+    }
+}
+
+/// What the package paints each of several objects with, **in one walk**: the sets are read and merged once, the
+/// index is built once, and the package is listed once, whatever the number of objects.
+///
+/// `names` are as [`of_package`]'s `Wanted::object` takes them (a full uri; a bare uuid is an adapter). The answer
+/// has one entry per name, in order, and each is what `of_package` would have said for that object alone: the
+/// decision (`None` when no level answers, or when the object is neither a representation nor a property), or
+/// the words of the refusal that object alone would have met (a name that fits two versions, a walk that fails).
+/// An outer error is what stops every object: the sets do not read.
+///
+/// # Errors
+///
+/// The package's graphical information does not read.
+pub fn decisions_of(
+    cache: &Cache,
+    store: &EpcStore,
+    names: &[&str],
+    options: &Options,
+) -> Result<Vec<Result<Option<Decision>, String>>, Error> {
+    let sets: Vec<GraphicalSet> = graphical_sets(store)?.into_iter().map(|(_, set)| set).collect();
+    if sets.is_empty() {
+        return Ok(names.iter().map(|_| Ok(None)).collect());
+    }
+    let set = GraphicalSet::merged(sets);
+    // Each name through the one door, as `of_package` does; a refusal belongs to its name alone.
+    let uris: Vec<Result<String, String>> = names
+        .iter()
+        .map(|name| match held_uri(store, name) {
+            Ok(held) => Ok(held.unwrap_or_else(|| name.trim().to_string())),
+            Err(why) => Err(why.to_string()),
+        })
+        .collect();
+    let wanted: HashSet<&str> = uris
+        .iter()
+        .filter_map(|uri| uri.as_ref().ok())
+        .map(String::as_str)
+        .collect();
+    let mut decided: HashMap<String, Result<Option<Decision>, String>> = HashMap::new();
+    cache.with_index(store, |index| {
+        for summary in store.resources() {
+            if !wanted.contains(summary.uri.as_str()) {
+                continue;
+            }
+            if let Some(decision) = decide_summary(index, store, &set, summary, options) {
+                decided.insert(summary.uri.clone(), decision.map_err(|why| why.to_string()));
+            }
+        }
+    });
+    Ok(uris
+        .into_iter()
+        .map(|uri| match uri {
+            Ok(uri) => decided.get(&uri).cloned().unwrap_or(Ok(None)),
+            Err(why) => Err(why),
+        })
+        .collect())
+}
+
 impl Cache {
     /// The ladders of `rows`, in order, **from the walks the cache keeps**: one
     /// walker for all of them, the walk of an object done once, a target the
@@ -541,46 +638,17 @@ pub fn of_package(cache: &Cache, store: &EpcStore, wanted: &Wanted<'_>) -> Resul
     let rows = cache.with_index(store, |index| -> Result<Vec<Coloured>, Error> {
         let mut rows = Vec::new();
         for summary in store.resources() {
-            let is_representation = summary.qualified_type.contains("Representation");
-            let is_property = summary.qualified_type.ends_with("Property");
-            if !is_representation && !is_property {
-                continue;
-            }
             if let Some(wanted) = &wanted_uri
                 && summary.uri != *wanted
             {
                 continue;
             }
-            let decision = if is_property {
-                let Ok(object) = store.get_object(&summary.uri) else {
-                    continue;
-                };
-                let Ok(read) = property::read(object.as_reflect()) else {
-                    continue;
-                };
-                let chain = kind_chain(store, &read);
-                // By the uri the property names, so the version it names is the
-                // one whose colour it inherits.
-                let representation = read
-                    .supporting_representation_uri
-                    .clone()
-                    .or_else(|| read.supporting_representation.clone())
-                    .unwrap_or_default();
-                decide_in(
-                    index,
-                    store,
-                    &set,
-                    &representation,
-                    Some(&summary.uri),
-                    &chain,
-                    &wanted.options,
-                )?
-            } else {
-                decide_in(index, store, &set, &summary.uri, None, &[], &wanted.options)?
+            let Some(decision) = decide_summary(index, store, &set, summary, &wanted.options) else {
+                continue;
             };
             rows.push(Coloured {
                 summary: summary.clone(),
-                decision,
+                decision: decision?,
             });
         }
         Ok(rows)

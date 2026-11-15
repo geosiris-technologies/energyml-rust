@@ -48,7 +48,7 @@
 //! two kinds titled `X` and two titled `Y`, with different uuids.
 
 use std::collections::HashMap;
-use std::sync::{OnceLock, RwLock};
+use std::sync::{Mutex, OnceLock, RwLock};
 
 use energyml_core::value::{Reflect, Scalar};
 
@@ -407,10 +407,23 @@ pub fn set_default(dictionary: Dictionary) {
 ///
 /// Built over an [`ObjectSource`] - the package - and a dictionary, in that
 /// order of authority.
+///
+/// **A kind object of the package is read once per resolver.** A package has
+/// tens of thousands of properties sharing a few dozen kinds, and a resolver
+/// is typically asked once per property: the `PropertyKind` objects it found
+/// in the package (and the absence of those it did not) are remembered for
+/// the life of the resolver, so each is fetched and parsed once however many
+/// properties follow it. What is remembered is only what the **package**
+/// said; the dictionary is consulted afresh on every call (so
+/// [`set_default`] still takes effect at once). The memory cannot go stale
+/// because it lives no longer than the resolver, which borrows the source for
+/// that whole time: build a new resolver after a source has changed.
 pub struct Resolver<'a> {
     objects: &'a dyn ObjectSource,
     dictionary: Option<&'a Dictionary>,
     depth_limit: usize,
+    /// What the package held for an address (`u:<uri>|<uuid>` or `i:<uuid>`, as asked).
+    package_kinds: Mutex<HashMap<String, Option<Kind>>>,
 }
 
 impl<'a> Resolver<'a> {
@@ -420,6 +433,7 @@ impl<'a> Resolver<'a> {
             objects,
             dictionary: None,
             depth_limit: 64,
+            package_kinds: Mutex::default(),
         }
     }
 
@@ -430,6 +444,7 @@ impl<'a> Resolver<'a> {
             objects,
             dictionary: Some(dictionary),
             depth_limit: 64,
+            package_kinds: Mutex::default(),
         }
     }
 
@@ -510,12 +525,7 @@ impl<'a> Resolver<'a> {
         dictionary: &Dictionary,
         notes: &mut Vec<String>,
     ) -> Result<Kind> {
-        let held = match uri {
-            Some(uri) => self.objects.object_at(uri),
-            None => self.objects.object(uuid),
-        };
-        if let Some(object) = held {
-            let kind = from_object(object.as_reflect(), uuid);
+        if let Some(kind) = self.package_kind(uuid, uri) {
             if let Some(entry) = dictionary.by_uuid(uuid)
                 && !entry.title.eq_ignore_ascii_case(&kind.title)
             {
@@ -548,6 +558,33 @@ impl<'a> Resolver<'a> {
                 ""
             }
         )))
+    }
+
+    /// The kind the **package** holds for an address, read through the source
+    /// once per resolver (see the type's documentation for why that is safe).
+    fn package_kind(&self, uuid: &str, uri: Option<&str>) -> Option<Kind> {
+        let key = match uri {
+            Some(uri) => format!("u:{uri}|{uuid}"),
+            None => format!("i:{uuid}"),
+        };
+        if let Some(known) = self
+            .package_kinds
+            .lock()
+            .expect("the kind memory is never held across a panic")
+            .get(&key)
+        {
+            return known.clone();
+        }
+        let held = match uri {
+            Some(uri) => self.objects.object_at(uri),
+            None => self.objects.object(uuid),
+        };
+        let kind = held.map(|object| from_object(object.as_reflect(), uuid));
+        self.package_kinds
+            .lock()
+            .expect("the kind memory is never held across a panic")
+            .insert(key, kind.clone());
+        kind
     }
 
     /// A RESQML 2.0.1 standard name.

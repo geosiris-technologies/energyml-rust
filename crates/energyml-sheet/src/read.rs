@@ -60,7 +60,7 @@ use energyml_domain::property::{self, IndexableElement};
 use energyml_domain::property_kind::Resolver;
 use energyml_domain::source::ArraySource;
 use energyml_domain::values::{self, Values};
-use energyml_domain::well_strata::{self, Known, Wanted};
+use energyml_domain::well_strata::{self, Known, StrataCache, Wanted};
 use energyml_storage::ObjectSummary;
 
 use crate::layout::{Board, Interval, IntervalTrack, MdTrack, Track};
@@ -297,11 +297,20 @@ pub fn board_of_frame(
         graphics: &graphics,
         units: &unit_titles,
     };
+    // One cache for the whole sheet: the ranks, the merged colours and the frame's own depths are read once, not
+    // once per rank and per category property.
+    let strata_cache = StrataCache::new();
 
     // -- one track per stratigraphic rank the frame carries -----
     let ranks = well_strata::ranks_of_frame(frame);
     if !ranks.is_empty() {
-        match well_strata::of_frame(frame, &Wanted::IntervalUnits { rank: None }, source, &known) {
+        match well_strata::of_frame_cached(
+            frame,
+            &Wanted::IntervalUnits { rank: None },
+            source,
+            &known,
+            &strata_cache,
+        ) {
             Ok(strata) => {
                 let header = if ranks.len() == 1 {
                     rank_header(&ranks[0].1, source)
@@ -322,13 +331,14 @@ pub fn board_of_frame(
                      as separate tracks, one per rank, never merged"
                 ));
                 for (rank_uuid, rank_uri) in &ranks {
-                    match well_strata::of_frame(
+                    match well_strata::of_frame_cached(
                         frame,
                         &Wanted::IntervalUnits {
                             rank: Some(rank_uuid),
                         },
                         source,
                         &known,
+                        &strata_cache,
                     ) {
                         Ok(strata) => {
                             notes.extend(strata.notes.clone());
@@ -352,7 +362,10 @@ pub fn board_of_frame(
     }
 
     // -- one track per interval property, none for a per-node one -----
-    let mut candidates: Vec<&ObjectSummary> = Vec::new();
+    //
+    // Each property is read **once**: the object read to test its frame is kept
+    // for the candidates, and is the one the track is built from.
+    let mut candidates: Vec<(&ObjectSummary, Box<dyn DynObject>)> = Vec::new();
     let mut node_property_count = 0usize;
     for summary in resources {
         if !summary.qualified_type.ends_with("Property") {
@@ -394,7 +407,9 @@ pub fn board_of_frame(
         }
         match read.indexable {
             IndexableElement::Nodes => node_property_count += 1,
-            IndexableElement::Intervals | IndexableElement::IntervalsFromDatum => candidates.push(summary),
+            IndexableElement::Intervals | IndexableElement::IntervalsFromDatum => {
+                candidates.push((summary, object));
+            }
             // Neither this frame's nodes nor its intervals - out of scope
             // for a per-frame sheet whatever it is (e.g. a property hanging
             // on `patches` or `representation`); not drawn, not counted as a
@@ -403,31 +418,26 @@ pub fn board_of_frame(
         }
     }
 
-    let ordered: Vec<&ObjectSummary> = match &options.tracks {
+    // `Only` keeps the caller's order; a uuid named twice is drawn twice, from a copy of the one object read.
+    let objects: Vec<(&ObjectSummary, Box<dyn DynObject>)> = match &options.tracks {
         TrackSelection::All => candidates,
         TrackSelection::Only(wanted) => wanted
             .iter()
             .filter_map(|uuid| {
                 candidates
                     .iter()
-                    .find(|summary| summary.uuid.eq_ignore_ascii_case(uuid))
-                    .copied()
+                    .find(|(summary, _)| summary.uuid.eq_ignore_ascii_case(uuid))
+                    .map(|(summary, object)| (*summary, object.clone_box()))
             })
             .collect(),
     };
-
-    let mut objects: Vec<(&ObjectSummary, Box<dyn DynObject>)> = Vec::with_capacity(ordered.len());
-    for summary in ordered {
-        match source.read_object_at(&summary.uri) {
-            Ok(object) => objects.push((summary, object)),
-            Err(why) => notes.push(format!("property {}: {why}", summary.uuid)),
-        }
-    }
+    // One resolver for the whole sheet: a kind shared by several properties is read once.
+    let resolver = Resolver::new(source);
     let mut labelled: Vec<(property::Property<'_>, &dyn Reflect, String)> = Vec::with_capacity(objects.len());
     for (summary, object) in &objects {
         match property::read(object.as_reflect()) {
             Ok(read) => {
-                let label = column_label(&read, source, options);
+                let label = column_label(&read, &resolver, options);
                 labelled.push((read, object.as_reflect(), label));
             }
             Err(why) => notes.push(format!("property {}: {why}", summary.uuid)),
@@ -444,6 +454,7 @@ pub fn board_of_frame(
             &mds,
             source,
             &known,
+            &strata_cache,
             options,
             &header,
             &uri_of,
@@ -514,13 +525,13 @@ fn track_from_strata(
 /// A property column's label: the chosen [`PropertyLabel`],
 /// before its unit - [`with_unit`] appends that, once [`disambiguate`] has
 /// had its say.
-fn column_label(read: &property::Property<'_>, source: &dyn ArraySource, options: &Options) -> String {
+fn column_label(read: &property::Property<'_>, resolver: &Resolver<'_>, options: &Options) -> String {
     match options.label {
         PropertyLabel::Title => read.title.clone().unwrap_or_else(|| read.uuid.clone()),
         PropertyLabel::Kind => read
             .kind
             .as_ref()
-            .and_then(|kind_ref| Resolver::new(source).resolve(kind_ref).ok())
+            .and_then(|kind_ref| resolver.resolve(kind_ref).ok())
             .map(|resolution| resolution.kind().title.clone())
             .filter(|title| !title.is_empty())
             .or_else(|| read.title.clone())
@@ -627,6 +638,7 @@ fn build_property_track(
     mds: &[f64],
     source: &dyn ArraySource,
     known: &Known<'_>,
+    strata_cache: &StrataCache,
     options: &Options,
     header: &str,
     uri_of: &HashMap<String, String>,
@@ -643,13 +655,14 @@ fn build_property_track(
     }
 
     if read.lookup.is_some() {
-        return match well_strata::of_frame(
+        return match well_strata::of_frame_cached(
             frame,
             &Wanted::Category {
                 property: property_object,
             },
             source,
             known,
+            strata_cache,
         ) {
             Ok(strata) => {
                 notes.extend(strata.notes.clone());

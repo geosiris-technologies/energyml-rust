@@ -405,7 +405,8 @@ pub struct ColorMap {
     pub title: Option<String>,
     /// Continuous maps interpolate; discrete ones do not.
     pub continuous: Option<(Domain, Interpolation)>,
-    /// Stops, sorted by index.
+    /// Stops, sorted by index. Sampling relies on it (it bisects): [`ColorMap::read`] sorts them, and a map built
+    /// by hand keeps them in ascending order.
     pub stops: Vec<Stop>,
     /// Colour for a null value.
     pub null_color: Option<Hsv>,
@@ -635,14 +636,10 @@ impl ColorMap {
 
     /// The schema's business rule: the nearest **existing** lower entry.
     fn discrete_at(&self, position: f64) -> Rgba {
-        let mut chosen = &self.stops[0];
-        for stop in &self.stops {
-            if stop.index <= position {
-                chosen = stop;
-            } else {
-                break;
-            }
-        }
+        // The stops are sorted by index (`ColorMap::stops`): the last one at or below the position is found by
+        // bisection, not by a walk from the first. A NaN position is below every stop: the first one.
+        let below = self.stops.partition_point(|stop| stop.index <= position);
+        let chosen = &self.stops[below.saturating_sub(1)];
         // Below every stop: the first one, unless the map says otherwise.
         if position < self.stops[0].index
             && let Some(color) = &self.below_min
@@ -661,11 +658,14 @@ impl ColorMap {
         if position >= last.index {
             return last.color.to_rgba();
         }
-        let window = self
-            .stops
-            .windows(2)
-            .find(|pair| position >= pair[0].index && position <= pair[1].index)
-            .unwrap_or(&self.stops[..2]);
+        // The first window holding the position, by bisection: the first stop at or above it closes the window.
+        // (A NaN position matches no window and takes the first two stops, as before.)
+        let closing = self.stops.partition_point(|stop| stop.index < position);
+        let window = if (1..self.stops.len()).contains(&closing) {
+            &self.stops[closing - 1..=closing]
+        } else {
+            &self.stops[..2]
+        };
         let (low, high) = (&window[0], &window[1]);
         let span = high.index - low.index;
         let mut t = if span.abs() < f64::EPSILON {
@@ -1412,6 +1412,22 @@ pub struct Cascade<'a> {
     /// The set's entries by target, built the first time an object is asked
     /// about - see [`Cascade::targeting`].
     targets: RefCell<Option<TargetMap>>,
+    /// The colour maps this cascade has read, by what named them - a map shared by thousands of properties is
+    /// read and validated once. See [`MapMemory`].
+    maps: RefCell<MapMemory>,
+}
+
+/// The colour maps one cascade has read.
+///
+/// Valid for the life of the cascade and for the one source it was filled from (the address of the source is
+/// kept; asking another source empties it). Like the target map above, it is never invalidated otherwise: a
+/// caller whose package changed builds a new cascade.
+#[derive(Clone, Debug, Default)]
+struct MapMemory {
+    /// The data address of the source the maps were read from.
+    source: usize,
+    /// `u:<uri>` or `i:<uuid>`, as the entry names the map.
+    by_address: HashMap<String, ColorMap>,
 }
 
 /// Which entries of a set target each object: lowercase uuid → positions, in
@@ -1441,6 +1457,7 @@ impl<'a> Cascade<'a> {
             viewer_kind: Some("3d".to_string()),
             inherit: true,
             targets: RefCell::new(None),
+            maps: RefCell::new(MapMemory::default()),
         }
     }
 
@@ -1673,19 +1690,39 @@ impl<'a> Cascade<'a> {
             };
             // By the uri the entry names, so the version it names is the one
             // read; the uuid only when the entry carries no uri.
-            let found = match &entry.map_uri {
-                Some(uri) => objects.object_at(uri),
-                None => objects.object(map_uuid),
+            let address = match &entry.map_uri {
+                Some(uri) => format!("u:{uri}"),
+                None => format!("i:{map_uuid}"),
             };
-            let Some(object) = found else {
-                notes.push(format!(
-                    "entry {} points at colour map {map_uuid}, which is not in this package; \
-                     looking further",
-                    entry.position
-                ));
-                continue;
+            let source_at = objects as *const dyn ObjectSource as *const () as usize;
+            let remembered = {
+                let mut memory = self.maps.borrow_mut();
+                if memory.source != source_at {
+                    memory.source = source_at;
+                    memory.by_address.clear();
+                }
+                memory.by_address.get(&address).cloned()
             };
-            let map = ColorMap::read(object.as_reflect())?;
+            let map = match remembered {
+                Some(map) => map,
+                None => {
+                    let found = match &entry.map_uri {
+                        Some(uri) => objects.object_at(uri),
+                        None => objects.object(map_uuid),
+                    };
+                    let Some(object) = found else {
+                        notes.push(format!(
+                            "entry {} points at colour map {map_uuid}, which is not in this package; \
+                             looking further",
+                            entry.position
+                        ));
+                        continue;
+                    };
+                    let map = ColorMap::read(object.as_reflect())?;
+                    self.maps.borrow_mut().by_address.insert(address, map.clone());
+                    map
+                }
+            };
             return Ok(Some(Decision {
                 paint: Paint::Mapped {
                     map: Box::new(map),

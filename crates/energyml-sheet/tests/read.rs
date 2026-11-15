@@ -18,13 +18,14 @@
 
 use energyml_core::registry::DynObject;
 use energyml_core::value::Reflect;
-use energyml_domain::source::Prefetched;
+use energyml_domain::source::{ArraySource, ObjectSource, Prefetched};
 use energyml_eml_2_3 as eml23;
 use energyml_resqml_2_2 as resqml22;
 use energyml_sheet::layout::{HeightGoal, Params, Track};
 use energyml_sheet::read::{self, Options, TrackSelection};
 use energyml_storage::ArrayLocation;
 use energyml_storage::ObjectSummary;
+use energyml_storage::array::{ArrayBuffer, ArrayData, ArrayMetadata};
 
 const FRAME: &str = "f0000000-0000-4000-8000-000000000001";
 const TRAJECTORY: &str = "f0000000-0000-4000-8000-000000000002";
@@ -509,4 +510,97 @@ fn a_property_on_another_version_of_the_frame_is_not_on_this_sheet() {
         "{:?}",
         headers(&on_two.board)
     );
+}
+
+/// An [`ObjectSource`] that counts every object it hands out, by uri or uuid
+/// as the caller asked for it.
+struct Counting {
+    inner: Prefetched,
+    reads: std::cell::RefCell<std::collections::HashMap<String, usize>>,
+}
+
+impl Counting {
+    fn new(inner: Prefetched) -> Self {
+        Counting {
+            inner,
+            reads: Default::default(),
+        }
+    }
+
+    fn count(&self, address: &str) {
+        let uuid = energyml_core::identity::parse_address(address)
+            .0
+            .to_ascii_lowercase();
+        *self.reads.borrow_mut().entry(uuid).or_default() += 1;
+    }
+
+    fn reads_of(&self, uuid: &str) -> usize {
+        self.reads
+            .borrow()
+            .get(&uuid.to_ascii_lowercase())
+            .copied()
+            .unwrap_or(0)
+    }
+}
+
+impl ObjectSource for Counting {
+    fn object(&self, uuid: &str) -> Option<Box<dyn DynObject>> {
+        self.count(uuid);
+        self.inner.object(uuid)
+    }
+    fn read_object(&self, uuid: &str) -> Result<Box<dyn DynObject>, String> {
+        self.count(uuid);
+        self.inner.read_object(uuid)
+    }
+    fn object_at(&self, uri: &str) -> Option<Box<dyn DynObject>> {
+        self.count(uri);
+        self.inner.object_at(uri)
+    }
+    fn read_object_at(&self, uri: &str) -> Result<Box<dyn DynObject>, String> {
+        self.count(uri);
+        self.inner.read_object_at(uri)
+    }
+}
+
+impl ArraySource for Counting {
+    fn locate(&self, object: &dyn Reflect) -> Vec<ArrayLocation> {
+        self.inner.locate(object)
+    }
+    fn metadata(&self, location: &ArrayLocation) -> energyml_domain::error::Result<ArrayMetadata> {
+        self.inner.metadata(location)
+    }
+    fn read(&self, location: &ArrayLocation) -> energyml_domain::error::Result<ArrayData> {
+        self.inner.read(location)
+    }
+    fn read_into(
+        &self,
+        location: &ArrayLocation,
+        out: &mut ArrayBuffer<'_>,
+    ) -> energyml_domain::error::Result<ArrayMetadata> {
+        self.inner.read_into(location, out)
+    }
+}
+
+/// **A property is read once per sheet.** The classification loop reads each
+/// property to find the frame it hangs on, and the track is then built from
+/// that same object, not from a second read.
+///
+/// Break it: in `board_of_frame`, re-read the candidates with
+/// `source.read_object_at(&summary.uri)` before building the tracks (as the code did
+/// before 15/11); the pressure property is then read twice and this fails.
+#[test]
+fn each_property_of_the_frame_is_read_once() {
+    let (frame, source, resources) = package();
+    let source = Counting::new(source);
+    let options = Options::new("MD (m)");
+    let read = read::board_of_frame(&frame, &resources, &source, &options).expect("the frame reads");
+    assert!(read.board.tracks.len() >= 3);
+    for property in [STRATA_PROPERTY, PRESSURE_PROPERTY, NODE_PROPERTY] {
+        assert_eq!(
+            source.reads_of(property),
+            1,
+            "property {property} is read more than once"
+        );
+    }
+    let _ = source.object(FRAME);
 }

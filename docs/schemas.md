@@ -7,6 +7,11 @@ separate generated crate under `generated/`, and `energyml-schemas` registers
 them in one `Registry` (`energyml_schemas::all()`, or `energyml::schemas::all()`
 through the `energyml` crate) - those whose Cargo feature is on.
 
+`all()` registers every generated type on each call, which is a cost to pay once, not per request. A program
+that answers many requests takes `energyml_schemas::shared()` instead: the same registry, built on the first
+call and handed out as an `Arc` afterwards (the compiled-in crates cannot change during a run, so it is never
+stale). Keep `all()` when you need an owned registry to add to.
+
 | Standard | Versions |
 |---|---|
 | RESQML | 2.0.1, 2.2 (and the development drop `2.2_dev3`, see below) |

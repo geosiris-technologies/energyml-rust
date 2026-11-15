@@ -489,6 +489,20 @@ objects of their own: `resources()` lists the parts, `contents()` the contained
 objects with their edge to the container, and `references()` gives a reference
 written inside a contained object to that object ([ADR-0023](adr/0023-objects-held-by-value.md)).
 
+## Reading the package once per operation
+
+An operation that touches many objects reads each shared object once. The caches that do it live no longer than
+the operation, so none can serve a stale answer:
+
+- `property_kind::Resolver` keeps the `PropertyKind` objects it found (and those it did not) for its own life:
+  build one per operation, not one per property.
+- `well_strata::StrataCache` keeps the ranks, the merged colour sets and the measured depths of a package for
+  the frames passed to `well_strata::of_frame_cached` (and `strata_by_md::of_representation_cached`); `of_frame`
+  uses a fresh one per call.
+- `integrity::run` reads each table, and each link target, once for all the table checks of the run.
+- `energyml_cache::colours::decisions_of` answers the colour of several objects in one walk; the views ask it
+  through `ColourDoor::paint_all`.
+
 ## Further reading
 
 [Creating objects](creating-objects.md) · [Geostatistics](geostat.md) ·
