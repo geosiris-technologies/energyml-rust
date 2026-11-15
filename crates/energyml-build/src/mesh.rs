@@ -26,6 +26,7 @@
 //! in a bag, and the fifteen operations read it like any other shape.
 
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
+use energyml_geometry::shape::HEXAHEDRON_FACES;
 
 /// A format this module can **read**.
 ///
@@ -916,20 +917,6 @@ pub fn read_vtk(text: &str) -> Result<Geometry, String> {
     }
     Ok(one_patch("vtk", points, triangles, segments))
 }
-
-/// The six faces of a hexahedron, from VTK's corner order (VTK file formats,
-/// "Cell types": VTK_HEXAHEDRON = 12, corners 0-3 the bottom face
-/// counter-clockwise seen from above, 4-7 the top face above them). Each face
-/// is wound outward, the same table `energyml-export` writes.
-// TODO(A7): hexahedron face table from energyml_geometry
-const HEXAHEDRON_FACES: [[usize; 4]; 6] = [
-    [0, 3, 2, 1],
-    [4, 5, 6, 7],
-    [0, 1, 5, 4],
-    [1, 2, 6, 5],
-    [2, 3, 7, 6],
-    [3, 0, 4, 7],
-];
 
 /// What one VTK cell of type `kind` contributes: triangles for an area, segments
 /// for a line, nothing for a vertex, and a refusal naming the type for the rest.

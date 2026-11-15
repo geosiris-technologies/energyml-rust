@@ -128,7 +128,7 @@ pub fn run(args: TerrainArgs) -> Result<ExitCode> {
     // Four bytes a node, and the header: a ceiling that names a typo, never the data.
     let most = (u64::from(ask.width) * u64::from(ask.height) * 4 + (1 << 20)) as usize;
     let raster = terrain::read_answer(answer, most).map_err(|why| anyhow::anyhow!("{why}"))?;
-    let lattice = terrain::lattice_of(&raster).map_err(|why| anyhow::anyhow!("{why}"))?;
+    let (lattice, voids) = terrain::lattice_with_voids(&raster).map_err(|why| anyhow::anyhow!("{why}"))?;
     let holes = lattice.z.iter().filter(|z| !z.is_finite()).count();
     println!(
         "\nreceived {} × {} values in {:.2}s, {} without a value",
@@ -139,7 +139,6 @@ pub fn run(args: TerrainArgs) -> Result<ExitCode> {
     );
     // Why they have no value: the file's own no-data is expected, the others are
     // what the service did and are said, not hidden.
-    let (_, voids) = terrain::voids_of(&raster);
     if voids.undeclared + voids.blended_ring > 0 {
         println!(
             "            of which {} below {} m that the file does not declare and {} neighbours of such a pixel (the service's resampling)",
@@ -175,7 +174,7 @@ pub fn run(args: TerrainArgs) -> Result<ExitCode> {
     }
     for one in &args.choices {
         let (name, value) = super::target::parse_choice(one)?;
-        choices = choices.set(name, value);
+        choices = choices.set(&name, value);
     }
 
     let pieces = Pieces::empty().with("lattice", Source::Lattice(lattice));

@@ -223,7 +223,7 @@ pub fn run(args: CreateArgs) -> Result<ExitCode> {
     let mut choices = Choices::new();
     for one in &args.choices {
         let (name, value) = super::target::parse_choice(one)?;
-        choices = choices.set(name, value);
+        choices = choices.set(&name, value);
     }
     let when = When {
         creation: args.now.clone().unwrap_or_else(super::import::now),
@@ -254,7 +254,8 @@ pub fn run(args: CreateArgs) -> Result<ExitCode> {
         return Ok(ExitCode::SUCCESS);
     };
 
-    let mut store = super::target::open(args.into.as_deref(), &out)?;
+    let name = super::target::package_name(&out);
+    let mut store = super::target::open_named(args.into.as_deref(), &name, &out)?;
     let made = apply::apply(&plan, &mut store, &when);
     super::target::save(&store, &out)?;
 

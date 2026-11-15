@@ -37,11 +37,14 @@ pub fn parse_choice(one: &str) -> Result<(String, serde_json::Value)> {
 /// its arrays (`data.h5`: file not found), two thousand lines of refusals for a
 /// file that looks as if it came out fine.
 pub fn open(into: Option<&Path>, out: &Path) -> Result<EpcStore> {
-    let name = out
-        .file_name()
+    open_named(into, &package_name(out), out)
+}
+
+/// The name a package written to `out` takes: its file name, else the path as written.
+pub fn package_name(out: &Path) -> String {
+    out.file_name()
         .map(|n| n.to_string_lossy().to_string())
-        .unwrap_or_else(|| out.display().to_string());
-    open_named(into, &name, out)
+        .unwrap_or_else(|| out.display().to_string())
 }
 
 /// [`open`], for a command that names the package itself.
