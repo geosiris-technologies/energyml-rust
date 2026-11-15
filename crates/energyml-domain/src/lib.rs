@@ -17,6 +17,7 @@
 //! | [`property`] | what do these numbers hang on, and how many should there be |
 //! | [`property_kind`] | what kind of quantity is it, and what is it a kind *of* |
 //! | [`color`] | what colour is this drawn in, and who said so |
+//! | [`palettes`] | what colour is this drawn in when the file says none |
 //! | [`table`] | what does the integer 3 mean here, and which row does this cell name |
 //! | [`table_structure`] | how these tables hold together: links, row trees, key-value sheets |
 //! | [`forest`] | which node hangs under which, and which loop |
@@ -98,6 +99,7 @@ pub mod metadata;
 /// What the module keeps of a package: links and property sheets, never the
 /// objects (ADR-0010).
 pub mod package_index;
+pub mod palettes;
 pub mod property;
 pub mod property_kind;
 /// Recording that an operation happened: the canonical activity templates, and

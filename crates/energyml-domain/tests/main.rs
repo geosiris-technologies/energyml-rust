@@ -44,6 +44,7 @@ mod null_value;
 mod object_chip;
 mod package_index;
 mod package_index_versions;
+mod palettes;
 mod prefetch;
 mod property;
 mod property_counts_in_check;
