@@ -355,7 +355,7 @@ fn the_count_of_panels_goes_into_the_activity() {
         .expect("the plan succeeds");
     let named = |title: &str| {
         plan.activity.parameters.iter().any(
-            |p| matches!(p, energyml_domain::provenance::Parameter::Double { title: t, .. } if t == title),
+            |p| p.title() == title,
         )
     };
     assert!(named("panelCount"));

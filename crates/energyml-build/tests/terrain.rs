@@ -101,7 +101,7 @@ fn text_of(plan: &Plan, title: &str) -> Option<String> {
 
 fn number_of(plan: &Plan, title: &str) -> Option<f64> {
     plan.activity.parameters.iter().find_map(|p| match p {
-        Parameter::Double { title: t, value, .. } if t == title => Some(*value),
+        other if other.title() == title => other.number(),
         _ => None,
     })
 }

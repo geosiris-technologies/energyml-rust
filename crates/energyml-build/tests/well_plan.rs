@@ -69,7 +69,7 @@ fn recorded(plan: &Plan, name: &str) -> Option<f64> {
         .parameters
         .iter()
         .find_map(|parameter| match parameter {
-            Parameter::Double { title, value, .. } if title == name => Some(*value),
+            other if other.title() == name => other.number(),
             _ => None,
         })
 }

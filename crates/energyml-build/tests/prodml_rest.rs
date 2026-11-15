@@ -86,7 +86,7 @@ fn double_param(plan: &Plan, title: &str) -> f64 {
         .parameters
         .iter()
         .find_map(|p| match p {
-            Parameter::Double { title: t, value, .. } if t == title => Some(*value),
+            other if other.title() == title => other.number(),
             _ => None,
         })
         .unwrap_or_else(|| panic!("no `{title}` parameter recorded"))

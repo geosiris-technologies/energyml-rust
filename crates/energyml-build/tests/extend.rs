@@ -78,7 +78,7 @@ fn plan(bag: &Pieces, choices: Choices) -> Plan {
 
 fn count(plan: &Plan, name: &str) -> Option<f64> {
     plan.activity.parameters.iter().find_map(|p| match p {
-        Parameter::Double { title, value, .. } if title == name => Some(*value),
+        other if other.title() == name => other.number(),
         _ => None,
     })
 }

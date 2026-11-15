@@ -171,10 +171,12 @@ fn a_horizon_outside_the_fault_is_counted_and_none_is_a_refusal() {
         .expect("the plan succeeds");
     assert!(plan.says.iter().any(|n| n.key == "no-trace"));
     assert_eq!(plan.shapes.iter().filter(|m| m.parent.is_some()).count(), 1);
-    assert!(plan.activity.parameters.iter().any(|p| matches!(
-        p,
-        energyml_domain::provenance::Parameter::Double { title, value, .. } if title == "uncutSurfaces" && *value == 1.0
-    )));
+    assert!(
+        plan.activity
+            .parameters
+            .iter()
+            .any(|p| p.title() == "uncutSurfaces" && p.number() == Some(1.0))
+    );
 
     let none = Pieces::empty()
         .with("fault", wall())

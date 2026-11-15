@@ -19,6 +19,10 @@ use serde_json::{Value, json};
 use crate::operation::{AnyOperation, Need, Slot};
 use crate::pieces::Pieces;
 
+/// The `Constraint` of `inputFile`, the same words as `data/activityTemplates.json`.
+pub const INPUT_FILE_CONSTRAINT: &str =
+    "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named";
+
 /// The `eml23.ParameterTemplate` a slot projects to.
 pub fn parameter_template(slot: &Slot, is_input: bool) -> Value {
     let mut out = json!({
@@ -128,6 +132,28 @@ pub fn template_of(operation: &dyn AnyOperation) -> Value {
             .iter()
             .map(|slot| parameter_template(slot, false)),
     );
+    // The objects of the bag are recorded under `input`, and a file a step read
+    // under `inputFile`: every template declares both (common TRG 2.3 section 3.1,
+    // p. 40: a parameter must have an equivalent in the descriptor).
+    parameters.push(json!({
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": ["dataObject"],
+        "IsInput": true,
+        "IsOutput": false,
+        "Title": "input",
+        "MinOccurs": 0,
+        "MaxOccurs": -1,
+    }));
+    parameters.push(json!({
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": ["string"],
+        "Constraint": INPUT_FILE_CONSTRAINT,
+        "IsInput": true,
+        "IsOutput": false,
+        "Title": "inputFile",
+        "MinOccurs": 0,
+        "MaxOccurs": -1,
+    }));
     parameters.push(json!({
         "$type": "eml23.ParameterTemplate",
         "AllowedKind": ["dataObject"],
@@ -155,9 +181,8 @@ pub fn template_of(operation: &dyn AnyOperation) -> Value {
 /// agree.
 ///
 /// Compared by parameter title, on what the form is made of: the kind, the
-/// direction, the occurrences. The file may carry an `input` parameter the
-/// projection does not declare - the objects of the bag are recorded under it
-/// by the writer - and nothing else the operation does not declare.
+/// direction, the occurrences. The file declares what the projection declares,
+/// `input` and `inputFile` included, and nothing else.
 pub fn disagreements(operation: &dyn AnyOperation) -> Vec<String> {
     let recipe = operation.recipe();
     let mut out = Vec::new();
@@ -188,7 +213,7 @@ pub fn disagreements(operation: &dyn AnyOperation) -> Vec<String> {
         }
     }
     for (title, _) in &held {
-        if title != "input" && !wanted.iter().any(|(t, _)| t == title) {
+        if !wanted.iter().any(|(t, _)| t == title) {
             out.push(format!(
                 "`{recipe}`: the file declares `{title}`, which the operation does not"
             ));

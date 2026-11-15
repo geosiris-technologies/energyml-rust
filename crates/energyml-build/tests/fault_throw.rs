@@ -252,7 +252,7 @@ fn number(plan: &Plan, title: &str) -> f64 {
         .parameters
         .iter()
         .filter_map(|p| match p {
-            Parameter::Double { title: t, value, .. } if t == title => Some(*value),
+            other if other.title() == title => other.number(),
             _ => None,
         })
         .collect();

@@ -1394,9 +1394,7 @@ fn a_margin_widens_the_grid_and_the_origin_it_wrote_is_reported() {
     assert_eq!(lattice["Origin"]["Coordinate1"], json!(-30.0));
     let reported = |name: &str| {
         plan.activity.parameters.iter().find_map(|p| match p {
-            energyml_domain::provenance::Parameter::Double { title, value, .. } if title == name => {
-                Some(*value)
-            }
+            other if other.title() == name => other.number(),
             _ => None,
         })
     };

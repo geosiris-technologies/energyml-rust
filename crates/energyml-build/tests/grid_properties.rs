@@ -200,7 +200,7 @@ fn recorded_double(plan: &Plan, title: &str) -> f64 {
         .parameters
         .iter()
         .find_map(|one| match one {
-            Parameter::Double { title: t, value, .. } if t == title => Some(*value),
+            other if other.title() == title => other.number(),
             _ => None,
         })
         .unwrap_or_else(|| panic!("`{title}` is not recorded in the activity"))

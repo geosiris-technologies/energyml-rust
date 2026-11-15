@@ -241,10 +241,22 @@ pub fn run(args: CreateArgs) -> Result<ExitCode> {
         creation: args.now.clone().unwrap_or_else(super::import::now),
         originator: args.originator.clone(),
     };
-    let plan = match registry.plan(operation, &pieces, &choices, &Identity::derived(), &when) {
+    let mut plan = match registry.plan(operation, &pieces, &choices, &Identity::derived(), &when) {
         Ok(plan) => plan,
         Err(why) => bail!("{why}"),
     };
+    // **The files this run read**, recorded in its activity as `inputFile`
+    // (the library's one writer of that parameter, the one a recipe step uses):
+    // a file given with `--from`, never an object of a package (`file.epc#uuid`)
+    // nor a URL.
+    for input in &args.from {
+        let (slot, source) = entries::slot_of(input);
+        if matches!(energyml_build::source::source_of(source), FromWhere::File(_)) && !source.contains('#') {
+            plan.activity
+                .parameters
+                .push(recipe::input_file_parameter(slot, source));
+        }
+    }
     print_plan(operation, &plan);
 
     let Some(out) = args.out else {

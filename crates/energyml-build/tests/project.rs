@@ -74,7 +74,7 @@ fn plan(bag: &Pieces, choices: Choices) -> Plan {
 
 fn reported(plan: &Plan, title: &str) -> Option<f64> {
     plan.activity.parameters.iter().find_map(|p| match p {
-        Parameter::Double { title: t, value, .. } if t == title => Some(*value),
+        other if other.title() == title => other.number(),
         _ => None,
     })
 }

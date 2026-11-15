@@ -82,9 +82,7 @@ fn number(plan: &Plan, title: &str) -> f64 {
         .parameters
         .iter()
         .find_map(|one| match one {
-            energyml_domain::provenance::Parameter::Double {
-                title: name, value, ..
-            } if name == title => Some(*value),
+            other if other.title() == title => other.number(),
             _ => None,
         })
         .unwrap_or_else(|| panic!("no `{title}` in the activity"))

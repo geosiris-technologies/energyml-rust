@@ -175,11 +175,7 @@ fn recorded(plan: &Plan, title: &str) -> Option<Parameter> {
     plan.activity
         .parameters
         .iter()
-        .find(|one| match one {
-            Parameter::Double { title: t, .. }
-            | Parameter::Text { title: t, .. }
-            | Parameter::Object { title: t, .. } => t == title,
-        })
+        .find(|one| one.title() == title)
         .cloned()
 }
 

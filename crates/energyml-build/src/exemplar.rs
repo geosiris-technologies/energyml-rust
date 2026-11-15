@@ -187,7 +187,7 @@ pub fn from_activity(slots: &[Slot], activity: &Value) -> Vec<Copied> {
         let Some(found) = parameters.iter().find(|p| p["Title"].as_str() == Some(slot.name)) else {
             continue;
         };
-        // The three forms `provenance::Parameter` writes, and nothing else:
+        // The forms `provenance::Parameter` writes, and nothing else:
         // a fourth that would be read by guesswork would be a guess.
         let raw = if !found["DataObject"].is_null() {
             found["DataObject"].clone()

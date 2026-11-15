@@ -67,11 +67,7 @@ fn samples() -> Pieces {
 fn titles(parameters: &[Parameter]) -> Vec<&str> {
     parameters
         .iter()
-        .map(|p| match p {
-            Parameter::Double { title, .. }
-            | Parameter::Text { title, .. }
-            | Parameter::Object { title, .. } => title.as_str(),
-        })
+        .map(Parameter::title)
         .collect()
 }
 

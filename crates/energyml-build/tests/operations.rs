@@ -307,6 +307,8 @@ fn an_activity_records_what_the_run_was_told_and_returns_it() {
         .map(|p| match p {
             energyml_domain::provenance::Parameter::Double { title, value, .. } =>
                 json!({ "Title": title, "Value": value }),
+            energyml_domain::provenance::Parameter::Integer { title, value } =>
+                json!({ "Title": title, "Value": value }),
             energyml_domain::provenance::Parameter::Text { title, value } =>
                 json!({ "Title": title, "Value": value }),
             energyml_domain::provenance::Parameter::Object { title, reference } =>
@@ -903,11 +905,7 @@ fn sigeol_plans_the_same_objects_the_writer_made_and_counts_what_it_dropped() {
         .parameters
         .iter()
         .find_map(|p| match p {
-            energyml_domain::provenance::Parameter::Double { title, value, .. }
-                if title == "duplicatesDropped" =>
-            {
-                Some(*value)
-            }
+            other if other.title() == "duplicatesDropped" => other.number(),
             _ => None,
         })
         .expect("counted");

@@ -217,7 +217,7 @@ fn bits(lattice: &([f64; 2], [f64; 2], [usize; 2])) -> ([u64; 2], [u64; 2], [usi
 
 fn double(plan: &Plan, title: &str) -> Option<f64> {
     plan.activity.parameters.iter().find_map(|p| match p {
-        Parameter::Double { title: t, value, .. } if t == title => Some(*value),
+        other if other.title() == title => other.number(),
         _ => None,
     })
 }
@@ -226,11 +226,7 @@ fn titles(plan: &Plan) -> Vec<&str> {
     plan.activity
         .parameters
         .iter()
-        .map(|p| match p {
-            Parameter::Double { title, .. }
-            | Parameter::Text { title, .. }
-            | Parameter::Object { title, .. } => title.as_str(),
-        })
+        .map(Parameter::title)
         .collect()
 }
 

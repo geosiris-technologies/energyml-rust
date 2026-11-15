@@ -235,9 +235,7 @@ fn reported(plan: &Plan, title: &str) -> Option<f64> {
         .parameters
         .iter()
         .find_map(|parameter| match parameter {
-            Parameter::Double {
-                title: named, value, ..
-            } if named == title => Some(*value),
+            other if other.title() == title => other.number(),
             _ => None,
         })
 }

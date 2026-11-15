@@ -195,7 +195,7 @@ fn kriging_takes_a_radius_and_a_ceiling() {
         .expect("the plan succeeds");
     let named = |title: &str| {
         plan.activity.parameters.iter().any(
-            |p| matches!(p, energyml_domain::provenance::Parameter::Double { title: t, .. } if t == title),
+            |p| p.title() == title,
         )
     };
     assert!(named("radius") && named("neighbours"));
@@ -345,9 +345,7 @@ fn the_buffer_sets_aside_close_points_and_the_step_regularises_the_trace() {
         )
         .expect("the plan succeeds");
     let buffered = plan.activity.parameters.iter().find_map(|p| match p {
-        energyml_domain::provenance::Parameter::Double { title, value, .. } if title == "nodesBuffered" => {
-            Some(*value)
-        }
+        other if other.title() == "nodesBuffered" => other.number(),
         _ => None,
     });
     assert_eq!(buffered, Some(2.0), "the two points within 0.8 of the fault");

@@ -67,7 +67,7 @@ fn plan(bag: &Pieces, choices: Choices) -> Plan {
 /// A recorded number, by its title.
 fn double(plan: &Plan, title: &str) -> Option<f64> {
     plan.activity.parameters.iter().find_map(|p| match p {
-        Parameter::Double { title: t, value, .. } if t == title => Some(*value),
+        other if other.title() == title => other.number(),
         _ => None,
     })
 }
@@ -293,11 +293,7 @@ fn a_translation_alone_has_no_pivot() {
         .activity
         .parameters
         .iter()
-        .map(|p| match p {
-            Parameter::Double { title, .. }
-            | Parameter::Text { title, .. }
-            | Parameter::Object { title, .. } => title.clone(),
-        })
+        .map(|p| p.title().to_string())
         .collect();
     assert!(!titles.iter().any(|t| t.starts_with("pivot")), "{titles:?}");
     // Given anyway, it is refused by name - it would do nothing.
