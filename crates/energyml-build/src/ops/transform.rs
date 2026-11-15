@@ -63,6 +63,7 @@ use crate::declare::{Choice, Inputs, Params, Shape, Suggestions};
 use crate::operation::{About, Category, Context, Need, Note, Operation, Plan, Refusal, Slot};
 use crate::pieces::Pieces;
 
+use super::blocks::double;
 use super::pointset::{Pointset, PointsetInputs, PointsetParams};
 use super::polylines::PolylinesInputs;
 use super::support;
@@ -419,14 +420,6 @@ pub(crate) fn flipped_in(before: &Geometry, after: &Geometry) -> usize {
             _ => 0,
         })
         .sum()
-}
-
-fn double(title: &str, value: f64) -> Parameter {
-    Parameter::Double {
-        title: title.to_string(),
-        value,
-        uom: None,
-    }
 }
 
 impl Operation for Transform {

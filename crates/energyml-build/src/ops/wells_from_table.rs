@@ -734,14 +734,7 @@ impl WellsFromTable {
         // degrees makes it between a hundred and ten thousand times too long, in a package
         // that `check` validates. The full argument is in `sigeol_boreholes`.
         if let crate::crs::Target::Geographic(code) = &target {
-            return Err(Refusal::new(
-                "project",
-                format!(
-                    "a borehole is a vertical extent, and EPSG:{code} measures its horizontal axes in degrees \
-                     while its depths are linear: every hole would be written between a hundred and ten thousand \
-                     times longer than the model is wide - name a projected system in `project` (EPSG:2154 for mainland France)"
-                ),
-            ));
+            return Err(super::blocks::refuse_degrees_target(code));
         }
         let vertical_up = Some(true);
         let file = params.data_file.clone();
@@ -928,26 +921,7 @@ impl Columns {
     /// column that the file does not have and a column of the file that the template
     /// ignores are two different pieces of news.
     pub(crate) fn of(table: &Table, template: &crate::osdu::Template) -> Result<Columns, Refusal> {
-        let at = |word: &str| -> Result<Option<usize>, Refusal> {
-            let role = role(word);
-            let column = template
-                .for_kind(role.uuid)
-                .map_err(|why| Refusal::on(word, why))?;
-            let Some(column) = column else { return Ok(None) };
-            match table.column(&column.name) {
-                Some(found) => Ok(Some(found)),
-                None => Err(Refusal::on(
-                    word,
-                    format!(
-                        "the template declares `{}` for the {} of a hole, and the file's header does not carry it \
-                         (it names: {})",
-                        column.name,
-                        role.title,
-                        table.headers.join(", ")
-                    ),
-                )),
-            }
-        };
+        let at = |word: &str| column_at(table, template, word);
         let need = |word: &str, found: Option<usize>| -> Result<usize, Refusal> {
             found.ok_or_else(|| {
                 Refusal::on(
@@ -1230,47 +1204,19 @@ fn one_hole(
     } else {
         let feature_uuid = support::next_uuid(identity, &format!("well-feature:{key}"), rank)
             .map_err(|why| why.to_string())?;
-        objects.push(NewObject {
-            uuid: feature_uuid.clone(),
-            qualified_type: "resqml22.WellboreFeature".to_string(),
-            role: "feature".to_string(),
-            title: title.clone(),
-            json: json!({
-                "$type": "resqml22.WellboreFeature",
-                "uuid": feature_uuid,
-                "schemaVersion": "2.2",
-                "Citation": cite(&title),
-            }),
-        });
-
         let interpretation_uuid = support::next_uuid(identity, &format!("well-interpretation:{key}"), rank)
             .map_err(|why| why.to_string())?;
         let interpretation_title = format!("{title} - interpretation");
-        objects.push(NewObject {
-            uuid: interpretation_uuid.clone(),
-            qualified_type: "resqml22.WellboreInterpretation".to_string(),
-            role: "interpretation".to_string(),
-            title: interpretation_title.clone(),
-            json: json!({
-                "$type": "resqml22.WellboreInterpretation",
-                "uuid": interpretation_uuid,
-                "schemaVersion": "2.2",
-                "Citation": cite(&interpretation_title),
-                "Domain": "depth",
-                "InterpretedFeature": {
-                    "$type": "eml23.DataObjectReference",
-                    "Uuid": feature_uuid,
-                    "QualifiedType": "resqml22.WellboreFeature",
-                    "Title": title,
-                },
-            }),
-        });
-        json!({
-            "$type": "eml23.DataObjectReference",
-            "Uuid": interpretation_uuid,
-            "QualifiedType": "resqml22.WellboreInterpretation",
-            "Title": interpretation_title,
-        })
+        let (pair, interpretation) = super::blocks::wellbore_pair(
+            &feature_uuid,
+            &title,
+            &interpretation_uuid,
+            &interpretation_title,
+            &cite,
+            super::blocks::WellboreFlags::default(),
+        );
+        objects.extend(pair);
+        interpretation
     };
 
     // **The datum of a continued borehole is its own**, not a derived copy: the

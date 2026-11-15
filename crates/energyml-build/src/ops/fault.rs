@@ -750,17 +750,8 @@ impl Operation for FaultFromSticks {
                 format!("Fault {how}. Source: {source}")
             }
         });
-        if let Some(text) = &description
-            && text.chars().count() > 2000
-        {
-            // A source cut short cites nothing.
-            return Err(Refusal::on(
-                "source",
-                format!(
-                    "makes a description of {} characters, and a Citation/Description holds 2000 - cite the document shorter",
-                    text.chars().count()
-                ),
-            ));
+        if let Some(text) = &description {
+            super::blocks::checked_description(text)?;
         }
 
         // -- the interpretation, with what a fault carries --------------------------

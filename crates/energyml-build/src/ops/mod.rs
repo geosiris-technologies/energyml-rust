@@ -6,6 +6,7 @@
 pub mod along_well_view;
 pub mod attach;
 pub mod blocked_wellbore;
+pub mod blocks;
 pub mod boundary;
 pub mod business_associate;
 pub mod change_frame;

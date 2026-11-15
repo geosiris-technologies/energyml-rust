@@ -88,7 +88,6 @@ use energyml_analysis::well_plan::{self, PlanError, Section, Station, Tie, Turn}
 use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::Topology;
 
-use crate::crs::FrameKind;
 use crate::declare::{Inputs, Params, Scalar, Shape as ShapeIn, Suggestions};
 use crate::geojson::Position;
 use crate::operation::{
@@ -424,12 +423,8 @@ fn ground_under(
 }
 
 /// The wellbore feature and its interpretation - **the two objects
-/// `well-from-polyline` writes, word for word** (`ops/well.rs`, in
-/// `WellFromPolyline::plan`), under the same seeds' shape.
-///
-/// A copy, and named as one: `well.rs` keeps them inline, and extracting a
-/// `well::pair_in` that both call is the change that removes this. A third
-/// writer would not be justified (`crates/energyml-build/ARCHITECTURE.md`).
+/// `well-from-polyline` writes, word for word** (`ops/well.rs`), under the same
+/// seeds' shape: both go through [`super::blocks::wellbore_pair`].
 fn pair(
     title: &str,
     seed: &str,
@@ -439,51 +434,22 @@ fn pair(
 ) -> Result<(Value, Vec<NewObject>), Error> {
     let feature_uuid = support::next_uuid(identity, &format!("well-feature:{seed}"), rank)?;
     let feature_title = format!("{title} - feature");
-    let feature = NewObject {
-        uuid: feature_uuid.clone(),
-        qualified_type: "resqml22.WellboreFeature".to_string(),
-        role: "feature".to_string(),
-        title: feature_title.clone(),
-        json: json!({
-            "$type": "resqml22.WellboreFeature",
-            "uuid": feature_uuid,
-            "schemaVersion": "2.2",
-            "Citation": support::citation(when, &feature_title),
-            "IsWellKnown": false,
-        }),
-    };
     let uuid = support::next_uuid(identity, &format!("well-interpretation:{seed}"), rank)?;
     let interpretation_title = format!("{title} - interpretation");
-    let interpretation = NewObject {
-        uuid: uuid.clone(),
-        qualified_type: "resqml22.WellboreInterpretation".to_string(),
-        role: "interpretation".to_string(),
-        title: interpretation_title.clone(),
-        json: json!({
-            "$type": "resqml22.WellboreInterpretation",
-            "uuid": uuid,
-            "schemaVersion": "2.2",
-            "Citation": support::citation(when, &interpretation_title),
-            "Domain": "depth",
-            // “For planned trajectories, use IsDrilled=FALSE” (Wells.xsd).
-            "IsDrilled": false,
-            "InterpretedFeature": {
-                "$type": "eml23.DataObjectReference",
-                "Uuid": feature_uuid,
-                "QualifiedType": "resqml22.WellboreFeature",
-                "Title": feature_title,
-            },
-        }),
-    };
-    Ok((
-        json!({
-            "$type": "eml23.DataObjectReference",
-            "Uuid": uuid,
-            "QualifiedType": "resqml22.WellboreInterpretation",
-            "Title": interpretation_title,
-        }),
-        vec![feature, interpretation],
-    ))
+    let (objects, reference) = super::blocks::wellbore_pair(
+        &feature_uuid,
+        &feature_title,
+        &uuid,
+        &interpretation_title,
+        |name| support::citation(when, name),
+        // "For planned trajectories, use IsDrilled=FALSE" (Wells.xsd).
+        super::blocks::WellboreFlags {
+            is_well_known: Some(false),
+            is_drilled: Some(false),
+            ..Default::default()
+        },
+    );
+    Ok((reference, objects))
 }
 
 impl Operation for WellFromPlan {
@@ -627,20 +593,7 @@ impl Operation for WellFromPlan {
         // -- the frame, and which way is down --------------------------------
         let frame = support::frame_in(&known, &written.frame, identity, when, &mut rank)?;
         let frame_title = frame.crs["Title"].as_str().unwrap_or_default().to_string();
-        if frame.kind == Some(FrameKind::Geographic) {
-            // The refusal `well-from-polyline` makes, for the same reason:
-            // a wellbore is a vertical extent.
-            let (slot, what) = match written.frame.crs.as_ref() {
-                Some(_) => ("crs", format!("the frame `{frame_title}` named")),
-                None => ("project", "the frame created without `project`".to_string()),
-            };
-            return Err(Refusal::on(
-                slot,
-                format!(
-                    "a wellbore is a vertical extent, and {what} measures its horizontal axes in degrees while its depths are metres, which no reader can reconcile - name a projected system in `project` (EPSG:2154 for mainland France), or a LocalEngineeringCompoundCrs as `crs`"
-                ),
-            ));
-        }
+        super::blocks::refuse_degrees(&frame, written.frame.crs.is_some(), "a wellbore", "hole")?;
         let frame_uuid = frame.crs["Uuid"].as_str().unwrap_or_default().to_string();
         let in_frame = |one: &&Known| {
             one.crs

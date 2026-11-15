@@ -53,8 +53,6 @@
 //!   unit dictionary uses; a unit outside it is refused by name rather than
 //!   spelled by guess.
 
-use serde_json::json;
-
 use energyml_analysis::measure::{self as analysis};
 use energyml_domain::provenance::Parameter;
 use energyml_domain::units::Dimension;
@@ -544,24 +542,7 @@ impl Operation for Measure {
         // dictionary is the authority for its own identifiers.
         let kind = match params.property_kind {
             Some(given) => given.0,
-            None => {
-                let wanted = what.word();
-                let found = energyml_domain::property_kind::with_default(|dictionary| {
-                    dictionary
-                        .by_title(wanted)
-                        .first()
-                        .map(|kind| (kind.uuid.clone(), kind.title.clone()))
-                });
-                let (uuid, title) = found.ok_or_else(|| {
-                    Refusal::on(
-                        "propertyKind",
-                        format!(
-                            "the dictionary in use holds no kind called `{wanted}`: name one of the package"
-                        ),
-                    )
-                })?;
-                json!({ "$type": "eml23.DataObjectReference", "Uuid": uuid, "QualifiedType": "eml23.PropertyKind", "Title": title })
-            }
+            None => super::blocks::standard_kind_dor(what.word(), "propertyKind")?,
         };
         let label = match (what, params.measured) {
             (What::Volume, _) => "cell volume".to_string(),

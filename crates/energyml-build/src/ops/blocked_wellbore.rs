@@ -117,16 +117,6 @@ pub struct BlockedWellboreInputs {
     pub grids: Vec<Shape>,
 }
 
-/// The title the object behind a shape carries, or the shape's name.
-fn title_of(shape: &Shape) -> String {
-    shape
-        .known
-        .as_ref()
-        .and_then(|known| known.reference.as_ref())
-        .map(|r| r.title.clone())
-        .unwrap_or_else(|| shape.name.clone())
-}
-
 /// A grid's cells in index order - see the module header.
 fn grid_of(shape: &Shape) -> Result<(Grid, usize), Refusal> {
     let [
@@ -146,7 +136,7 @@ fn grid_of(shape: &Shape) -> Result<(Grid, usize), Refusal> {
             "grids",
             format!(
                 "`{}` is no IJK grid: a blocked wellbore is blocked in the cells of one",
-                title_of(shape)
+                shape.title()
             ),
         ));
     };
@@ -325,7 +315,7 @@ impl Operation for BlockedWellbore {
                         "`{}` is in `{}` and `{}` in `{}`: a path and cells read in two frames meet where neither is - bring them into one frame first",
                         frame_ref.title,
                         a.title,
-                        title_of(grid),
+                        grid.title(),
                         b.title
                     ),
                 ));
@@ -347,7 +337,7 @@ impl Operation for BlockedWellbore {
                 CellsError::Leaning { grid, .. }
                 | CellsError::NotParallelogram { grid, .. }
                 | CellsError::Shared { grid, .. } => {
-                    format!(" - grid {grid} is `{}`", title_of(&grids[*grid]))
+                    format!(" - grid {grid} is `{}`", grids[*grid].title())
                 }
                 _ => String::new(),
             };
@@ -513,7 +503,7 @@ impl Operation for BlockedWellbore {
                     key: "undefined-cells",
                     detail: format!(
                         "`{}` leaves {holes} cell(s) without geometry: the path there is in no cell",
-                        title_of(grid)
+                        grid.title()
                     ),
                 });
             }
@@ -525,7 +515,7 @@ impl Operation for BlockedWellbore {
                     "where two grids hold one stretch the first listed holds it: {}",
                     grids
                         .iter()
-                        .map(|grid| format!("`{}`", title_of(grid)))
+                        .map(|grid| format!("`{}`", grid.title()))
                         .collect::<Vec<_>>()
                         .join(" before ")
                 ),

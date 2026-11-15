@@ -921,6 +921,7 @@ pub fn read_vtk(text: &str) -> Result<Geometry, String> {
 /// "Cell types": VTK_HEXAHEDRON = 12, corners 0-3 the bottom face
 /// counter-clockwise seen from above, 4-7 the top face above them). Each face
 /// is wound outward, the same table `energyml-export` writes.
+// TODO(A7): hexahedron face table from energyml_geometry
 const HEXAHEDRON_FACES: [[usize; 4]; 6] = [
     [0, 3, 2, 1],
     [4, 5, 6, 7],

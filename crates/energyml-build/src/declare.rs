@@ -626,6 +626,20 @@ pub struct Shape {
     pub known: Option<Known>,
 }
 
+impl Shape {
+    /// What names the shape in a message: the title of the object behind it,
+    /// else its name in the bag. An empty title is no title - the name stands
+    /// in - so every operation names the same shape the same way.
+    pub fn title(&self) -> String {
+        self.known
+            .as_ref()
+            .and_then(|known| known.reference.as_ref())
+            .map(|reference| reference.title.clone())
+            .filter(|title| !title.is_empty())
+            .unwrap_or_else(|| self.name.clone())
+    }
+}
+
 impl Input for Shape {
     const KIND: &'static str = "shape";
     fn from_piece(piece: &Piece<'_>) -> Result<Self, String> {

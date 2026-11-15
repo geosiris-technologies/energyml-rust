@@ -16,13 +16,13 @@
 //!   once a grid can be written back; a volume's cells are another affair.
 
 use energyml_analysis::nodes::{erase_from_cloud, erase_from_lines, erase_from_surface};
-use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 
 use crate::declare::{Inputs, Params, Shape, Suggestions};
 use crate::operation::{About, Category, Context, Need, Note, Operation, Plan, Refusal, Slot};
 use crate::pieces::Pieces;
 
+use super::blocks::double;
 use super::polylines::said_closed;
 use super::support;
 use super::transform::{kind_of, write_as};
@@ -47,14 +47,6 @@ pub struct DeleteNodesParams {
 pub struct DeleteNodesInputs {
     /// the shape to take nodes out of - a cloud, polylines or a triangulated surface
     pub shape: Shape,
-}
-
-fn double(title: &str, value: f64) -> Parameter {
-    Parameter::Double {
-        title: title.to_string(),
-        value,
-        uom: None,
-    }
 }
 
 impl Operation for DeleteNodes {

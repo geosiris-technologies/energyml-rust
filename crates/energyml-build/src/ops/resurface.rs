@@ -200,28 +200,9 @@ fn fit_ranks(points: &[[f64; 3]], outer: Option<&Shape>, inner: &[Shape]) -> Res
         return Ok((0..points.len()).collect());
     }
     let flat: Vec<f64> = points.iter().flat_map(|p| [p[0], p[1], 0.0]).collect();
-    let ring_of = |slot: &str, shape: &Shape| -> Result<Vec<f64>, Refusal> {
-        let ring_points: Vec<[f64; 3]> = shape
-            .geometry
-            .patches
-            .iter()
-            .flat_map(|p| p.points.iter().copied())
-            .collect();
-        if ring_points.len() < 3 {
-            return Err(Refusal::on(
-                slot,
-                format!(
-                    "`{}` holds {} point(s): a ring encloses something with at least 3",
-                    shape.name,
-                    ring_points.len()
-                ),
-            ));
-        }
-        Ok(ring_points.iter().flat_map(|p| [p[0], p[1]]).collect())
-    };
     let mut keep: Option<std::collections::HashSet<usize>> = None;
     if let Some(shape) = outer {
-        let ring = ring_of("outer", shape)?;
+        let ring = super::blocks::ring_corners("outer", shape)?;
         let kept: std::collections::HashSet<usize> =
             energyml_geometry::clip::nodes_in_ring(&flat, &ring, false)
                 .map_err(|why| Refusal::on("outer", why))?
@@ -231,7 +212,7 @@ fn fit_ranks(points: &[[f64; 3]], outer: Option<&Shape>, inner: &[Shape]) -> Res
         keep = Some(kept);
     }
     for shape in inner {
-        let ring = ring_of("inner", shape)?;
+        let ring = super::blocks::ring_corners("inner", shape)?;
         let kept: std::collections::HashSet<usize> =
             energyml_geometry::clip::nodes_in_ring(&flat, &ring, true)
                 .map_err(|why| Refusal::on("inner", why))?

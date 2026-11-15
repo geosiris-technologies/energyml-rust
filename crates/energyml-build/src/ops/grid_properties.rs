@@ -129,6 +129,7 @@ use crate::operation::{
 };
 use crate::pieces::{Known, Ref};
 
+use super::blocks::digest;
 use super::property::PropertyParams;
 use super::support;
 use super::well_logs::{HydrostaticParams, TemperatureParams};
@@ -229,16 +230,6 @@ fn hexahedra_dims(geometry: &Geometry) -> Result<[usize; 3], String> {
     Ok([ni, nj, nk])
 }
 
-/// The title the object behind a shape carries, or the shape's name.
-fn title_of(shape: &Shape) -> String {
-    shape
-        .known
-        .as_ref()
-        .and_then(|known| known.reference.as_ref())
-        .map(|r| r.title.clone())
-        .unwrap_or_else(|| shape.name.clone())
-}
-
 /// The centre of the cell at `position` in `cells` - the mean of its eight corners.
 fn cell_centre(patch: &Patch, position: usize) -> [f64; 3] {
     let Topology::Hexahedra { cells, .. } = &patch.topology else {
@@ -257,31 +248,9 @@ fn cell_centre(patch: &Patch, position: usize) -> [f64; 3] {
 /// The property kind of the standard dictionary, by its title - never a uuid
 /// typed here, the dictionary is the authority for its own identifiers.
 fn kind_ref(title: &str) -> Result<(serde_json::Value, String), Refusal> {
-    let found = energyml_domain::property_kind::with_default(|dictionary| {
-        dictionary
-            .by_title(title)
-            .first()
-            .map(|kind| (kind.uuid.clone(), kind.title.clone()))
-    });
-    let (uuid, kind_title) = found.ok_or_else(|| {
-        Refusal::on(
-            "what",
-            format!(
-                "the dictionary in use holds no kind called `{title}`: name a `propertyKind` of the package"
-            ),
-        )
-    })?;
-    let dor = json!({ "$type": "eml23.DataObjectReference", "Uuid": uuid, "QualifiedType": "eml23.PropertyKind", "Title": kind_title });
+    let dor = super::blocks::standard_kind_dor(title, "what")?;
+    let uuid = dor["Uuid"].as_str().unwrap_or_default().to_string();
     Ok((dor, uuid))
-}
-
-/// Values as the seed carries them - exactly, NaN included.
-fn digest(values: &[f64]) -> String {
-    values
-        .iter()
-        .map(|value| format!("{value:?}"))
-        .collect::<Vec<_>>()
-        .join(",")
 }
 
 /// A count, as the activity records it.
@@ -502,7 +471,7 @@ impl Operation for GridProperties {
         let [ni, nj, nk] = hexahedra_dims(&grid.geometry).map_err(|why| Refusal::on("grid", why))?;
         let total = ni * nj * nk;
         let per_layer = ni * nj;
-        let grid_title = title_of(&grid);
+        let grid_title = grid.title();
         let known = grid.known.as_ref();
         let reference = known.and_then(|k| k.reference.as_ref()).ok_or_else(|| {
             Refusal::on(
@@ -654,7 +623,7 @@ fn plan_depth(
         )
     })?;
     let ground_known = ground.known.as_ref();
-    let ground_title = title_of(ground);
+    let ground_title = ground.title();
     match (
         known.and_then(|k| k.crs.as_ref()),
         ground_known.and_then(|k| k.crs.as_ref()),
@@ -792,24 +761,14 @@ fn plan_depth(
         "Laid by a law, not measured: {}, at each cell's own vertical depth below the ground read on `{ground_title}`. Source: {source}",
         told.words()
     );
-    if description.chars().count() > 2000 {
-        return Err(Refusal::on(
-            "source",
-            format!(
-                "makes a description of {} characters, and a Citation/Description holds 2000 - cite the document shorter",
-                description.chars().count()
-            ),
-        ));
-    }
+    super::blocks::checked_description(&description)?;
     for object in drawn.objects.iter_mut() {
         object.json["Citation"]["Description"] = json!(description);
         // The reference-model rule on invented objects (ADR-0019).
-        object.json["ExtensionNameValue"] = json!([{
-            "$type": "eml23.ExtensionNameValue",
-            "Name": "synthetic",
-            "Value": { "$type": "eml23.StringMeasure", "_": "true" },
-            "Description": format!("laid by `grid-properties` by a law of depth ({}), not measured", told.word()),
-        }]);
+        object.json["ExtensionNameValue"] = super::blocks::synthetic_extension(format!(
+            "laid by `grid-properties` by a law of depth ({}), not measured",
+            told.word()
+        ));
     }
 
     let mut notes = vec![
@@ -957,23 +916,12 @@ fn plan_layer(
         "Laid by a value per K layer, not measured: {kind_title} - one value per layer, top to bottom: {:?} {}. Source: {source}",
         layer.layers, layer.uom
     );
-    if description.chars().count() > 2000 {
-        return Err(Refusal::on(
-            "source",
-            format!(
-                "makes a description of {} characters, and a Citation/Description holds 2000 - cite the document shorter",
-                description.chars().count()
-            ),
-        ));
-    }
+    super::blocks::checked_description(&description)?;
     for object in drawn.objects.iter_mut() {
         object.json["Citation"]["Description"] = json!(description);
-        object.json["ExtensionNameValue"] = json!([{
-            "$type": "eml23.ExtensionNameValue",
-            "Name": "synthetic",
-            "Value": { "$type": "eml23.StringMeasure", "_": "true" },
-            "Description": "laid by `grid-properties`, one value per K layer, not measured",
-        }]);
+        object.json["ExtensionNameValue"] = super::blocks::synthetic_extension(
+            "laid by `grid-properties`, one value per K layer, not measured",
+        );
     }
 
     let mut notes = vec![
@@ -1118,27 +1066,16 @@ fn plan_permeability(
             "Laid by a value per K layer, not measured: absolute permeability, direction {component} - one value per layer, top to bottom: {values:?} {}. Source: {source}",
             perm.uom
         );
-        if description.chars().count() > 2000 {
-            return Err(Refusal::on(
-                "source",
-                format!(
-                    "makes a description of {} characters, and a Citation/Description holds 2000 - cite the document shorter",
-                    description.chars().count()
-                ),
-            ));
-        }
+        super::blocks::checked_description(&description)?;
         for object in drawn.objects.iter_mut() {
             object.json["Citation"]["Description"] = json!(description);
             // One direction per property - see the module's *A tensor
             // property this build does not write*.
             object.json["Facet"] =
                 json!([{ "$type": "eml23.PropertyKindFacet", "Facet": facet, "Kind": "direction" }]);
-            object.json["ExtensionNameValue"] = json!([{
-                "$type": "eml23.ExtensionNameValue",
-                "Name": "synthetic",
-                "Value": { "$type": "eml23.StringMeasure", "_": "true" },
-                "Description": "laid by `grid-properties`, one value per K layer, not measured",
-            }]);
+            object.json["ExtensionNameValue"] = super::blocks::synthetic_extension(
+                "laid by `grid-properties`, one value per K layer, not measured",
+            );
         }
         objects.append(&mut drawn.objects);
         datasets.append(&mut drawn.datasets);

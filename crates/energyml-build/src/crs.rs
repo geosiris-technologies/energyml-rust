@@ -493,7 +493,7 @@ pub fn names(
             let local = projected.then(|| {
                 let plane = plane_seed(target.epsg(), local);
                 let compound = compound_seed(&plane, vertical, local);
-                (derive(&plane), derive(&compound))
+                (crate::naming::derive(&plane), crate::naming::derive(&compound))
             });
             Names {
                 horizontal,
@@ -518,12 +518,6 @@ pub fn names(
     };
     *rank += if projected { 4 } else { 2 };
     Ok(names)
-}
-
-/// A uuid in the crate's namespace - the one [`crate::naming`] hangs every
-/// derived name from, so the two new names live beside the two old ones.
-fn derive(name: &str) -> String {
-    uuid::Uuid::new_v5(&crate::naming::NAMESPACE, name.as_bytes()).to_string()
 }
 
 /// A number as a seed spells it: the shortest text that reads back to it, and

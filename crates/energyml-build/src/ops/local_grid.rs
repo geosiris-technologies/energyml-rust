@@ -131,16 +131,6 @@ pub struct LocalGridInputs {
     pub parent: Shape,
 }
 
-/// The title the object behind a shape carries, or the shape's name.
-fn title_of(shape: &Shape) -> String {
-    shape
-        .known
-        .as_ref()
-        .and_then(|known| known.reference.as_ref())
-        .map(|r| r.title.clone())
-        .unwrap_or_else(|| shape.name.clone())
-}
-
 /// The parent as the geometry reader hands it: one patch of hexahedra over
 /// the file's raw `Points` - every level, K gap levels included, and every
 /// coordinate line, split lines included - each cell naming its eight corners
@@ -188,7 +178,7 @@ fn parent_grid(shape: &Shape) -> Result<ParentGrid<'_>, Refusal> {
             "parent",
             format!(
                 "`{}` reads as {} cell(s) for a {ni}×{nj}×{nk} grid and does not say which are missing: a window cannot find its cells",
-                title_of(shape),
+                shape.title(),
                 cells.len()
             ),
         ));
@@ -530,7 +520,7 @@ impl Operation for LocalGrid {
                     name,
                     format!(
                         "names parent cell {hi}, and `{}` has {extent} cell(s) along this axis (0..{extent})",
-                        title_of(&parent)
+                        parent.title()
                     ),
                 ));
             }
@@ -555,7 +545,7 @@ impl Operation for LocalGrid {
         cx.stop_if_cancelled()?;
 
         // -- the window's lattice, read off the parent's own cells ---------------------------
-        let window = window_of(&grid, &title_of(&parent), [i0, j0, k0], [i1, j1, k1])?;
+        let window = window_of(&grid, &parent.title(), [i0, j0, k0], [i1, j1, k1])?;
         cx.stop_if_cancelled()?;
 
         // -- the child's nodes, trilinearly interpolated in the parent's lattice ------------
@@ -671,7 +661,7 @@ impl Operation for LocalGrid {
             key: "window",
             detail: format!(
                 "parent `{}` cells I {i0}..={i1}, J {j0}..={j1}, K {k0}..={k1} ({span_i} × {span_j} × {span_k}), refined {ri} × {rj} × {rk} → {ni} × {nj} × {nk} = {} child cell(s)",
-                title_of(&parent),
+                parent.title(),
                 ni * nj * nk
             ),
         }];

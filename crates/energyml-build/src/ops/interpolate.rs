@@ -109,6 +109,7 @@ use crate::declare::{Field, Inputs, Params, Shape, Suggestions, known_named};
 use crate::operation::{About, Category, Context, Error, Need, Note, Operation, Plan, Refusal, Slot};
 use crate::pieces::{Lattice, Pieces};
 
+use super::blocks::double;
 use super::support;
 
 /// The operation.
@@ -273,16 +274,6 @@ pub struct InterpolateInputs {
     pub inner: Vec<Shape>,
 }
 
-/// The title of the object behind a shape, or the shape's name.
-fn title_of(shape: &Shape) -> String {
-    shape
-        .known
-        .as_ref()
-        .and_then(|known| known.reference.as_ref())
-        .map(|r| r.title.clone())
-        .unwrap_or_else(|| shape.name.clone())
-}
-
 /// The counts of the grid `onto` names - `[ni, nj]` - or why it is none.
 fn grid_counts(onto: &Shape) -> Result<[usize; 2], Refusal> {
     let [patch] = onto.geometry.patches.as_slice() else {
@@ -290,7 +281,7 @@ fn grid_counts(onto: &Shape) -> Result<[usize; 2], Refusal> {
             "onto",
             format!(
                 "`{}` holds {} patch(es): the lattice is taken from one 2D grid",
-                title_of(onto),
+                onto.title(),
                 onto.geometry.patches.len()
             ),
         ));
@@ -300,7 +291,7 @@ fn grid_counts(onto: &Shape) -> Result<[usize; 2], Refusal> {
             "onto",
             format!(
                 "`{}` is no 2D grid: only a Grid2dRepresentation's lattice can be reused",
-                title_of(onto)
+                onto.title()
             ),
         ));
     };
@@ -319,7 +310,7 @@ pub(crate) fn lattice_onto(
 ) -> Result<ijk::Lattice, Refusal> {
     let counts = grid_counts(onto)?;
     let lattice = ijk::lattice_of(&onto.geometry.patches[0].points, counts).map_err(|why| {
-        let title = title_of(onto);
+        let title = onto.title();
         Refusal::on(
             "onto",
             match why {
@@ -342,9 +333,9 @@ pub(crate) fn lattice_onto(
             "onto",
             format!(
                 "`{}` is in `{}` and the samples `{}` in `{}`: a grid is never reprojected - interpolate onto a grid of the samples' frame, or bring the samples into `{}` first",
-                title_of(onto),
+                onto.title(),
                 grid_frame.title,
-                title_of(samples),
+                samples.title(),
                 seeds_frame.title,
                 grid_frame.title
             ),
@@ -352,18 +343,12 @@ pub(crate) fn lattice_onto(
     }
     match (&frame.crs, frame.source_epsg) {
         (Some(named), _) => {
-            let uuid = named
-                .0
-                .get("Uuid")
-                .and_then(|v| v.as_str())
-                .or_else(|| named.0.as_str())
-                .unwrap_or_default();
-            if !uuid.eq_ignore_ascii_case(&grid_frame.uuid) {
+            if !super::blocks::names_frame(named, &grid_frame.uuid) {
                 return Err(Refusal::on(
                     "crs",
                     format!(
                         "names another frame than `{}`'s `{}`: the lattice is written as it is, so in its own frame - name that one, or leave `crs` out to take it",
-                        title_of(onto),
+                        onto.title(),
                         grid_frame.title
                     ),
                 ));
@@ -375,7 +360,7 @@ pub(crate) fn lattice_onto(
                 format!(
                     "would create a frame from EPSG:{}, and the lattice of `{}` is in `{}`: name that one as `crs`, or leave both out to take it",
                     code.0,
-                    title_of(onto),
+                    onto.title(),
                     grid_frame.title
                 ),
             ));
@@ -498,14 +483,6 @@ struct Ran {
     /// What the activity records of the method, beyond its name.
     parameters: Vec<Parameter>,
     says: Vec<Note>,
-}
-
-fn double(title: &str, value: f64) -> Parameter {
-    Parameter::Double {
-        title: title.to_string(),
-        value,
-        uom: None,
-    }
 }
 
 /// The run - **one arm per case of the union**, each reading only its own
@@ -864,7 +841,7 @@ impl Operation for Interpolate {
                     key: "onto",
                     detail: format!(
                         "on the lattice of `{}`, as it is: {} by {} nodes from ({}, {}) every ({}, {})",
-                        title_of(onto),
+                        onto.title(),
                         counts[0],
                         counts[1],
                         origin[0],

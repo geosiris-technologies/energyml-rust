@@ -35,7 +35,6 @@ use energyml_analysis::fake::{self, vertical_polylines};
 use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 
-use crate::crs::FrameKind;
 use crate::declare::{Inputs, Params, Shape, Suggestions};
 use crate::operation::{About, Category, Context, Need, Note, Operation, Plan, Refusal, Slot};
 use crate::pieces::Pieces;
@@ -255,24 +254,12 @@ impl Operation for PolylinesFromCloud {
         if heads.is_empty() {
             return Err(Refusal::on("shape", "the input has no point at all"));
         }
-        if frame.kind == Some(FrameKind::Geographic) {
-            let (slot, what) = match params.written.frame.crs.as_ref() {
-                Some(_) => (
-                    "crs",
-                    format!(
-                        "the frame `{}` named",
-                        frame.crs["Title"].as_str().unwrap_or_default()
-                    ),
-                ),
-                None => ("project", "the frame created without `project`".to_string()),
-            };
-            return Err(Refusal::on(
-                slot,
-                format!(
-                    "a vertical polyline is a vertical extent, and {what} measures its horizontal axes in degrees while its length is linear: every polyline would be written between a hundred and ten thousand times longer than the model is wide - name a projected system in `project` (EPSG:2154 for mainland France), or a LocalEngineeringCompoundCrs as `crs`"
-                ),
-            ));
-        }
+        super::blocks::refuse_degrees(
+            &frame,
+            params.written.frame.crs.is_some(),
+            "a vertical polyline",
+            "polyline",
+        )?;
         let vertical_up = if frame.objects.is_empty() {
             known.first().and_then(|k| k.vertical_up)
         } else {

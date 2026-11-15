@@ -100,6 +100,7 @@ use crate::declare::{Choice, Inputs, Params, Shape, Suggestions, known_of};
 use crate::operation::{About, Category, Context, Need, Note, Operation, Plan, Refusal, Slot};
 use crate::pieces::{Lattice, Pieces};
 
+use super::blocks::double;
 use super::support;
 use super::thickness::Vertical;
 use super::written::Written;
@@ -185,25 +186,6 @@ pub struct HorizonLawInputs {
     pub cuts: Vec<Shape>,
 }
 
-/// A count, as the activity records it.
-fn double(title: &str, value: f64) -> Parameter {
-    Parameter::Double {
-        title: title.to_string(),
-        value,
-        uom: None,
-    }
-}
-
-/// The title the object behind a shape carries, or the shape's name.
-fn title_of(shape: &Shape) -> String {
-    shape
-        .known
-        .as_ref()
-        .and_then(|known| known.reference.as_ref())
-        .map(|r| r.title.clone())
-        .unwrap_or_else(|| shape.name.clone())
-}
-
 /// The counts of a grid shape - `[ni, nj]` - or why it is none a law is laid
 /// on.
 fn grid_counts(geometry: &Geometry) -> Result<[usize; 2], String> {
@@ -238,45 +220,20 @@ fn grid_counts(geometry: &Geometry) -> Result<[usize; 2], String> {
 type LatticeRead = ([f64; 2], [f64; 2], [usize; 2]);
 
 /// The reference's lattice - origin, spacing, counts - read off its nodes, or
-/// the first node that is not where the house lattice puts it.
+/// why they are none.
 ///
-/// The house order is `grid`'s (a grid is never reprojected, and its order is the house order):
-/// `i` along +x varies fastest, `j` along +y. A grid
-/// read from a file comes in the order its `FastestAxisCount` says
-/// (`energyml_geometry`, `grid_2d`), so a rotated lattice, or one running
-/// toward −x or −y, is refused rather than re-indexed here: `grid` would write
-/// it on axes it does not have.
+/// The one reading is `energyml_analysis::ijk::lattice_of`, the door `clip`
+/// and `interpolate` use: the house order is `grid`'s (a grid is never
+/// reprojected, and its order is the house order), `i` along +x varies
+/// fastest, `j` along +y. A grid read from a file comes in the order its
+/// `FastestAxisCount` says (`energyml_geometry`, `grid_2d`), so a rotated
+/// lattice, or one running toward -x or -y, is refused rather than re-indexed
+/// here: `grid` would write it on axes it does not have.
 fn lattice_of(geometry: &Geometry) -> Result<LatticeRead, String> {
-    let [ni, nj] = grid_counts(geometry)?;
-    let points = &geometry.patches[0].points;
-    let at = |i: usize, j: usize| points[j * ni + i];
-    let origin = at(0, 0);
-    let (dx, dy) = (at(1, 0)[0] - origin[0], at(0, 1)[1] - origin[1]);
-    if !(dx.is_finite() && dx > 0.0 && dy.is_finite() && dy > 0.0) {
-        return Err(format!(
-            "runs along ({}, {}) then ({}, {}): `grid` writes a lattice along +x then +y, and a rotated or reversed one is not re-indexed here",
-            at(1, 0)[0] - origin[0],
-            at(1, 0)[1] - origin[1],
-            at(0, 1)[0] - origin[0],
-            at(0, 1)[1] - origin[1]
-        ));
-    }
-    // A millionth of a cell: what the reader's running sum of spacings can
-    // drift by, and nothing a producer means.
-    let tolerance = 1e-6 * dx.min(dy);
-    for j in 0..nj {
-        for i in 0..ni {
-            let node = at(i, j);
-            let (x, y) = (origin[0] + i as f64 * dx, origin[1] + j as f64 * dy);
-            if !((node[0] - x).abs() <= tolerance && (node[1] - y).abs() <= tolerance) {
-                return Err(format!(
-                    "node ({i}, {j}) is at ({}, {}) where a regular lattice along +x then +y puts it at ({x}, {y}): a rotated or irregular grid is not what `grid` writes",
-                    node[0], node[1]
-                ));
-            }
-        }
-    }
-    Ok(([origin[0], origin[1]], [dx, dy], [ni, nj]))
+    let counts = grid_counts(geometry)?;
+    let lattice = energyml_analysis::ijk::lattice_of(&geometry.patches[0].points, counts)
+        .map_err(|why| why.to_string())?;
+    Ok((lattice.origin, lattice.spacing, lattice.counts))
 }
 
 /// The law, in the words a description and a note use.
@@ -392,7 +349,7 @@ impl Operation for HorizonFromLaw {
                     format!(
                         "`reference` is in `{}` and the cut `{}` in `{}`: a height compared across two frames is a comparison of two origins - bring them into one frame first",
                         a.title,
-                        title_of(cut),
+                        cut.title(),
                         b.title
                     ),
                 ));
@@ -404,7 +361,7 @@ impl Operation for HorizonFromLaw {
                     "units",
                     format!(
                         "`reference` counts its heights in `{a}` and the cut `{}` in `{b}` - one unit, or no comparison",
-                        title_of(cut)
+                        cut.title()
                     ),
                 ));
             }
@@ -412,13 +369,7 @@ impl Operation for HorizonFromLaw {
         if let Some(frame) = frame {
             match (&params.written.frame.crs, params.written.frame.source_epsg) {
                 (Some(named), _) => {
-                    let uuid = named
-                        .0
-                        .get("Uuid")
-                        .and_then(|v| v.as_str())
-                        .or_else(|| named.0.as_str())
-                        .unwrap_or_default();
-                    if !uuid.eq_ignore_ascii_case(&frame.uuid) {
+                    if !super::blocks::names_frame(named, &frame.uuid) {
                         return Err(Refusal::on(
                             "crs",
                             format!(
@@ -497,7 +448,7 @@ impl Operation for HorizonFromLaw {
         }
 
         // -- the writing is `grid`'s -------------------------------------------------
-        let reference_title = title_of(&reference);
+        let reference_title = reference.title();
         let reference_key = known
             .and_then(|k| k.reference.as_ref())
             .map(|r| r.uuid.clone())
@@ -518,7 +469,7 @@ impl Operation for HorizonFromLaw {
             .clone()
             .unwrap_or_else(|| "(the unit of the reference's heights)".to_string());
         let side_word = params.side.word();
-        let cut_titles: Vec<String> = cuts.iter().map(title_of).collect();
+        let cut_titles: Vec<String> = cuts.iter().map(Shape::title).collect();
         let stated = law_words(&law, &unit_word);
         let description = format!(
             "Laid by a law, not measured: {stated}, {side_word} `{reference_title}`, measured vertically{}. Source of the thickness: {source}",
@@ -531,15 +482,7 @@ impl Operation for HorizonFromLaw {
         // `Citation/Description` holds 2000 characters (eml 2.3 `Citation`,
         // `DescriptionString`): refused rather than cut short, since a source
         // cut short cites nothing.
-        if description.chars().count() > 2000 {
-            return Err(Refusal::on(
-                "source",
-                format!(
-                    "makes a description of {} characters, and a Citation/Description holds 2000 - cite the document shorter",
-                    description.chars().count()
-                ),
-            ));
-        }
+        super::blocks::checked_description(&description)?;
         if let Some(object) = plan
             .objects
             .iter_mut()
@@ -549,12 +492,9 @@ impl Operation for HorizonFromLaw {
             // The reference-model rule on invented objects (ADR-0019): an
             // `ExtensionNameValue` `synthetic = true` and a sentence in `Citation/Description`
             // on any invented object.
-            object.json["ExtensionNameValue"] = json!([{
-                "$type": "eml23.ExtensionNameValue",
-                "Name": "synthetic",
-                "Value": { "$type": "eml23.StringMeasure", "_": "true" },
-                "Description": "laid by `horizon-from-law` at a stated thickness from another horizon, not measured",
-            }]);
+            object.json["ExtensionNameValue"] = super::blocks::synthetic_extension(
+                "laid by `horizon-from-law` at a stated thickness from another horizon, not measured",
+            );
         }
 
         plan.activity.recipe = "horizon-from-law";

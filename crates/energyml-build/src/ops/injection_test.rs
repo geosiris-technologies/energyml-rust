@@ -142,18 +142,14 @@ struct Measured {
 
 /// The kind the standard dictionary holds under `title`, or a refusal.
 fn standard_kind(title: &str) -> Result<eml::DataObjectReference, Refusal> {
-    energyml_domain::property_kind::with_default(|dictionary| {
-        dictionary
-            .by_title(title)
-            .first()
-            .map(|kind| crate::crs::reference_to(&kind.uuid, "eml23.PropertyKind", &kind.title))
-    })
-    .ok_or_else(|| {
-        Refusal::new(
-            "refused",
-            format!("the dictionary in use holds no kind called `{title}`"),
-        )
-    })
+    super::blocks::standard_kind(title)
+        .map(|(uuid, named)| crate::crs::reference_to(&uuid, "eml23.PropertyKind", &named))
+        .ok_or_else(|| {
+            Refusal::new(
+                "refused",
+                format!("the dictionary in use holds no kind called `{title}`"),
+            )
+        })
 }
 
 /// A unit code as the schema spells it.

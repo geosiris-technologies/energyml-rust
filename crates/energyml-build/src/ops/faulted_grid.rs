@@ -58,12 +58,12 @@ use serde_json::json;
 use energyml_analysis::fault_throw::Sense;
 use energyml_analysis::ijk_faults::{self, CutError, Fault, Settings};
 use energyml_domain::provenance::Parameter;
-use energyml_geometry::geometry::Topology;
 
 use crate::declare::{Inputs, Params, Shape, Suggestions};
 use crate::operation::{About, Category, Context, Need, Note, Operation, Plan, Refusal, Slot};
 use crate::pieces::Pieces;
 
+use super::blocks::{Surface, triangle_surface as surface_of};
 use super::fault::Throw;
 use super::fault_throw::Profile;
 use super::ijk_grid::{self, Cut, Faulting, IjkGridParams};
@@ -122,16 +122,6 @@ fn double(title: &str, value: f64, uom: Option<&str>) -> Parameter {
     }
 }
 
-/// What names a shape in a message: its object's title, or its name in the bag.
-fn name_of(shape: &Shape) -> String {
-    shape
-        .known
-        .as_ref()
-        .and_then(|known| known.reference.as_ref())
-        .map(|one| one.title.clone())
-        .unwrap_or_else(|| shape.name.clone())
-}
-
 /// The key a fault enters the seed by: its uuid, or its name in the bag.
 fn key_of(shape: &Shape) -> String {
     shape
@@ -140,25 +130,6 @@ fn key_of(shape: &Shape) -> String {
         .and_then(|known| known.reference.as_ref())
         .map(|one| one.uuid.to_ascii_lowercase())
         .unwrap_or_else(|| shape.name.clone())
-}
-
-/// A triangulated surface: its nodes and its triangles.
-type Surface = (Vec<[f64; 3]>, Vec<[u32; 3]>);
-
-/// A shape's triangles, every patch's indices shifted to the whole shape's
-/// nodes - or `None` when it holds none. F1 is in two patches.
-fn surface_of(shape: &Shape) -> Option<Surface> {
-    let mut points = Vec::new();
-    let mut triangles = Vec::new();
-    for patch in &shape.geometry.patches {
-        let Topology::Triangles(faces) = &patch.topology else {
-            continue;
-        };
-        let base = points.len() as u32;
-        points.extend(patch.points.iter().copied());
-        triangles.extend(faces.iter().map(|f| [f[0] + base, f[1] + base, f[2] + base]));
-    }
-    (!triangles.is_empty()).then_some((points, triangles))
 }
 
 /// The slot a refusal of the computation belongs to.
@@ -203,7 +174,7 @@ impl Operation for FaultedIjkGrid {
                     "faults",
                     format!(
                         "`{}` is not a triangulated surface - where a fault runs through the grid is read on its surface",
-                        name_of(fault)
+                        fault.title()
                     ),
                 ));
             }
@@ -219,7 +190,7 @@ impl Operation for FaultedIjkGrid {
     ) -> Result<Plan, Refusal> {
         let FaultedGridInputs { horizons, faults } = inputs;
         let count = faults.len();
-        let names: Vec<String> = faults.iter().map(name_of).collect();
+        let names: Vec<String> = faults.iter().map(Shape::title).collect();
 
         // -- one entry per fault -------------------------------------------------------
         if params.maximum_throw.len() != count {
@@ -321,16 +292,8 @@ impl Operation for FaultedIjkGrid {
                 format!("Faulted grid. Throw: {law}. Source: {source}")
             }
         });
-        if let Some(text) = &description
-            && text.chars().count() > 2000
-        {
-            return Err(Refusal::on(
-                "source",
-                format!(
-                    "makes a description of {} characters, and a Citation/Description holds 2000 - cite the document shorter",
-                    text.chars().count()
-                ),
-            ));
+        if let Some(text) = &description {
+            super::blocks::checked_description(text)?;
         }
 
         // -- the seed: the faults and the law ------------------------------------------------------
@@ -489,12 +452,9 @@ impl Operation for FaultedIjkGrid {
             grid.json["Citation"]["Description"] = json!(text);
             if synthetic {
                 // The reference-model rule on invented objects (ADR-0019).
-                grid.json["ExtensionNameValue"] = json!([{
-                    "$type": "eml23.ExtensionNameValue",
-                    "Name": "synthetic",
-                    "Value": { "$type": "eml23.StringMeasure", "_": "true" },
-                    "Description": "an invented throw, cut into the grid by `faulted-ijk-grid` from a stated law, not measured",
-                }]);
+                grid.json["ExtensionNameValue"] = super::blocks::synthetic_extension(
+                    "an invented throw, cut into the grid by `faulted-ijk-grid` from a stated law, not measured",
+                );
             }
         }
         Ok(plan)

@@ -53,7 +53,6 @@ use energyml_domain::color::{self, Decorated, Scaling};
 use energyml_domain::provenance::Parameter;
 use energyml_eml_2_3 as eml;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
-use serde_json::json;
 
 use crate::declare::{
     Field as FieldIn, Inputs, ObjectIn, Params, PropertyKindRef, Ramp, Shape, Suggestions, Title,
@@ -493,22 +492,8 @@ fn kind_of(found: &Field, known: Option<&Known>, uom: &str) -> Result<(serde_jso
             }
         }
     };
-    let found = energyml_domain::property_kind::with_default(|dictionary| {
-        dictionary
-            .by_title(title)
-            .first()
-            .map(|kind| (kind.uuid.clone(), kind.title.clone()))
-    });
-    let (uuid, named) = found.ok_or_else(|| {
-        Refusal::on(
-            "propertyKind",
-            format!(
-                "the dictionary in use holds no kind called `{title}`: name a `propertyKind` of the package"
-            ),
-        )
-    })?;
     Ok((
-        json!({ "$type": "eml23.DataObjectReference", "Uuid": uuid, "QualifiedType": "eml23.PropertyKind", "Title": named }),
+        super::blocks::standard_kind_dor(title, "propertyKind")?,
         title.to_string(),
     ))
 }

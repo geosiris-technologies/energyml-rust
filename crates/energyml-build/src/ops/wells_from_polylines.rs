@@ -44,11 +44,8 @@ use serde_json::{Value, json};
 
 use energyml_domain::provenance::Parameter;
 
-use crate::crs::FrameKind;
 use crate::declare::{Features, Inputs, Params, Shape as ShapeIn, Suggestions};
-use crate::operation::{
-    About, ActivityDraft, Category, Context, Need, NewObject, Note, Operation, Plan, Refusal, Slot,
-};
+use crate::operation::{About, ActivityDraft, Category, Context, Need, Note, Operation, Plan, Refusal, Slot};
 use crate::pieces::Pieces;
 
 use super::support;
@@ -162,24 +159,7 @@ impl Operation for WellsFromPolylines {
         // A wellbore is a vertical extent, exactly the refusal
         // `well-from-polyline` makes and for the same reason: a degree horizontal beside a metre vertical is not
         // a frame any reader reconciles.
-        if frame.kind == Some(FrameKind::Geographic) {
-            let (slot, what) = match params.frame.crs.as_ref() {
-                Some(_) => (
-                    "crs",
-                    format!(
-                        "the frame `{}` named",
-                        frame.crs["Title"].as_str().unwrap_or_default()
-                    ),
-                ),
-                None => ("project", "the frame created without `project`".to_string()),
-            };
-            return Err(Refusal::on(
-                slot,
-                format!(
-                    "a wellbore is a vertical extent, and {what} measures its horizontal axes in degrees while its depths are linear: every hole would be written between a hundred and ten thousand times longer than the model is wide - name a projected system in `project` (EPSG:2154 for mainland France), or a LocalEngineeringCompoundCrs as `crs`"
-                ),
-            ));
-        }
+        super::blocks::refuse_degrees(&frame, params.frame.crs.is_some(), "a wellbore", "hole")?;
         let vertical_up = if frame.objects.is_empty() {
             known.first().and_then(|k| k.vertical_up)
         } else {
@@ -244,48 +224,22 @@ impl Operation for WellsFromPolylines {
 
             let feature_uuid = support::next_uuid(identity, &format!("well-feature:{seed}"), &mut rank)?;
             let feature_title = format!("{title} - feature");
-            objects.push(NewObject {
-                uuid: feature_uuid.clone(),
-                qualified_type: "resqml22.WellboreFeature".to_string(),
-                role: "feature".to_string(),
-                title: feature_title.clone(),
-                json: json!({
-                    "$type": "resqml22.WellboreFeature",
-                    "uuid": feature_uuid,
-                    "schemaVersion": "2.2",
-                    "Citation": cite(&feature_title),
-                    "IsWellKnown": false,
-                }),
-            });
             let interpretation_uuid =
                 support::next_uuid(identity, &format!("well-interpretation:{seed}"), &mut rank)?;
             let interpretation_title = format!("{title} - interpretation");
-            objects.push(NewObject {
-                uuid: interpretation_uuid.clone(),
-                qualified_type: "resqml22.WellboreInterpretation".to_string(),
-                role: "interpretation".to_string(),
-                title: interpretation_title.clone(),
-                json: json!({
-                    "$type": "resqml22.WellboreInterpretation",
-                    "uuid": interpretation_uuid,
-                    "schemaVersion": "2.2",
-                    "Citation": cite(&interpretation_title),
-                    "Domain": "depth",
-                    "IsDrilled": false,
-                    "InterpretedFeature": {
-                        "$type": "eml23.DataObjectReference",
-                        "Uuid": feature_uuid,
-                        "QualifiedType": "resqml22.WellboreFeature",
-                        "Title": feature_title,
-                    },
-                }),
-            });
-            let interpretation = json!({
-                "$type": "eml23.DataObjectReference",
-                "Uuid": interpretation_uuid,
-                "QualifiedType": "resqml22.WellboreInterpretation",
-                "Title": interpretation_title,
-            });
+            let (pair, interpretation) = super::blocks::wellbore_pair(
+                &feature_uuid,
+                &feature_title,
+                &interpretation_uuid,
+                &interpretation_title,
+                &cite,
+                super::blocks::WellboreFlags {
+                    is_well_known: Some(false),
+                    is_drilled: Some(false),
+                    ..Default::default()
+                },
+            );
+            objects.extend(pair);
 
             let written = well::write(
                 &Wellbore {

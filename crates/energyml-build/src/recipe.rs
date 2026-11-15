@@ -610,12 +610,12 @@ impl Recipe {
                 )
             })
             .collect();
-        let template = derived(&format!(
+        let template = crate::naming::derive(&format!(
             "recipe-workflow-template:{}:{}",
             self.workflow,
             structure.join(";")
         ));
-        let activity = derived(&format!(
+        let activity = crate::naming::derive(&format!(
             "recipe-workflow-activity:{}:{template}:{}",
             self.activity_title(),
             self.creation
@@ -625,12 +625,6 @@ impl Recipe {
             activity: Ref::new(activity, "eml23.Activity", self.activity_title().to_string()),
         }
     }
-}
-
-/// A uuid v5 in the crate's namespace - the one every derived identity hangs
-/// from.
-fn derived(name: &str) -> String {
-    uuid::Uuid::new_v5(&crate::naming::NAMESPACE, name.as_bytes()).to_string()
 }
 
 /// `YYYY-MM-DDThh:mm:ssZ`, digits where digits go.

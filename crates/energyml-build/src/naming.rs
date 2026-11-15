@@ -49,8 +49,9 @@ pub const NAMESPACE: Uuid = Uuid::from_bytes([
     0x9f, 0x2a, 0x4b, 0x1c, 0x7d, 0x6e, 0x5f, 0x40, 0x8a, 0x3b, 0x2c, 0x1d, 0x0e, 0x9f, 0x8a, 0x7b,
 ]);
 
-/// A uuid derived from a name, inside this crate's namespace.
-fn derive(name: &str) -> String {
+/// A uuid derived from a name, inside this crate's namespace - the one door
+/// every derived identity of the crate hangs from.
+pub fn derive(name: &str) -> String {
     Uuid::new_v5(&NAMESPACE, name.as_bytes()).to_string()
 }
 

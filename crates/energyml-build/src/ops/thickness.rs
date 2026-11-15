@@ -258,21 +258,7 @@ impl Operation for Thickness {
         };
         let kind = match params.property_kind {
             Some(given) => given.0,
-            None => {
-                let found = energyml_domain::property_kind::with_default(|dictionary| {
-                    dictionary
-                        .by_title(kind_title)
-                        .first()
-                        .map(|kind| (kind.uuid.clone(), kind.title.clone()))
-                });
-                let (uuid, title) = found.ok_or_else(|| {
-                    Refusal::on(
-                        "propertyKind",
-                        format!("the dictionary in use holds no kind called `{kind_title}`: name one of the package"),
-                    )
-                })?;
-                json!({ "$type": "eml23.DataObjectReference", "Uuid": uuid, "QualifiedType": "eml23.PropertyKind", "Title": title })
-            }
+            None => super::blocks::standard_kind_dor(kind_title, "propertyKind")?,
         };
         let label = if time { "isochron" } else { params.what.word() };
         let title = match params.title {

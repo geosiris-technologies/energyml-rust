@@ -124,17 +124,6 @@ pub struct ComputedTopsInputs {
     pub horizons: Vec<Shape>,
 }
 
-/// The title the object behind a shape carries, or the shape's name.
-fn title_of(shape: &Shape) -> String {
-    shape
-        .known
-        .as_ref()
-        .and_then(|known| known.reference.as_ref())
-        .map(|reference| reference.title.clone())
-        .filter(|title| !title.is_empty())
-        .unwrap_or_else(|| shape.name.clone())
-}
-
 /// Which side, in words - the frame's vertical sense decides *above*.
 fn side_word(side: Side, up: Option<bool>) -> &'static str {
     match (side, up) {
@@ -265,7 +254,7 @@ impl Operation for ComputedTops {
         cx: &Context<'_>,
     ) -> Result<Plan, Refusal> {
         let ComputedTopsInputs { well, horizons } = inputs;
-        let well_title = title_of(&well);
+        let well_title = well.title();
 
         // -- the well: its line, its depths ---------------------------------
         let known = well.known.as_ref().ok_or_else(|| {
@@ -340,14 +329,14 @@ impl Operation for ComputedTops {
                         "horizons",
                         format!(
                             "`{}` is in `{}` and the well `{well_title}` in `{}`: a height read in one frame under a position of the other is a difference of two origins - bring them into one frame first",
-                            title_of(horizon),
+                            horizon.title(),
                             b.title,
                             a.title
                         ),
                     ));
                 }
                 (Some(_), Some(_)) => {}
-                _ => unchecked.push(title_of(horizon)),
+                _ => unchecked.push(horizon.title()),
             }
             let theirs = horizon.known.as_ref().and_then(|k| k.vertical_uom.as_deref());
             if let (Some(a), Some(b)) = (known.vertical_uom.as_deref(), theirs)
@@ -357,7 +346,7 @@ impl Operation for ComputedTops {
                     "horizons",
                     format!(
                         "`{}` counts its heights in `{b}` and the well `{well_title}` in `{a}` - one unit, or no crossing",
-                        title_of(horizon)
+                        horizon.title()
                     ),
                 ));
             }
@@ -405,7 +394,7 @@ impl Operation for ComputedTops {
         let mut outcomes: Vec<Tops> = Vec::with_capacity(horizons.len());
         for (horizon, faces) in horizons.iter().zip(&faces) {
             let heights = Heights::of(faces.surface(), "horizon", "under each sample of the hole")
-                .map_err(|why| Refusal::on("horizons", format!("`{}`: {why}", title_of(horizon))))?;
+                .map_err(|why| Refusal::on("horizons", format!("`{}`: {why}", horizon.title())))?;
             let found =
                 analysis::tops(&path_at, knots, step, &heights).map_err(|why| Refusal::on("step", why))?;
             outcomes.push(found);
@@ -417,7 +406,7 @@ impl Operation for ComputedTops {
         let (mut gaps, mut folded, mut unresolved, mut touches) = (0usize, 0usize, 0usize, 0usize);
         let mut all: Vec<Found> = Vec::new();
         for (index, (horizon, found)) in horizons.iter().zip(&outcomes).enumerate() {
-            let title = title_of(horizon);
+            let title = horizon.title();
             let count = found.crossings.len();
             for (rank, crossing) in found.crossings.iter().enumerate() {
                 all.push(Found {
@@ -542,7 +531,7 @@ impl Operation for ComputedTops {
         let mut points = Vec::new();
         let mut marker_uuids = Vec::new();
         for (rank, found) in all.iter().enumerate() {
-            let horizon_title = title_of(found.shape);
+            let horizon_title = found.shape.title();
             let horizon_key = found
                 .shape
                 .known
@@ -614,7 +603,7 @@ impl Operation for ComputedTops {
         let uninterpreted: Vec<String> = horizons
             .iter()
             .filter(|h| boundary_of(h.known.as_ref()).1.is_none())
-            .map(title_of)
+            .map(Shape::title)
             .collect();
         if !uninterpreted.is_empty() {
             says.push(Note {

@@ -162,6 +162,7 @@ use crate::operation::{
 };
 use crate::pieces::{KnownProperty, Ref};
 
+use super::blocks::digest;
 use super::support;
 
 /// The operation.
@@ -432,17 +433,6 @@ pub(crate) fn json_number(value: f64) -> Value {
 /// writes `null` ([`json_number`]), so the two forms read back the same.
 fn nan_unless_finite(value: f64) -> f64 {
     if value.is_finite() { value } else { f64::NAN }
-}
-
-/// Values as a seed carries them - exactly, NaN included (`well-logs`'s own
-/// `digest`, duplicated: a small, pure formatting helper, not the kind of
-/// formula this module's doc asks a caller to share rather than copy).
-fn digest(values: &[f64]) -> String {
-    values
-        .iter()
-        .map(|value| format!("{value:?}"))
-        .collect::<Vec<_>>()
-        .join(",")
 }
 
 /// A few names and how many more.

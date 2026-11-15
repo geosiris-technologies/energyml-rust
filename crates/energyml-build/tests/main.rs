@@ -24,6 +24,7 @@
 mod along_well_view;
 mod attach;
 mod blocked_wellbore;
+mod blocks;
 mod boreholes;
 mod business_associate;
 mod cardinality;

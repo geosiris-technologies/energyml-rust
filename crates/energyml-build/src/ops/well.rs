@@ -881,24 +881,7 @@ impl Operation for WellFromPolyline {
         // `Geographic2dCrs`'s horizontal axes are degrees, and every hole comes
         // out between a hundred and ten thousand times longer than the model
         // is wide, in a package `check` validates.
-        if frame.kind == Some(FrameKind::Geographic) {
-            let (slot, what) = match written.frame.crs.as_ref() {
-                Some(_) => (
-                    "crs",
-                    format!(
-                        "the frame `{}` named",
-                        frame.crs["Title"].as_str().unwrap_or_default()
-                    ),
-                ),
-                None => ("project", "the frame created without `project`".to_string()),
-            };
-            return Err(Refusal::on(
-                slot,
-                format!(
-                    "a wellbore is a vertical extent, and {what} measures its horizontal axes in degrees while its depths are linear: every hole would be written between a hundred and ten thousand times longer than the model is wide, which no reader can reconcile - name a projected system in `project` (EPSG:2154 for mainland France), or a LocalEngineeringCompoundCrs as `crs`"
-                ),
-            ));
-        }
+        super::blocks::refuse_degrees(&frame, written.frame.crs.is_some(), "a wellbore", "hole")?;
         let line: Vec<[f64; 3]> = found.placed_in(&frame)?;
         let known: Option<&Known> = cx.known().into_iter().next();
         let vertical_up = if frame.objects.is_empty() {
@@ -948,47 +931,22 @@ impl Operation for WellFromPolyline {
             None => {
                 let feature_uuid = support::next_uuid(identity, &format!("well-feature:{seed}"), &mut rank)?;
                 let feature_title = format!("{title} - feature");
-                objects.push(NewObject {
-                    uuid: feature_uuid.clone(),
-                    qualified_type: "resqml22.WellboreFeature".to_string(),
-                    role: "feature".to_string(),
-                    title: feature_title.clone(),
-                    json: json!({
-                        "$type": "resqml22.WellboreFeature",
-                        "uuid": feature_uuid,
-                        "schemaVersion": "2.2",
-                        "Citation": support::citation(when, &feature_title),
-                        "IsWellKnown": false,
-                    }),
-                });
                 let uuid = support::next_uuid(identity, &format!("well-interpretation:{seed}"), &mut rank)?;
                 let interpretation_title = format!("{title} - interpretation");
-                objects.push(NewObject {
-                    uuid: uuid.clone(),
-                    qualified_type: "resqml22.WellboreInterpretation".to_string(),
-                    role: "interpretation".to_string(),
-                    title: interpretation_title.clone(),
-                    json: json!({
-                        "$type": "resqml22.WellboreInterpretation",
-                        "uuid": uuid,
-                        "schemaVersion": "2.2",
-                        "Citation": support::citation(when, &interpretation_title),
-                        "Domain": "depth",
-                        "IsDrilled": false,
-                        "InterpretedFeature": {
-                            "$type": "eml23.DataObjectReference",
-                            "Uuid": feature_uuid,
-                            "QualifiedType": "resqml22.WellboreFeature",
-                            "Title": feature_title,
-                        },
-                    }),
-                });
-                json!({
-                    "$type": "eml23.DataObjectReference",
-                    "Uuid": uuid,
-                    "QualifiedType": "resqml22.WellboreInterpretation",
-                    "Title": interpretation_title,
-                })
+                let (pair, interpretation) = super::blocks::wellbore_pair(
+                    &feature_uuid,
+                    &feature_title,
+                    &uuid,
+                    &interpretation_title,
+                    |name| support::citation(when, name),
+                    super::blocks::WellboreFlags {
+                        is_well_known: Some(false),
+                        is_drilled: Some(false),
+                        ..Default::default()
+                    },
+                );
+                objects.extend(pair);
+                interpretation
             }
         };
 

@@ -215,13 +215,13 @@ fn filter_by_rings(
     let flat: Vec<f64> = at.iter().flat_map(|p| [p[0], p[1], 0.0]).collect();
     let mut keep: Option<Vec<u32>> = None;
     if let Some(shape) = outer {
-        let ring = ring_of("outer", shape)?;
+        let ring = super::blocks::ring_corners("outer", shape)?;
         let kept = energyml_geometry::clip::nodes_in_ring(&flat, &ring, false)
             .map_err(|why| Refusal::on("outer", why))?;
         keep = Some(kept);
     }
     for shape in inner {
-        let ring = ring_of("inner", shape)?;
+        let ring = super::blocks::ring_corners("inner", shape)?;
         let kept = energyml_geometry::clip::nodes_in_ring(&flat, &ring, true)
             .map_err(|why| Refusal::on("inner", why))?;
         keep = Some(match keep {
@@ -258,15 +258,20 @@ fn mask_by_rings(
     let flat: Vec<f64> = nodes.iter().flat_map(|p| [p[0], p[1], 0.0]).collect();
     let mut cut = vec![false; nodes.len()];
     if let Some(shape) = outer {
-        for at in energyml_geometry::clip::nodes_in_ring(&flat, &ring_of("outer", shape)?, true)
-            .map_err(|why| Refusal::on("outer", why))?
+        for at in
+            energyml_geometry::clip::nodes_in_ring(&flat, &super::blocks::ring_corners("outer", shape)?, true)
+                .map_err(|why| Refusal::on("outer", why))?
         {
             cut[at as usize] = true;
         }
     }
     for shape in inner {
-        for at in energyml_geometry::clip::nodes_in_ring(&flat, &ring_of("inner", shape)?, false)
-            .map_err(|why| Refusal::on("inner", why))?
+        for at in energyml_geometry::clip::nodes_in_ring(
+            &flat,
+            &super::blocks::ring_corners("inner", shape)?,
+            false,
+        )
+        .map_err(|why| Refusal::on("inner", why))?
         {
             cut[at as usize] = true;
         }
@@ -279,28 +284,6 @@ fn mask_by_rings(
         }
     }
     Ok(count)
-}
-
-/// A ring's corners in plan, flat `[x, y, …]` - refused by `slot`'s name when
-/// it cannot enclose anything.
-fn ring_of(slot: &str, shape: &Shape) -> Result<Vec<f64>, Refusal> {
-    let points: Vec<[f64; 3]> = shape
-        .geometry
-        .patches
-        .iter()
-        .flat_map(|p| p.points.iter().copied())
-        .collect();
-    if points.len() < 3 {
-        return Err(Refusal::on(
-            slot,
-            format!(
-                "`{}` holds {} point(s): a ring encloses something with at least 3",
-                shape.name,
-                points.len()
-            ),
-        ));
-    }
-    Ok(points.iter().flat_map(|p| [p[0], p[1]]).collect())
 }
 
 /// Drops the samples that fall outside `domain`, counted - never passed to
@@ -477,7 +460,7 @@ fn plan_fitted(
     let mut z = answer.values;
     let ring_cut = mask_by_rings(&nodes, &mut z, inputs.outer.as_ref(), &inputs.inner)?;
 
-    let name = format!("mba of {}", samples_name(inputs));
+    let name = format!("mba of {}", inputs.shape.title());
     let title = params.written.naming.title();
     let seed = match &inputs.onto {
         None => format!("{name}:{title}"),
@@ -731,19 +714,6 @@ fn said_ring_cut(plan: &mut Plan, cut: usize) {
             detail: format!("{cut} node(s) outside `outer` or inside an `inner` written as NaN"),
         });
     }
-}
-
-/// The title of the samples' shape, or its name - mirrors `interpolate.rs`'s
-/// own `title_of`, kept local rather than reused: it is three lines, and the
-/// existing one takes a `&Shape` this file does not always have handy.
-fn samples_name(inputs: &InterpolateInputs) -> String {
-    inputs
-        .shape
-        .known
-        .as_ref()
-        .and_then(|known| known.reference.as_ref())
-        .map(|r| r.title.clone())
-        .unwrap_or_else(|| inputs.shape.name.clone())
 }
 
 /// The given grid's identity key, for the seed - mirrors `interpolate.rs`'s

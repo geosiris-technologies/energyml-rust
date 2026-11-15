@@ -150,16 +150,6 @@ pub struct SubrepresentationInputs {
     pub support: Shape,
 }
 
-/// The title the object behind a shape carries, or the shape's name.
-fn title_of(shape: &Shape) -> String {
-    shape
-        .known
-        .as_ref()
-        .and_then(|known| known.reference.as_ref())
-        .map(|r| r.title.clone())
-        .unwrap_or_else(|| shape.name.clone())
-}
-
 /// The one IJK patch of a support - its cells, `[ni, nj, nk]`, the RESQML
 /// index of each cell drawn, and its points.
 type IjkPatch<'a> = (&'a [[u32; 8]], [usize; 3], &'a [u32], &'a [[f64; 3]]);
@@ -188,14 +178,14 @@ fn ijk_of(shape: &Shape) -> Result<IjkPatch<'_>, Refusal> {
             "support",
             format!(
                 "`{}` is an unstructured grid: its cells are not selected here yet - nothing in this build draws a sub-representation of them",
-                title_of(shape)
+                shape.title()
             ),
         )),
         _ => Err(Refusal::on(
             "support",
             format!(
                 "`{}` holds no IJK grid, and cells are chosen in one",
-                title_of(shape)
+                shape.title()
             ),
         )),
     }
@@ -213,7 +203,7 @@ fn node_count(shape: &Shape) -> Result<usize, Refusal> {
                 "support",
                 format!(
                     "`{}` declares {fastest} × {slowest} nodes and holds {}: its node numbering is not the file's",
-                    title_of(shape),
+                    shape.title(),
                     patch.points.len()
                 ),
             ));
@@ -310,7 +300,7 @@ impl Operation for Subrepresentation {
                         &slot,
                         format!(
                             "{why} - `{}` is {} × {} × {} cells",
-                            title_of(&shape),
+                            shape.title(),
                             dimensions[0],
                             dimensions[1],
                             dimensions[2]
@@ -338,7 +328,7 @@ impl Operation for Subrepresentation {
                 if count == 0 {
                     return Err(Refusal::on(
                         "element",
-                        format!("`{}` has no triangle to choose", title_of(&shape)),
+                        format!("`{}` has no triangle to choose", shape.title()),
                     ));
                 }
                 (count, "triangles")
@@ -357,7 +347,7 @@ impl Operation for Subrepresentation {
                 slot,
                 format!(
                     "{bad} is no index of `{}`: it has {available} {name}, from 0 to {}",
-                    title_of(&shape),
+                    shape.title(),
                     available.saturating_sub(1)
                 ),
             ));
@@ -371,7 +361,7 @@ impl Operation for Subrepresentation {
                         "{one} is given at places {} and {}: two elements of the sub-representation would be one of `{}`, and a property on it would give that one two values",
                         first + 1,
                         at + 1,
-                        title_of(&shape)
+                        shape.title()
                     ),
                 ));
             }
