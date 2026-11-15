@@ -23,6 +23,8 @@ energyml-domain = { path = "../energyml-domain", version = "0.3.0" }
 energyml-geometry = { path = "../energyml-geometry", version = "0.3.0" }
 # The display list, its SVG writer and reader, its PNG: the one drawing every view shares.
 energyml-sheet = { path = "../energyml-sheet", version = "0.3.0" }
+# What is computed above geometry: the quality control of a survey.
+energyml-analysis = { path = "../energyml-analysis", version = "0.3.0" }
 # The geosteering section, wrapped as a view: its computing and its layout stay there.
 energyml-section = { path = "../energyml-section", version = "0.3.0" }
 # The colour of an object: the one door to colours.

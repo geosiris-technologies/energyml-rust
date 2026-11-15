@@ -795,6 +795,7 @@ dependencies = [
 name = "energyml-views"
 version = "0.3.0"
 dependencies = [
+ "energyml-analysis",
  "energyml-cache",
  "energyml-core",
  "energyml-domain",
