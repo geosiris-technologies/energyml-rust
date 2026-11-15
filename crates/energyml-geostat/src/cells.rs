@@ -48,7 +48,11 @@
 //! quadratic along a straight chord, and where the path crosses it is a root.
 //! A leaning pillar, or a column that is no parallelogram, is **refused by
 //! name**: the surface between its corners is then no bilinear patch in plan,
-//! and cutting it by a diagonal the file never chose would be a guess.
+//! and cutting it by a diagonal the file never chose would be a guess. A column
+//! is judged **only where the path meets it** - where a segment's box meets the
+//! column's box, as `blocked-wellbore` reads only the cells near the path: an
+//! irregular column far from the path, never read, refuses nothing, and one the
+//! path reaches is refused whatever else the grid holds.
 //!
 //! A stretch of path **two cells of one grid both claim** - a path running
 //! along the face they share - is refused, naming both: which cell holds it is
@@ -336,8 +340,27 @@ struct Column {
 
 /// The column's box in plan has four finite bounds, so the grid of buckets can
 /// file it.
-fn cell_box_is_finite(column: &Column) -> bool {
-    column.reach[..2].iter().all(|r| r.iter().all(|v| v.is_finite()))
+fn cell_box_is_finite(reach: &[[f64; 2]; 3]) -> bool {
+    reach[..2].iter().all(|r| r.iter().all(|v| v.is_finite()))
+}
+
+/// A cell's box (plan and heights) from its eight corners, whatever its shape.
+fn reach_of(cell: &Hexahedron) -> [[f64; 2]; 3] {
+    let mut reach = [[f64::INFINITY, f64::NEG_INFINITY]; 3];
+    for corner in &cell.corners {
+        for axis in 0..3 {
+            reach[axis][0] = reach[axis][0].min(corner[axis]);
+            reach[axis][1] = reach[axis][1].max(corner[axis]);
+        }
+    }
+    reach
+}
+
+/// A cell read: its box, always, and its column or why it is refused. The
+/// refusal is only raised when a segment of the path meets the box.
+struct Read {
+    reach: [[f64; 2]; 3],
+    column: Result<Column, CellsError>,
 }
 
 fn column(grid: usize, cell: &Hexahedron) -> Result<Column, CellsError> {
@@ -369,13 +392,7 @@ fn column(grid: usize, cell: &Hexahedron) -> Result<Column, CellsError> {
         [ring[1][0] - ring[0][0], ring[1][1] - ring[0][1]],
         [ring[3][0] - ring[0][0], ring[3][1] - ring[0][1]],
     ];
-    let mut reach = [[f64::INFINITY, f64::NEG_INFINITY]; 3];
-    for corner in c {
-        for axis in 0..3 {
-            reach[axis][0] = reach[axis][0].min(corner[axis]);
-            reach[axis][1] = reach[axis][1].max(corner[axis]);
-        }
-    }
+    let reach = reach_of(cell);
     Ok(Column {
         index: cell.index,
         origin: ring[0],
@@ -616,18 +633,22 @@ pub fn block(points: &[Point], mds: &[f64], grids: &[Grid]) -> Result<Blocked, C
     // -- each grid on its own ----------------------------------------------------
     let mut held: Vec<Vec<Piece>> = Vec::with_capacity(grids.len());
     for (rank, grid) in grids.iter().enumerate() {
-        let columns: Vec<Column> = grid
+        // A column is judged only where the path meets it: its box is read for
+        // every cell, its shape is refused (leaning, not a parallelogram) only
+        // when a segment's box meets that box - as `blocked-wellbore` reads only
+        // the cells near the path. A cell no path comes near is never refused.
+        // The columns' plan boxes are filed once in the grid of buckets, and each
+        // segment visits the columns whose box its own box meets, in the order of
+        // `columns`. A column with no finite box is not indexable and is always
+        // visited.
+        let columns: Vec<Read> = grid
             .cells
             .iter()
-            .map(|cell| column(rank, cell))
-            .collect::<Result<_, _>>()?;
-        // Every column was read above, so a cell no path comes near that is not a
-        // parallelogram still refuses the grid; only the search is indexed. The
-        // columns' plan boxes are filed once in the grid of buckets, and each
-        // segment visits the columns whose box its own box meets, in the order of
-        // `columns` - what the sweep over every column gave, minus the columns
-        // far away. A column with no finite box is not indexable and is always
-        // visited, as the sweep did.
+            .map(|cell| Read {
+                reach: reach_of(cell),
+                column: column(rank, cell),
+            })
+            .collect();
         let boxes: Vec<buckets::Bounds> = columns
             .iter()
             .map(|cell| {
@@ -642,7 +663,7 @@ pub fn block(points: &[Point], mds: &[f64], grids: &[Grid]) -> Result<Blocked, C
             Vec::new()
         } else {
             (0..columns.len())
-                .filter(|&at| !cell_box_is_finite(&columns[at]))
+                .filter(|&at| !cell_box_is_finite(&columns[at].reach))
                 .collect()
         };
         let mut pieces: Vec<Piece> = Vec::new();
@@ -658,10 +679,11 @@ pub fn block(points: &[Point], mds: &[f64], grids: &[Grid]) -> Result<Blocked, C
                 near.dedup();
             }
             for at in near {
-                let cell = &columns[at];
-                if (0..3).any(|axis| high[axis] < cell.reach[axis][0] || low[axis] > cell.reach[axis][1]) {
+                let read = &columns[at];
+                if (0..3).any(|axis| high[axis] < read.reach[axis][0] || low[axis] > read.reach[axis][1]) {
                     continue;
                 }
+                let cell = read.column.as_ref().map_err(Clone::clone)?;
                 for (s, e, ends) in inside(cell, a, b) {
                     pieces.push(Piece {
                         cell: cell.index,
@@ -938,8 +960,8 @@ mod tests {
     /// [geostat-proj-roundtrip S2] A path through a grid of 20 000 columns, each
     /// segment visiting only the columns its box meets (the grid of buckets):
     /// every interval is held by the cell the arithmetic finds at its middle, and
-    /// a column far from the path that is no parallelogram still refuses the
-    /// grid, as it did when every column was read first.
+    /// a column far from the path that is no parallelogram refuses nothing (it
+    /// is never read).
     #[test]
     fn a_path_through_a_large_grid_is_held_by_the_cells_arithmetic_finds() {
         let (origin, size, counts) = ([5000.0, 7000.0], [10.0, 10.0, 4.0], [100, 100, 2]);
@@ -967,20 +989,34 @@ mod tests {
             let expected = by_arithmetic(origin, size, counts, at_md(&points, &mds, middle));
             assert_eq!(one.map(|held| held.cell), expected, "interval {n}, MD {middle}");
         }
+        // [fin-F2] A kite far from the path, never read, refuses nothing, and the
+        // blocking is the one of the regular grid.
         let mut kite = grid;
         let last = kite.cells.len() - 1;
         for n in [2, 6] {
             kite.cells[last].corners[n][0] += 2.0;
         }
+        assert_eq!(block(&points, &mds, &[kite]), Ok(blocked));
+        // Break it: read (and refuse) every column before the search, and the far kite refuses the grid.
+    }
+
+    /// [fin-F2] A kite the path reaches is refused by name, whichever other
+    /// columns the grid holds: the lazy reading judges the columns the path meets.
+    #[test]
+    fn an_irregular_column_on_the_path_is_refused_by_name() {
+        let grid = boxes([0.0, 0.0], [10.0, 10.0, 10.0], [20, 1, 1]);
+        let points = [[5.0, 5.0, -5.0], [195.0, 5.0, -5.0]];
+        let mds = [0.0, 190.0];
+        assert!(block(&points, &mds, std::slice::from_ref(&grid)).is_ok());
+        let mut kite = grid;
+        for n in [2, 6] {
+            kite.cells[7].corners[n][0] += 2.0;
+        }
         assert_eq!(
             block(&points, &mds, &[kite]),
-            Err(CellsError::NotParallelogram {
-                grid: 0,
-                cell: last as u64
-            })
+            Err(CellsError::NotParallelogram { grid: 0, cell: 7 })
         );
-        // Break it: index only the columns near the path, with an `Err` for the others
-        // dropped, and the far kite is no longer refused.
+        // Break it: skip the refusal of a column once its box is met, and the kite on the path is blocked as a box.
     }
 
     #[test]

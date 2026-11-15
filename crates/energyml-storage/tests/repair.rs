@@ -510,3 +510,46 @@ fn a_repair_the_store_refuses_does_not_lose_the_part() {
         "the part is still in the saved package: {names:?}"
     );
 }
+
+/// Reopen what `write_to` wrote into memory.
+fn written(store: &EpcStore) -> EpcStore {
+    let mut out = std::io::Cursor::new(Vec::new());
+    store
+        .write_to(&mut out, &SaveOptions::default())
+        .expect("bytes posed on an object's part are written once");
+    EpcStore::from_reader(
+        Box::new(std::io::Cursor::new(out.into_inner())),
+        "posed.epc",
+        registry(),
+    )
+    .expect("the package opens")
+}
+
+/// [fin-F2] Bytes posed on a part the store holds as an object **replace the
+/// object** in the save: one entry of that name, with the posed bytes. Both a
+/// part read from the archive and an object the session put under that name.
+///
+/// The second used to write the object and the bytes under one part name, and
+/// the archive refused the save (`Duplicate filename`).
+///
+/// Break it: in `write_package`, write every object whatever `carried` holds, and the
+/// second half fails to save.
+#[test]
+fn bytes_posed_on_an_object_part_replace_the_object() {
+    let posed = healthy().replace("Fault1 Interp1 TriRep", "Posed").into_bytes();
+
+    // A part read from the archive.
+    let path = package("posed-read", PART, healthy().as_bytes(), true);
+    let mut store = EpcStore::open(&path, registry()).expect("opens");
+    store.set_raw_part(PART, posed.clone());
+    assert_eq!(written(&store).raw_part(PART).unwrap(), posed);
+
+    // An object put in this session, under the name its type and uuid give it.
+    let path = package("posed-made", "Broken.xml", b"", false);
+    let mut store = EpcStore::open(&path, registry()).expect("opens");
+    store
+        .stage_repaired_part("Broken.xml", healthy().into_bytes())
+        .expect("the repaired bytes parse");
+    store.set_raw_part(PART, posed.clone());
+    assert_eq!(written(&store).raw_part(PART).unwrap(), posed);
+}

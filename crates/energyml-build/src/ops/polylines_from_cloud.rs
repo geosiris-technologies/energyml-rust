@@ -157,14 +157,29 @@ pub struct FakeInputs {
     pub shape: Vec<Shape>,
 }
 
-fn cuts_of(cuts: &Cuts) -> fake::Cuts {
-    match cuts {
-        Cuts::Fixed(one) => fake::Cuts::Fixed(one.count.max(0) as u32),
+/// A count of cuts as the generator takes it. A negative or oversized count is
+/// refused by name - it used to be brought back to 0 without a word, which reads
+/// as a request that was met.
+fn count_of(slot: &str, value: i64) -> Result<u32, Refusal> {
+    u32::try_from(value).map_err(|_| {
+        Refusal::on(
+            slot,
+            format!(
+                "{value} is not a number of cuts (a whole number from 1 to {})",
+                u32::MAX
+            ),
+        )
+    })
+}
+
+fn cuts_of(cuts: &Cuts) -> Result<fake::Cuts, Refusal> {
+    Ok(match cuts {
+        Cuts::Fixed(one) => fake::Cuts::Fixed(count_of("count", one.count)?),
         Cuts::Random(range) => fake::Cuts::Random {
-            min: range.cuts_min.max(0) as u32,
-            max: range.cuts_max.max(0) as u32,
+            min: count_of("cuts_min", range.cuts_min)?,
+            max: count_of("cuts_max", range.cuts_max)?,
         },
-    }
+    })
 }
 
 fn length_of(length: &Length) -> fake::Length {
@@ -272,10 +287,11 @@ impl Operation for PolylinesFromCloud {
             ));
         };
 
-        let seed_value = params.seed.max(0) as u64;
+        let seed_value = u64::try_from(params.seed)
+            .map_err(|_| Refusal::on("seed", format!("{} is not a seed (0 or more)", params.seed)))?;
         let made = vertical_polylines(
             &heads,
-            &cuts_of(&params.cuts),
+            &cuts_of(&params.cuts)?,
             &length_of(&params.length),
             &spacing_of(&params.spacing),
             up,
@@ -353,5 +369,31 @@ impl Operation for PolylinesFromCloud {
             "cloud points turned into polylines",
         ));
         slots
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// [fin-F2] A negative count of cuts is refused by name, whichever form it
+    /// is given in, instead of becoming 0; a good count is kept as it is.
+    #[test]
+    fn a_negative_count_of_cuts_is_refused() {
+        let fixed = |count| Cuts::Fixed(FixedCuts { count });
+        assert!(matches!(cuts_of(&fixed(3)), Ok(fake::Cuts::Fixed(3))));
+        let refusal = cuts_of(&fixed(-2)).err().expect("refused");
+        assert_eq!(refusal.slot.as_deref(), Some("count"), "{refusal:?}");
+        let random = |cuts_min, cuts_max| Cuts::Random(RandomCuts { cuts_min, cuts_max });
+        assert!(cuts_of(&random(1, 4)).is_ok());
+        assert_eq!(
+            cuts_of(&random(-1, 4)).err().expect("refused").slot.as_deref(),
+            Some("cuts_min")
+        );
+        assert_eq!(
+            cuts_of(&random(1, -4)).err().expect("refused").slot.as_deref(),
+            Some("cuts_max")
+        );
+        // Break it: put `.max(0) as u32` back in `count_of`, and -2 is read as 0 cuts.
     }
 }

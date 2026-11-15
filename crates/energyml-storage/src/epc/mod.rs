@@ -1374,6 +1374,12 @@ impl EpcStore {
     /// Both are the price of being able to fix a file no parser will touch.
     /// [`EpcStore::staged_part_parses`] answers the first question a caller
     /// should ask before saving.
+    ///
+    /// A part the store holds as an object - read from the archive or put in
+    /// this session - is **replaced by these bytes** in the save: the part is
+    /// written once, with the posted bytes, and the object's relationships and
+    /// content type are kept. (It used to be written twice, the object and the
+    /// bytes under one name, and the archive refused the duplicate.)
     pub fn set_raw_part(&mut self, part: &str, bytes: Vec<u8>) {
         self.overlay.set_raw(part, bytes);
         // A part's bytes are what `get_object` reads, and a part name carries
