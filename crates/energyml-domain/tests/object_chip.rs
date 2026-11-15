@@ -67,14 +67,23 @@ fn a_held_object_gives_its_title_and_type() {
 #[test]
 fn another_dataspace_is_not_looked_up() {
     let package = package();
-    let chip = object_chip(&format!("eml:///dataspace('x')/eml23.Activity({HELD})"), None, &package).expect("a chip");
+    let chip = object_chip(
+        &format!("eml:///dataspace('x')/eml23.Activity({HELD})"),
+        None,
+        &package,
+    )
+    .expect("a chip");
     assert_eq!(
         chip.presence,
         Presence::OtherDataspace {
             dataspace: "x".to_string()
         }
     );
-    assert_eq!(package.asked.get(), 0, "an object of another dataspace is not asked for");
+    assert_eq!(
+        package.asked.get(),
+        0,
+        "an object of another dataspace is not asked for"
+    );
     assert_eq!(chip.title, None);
 
     // The same uri is looked up when `here` is that dataspace.

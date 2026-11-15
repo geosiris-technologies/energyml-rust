@@ -1369,8 +1369,7 @@ impl PackageIndex {
         ) {
             match crate::table::Table::read(object) {
                 Ok(table) => {
-                    let sheet =
-                        crate::table::TableSheet::of_table(&table, &self.nodes[id as usize].uri);
+                    let sheet = crate::table::TableSheet::of_table(&table, &self.nodes[id as usize].uri);
                     self.tables.insert(id, sheet);
                 }
                 Err(why) => {

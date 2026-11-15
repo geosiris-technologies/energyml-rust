@@ -8,9 +8,7 @@
 //! object is built by hand.
 
 use energyml_domain::source::NoObjects;
-use energyml_domain::table::{
-    Cell, KeyIndex, Lookup, NamingRefusal, RowMatch, Rows, row_named_by,
-};
+use energyml_domain::table::{Cell, KeyIndex, Lookup, NamingRefusal, RowMatch, Rows, row_named_by};
 use energyml_domain::values::Values;
 
 /// A table of `keys.len()` key columns (each of `keys[i]`) and one value column of `names`.
@@ -51,12 +49,7 @@ fn a_key_index_finds_what_the_linear_search_found() {
     for wanted in ["a", "b", "c", "z"] {
         let key = [Cell::Text(wanted.to_string())];
         let linear: Vec<usize> = (0..table.rows.rows)
-            .filter(|row| {
-                table
-                    .rows
-                    .cell(*row, 0)
-                    .is_some_and(|cell| cell.matches(&key[0]))
-            })
+            .filter(|row| table.rows.cell(*row, 0).is_some_and(|cell| cell.matches(&key[0])))
             .collect();
         assert_eq!(index.rows_of(&key), linear.as_slice(), "key {wanted}");
     }
@@ -84,7 +77,10 @@ fn a_double_lookup_keeps_fractional_keys() {
     let object = DoubleTableLookup {
         uuid: "00000000-0000-0000-0000-00000000000b".into(),
         value: vec![
-            DoubleLookup { key: 0.15, value: 1.0 },
+            DoubleLookup {
+                key: 0.15,
+                value: 1.0,
+            },
             DoubleLookup { key: 0.2, value: 2.0 },
         ],
         ..Default::default()

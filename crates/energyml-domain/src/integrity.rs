@@ -57,9 +57,9 @@ use crate::property_kind::Resolver;
 use crate::rules::{Finding, Gravity, Outcome, concepts_of};
 use crate::source::{ArraySource, NoObjects, ObjectSource, Presence, object_chip};
 use crate::table::{
-    Cell, CellState, ColumnCells, Convention, LinkDeclaration, LinkReaders, LinkRefusal, LinkReport, LinkTarget,
-    Lookup, NamingRefusal, Resolved, RowMatch, Table, TableRefusal, TableSet, TableSheet, TargetIndexes,
-    check_links, resolve, resolve_kinds, row_named_by, uri_column,
+    Cell, CellState, ColumnCells, Convention, LinkDeclaration, LinkReaders, LinkRefusal, LinkReport,
+    LinkTarget, Lookup, NamingRefusal, Resolved, RowMatch, Table, TableRefusal, TableSet, TableSheet,
+    TargetIndexes, check_links, resolve, resolve_kinds, row_named_by, uri_column,
 };
 use crate::values::{Family, Values};
 
@@ -367,7 +367,11 @@ fn rows_listed(rows: &[usize]) -> String {
 }
 
 /// The value of a cell as text, when it holds a value.
-fn value_at(cells: &[std::result::Result<ColumnCells<'static>, TableRefusal>], column: usize, row: usize) -> Option<String> {
+fn value_at(
+    cells: &[std::result::Result<ColumnCells<'static>, TableRefusal>],
+    column: usize,
+    row: usize,
+) -> Option<String> {
     match cells.get(column)?.as_ref().ok()?.cell(row)? {
         CellState::Value(cell) => Some(cell.to_string()),
         _ => None,
@@ -433,7 +437,10 @@ fn check_table_links(
             lookup,
         );
     }
-    let unread = unread.into_iter().filter(|(uri, _)| declared.contains(uri)).collect();
+    let unread = unread
+        .into_iter()
+        .filter(|(uri, _)| declared.contains(uri))
+        .collect();
     let report = check_links(&links.sheet, &cells, &links.declarations, &targets, None);
     Ok(LinksChecked {
         report,
@@ -444,13 +451,19 @@ fn check_table_links(
 }
 
 /// The tables of the package that declare at least one link they can follow.
-fn tables_with_links<'a>(context: &'a Context<'a>) -> impl Iterator<Item = (&'a str, &'a dyn Reflect, LinkedTable)> {
+fn tables_with_links<'a>(
+    context: &'a Context<'a>,
+) -> impl Iterator<Item = (&'a str, &'a dyn Reflect, LinkedTable)> {
     context.objects.iter().filter_map(move |(uuid, object)| {
         if object.type_info().type_key != TABLE_TYPE {
             return None;
         }
         let links = table_context(*object, context.source)?;
-        if links.declarations.iter().all(|(_, declaration)| declaration.is_err()) {
+        if links
+            .declarations
+            .iter()
+            .all(|(_, declaration)| declaration.is_err())
+        {
             return None;
         }
         Some((*uuid, *object, links))
@@ -480,7 +493,11 @@ fn table_link_resolves(context: &Context<'_>, check: &Integrity, out: &mut Vec<F
             }
         };
         for (uri, _) in &checked.unread {
-            out.push(unverifiable(check, uuid, format!("its target `{uri}` is not in this package")));
+            out.push(unverifiable(
+                check,
+                uuid,
+                format!("its target `{uri}` is not in this package"),
+            ));
         }
         let mut dangling: Vec<String> = Vec::new();
         for column in &checked.report.columns {
@@ -567,7 +584,11 @@ fn table_link_target_key_unique(context: &Context<'_>, check: &Integrity, out: &
             // `check_links` made, asked again for the rows it flagged.
             let mut named: Vec<(String, String, Vec<usize>)> = Vec::new();
             for row in &column.ambiguous {
-                let Some(state) = checked.cells.get(column.column).and_then(|c| c.as_ref().ok()).and_then(|c| c.cell(*row))
+                let Some(state) = checked
+                    .cells
+                    .get(column.column)
+                    .and_then(|c| c.as_ref().ok())
+                    .and_then(|c| c.cell(*row))
                 else {
                     continue;
                 };
@@ -579,9 +600,13 @@ fn table_link_target_key_unique(context: &Context<'_>, check: &Integrity, out: &
                         .and_then(|c| c.cell(*row)),
                     _ => None,
                 };
-                let Resolved::Ambiguous { table_uri, rows } =
-                    resolve(declaration, &state, sibling.as_ref(), &links.sheet.uri, &checked.targets)
-                else {
+                let Resolved::Ambiguous { table_uri, rows } = resolve(
+                    declaration,
+                    &state,
+                    sibling.as_ref(),
+                    &links.sheet.uri,
+                    &checked.targets,
+                ) else {
                     continue;
                 };
                 let CellState::Value(key) = &state else { continue };
@@ -672,7 +697,11 @@ fn table_uri_value_resolves(context: &Context<'_>, check: &Integrity, out: &mut 
                     // Only a text column can hold uris: another one, unread, is not this rule's.
                     let text = links.sheet.columns.get(column).and_then(|c| c.family) == Some(Family::Text);
                     if text {
-                        out.push(unverifiable(check, uuid, format!("column `{name}` cannot be read: {why}")));
+                        out.push(unverifiable(
+                            check,
+                            uuid,
+                            format!("column `{name}` cannot be read: {why}"),
+                        ));
                     }
                     continue;
                 }

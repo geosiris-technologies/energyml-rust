@@ -92,6 +92,7 @@ impl ObjectSource for Package {
                 abstract_vertical_crs: Some(AbstractVerticalCrs::VerticalEpsgCrs(VerticalEpsgCrs {
                     epsg_code: 5714,
                 })),
+                uom: energyml_eml_2_3::LengthUomExt::M,
                 ..Default::default()
             }),
             PCRS_A => Box::new(projected(PCRS_A, 2154)),

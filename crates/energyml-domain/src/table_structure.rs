@@ -291,7 +291,10 @@ pub fn schema(tables: &[TableLinks], index_edges: &[IndexEdge]) -> Schema {
                 // Drawn from the titles read, below.
                 LinkTarget::ByTitleIn { .. } | LinkTarget::Objects => continue,
             };
-            edges.entry((from, to, link)).or_default().push(declaration.column);
+            edges
+                .entry((from, to, link))
+                .or_default()
+                .push(declaration.column);
         }
         for (column, column_uris) in &table.uri_columns {
             for qualified_type in &column_uris.qualified_types {
@@ -299,7 +302,10 @@ pub fn schema(tables: &[TableLinks], index_edges: &[IndexEdge]) -> Schema {
                     qualified_type: qualified_type.clone(),
                 };
                 if let Some(to) = nodes.position_of(&wanted) {
-                    edges.entry((from, to, SchemaLink::UriValues)).or_default().push(*column);
+                    edges
+                        .entry((from, to, SchemaLink::UriValues))
+                        .or_default()
+                        .push(*column);
                 }
             }
         }
@@ -311,13 +317,19 @@ pub fn schema(tables: &[TableLinks], index_edges: &[IndexEdge]) -> Schema {
                 }
                 let wanted = SchemaNode::Unmatched { label: title.clone() };
                 if let Some(to) = nodes.position_of(&wanted) {
-                    edges.entry((from, to, SchemaLink::ByTitle)).or_default().push(*column);
+                    edges
+                        .entry((from, to, SchemaLink::ByTitle))
+                        .or_default()
+                        .push(*column);
                 }
             }
         }
     }
     for (from, column, to) in by_title {
-        edges.entry((from, to, SchemaLink::ByTitle)).or_default().push(column);
+        edges
+            .entry((from, to, SchemaLink::ByTitle))
+            .or_default()
+            .push(column);
     }
     for edge in index_edges {
         let from = match nodes.table(&edge.from) {
@@ -326,7 +338,13 @@ pub fn schema(tables: &[TableLinks], index_edges: &[IndexEdge]) -> Schema {
         };
         let to = nodes.table_or_named(&edge.to);
         edges
-            .entry((from, to, SchemaLink::Index { path: edge.path.clone() }))
+            .entry((
+                from,
+                to,
+                SchemaLink::Index {
+                    path: edge.path.clone(),
+                },
+            ))
             .or_default();
     }
 
@@ -335,7 +353,12 @@ pub fn schema(tables: &[TableLinks], index_edges: &[IndexEdge]) -> Schema {
         .map(|((from, to, link), mut columns)| {
             columns.sort_unstable();
             columns.dedup();
-            SchemaEdge { from, to, link, columns }
+            SchemaEdge {
+                from,
+                to,
+                link,
+                columns,
+            }
         })
         .collect();
     let touched: BTreeSet<usize> = edges.iter().flat_map(|edge| [edge.from, edge.to]).collect();

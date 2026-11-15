@@ -110,10 +110,7 @@ enum Slot {
 
 impl ColumnCells<'_> {
     /// Read a column's values and keep what cuts them into rows.
-    pub fn read(
-        column: &Column<'_>,
-        source: &dyn ArraySource,
-    ) -> Result<ColumnCells<'static>, TableRefusal> {
+    pub fn read(column: &Column<'_>, source: &dyn ArraySource) -> Result<ColumnCells<'static>, TableRefusal> {
         let name = column
             .title
             .clone()
@@ -125,7 +122,7 @@ impl ColumnCells<'_> {
     pub fn rows(&self, column: &str) -> Result<usize, TableRefusal> {
         let per_row = self.per_row.max(1) as usize;
         let len = self.values.len();
-        if len % per_row != 0 {
+        if !len.is_multiple_of(per_row) {
             return Err(TableRefusal::VectorShape {
                 column: column.to_string(),
                 per_row: self.per_row,
@@ -233,10 +230,7 @@ fn read_named(
 impl Table<'_> {
     /// Every column as cells, in the table's order (keys first). One entry per column: a column
     /// that cannot be read is an `Err` naming it, never an empty column.
-    pub fn read_cells(
-        &self,
-        source: &dyn ArraySource,
-    ) -> Vec<Result<ColumnCells<'static>, TableRefusal>> {
+    pub fn read_cells(&self, source: &dyn ArraySource) -> Vec<Result<ColumnCells<'static>, TableRefusal>> {
         self.columns
             .iter()
             .enumerate()
@@ -274,8 +268,5 @@ pub fn row_count(
         return Ok(first);
     }
     let common = readable.iter().copied().min().unwrap_or(0);
-    Err(TableRefusal::RowCountsDisagree {
-        rows: counts,
-        common,
-    })
+    Err(TableRefusal::RowCountsDisagree { rows: counts, common })
 }

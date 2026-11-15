@@ -124,7 +124,10 @@ fn without_an_array_reader_a_link_is_uncheckable_never_a_pass() {
     );
     let found = of(&findings, RESOLVES);
     assert_eq!(found.len(), 1, "{findings:?}");
-    assert!(matches!(&found[0].outcome, Outcome::Unverifiable { .. }), "{found:?}");
+    assert!(
+        matches!(&found[0].outcome, Outcome::Unverifiable { .. }),
+        "{found:?}"
+    );
 }
 
 /// Nothing requires keys to be unique (common TRG 2.3 §9.1 p. 190): a link into
@@ -132,7 +135,10 @@ fn without_an_array_reader_a_link_is_uncheckable_never_a_pass() {
 #[test]
 fn a_link_into_a_duplicated_key_is_a_warning() {
     let findings = judge(
-        vec![(A, boxed(linking(A, &["i1", "i1"]))), (B, boxed(target(&["i1", "i1"])))],
+        vec![
+            (A, boxed(linking(A, &["i1", "i1"]))),
+            (B, boxed(target(&["i1", "i1"]))),
+        ],
         true,
     );
     let found = of(&findings, UNIQUE);
@@ -227,9 +233,15 @@ fn a_discrete_value_is_checked_by_rank_on_a_keyless_table() {
 #[test]
 fn a_keyed_lookup_is_still_checked_by_its_key() {
     let bad = "00000000-0000-0000-0000-00000000f103";
-    let findings = judge(vec![(TABLE, boxed(table())), (bad, boxed(discrete(bad, &[0])))], true);
+    let findings = judge(
+        vec![(TABLE, boxed(table())), (bad, boxed(discrete(bad, &[0])))],
+        true,
+    );
     let found = of(&findings, DISCRETE);
     assert_eq!(found.len(), 1, "{findings:?}");
     let read = read_of(found[0]);
-    assert!(read.contains("0 (1 element(s))") && read.contains("key column"), "{read}");
+    assert!(
+        read.contains("0 (1 element(s))") && read.contains("key column"),
+        "{read}"
+    );
 }

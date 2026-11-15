@@ -103,7 +103,9 @@ impl SurveyDiagnosis {
 
     /// No check failed (some may be `NotReached` only if an earlier one failed, so: all passed).
     pub fn passed(&self) -> bool {
-        self.checks.iter().all(|check| check.outcome == CheckOutcome::Passed)
+        self.checks
+            .iter()
+            .all(|check| check.outcome == CheckOutcome::Passed)
     }
 }
 
@@ -552,7 +554,11 @@ pub(crate) fn renumbered(error: StationsError, kept: &[usize]) -> StationsError 
             what,
             given,
         },
-        StationsError::NotIncreasing { station, md, previous } => StationsError::NotIncreasing {
+        StationsError::NotIncreasing {
+            station,
+            md,
+            previous,
+        } => StationsError::NotIncreasing {
             station: number(station),
             md,
             previous,
@@ -638,9 +644,7 @@ fn check_datums(facts: &Facts) -> Result<String, Fault> {
             .cloned()
             .flatten()
             .or_else(|| facts.datums.default.clone())
-            .ok_or_else(|| {
-                Fault::new(CheckKind::Datum, Finding::NoDatum { station: at + 1 }, facts.kind)
-            })?;
+            .ok_or_else(|| Fault::new(CheckKind::Datum, Finding::NoDatum { station: at + 1 }, facts.kind))?;
         match &datum {
             None => datum = Some(counted_from),
             Some(first) if crate::well::same_uri(first, &counted_from) => {}
@@ -678,7 +682,10 @@ fn check_start(kept: &Kept, survey: SurveyKind) -> Result<(), Fault> {
     match (kept.measured.first(), kept.stations.first()) {
         (Some(first), Some(&station)) if first.md != 0.0 => Err(Fault::new(
             CheckKind::StartsAtDatum,
-            Finding::StartsBelowDatum { station, md: first.md },
+            Finding::StartsBelowDatum {
+                station,
+                md: first.md,
+            },
             survey,
         )),
         _ => Ok(()),
@@ -880,7 +887,9 @@ pub(crate) fn run(
 
     // 6. StartsAtDatum.
     let starts = match &kept {
-        Some(kept) => board.settle(CheckKind::StartsAtDatum, check_start(kept, kind)).is_some(),
+        Some(kept) => board
+            .settle(CheckKind::StartsAtDatum, check_start(kept, kind))
+            .is_some(),
         None => false,
     };
     if board.halted() {
@@ -906,7 +915,10 @@ pub(crate) fn run(
 
     // 9. Placement.
     let world = match (&datum, starts) {
-        (Some(datum), true) => board.settle(CheckKind::Placement, place::place_stage(survey, source, datum, kind)),
+        (Some(datum), true) => board.settle(
+            CheckKind::Placement,
+            place::place_stage(survey, source, datum, kind),
+        ),
         _ => None,
     };
     if board.halted() {

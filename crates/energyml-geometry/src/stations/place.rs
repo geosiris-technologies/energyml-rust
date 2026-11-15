@@ -222,7 +222,7 @@ pub fn read_declaring(
             facts.kind,
         ))
     };
-    let located = min_curvature::positions(&corrected).map_err(&path_fault)?;
+    let located = min_curvature::positions(&corrected).map_err(path_fault)?;
     let points = located
         .iter()
         .map(|one| {
@@ -234,7 +234,7 @@ pub fn read_declaring(
             )
         })
         .collect();
-    let local = survey_path(&corrected, BetweenStations::Arc).map_err(&path_fault)?;
+    let local = survey_path(&corrected, BetweenStations::Arc).map_err(path_fault)?;
     Ok(PlacedSurvey {
         points,
         kept: kept.stations.clone(),

@@ -14,15 +14,15 @@ use energyml_core::registry::DynObject;
 use energyml_core::value::Reflect;
 use energyml_domain::source::{ArraySource, ObjectSource};
 use energyml_eml_2_0::{
-    AbstractProjectedCrs, AbstractVerticalCrs, AxisOrder2d, DataObjectReference, LengthUom, PlaneAngleMeasure,
-    PlaneAngleUom, ProjectedCrsEpsgCode, VerticalCrsEpsgCode,
+    AbstractProjectedCrs, AbstractVerticalCrs, AxisOrder2d, DataObjectReference, LengthUom,
+    PlaneAngleMeasure, PlaneAngleUom, ProjectedCrsEpsgCode, VerticalCrsEpsgCode,
 };
+use energyml_geometry::geometry;
 use energyml_geometry::min_curvature::courses;
 use energyml_geometry::scene::{self, Placement};
 use energyml_geometry::stations::{
     self, CheckKind, CheckOutcome, Finding, MethodFacts, NorthReference, SurveyDeclarations,
 };
-use energyml_geometry::geometry;
 use energyml_resqml_2_0_1::{
     AbstractDoubleArray, DeviationSurveyRepresentation, DoubleConstantArray, DoubleLatticeArray,
     LocalDepth3dCrs, MdDatum, MdReference, Point3d,
@@ -110,7 +110,10 @@ fn md_datum(z: f64) -> MdDatum {
             coordinate3: z,
         },
         md_reference: MdReference::KellyBushing,
-        local_crs: dor(CRS, "application/x-resqml+xml;version=2.0;type=obj_LocalDepth3dCrs"),
+        local_crs: dor(
+            CRS,
+            "application/x-resqml+xml;version=2.0;type=obj_LocalDepth3dCrs",
+        ),
         ..Default::default()
     }
 }
@@ -172,12 +175,18 @@ fn a_deviation_survey_is_read_into_the_same_stations() {
     assert_eq!(read.measured.len(), 11);
     for (k, station) in read.measured.iter().enumerate() {
         assert!((station.md - 30.0 * k as f64).abs() < 1e-12, "{station:?}");
-        assert!((station.inclination.unwrap() - 3.0 * k as f64).abs() < 1e-12, "{station:?}");
+        assert!(
+            (station.inclination.unwrap() - 3.0 * k as f64).abs() < 1e-12,
+            "{station:?}"
+        );
         assert_eq!(station.azimuth, Some(90.0));
     }
     assert_eq!(read.north, Some(NorthReference::Grid));
     assert!(
-        read.datums.default.as_deref().is_some_and(|datum| datum.contains(DATUM)),
+        read.datums
+            .default
+            .as_deref()
+            .is_some_and(|datum| datum.contains(DATUM)),
         "{:?}",
         read.datums
     );
@@ -197,7 +206,10 @@ fn a_deviation_survey_in_radians_is_read_in_degrees() {
     radians.azimuths = Some(constant(std::f64::consts::FRAC_PI_2, 11));
     let read = stations::stations_of(&radians, &site(local_crs(LengthUom::M), md_datum(0.0))).expect("read");
     for (k, station) in read.measured.iter().enumerate() {
-        assert!((station.inclination.unwrap() - 3.0 * k as f64).abs() < 1e-9, "{station:?}");
+        assert!(
+            (station.inclination.unwrap() - 3.0 * k as f64).abs() < 1e-9,
+            "{station:?}"
+        );
         assert!((station.azimuth.unwrap() - 90.0).abs() < 1e-9, "{station:?}");
     }
 }
@@ -277,9 +289,15 @@ fn a_vertical_deviation_survey_hangs_below_its_md_datum() {
         .points_in(Placement::Metres)
         .expect("placed");
     assert!(close(metres[0], [1000.0, 2000.0, -10.0], 1e-9), "{:?}", metres[0]);
-    assert!(close(metres[1], [1000.0, 2000.0, -110.0], 1e-9), "{:?}", metres[1]);
+    assert!(
+        close(metres[1], [1000.0, 2000.0, -110.0], 1e-9),
+        "{:?}",
+        metres[1]
+    );
     // The points of the reader are the local ones, which the CRS places.
-    let local = geometry::of(&vertical, &site).expect("drawn").patches[0].points.clone();
+    let local = geometry::of(&vertical, &site).expect("drawn").patches[0]
+        .points
+        .clone();
     assert!(close(local[0], [0.0, 0.0, 10.0], 1e-9), "{:?}", local[0]);
     assert!(close(local[1], [0.0, 0.0, 110.0], 1e-9), "{:?}", local[1]);
 }
@@ -293,6 +311,14 @@ fn a_vertical_deviation_survey_in_feet_is_converted_once() {
         .expect("a scene object")
         .points_in(Placement::Metres)
         .expect("placed");
-    assert!(close(metres[0], [1000.0, 2000.0, -3.048], 1e-9), "{:?}", metres[0]);
-    assert!(close(metres[1], [1000.0, 2000.0, -103.048], 1e-9), "{:?}", metres[1]);
+    assert!(
+        close(metres[0], [1000.0, 2000.0, -3.048], 1e-9),
+        "{:?}",
+        metres[0]
+    );
+    assert!(
+        close(metres[1], [1000.0, 2000.0, -103.048], 1e-9),
+        "{:?}",
+        metres[1]
+    );
 }

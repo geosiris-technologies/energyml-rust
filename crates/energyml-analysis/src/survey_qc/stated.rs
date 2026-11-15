@@ -150,7 +150,9 @@ pub fn stated_against_computed(
             None => {}
             Some(Err(fault)) => report.left(s, StatedField::Tvd, NotComparedWhy::Unit(fault.clone())),
             Some(Ok(StatedTvd { metres, from })) => match from {
-                TvdReference::VerticalCrs(_) => report.left(s, StatedField::Tvd, NotComparedWhy::TvdFromAVerticalCrs),
+                TvdReference::VerticalCrs(_) => {
+                    report.left(s, StatedField::Tvd, NotComparedWhy::TvdFromAVerticalCrs)
+                }
                 TvdReference::Point(point) => {
                     let datum = stations
                         .datums

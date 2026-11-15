@@ -32,7 +32,9 @@ fn floats(values: &[f64]) -> Columns {
 }
 
 fn texts(values: &[&str]) -> Columns {
-    vec![column(Values::Text(values.iter().map(|text| text.to_string()).collect()))]
+    vec![column(Values::Text(
+        values.iter().map(|text| text.to_string()).collect(),
+    ))]
 }
 
 fn ascending(column: usize) -> SortKey {
@@ -60,9 +62,17 @@ fn the_window_puts_absent_values_last_both_ways() {
     let cells = floats(&[3.0, f64::NAN, 1.0, 2.0]);
     let mut window = TableWindow::new(4).expect("a window");
     window.sort(&[ascending(0)], &cells);
-    assert_eq!(shown(&window), vec![2, 3, 0, 1], "ascending: 1, 2, 3, then the absence");
+    assert_eq!(
+        shown(&window),
+        vec![2, 3, 0, 1],
+        "ascending: 1, 2, 3, then the absence"
+    );
     window.sort(&[descending(0)], &cells);
-    assert_eq!(shown(&window), vec![0, 3, 2, 1], "descending: 3, 2, 1, and the absence is still last");
+    assert_eq!(
+        shown(&window),
+        vec![0, 3, 2, 1],
+        "descending: 3, 2, 1, and the absence is still last"
+    );
     // Break it: compare with `f64::total_cmp` before the absence test, and the NaN goes first
     // (or last in only one direction).
 }
@@ -72,7 +82,11 @@ fn an_empty_string_sorts_as_a_value_before_words() {
     let cells = texts(&["b", "", "a"]);
     let mut window = TableWindow::new(3).expect("a window");
     window.sort(&[ascending(0)], &cells);
-    assert_eq!(shown(&window), vec![1, 2, 0], "the empty string is the smallest text");
+    assert_eq!(
+        shown(&window),
+        vec![1, 2, 0],
+        "the empty string is the smallest text"
+    );
     // Break it: sort `Empty` with the absences, and it lands last.
 }
 
@@ -84,7 +98,11 @@ fn a_tie_keeps_file_order_and_a_second_key_breaks_it() {
     ];
     let mut window = TableWindow::new(4).expect("a window");
     window.sort(&[ascending(0)], &cells);
-    assert_eq!(shown(&window), vec![0, 1, 3, 2], "rows 0, 1, 3 tie on the first key: file order");
+    assert_eq!(
+        shown(&window),
+        vec![0, 1, 3, 2],
+        "rows 0, 1, 3 tie on the first key: file order"
+    );
     window.sort(&[ascending(0), ascending(1)], &cells);
     assert_eq!(shown(&window), vec![1, 3, 0, 2], "the second key breaks the tie");
     window.sort(&[], &cells);
@@ -99,7 +117,11 @@ fn a_jump_lands_on_the_page_of_its_row() {
     let mut window = TableWindow::new(1000).expect("a window");
     window.sort(&[descending(0)], &cells);
     assert_eq!(window.page_of(999, 200), Some(0), "the largest value is first");
-    assert_eq!(window.page_of(0, 200), Some(4), "the smallest is at position 999, page 4");
+    assert_eq!(
+        window.page_of(0, 200),
+        Some(4),
+        "the smallest is at position 999, page 4"
+    );
     assert_eq!(window.position_of(0), Some(999));
     assert_eq!(window.page_of(0, 0), None, "a page of no rows holds nothing");
     // Break it: answer `position_of(row) = row`, and the jump stays on page 0.
@@ -188,7 +210,11 @@ fn a_column_that_cannot_be_read_sorts_last_and_is_named_by_its_state() {
     let window_cells = &cells;
     use energyml_domain::table::ColumnAccess;
     assert_eq!(window_cells.state(0, 0), Some(CellState::Unreadable));
-    assert_eq!(window_cells.state(0, 5), None, "beyond the columns there is no state");
+    assert_eq!(
+        window_cells.state(0, 5),
+        None,
+        "beyond the columns there is no state"
+    );
     // Break it: answer `Absent` for an unreadable column, and the two are no longer told apart.
 }
 

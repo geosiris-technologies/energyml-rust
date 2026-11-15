@@ -13,8 +13,8 @@ use energyml_domain::package_index::SheetKind;
 use energyml_domain::property_kind::{Resolution, Resolver};
 use energyml_domain::source::{NoObjects, ObjectSource};
 use energyml_domain::table::{
-    ColumnClass, ColumnSheet, DepthKind, IntervalColumns, MEASURED_DEPTH, TableSheet, classify_column, curve_pairs,
-    md_columns, resolve_kinds,
+    ColumnClass, ColumnSheet, DepthKind, IntervalColumns, MEASURED_DEPTH, TableSheet, classify_column,
+    curve_pairs, md_columns, resolve_kinds,
 };
 use energyml_domain::values::Family;
 use energyml_eml_2_3 as eml23;
@@ -172,7 +172,12 @@ fn two_md_columns_make_a_pair_three_are_ambiguous() {
 #[test]
 fn an_md_kind_in_seconds_is_not_an_md_column() {
     let resolver = Resolver::new(&NoObjects);
-    let sheet = sheet(vec![column("t", Some(MEASURED_DEPTH), Family::Floating, Some("s"))]);
+    let sheet = sheet(vec![column(
+        "t",
+        Some(MEASURED_DEPTH),
+        Family::Floating,
+        Some("s"),
+    )]);
     assert_eq!(
         md_columns(&sheet, &resolve_kinds(&sheet, &resolver)),
         IntervalColumns::None,

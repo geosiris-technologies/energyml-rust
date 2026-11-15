@@ -11,9 +11,7 @@
 use std::borrow::Cow;
 
 use energyml_domain::source::NoObjects;
-use energyml_domain::table::{
-    Cell, CellState, Column, ColumnCells, Table, TableRefusal, row_count,
-};
+use energyml_domain::table::{Cell, CellState, Column, ColumnCells, Table, TableRefusal, row_count};
 use energyml_domain::values::{Family, Values};
 use energyml_eml_2_3 as eml23;
 
@@ -112,10 +110,7 @@ fn an_integer_null_value_is_absent_not_a_number() {
     let column = read[0].as_ref().expect("the column reads");
     assert_eq!(column.null, Some(-999));
     assert_eq!(column.cell(1), Some(CellState::Absent));
-    assert_eq!(
-        column.cell(0),
-        Some(CellState::Value(Cell::Number(1.0)))
-    );
+    assert_eq!(column.cell(0), Some(CellState::Value(Cell::Number(1.0))));
 }
 
 #[test]
@@ -132,10 +127,7 @@ fn an_empty_string_is_a_value() {
     let column = cells(Values::Text(vec!["a".into(), String::new()]), 1);
     assert_eq!(column.cell(1), Some(CellState::Empty));
     assert_ne!(column.cell(1), Some(CellState::Absent));
-    assert_eq!(
-        column.cell(0),
-        Some(CellState::Value(Cell::Text("a".into())))
-    );
+    assert_eq!(column.cell(0), Some(CellState::Value(Cell::Text("a".into()))));
 }
 
 #[test]
@@ -173,7 +165,12 @@ fn an_unreadable_column_is_named_and_does_not_count() {
     // Neither an array nor inline values: `Column::read` refuses it.
     let table = table(vec![
         column(Some("épaisseur"), 1, false, None),
-        column(Some("code"), 1, true, Some(Values::Text(vec!["e6".into(), "e5".into()]))),
+        column(
+            Some("code"),
+            1,
+            true,
+            Some(Values::Text(vec!["e6".into(), "e5".into()])),
+        ),
     ]);
     let read = table.read_cells(&NoObjects);
     match &read[0] {
@@ -190,7 +187,12 @@ fn rows_cells_borrows_the_values_read_by_read_all() {
     // `Table::read_cells`.
     let table = table(vec![
         column(Some("a"), 1, true, Some(Values::Integer(vec![1, 2]))),
-        column(Some("v"), 2, false, Some(Values::Floating(vec![0.5, 0.6, 0.7, 0.8]))),
+        column(
+            Some("v"),
+            2,
+            false,
+            Some(Values::Floating(vec![0.5, 0.6, 0.7, 0.8])),
+        ),
     ]);
     let rows = table.read_all(&NoObjects).expect("a table that reads");
     let owned = table.read_cells(&NoObjects);

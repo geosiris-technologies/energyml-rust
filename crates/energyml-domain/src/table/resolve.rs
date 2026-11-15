@@ -11,7 +11,9 @@ use energyml_core::identity;
 use crate::source::ArraySource;
 
 use super::links::same_object;
-use super::{Cell, CellState, KeyIndex, LinkDeclaration, LinkRefusal, LinkTarget, Lookup, RowMatch, row_named_by};
+use super::{
+    Cell, CellState, KeyIndex, LinkDeclaration, LinkRefusal, LinkTarget, Lookup, RowMatch, row_named_by,
+};
 
 /// A table a link can land in: its rows and its key index.
 pub struct TargetTable {
@@ -99,7 +101,9 @@ impl TableSet {
 
 impl TargetIndexes for TableSet {
     fn target(&self, table_uri: &str) -> Option<&TargetTable> {
-        self.tables.iter().find(|table| same_object(&table.uri, table_uri))
+        self.tables
+            .iter()
+            .find(|table| same_object(&table.uri, table_uri))
     }
 
     fn titled(&self, title: &str) -> Vec<&str> {
@@ -189,9 +193,7 @@ pub fn resolve(
                 let found = targets.titled(title);
                 match found.len() {
                     0 => {
-                        return Resolved::External {
-                            label: title.clone(),
-                        };
+                        return Resolved::External { label: title.clone() };
                     }
                     1 => found[0].to_string(),
                     count => {
@@ -203,9 +205,7 @@ pub fn resolve(
                 }
             }
             _ => {
-                return Resolved::External {
-                    label: String::new(),
-                };
+                return Resolved::External { label: String::new() };
             }
         },
         LinkTarget::Objects => return Resolved::Unresolvable(LinkRefusal::NotARowLink),
@@ -222,9 +222,7 @@ pub fn resolve(
             .iter()
             .any(|title| title.as_deref().map(str::trim) == Some(named.trim()))
     {
-        return Resolved::Unresolvable(LinkRefusal::KeyColumnMissing {
-            named: named.clone(),
-        });
+        return Resolved::Unresolvable(LinkRefusal::KeyColumnMissing { named: named.clone() });
     }
 
     match row_named_by(&target.index, cell) {

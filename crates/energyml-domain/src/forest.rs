@@ -141,7 +141,9 @@ pub fn forest(parents: &[Parent]) -> Forest {
             }
         }
     }
-    let unreached: Vec<usize> = (0..n).filter(|node| leads_to_cycle[*node] && !in_cycle[*node]).collect();
+    let unreached: Vec<usize> = (0..n)
+        .filter(|node| leads_to_cycle[*node] && !in_cycle[*node])
+        .collect();
 
     let mut depth: Vec<Option<usize>> = vec![None; n];
     for (node, at) in traverse(&roots, &orphans, &children) {

@@ -1181,7 +1181,7 @@ fn category_units(
 ) -> (Vec<Unit>, Vec<Option<usize>>) {
     let mut units = Vec::with_capacity(lookup.rows.rows);
     let mut unit_of_row = vec![None; lookup.rows.rows];
-    for row in 0..lookup.rows.rows {
+    for (row, unit_slot) in unit_of_row.iter_mut().enumerate() {
         let cells: Vec<String> = (0..lookup.titles.len())
             .filter(|column| !lookup.key_columns.contains(column))
             .filter_map(|column| lookup.rows.cell(row, column))
@@ -1204,7 +1204,7 @@ fn category_units(
             cells.join(JOIN)
         };
         let (uuid, by_title) = unit_titled(&cells, &label, known, notes);
-        unit_of_row[row] = Some(units.len());
+        *unit_slot = Some(units.len());
         units.push(Unit {
             code,
             uuid,
@@ -1458,13 +1458,14 @@ mod tests {
         // rank as a code could collide with a real key).
         let table = keyed(&["1", "x", "3"]);
         let mut notes = Vec::new();
-        let (units, unit_of_row) =
-            category_units(&table, Some(0), "t1", &Known::default(), &mut notes);
+        let (units, unit_of_row) = category_units(&table, Some(0), "t1", &Known::default(), &mut notes);
         let codes: Vec<f64> = units.iter().map(|unit| unit.code).collect();
         assert_eq!(codes, vec![1.0, 3.0]);
         assert_eq!(unit_of_row, vec![Some(0), None, Some(1)]);
         assert!(
-            notes.iter().any(|note| note.contains("row 1") && note.contains("key does not read as a number")),
+            notes
+                .iter()
+                .any(|note| note.contains("row 1") && note.contains("key does not read as a number")),
             "the row is named: {notes:?}"
         );
     }

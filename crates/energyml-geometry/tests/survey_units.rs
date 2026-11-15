@@ -219,11 +219,7 @@ fn station(at: f64, incl: Option<f64>, azi: Option<f64>) -> witsml::TrajectorySt
 
 /// Vertical to MD 100, then one arc to horizontal toward azimuth 90 at MD 1000, from the datum `uuid`
 /// of the given type, north as asked.
-fn trajectory(
-    datum: &str,
-    datum_type: &str,
-    north: Option<eml::NorthReferenceKind>,
-) -> witsml::Trajectory {
+fn trajectory(datum: &str, datum_type: &str, north: Option<eml::NorthReferenceKind>) -> witsml::Trajectory {
     witsml::Trajectory {
         uuid: TRAJECTORY.into(),
         schema_version: "2.1".into(),
@@ -287,7 +283,11 @@ fn a_compound_in_feet_already_lands_in_metres() {
         (2000.0 - 10.0 * sin) * FOOT,
         30.0 - 100.0 - R,
     ];
-    assert!(close(found[2], expected, 1e-6), "{:?} against {expected:?}", found[2]);
+    assert!(
+        close(found[2], expected, 1e-6),
+        "{:?} against {expected:?}",
+        found[2]
+    );
 }
 
 /// A point in a projected CRS in feet: the station is placed in metres (WITSML TRG 2.1 §16.6 p. 350).
@@ -303,7 +303,11 @@ fn a_point_in_a_feet_projected_crs_is_placed_in_metres() {
     let grid = from_point(eml::NorthReferenceKind::GridNorth);
     let metres = points_in(&grid, &site, Placement::Metres);
     let expected = [500_000.0 * FOOT + R, 6_000_000.0 * FOOT, -70.0 - R];
-    assert!(close(metres[2], expected, 1e-6), "{:?} against {expected:?}", metres[2]);
+    assert!(
+        close(metres[2], expected, 1e-6),
+        "{:?} against {expected:?}",
+        metres[2]
+    );
     let projected = points_in(&grid, &site, Placement::Projected);
     let expected = [500_000.0 + R / FOOT, 6_000_000.0, -70.0 - R];
     assert!(
@@ -367,7 +371,10 @@ fn a_resqml_trajectory_on_the_same_point_hangs_from_the_same_elevation() {
         .expect("a scene object")
         .points_in(Placement::Metres)
         .expect("placed");
-    assert!(close(resqml_in_metres[0], in_metres[0], 1e-9), "{resqml_in_metres:?}");
+    assert!(
+        close(resqml_in_metres[0], in_metres[0], 1e-9),
+        "{resqml_in_metres:?}"
+    );
 }
 
 /// The CRS of a point states the units its points are in, and the placed path of WP04 agrees with the

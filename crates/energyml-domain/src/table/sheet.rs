@@ -82,9 +82,7 @@ impl TableSheet {
                 let external = column.array.is_some_and(values::is_external);
                 let count = match (&column.inline, column.array) {
                     (Some(inline), _) => Some(inline.len()),
-                    (None, Some(array)) if !external => {
-                        values::count(array, &NoObjects, "column").ok()
-                    }
+                    (None, Some(array)) if !external => values::count(array, &NoObjects, "column").ok(),
                     _ => None,
                 };
                 ColumnSheet {

@@ -7,8 +7,8 @@
 
 use energyml_domain::source::NoObjects;
 use energyml_domain::table::{
-    Cell, CellState, Convention, DanglingWhy, LinkDeclaration, LinkRefusal, LinkTarget, Lookup, Resolved, TableSet,
-    resolve,
+    Cell, CellState, Convention, DanglingWhy, LinkDeclaration, LinkRefusal, LinkTarget, Lookup, Resolved,
+    TableSet, resolve,
 };
 use energyml_eml_2_3 as eml23;
 
@@ -67,7 +67,10 @@ fn keyed_set() -> TableSet {
     set.insert(
         TARGET,
         Some("targets".to_string()),
-        lookup(vec![column("index_uid", &["a", "b"])], vec![column("name", &["A", "B"])]),
+        lookup(
+            vec![column("index_uid", &["a", "b"])],
+            vec![column("name", &["A", "B"])],
+        ),
     );
     set
 }
@@ -105,7 +108,10 @@ fn a_self_reference_resolves_in_the_same_table() {
     set.insert(
         OWN,
         None,
-        lookup(vec![column("id", &["a", "b", "c"])], vec![column("parent", &["", "a", "b"])]),
+        lookup(
+            vec![column("id", &["a", "b", "c"])],
+            vec![column("parent", &["", "a", "b"])],
+        ),
     );
     let own = link(LinkTarget::SameTable, None);
     assert_eq!(
@@ -128,9 +134,18 @@ fn an_empty_link_cell_names_no_row() {
         None,
     );
     assert_eq!(resolve(&key, &CellState::Empty, None, OWN, &set), Resolved::Empty);
-    assert_eq!(resolve(&key, &CellState::Absent, None, OWN, &set), Resolved::Absent);
     assert_eq!(
-        resolve(&key, &CellState::Vector(vec![Some(Cell::Number(1.0))]), None, OWN, &set),
+        resolve(&key, &CellState::Absent, None, OWN, &set),
+        Resolved::Absent
+    );
+    assert_eq!(
+        resolve(
+            &key,
+            &CellState::Vector(vec![Some(Cell::Number(1.0))]),
+            None,
+            OWN,
+            &set
+        ),
         Resolved::Unresolvable(LinkRefusal::VectorValue)
     );
     assert_eq!(
@@ -166,7 +181,11 @@ fn a_target_with_two_key_columns_is_ambiguous() {
 #[test]
 fn a_rank_names_its_row_in_a_keyless_target_and_dangles_outside() {
     let mut set = TableSet::new();
-    set.insert(TARGET, None, lookup(Vec::new(), vec![column("v", &["p", "q", "r"])]));
+    set.insert(
+        TARGET,
+        None,
+        lookup(Vec::new(), vec![column("v", &["p", "q", "r"])]),
+    );
     let rank = link(
         LinkTarget::Rank {
             table_uri: TARGET.to_string(),
@@ -267,7 +286,13 @@ fn a_column_of_object_uris_is_not_a_row_link() {
     let set = keyed_set();
     let objects = link(LinkTarget::Objects, None);
     assert_eq!(
-        resolve(&objects, &text("eml:///eml23.Activity(00000000-0000-0000-0000-00000000f009)"), None, OWN, &set),
+        resolve(
+            &objects,
+            &text("eml:///eml23.Activity(00000000-0000-0000-0000-00000000f009)"),
+            None,
+            OWN,
+            &set
+        ),
         Resolved::Unresolvable(LinkRefusal::NotARowLink)
     );
 }

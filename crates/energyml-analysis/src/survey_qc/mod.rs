@@ -18,13 +18,13 @@ pub mod significance;
 pub mod stated;
 
 pub use compare::{
-    CompareAt, CompareError, FitError, Frames, MOST_SAMPLES, PathSample, PositionGap, RotationFit, SurveyComparison,
-    compare, rotation_fit, sample_mds,
+    CompareAt, CompareError, FitError, Frames, MOST_SAMPLES, PathSample, PositionGap, RotationFit,
+    SurveyComparison, compare, rotation_fit, sample_mds,
 };
 pub use pairing::{PairedBy, Pairings, SurveyObjectKind, TrajectoryRefs, pairings};
 pub use section::{
-    ChosenSection, ClosureAzimuth, DrainMeanAzimuth, SectionAzimuth, SectionAzimuths, SectionInput, StatedAzimuth,
-    UserAzimuth, section_azimuth,
+    ChosenSection, ClosureAzimuth, DrainMeanAzimuth, SectionAzimuth, SectionAzimuths, SectionInput,
+    StatedAzimuth, UserAzimuth, section_azimuth,
 };
 pub use significance::{
     Criteria, InclinationAtLeast, LateralEffectAtLeast, Significance, SignificanceCriterion, StationContext,

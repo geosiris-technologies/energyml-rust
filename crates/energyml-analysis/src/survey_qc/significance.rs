@@ -122,7 +122,10 @@ pub enum Significance {
 }
 
 /// One answer per station. A station that states no azimuth is `NoAzimuth`, and the criterion is not asked.
-pub fn azimuth_significance(stations: &[Measured], criterion: &dyn SignificanceCriterion) -> Vec<Significance> {
+pub fn azimuth_significance(
+    stations: &[Measured],
+    criterion: &dyn SignificanceCriterion,
+) -> Vec<Significance> {
     stations
         .iter()
         .enumerate()

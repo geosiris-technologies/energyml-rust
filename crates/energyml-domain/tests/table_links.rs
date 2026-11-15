@@ -11,13 +11,12 @@
 use std::borrow::Cow;
 use std::sync::Arc;
 
-use energyml_domain::package_index::SheetKind;
 use energyml_domain::property::{Facet, FacetValue, PropertyKindRef};
 use energyml_domain::property_kind::{Resolution, Resolver};
 use energyml_domain::source::NoObjects;
 use energyml_domain::table::{
-    ColumnCells, ColumnSheet, Convention, EXPLICIT_INDEX, IDENTIFIER, LinkDeclaration, LinkReader, LinkReaders,
-    LinkRefusal, LinkTarget, LinkWarning, TableSheet, UriColumn, uri_column,
+    ColumnCells, ColumnSheet, Convention, EXPLICIT_INDEX, IDENTIFIER, LinkDeclaration, LinkReader,
+    LinkReaders, LinkRefusal, LinkTarget, LinkWarning, TableSheet, UriColumn, uri_column,
 };
 use energyml_domain::values::{Family, Values};
 

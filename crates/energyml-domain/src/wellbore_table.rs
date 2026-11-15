@@ -377,8 +377,7 @@ fn one_property(
                 from: From::Property(read.uuid.clone()),
                 values: (0..rows)
                     .map(|at| {
-                        cell_of(table, index, &values, at, at_column)
-                            .or_else(|| cell_text(&values, at))
+                        cell_of(table, index, &values, at, at_column).or_else(|| cell_text(&values, at))
                     })
                     .collect(),
             })
@@ -405,13 +404,7 @@ fn one_property(
 }
 
 /// The cell of this table column, at the row the code designates.
-fn cell_of(
-    table: &Lookup,
-    index: &KeyIndex,
-    values: &Values,
-    at: usize,
-    column: usize,
-) -> Option<String> {
+fn cell_of(table: &Lookup, index: &KeyIndex, values: &Values, at: usize, column: usize) -> Option<String> {
     let row = row_of(index, values, at)?;
     match table.rows.cell(row, column)? {
         Cell::Text(text) => Some(text),

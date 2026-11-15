@@ -146,12 +146,26 @@ fn a_schema_groups_edges_and_keeps_isolated_tables() {
         1,
         "a",
         vec![
-            declaration(1, LinkTarget::Key { table_uri: table_uri(2) }),
-            declaration(2, LinkTarget::Key { table_uri: table_uri(2) }),
+            declaration(
+                1,
+                LinkTarget::Key {
+                    table_uri: table_uri(2),
+                },
+            ),
+            declaration(
+                2,
+                LinkTarget::Key {
+                    table_uri: table_uri(2),
+                },
+            ),
         ],
     );
     let found = schema(&[a, links(2, "b", vec![]), links(3, "c", vec![])], &[]);
-    assert_eq!(found.edges.len(), 1, "one edge per (from, to, link), not one per column");
+    assert_eq!(
+        found.edges.len(),
+        1,
+        "one edge per (from, to, link), not one per column"
+    );
     let edge = &found.edges[0];
     assert_eq!((edge.from, edge.to, edge.link.clone()), (0, 1, SchemaLink::Key));
     assert_eq!(edge.columns, vec![1, 2]);
@@ -161,7 +175,16 @@ fn a_schema_groups_edges_and_keeps_isolated_tables() {
 
 #[test]
 fn a_target_the_set_does_not_hold_is_a_node_marked_not_held() {
-    let a = links(1, "a", vec![declaration(1, LinkTarget::Rank { table_uri: table_uri(9) })]);
+    let a = links(
+        1,
+        "a",
+        vec![declaration(
+            1,
+            LinkTarget::Rank {
+                table_uri: table_uri(9),
+            },
+        )],
+    );
     let found = schema(&[a], &[]);
     assert_eq!(found.nodes.len(), 2);
     assert!(matches!(&found.nodes[1], SchemaNode::Table { held: false, .. }));
@@ -182,13 +205,25 @@ fn a_self_reference_is_a_loop_and_a_tree_column() {
 
 #[test]
 fn a_title_naming_no_table_is_an_unmatched_node() {
-    let mut source = links(1, "source", vec![declaration(3, LinkTarget::ByTitleIn { column: 4 })]);
+    let mut source = links(
+        1,
+        "source",
+        vec![declaration(3, LinkTarget::ByTitleIn { column: 4 })],
+    );
     source.titles_named = vec![(3, vec!["NWDF indexes".to_string(), "external file".to_string()])];
     let found = schema(&[source, links(2, "NWDF indexes", vec![])], &[]);
-    let by_title: Vec<_> = found.edges.iter().filter(|edge| edge.link == SchemaLink::ByTitle).collect();
+    let by_title: Vec<_> = found
+        .edges
+        .iter()
+        .filter(|edge| edge.link == SchemaLink::ByTitle)
+        .collect();
     assert_eq!(by_title.len(), 2);
     let reached = |to: usize| &found.nodes[to];
-    assert!(by_title.iter().any(|edge| matches!(reached(edge.to), SchemaNode::Table { held: true, .. })));
+    assert!(
+        by_title
+            .iter()
+            .any(|edge| matches!(reached(edge.to), SchemaNode::Table { held: true, .. }))
+    );
     assert!(by_title.iter().any(|edge| {
         matches!(reached(edge.to), SchemaNode::Unmatched { label } if label == "external file")
     }));
@@ -208,7 +243,11 @@ fn a_title_carried_by_two_tables_is_a_note_and_draws_no_edge() {
 #[test]
 fn dictionaries_have_index_edges_and_no_table_arrow() {
     // Lutetia: dictionaries tied by `CategoryLookup`, not by a column.
-    let tables = [links(1, "lithology", vec![]), links(2, "facies", vec![]), links(3, "unused", vec![])];
+    let tables = [
+        links(1, "lithology", vec![]),
+        links(2, "facies", vec![]),
+        links(3, "unused", vec![]),
+    ];
     let edges = [
         IndexEdge {
             from: "eml:///resqml22.DiscreteProperty(00000000-0000-4000-8000-0000000000e1)".to_string(),
@@ -223,10 +262,20 @@ fn dictionaries_have_index_edges_and_no_table_arrow() {
     ];
     let found = schema(&tables, &edges);
     assert_eq!(found.edges.len(), 2);
-    assert!(found.edges.iter().all(|edge| matches!(edge.link, SchemaLink::Index { .. })));
+    assert!(
+        found
+            .edges
+            .iter()
+            .all(|edge| matches!(edge.link, SchemaLink::Index { .. }))
+    );
     assert!(found.edges.iter().all(|edge| edge.columns.is_empty()));
     assert!(
-        found.nodes.iter().filter(|node| matches!(node, SchemaNode::Object { .. })).count() == 2,
+        found
+            .nodes
+            .iter()
+            .filter(|node| matches!(node, SchemaNode::Object { .. }))
+            .count()
+            == 2,
         "the properties are nodes, and no arrow joins two tables"
     );
     assert_eq!(found.isolated, vec![2], "the table nothing names is isolated");
@@ -253,9 +302,18 @@ fn objects_named_by_uri_are_grouped_by_qualified_type() {
             _ => None,
         })
         .collect();
-    assert_eq!(groups, vec!["eml23.Activity", "witsml21.Wellbore"], "sorted by type");
+    assert_eq!(
+        groups,
+        vec!["eml23.Activity", "witsml21.Wellbore"],
+        "sorted by type"
+    );
     assert_eq!(found.edges.len(), 2);
-    assert!(found.edges.iter().all(|edge| edge.link == SchemaLink::UriValues && edge.columns == vec![2]));
+    assert!(
+        found
+            .edges
+            .iter()
+            .all(|edge| edge.link == SchemaLink::UriValues && edge.columns == vec![2])
+    );
     // Break it: one node per uri, and the groups are no longer two.
 }
 
@@ -292,7 +350,10 @@ fn an_empty_parent_is_a_root() {
     let cells: Cells = vec![texts(&["a", "b"]), texts(&["", "a"])];
     let tree = row_forest(&cells, &keyed(&["a", "b"]), &parent_link()).expect("a tree");
     assert_eq!(tree.forest.roots, vec![0]);
-    assert!(tree.forest.orphans.is_empty(), "an empty parent is not a missing one");
+    assert!(
+        tree.forest.orphans.is_empty(),
+        "an empty parent is not a missing one"
+    );
     assert_eq!(tree.forest.children[0], vec![1]);
     // Break it: read an empty parent as `Missing`, and the row is an orphan.
 }
@@ -302,7 +363,11 @@ fn a_duplicated_parent_key_takes_the_first_row_and_says_so() {
     let cells: Cells = vec![texts(&["a", "a", "b"]), texts(&["", "", "a"])];
     let tree = row_forest(&cells, &keyed(&["a", "a", "b"]), &parent_link()).expect("a tree");
     assert_eq!(tree.ambiguous, vec![2]);
-    assert_eq!(tree.forest.children[0], vec![2], "the first row holding `a` is the parent");
+    assert_eq!(
+        tree.forest.children[0],
+        vec![2],
+        "the first row holding `a` is the parent"
+    );
     // Break it: take the last row, or leave `ambiguous` empty.
 }
 
@@ -325,7 +390,12 @@ fn a_keyless_table_reads_its_parents_by_rank() {
 #[test]
 fn a_column_that_is_not_self_referent_refuses_the_tree() {
     let cells: Cells = vec![texts(&["a"]), texts(&["a"])];
-    let elsewhere = declaration(1, LinkTarget::Key { table_uri: table_uri(7) });
+    let elsewhere = declaration(
+        1,
+        LinkTarget::Key {
+            table_uri: table_uri(7),
+        },
+    );
     assert!(matches!(
         row_forest(&cells, &keyed(&["a"]), &elsewhere),
         Err(RowTreeRefusal::NotSelfReferent { column: 1 })
@@ -345,11 +415,19 @@ fn an_unreadable_parent_column_is_named() {
 
 #[test]
 fn roots_are_grouped_by_a_column_in_order_of_first_appearance() {
-    let cells: Cells = vec![texts(&["a", "b", "c", "d"]), texts(&["", "a", "", ""]), texts(&["x", "x", "y", "x"])];
+    let cells: Cells = vec![
+        texts(&["a", "b", "c", "d"]),
+        texts(&["", "a", "", ""]),
+        texts(&["x", "x", "y", "x"]),
+    ];
     let tree = row_forest(&cells, &keyed(&["a", "b", "c", "d"]), &parent_link()).expect("a tree");
     let groups = group_roots(&tree.forest, &cells, 2);
     assert_eq!(groups.len(), 2);
-    assert_eq!(groups[0].roots, vec![0, 3], "rows 0 and 3 are roots under `x`; row 1 is not a root");
+    assert_eq!(
+        groups[0].roots,
+        vec![0, 3],
+        "rows 0 and 3 are roots under `x`; row 1 is not a root"
+    );
     assert_eq!(groups[1].roots, vec![2]);
     assert!(matches!(&groups[1].value, CellState::Value(_)));
     // Break it: group the children too, and row 1 appears.
@@ -382,7 +460,10 @@ fn a_las_header_is_key_value_and_says_its_guesses() {
 
 #[test]
 fn a_table_with_an_md_column_is_not_key_value() {
-    let table = sheet(vec![sheet_column("k", true, Family::Text), sheet_column("v", false, Family::Text)]);
+    let table = sheet(vec![
+        sheet_column("k", true, Family::Text),
+        sheet_column("v", false, Family::Text),
+    ]);
     assert_eq!(
         kv_shape(&table, &[], &IntervalColumns::Point { md: 1 }, &[None, None]),
         Err(KvRefusal::DepthColumns)
@@ -392,18 +473,32 @@ fn a_table_with_an_md_column_is_not_key_value() {
 
 #[test]
 fn a_numeric_column_or_a_link_column_or_a_second_key_is_not_key_value() {
-    let numeric = sheet(vec![sheet_column("k", true, Family::Text), sheet_column("v", false, Family::Floating)]);
+    let numeric = sheet(vec![
+        sheet_column("k", true, Family::Text),
+        sheet_column("v", false, Family::Floating),
+    ]);
     assert_eq!(
         kv_shape(&numeric, &[], &IntervalColumns::None, &[None, None]),
         Err(KvRefusal::NotText { column: 1 })
     );
-    let text = sheet(vec![sheet_column("k", true, Family::Text), sheet_column("v", false, Family::Text)]);
-    let link = declaration(1, LinkTarget::Key { table_uri: table_uri(2) });
+    let text = sheet(vec![
+        sheet_column("k", true, Family::Text),
+        sheet_column("v", false, Family::Text),
+    ]);
+    let link = declaration(
+        1,
+        LinkTarget::Key {
+            table_uri: table_uri(2),
+        },
+    );
     assert_eq!(
         kv_shape(&text, &[link], &IntervalColumns::None, &[None, None]),
         Err(KvRefusal::LinkColumn { column: 1 })
     );
-    let two_keys = sheet(vec![sheet_column("k", true, Family::Text), sheet_column("v", true, Family::Text)]);
+    let two_keys = sheet(vec![
+        sheet_column("k", true, Family::Text),
+        sheet_column("v", true, Family::Text),
+    ]);
     assert_eq!(
         kv_shape(&two_keys, &[], &IntervalColumns::None, &[None, None]),
         Err(KvRefusal::KeyColumns { count: 2 })
@@ -416,7 +511,12 @@ fn a_numeric_column_or_a_link_column_or_a_second_key_is_not_key_value() {
         sheet_column("d", false, Family::Text),
     ]);
     assert_eq!(
-        kv_shape(&wide, &[], &IntervalColumns::None, &[None; 5]),
+        kv_shape(
+            &wide,
+            &[],
+            &IntervalColumns::None,
+            &[None, None, None, None, None]
+        ),
         Err(KvRefusal::TooManyColumns { count: 4 })
     );
     // Break it: drop one of the four tests, and its table is taken for a sheet of parameters.

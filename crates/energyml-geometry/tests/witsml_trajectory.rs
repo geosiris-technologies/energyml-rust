@@ -586,6 +586,8 @@ fn dega(value: f64) -> eml::PlaneAngleMeasureExt {
     }
 }
 
+// The refusal of the library, as it is: its size is accepted there (`stations`), the rare path.
+#[allow(clippy::result_large_err)]
 fn read_with(
     trajectory: &witsml::Trajectory,
     declared: &SurveyDeclarations,
@@ -719,7 +721,10 @@ fn diagnose_lists_every_failure_not_only_the_first() {
     );
     assert_eq!(diagnosis.outcome(CheckKind::Path), &CheckOutcome::Passed);
     assert_eq!(diagnosis.outcome(CheckKind::Placement), &CheckOutcome::NotReached);
-    assert_eq!(diagnosis.outcome(CheckKind::NorthInFrame), &CheckOutcome::NotReached);
+    assert_eq!(
+        diagnosis.outcome(CheckKind::NorthInFrame),
+        &CheckOutcome::NotReached
+    );
     assert!(!diagnosis.passed());
     assert_eq!(diagnosis.failures().count(), 2);
 }
@@ -739,7 +744,10 @@ fn read_refuses_with_the_first_failure_diagnose_lists() {
         uom: eml::PlaneAngleUom::Ccgr,
     });
     for faulty in [trajectory(None), absent_datum, centesimal] {
-        let from_geometry = geometry::of(&faulty, &site()).map(|_| ()).unwrap_err().to_string();
+        let from_geometry = geometry::of(&faulty, &site())
+            .map(|_| ())
+            .unwrap_err()
+            .to_string();
         let refusal = read_with(&faulty, &SurveyDeclarations::default()).unwrap_err();
         assert_eq!(from_geometry, refusal.error.to_string());
         let diagnosis = stations::diagnose(&faulty, &site(), &SurveyDeclarations::default());
@@ -992,7 +1000,10 @@ fn the_placed_path_goes_through_every_station() {
     for (k, md) in [0.0, 100.0, 1000.0].into_iter().enumerate() {
         let found = path.at(md).point;
         let expected = crs.to_metres(placed.points[k]).expect("metres");
-        assert!(close(found, expected, 1e-6), "MD {md}: {found:?} against {expected:?}");
+        assert!(
+            close(found, expected, 1e-6),
+            "MD {md}: {found:?} against {expected:?}"
+        );
     }
 }
 

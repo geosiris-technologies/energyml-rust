@@ -145,14 +145,23 @@ fn an_md_interval_field_gives_a_declared_extent() {
     assert_eq!(found.reader, "declared-md-interval");
     let reference = found.reference.expect("a reference");
     assert_eq!(reference.datum.as_deref(), Some(DATUM_1));
-    assert_eq!(reference.trajectory, TRAJECTORY_A, "no trajectory counts these MDs: the object's own");
+    assert_eq!(
+        reference.trajectory, TRAJECTORY_A,
+        "no trajectory counts these MDs: the object's own"
+    );
     assert_eq!(reference.uom.as_deref(), Some("m"));
     // Break it: write `trajectory: String::new()`, and two objects look like one trajectory.
 }
 
 #[test]
 fn a_resqml_trajectory_gives_its_interval_and_how_it_is_counted() {
-    let found = extent_of(&trajectory(TRAJECTORY_A, DATUM_1, eml23::LengthUomExt::M, 5.0, 40.0));
+    let found = extent_of(&trajectory(
+        TRAJECTORY_A,
+        DATUM_1,
+        eml23::LengthUomExt::M,
+        5.0,
+        40.0,
+    ));
     assert_eq!((found.from, found.to), (5.0, 40.0));
     assert_eq!(found.reader, "resqml-md-reference");
     let reference = found.reference.expect("a reference");
@@ -187,16 +196,23 @@ fn a_time_index_is_out_of_the_md_axis() {
     let log = witsml21::Log {
         uuid: LOG.to_string(),
         citation: citation("a time log"),
-        primary_index_interval: Some(witsml21::AbstractInterval::DateTimeInterval(eml23::DateTimeInterval {
-            start_time: "2026-01-01T00:00:00Z".to_string(),
-            end_time: "2026-01-02T00:00:00Z".to_string(),
-            ..Default::default()
-        })),
+        primary_index_interval: Some(witsml21::AbstractInterval::DateTimeInterval(
+            eml23::DateTimeInterval {
+                start_time: "2026-01-01T00:00:00Z".to_string(),
+                end_time: "2026-01-02T00:00:00Z".to_string(),
+                ..Default::default()
+            },
+        )),
         ..Default::default()
     };
     let refused = of_object(&log, &NoObjects, &ExtentReaders::builtin());
     assert!(
-        matches!(refused, Err(ExtentRefusal::NotDepth { axis: ExtentAxis::Time })),
+        matches!(
+            refused,
+            Err(ExtentRefusal::NotDepth {
+                axis: ExtentAxis::Time
+            })
+        ),
         "got {refused:?}"
     );
     // Break it: answer an extent 0..0, and the time log is drawn on the depth axis.
@@ -206,7 +222,10 @@ fn a_time_index_is_out_of_the_md_axis() {
 fn an_object_that_states_no_interval_is_refused_by_name() {
     let table = eml23::ColumnBasedTable::default();
     let refused = of_object(&table, &NoObjects, &ExtentReaders::builtin());
-    assert!(matches!(refused, Err(ExtentRefusal::NoExtent { .. })), "got {refused:?}");
+    assert!(
+        matches!(refused, Err(ExtentRefusal::NoExtent { .. })),
+        "got {refused:?}"
+    );
     // Break it: return an empty extent for an object no reader knows.
 }
 
@@ -229,11 +248,21 @@ fn a_frame_extent_is_the_range_of_its_node_mds() {
     };
     let mut cache = Prefetched::new();
     cache.insert(
-        Box::new(trajectory(TRAJECTORY_A, DATUM_1, eml23::LengthUomExt::M, 0.0, 40.0)) as Box<dyn DynObject>,
+        Box::new(trajectory(
+            TRAJECTORY_A,
+            DATUM_1,
+            eml23::LengthUomExt::M,
+            0.0,
+            40.0,
+        )) as Box<dyn DynObject>,
         &nowhere,
     );
     let found = of_object(&frame, &cache, &ExtentReaders::builtin()).expect("an extent");
-    assert_eq!((found.from, found.to), (5.0, 30.0), "least and greatest, not first and last");
+    assert_eq!(
+        (found.from, found.to),
+        (5.0, 30.0),
+        "least and greatest, not first and last"
+    );
     assert_eq!(found.basis, ExtentBasis::Measured);
     assert_eq!(found.reader, "node-md");
     assert_eq!(found.reference.expect("a reference").trajectory, TRAJECTORY_A);
@@ -247,7 +276,11 @@ fn a_callers_extent_reader_is_tried_first() {
         fn id(&self) -> &'static str {
             "test"
         }
-        fn read(&self, _object: &dyn Reflect, _source: &dyn ArraySource) -> Option<Result<Extent, ExtentRefusal>> {
+        fn read(
+            &self,
+            _object: &dyn Reflect,
+            _source: &dyn ArraySource,
+        ) -> Option<Result<Extent, ExtentRefusal>> {
             Some(Ok(Extent {
                 reader: "test",
                 ..row_extent(1.0, 2.0)
@@ -272,21 +305,38 @@ fn a_row_takes_its_own_md_columns_and_a_half_pair_is_incomplete() {
         floats(vec![10.0, f64::NAN, 5.0]),
         floats(vec![20.0, 8.0, f64::NAN]),
     ];
-    let rows = of_rows(&cells, &IntervalColumns::Pair { top: 0, base: 1 }, Some("m"), None);
+    let rows = of_rows(
+        &cells,
+        &IntervalColumns::Pair { top: 0, base: 1 },
+        Some("m"),
+        None,
+    );
     assert_eq!(rows.len(), 3);
     let own = rows[0].extent.as_ref().expect("a whole pair");
     assert_eq!((own.from, own.to), (10.0, 20.0));
-    assert_eq!(own.reference, None, "a table column says nothing of how its MDs are counted");
+    assert_eq!(
+        own.reference, None,
+        "a table column says nothing of how its MDs are counted"
+    );
     assert_eq!(own.uom.as_deref(), Some("m"));
-    assert!(rows[1].incomplete && rows[1].extent.is_none(), "a missing top: no extent, and said");
-    assert!(rows[2].incomplete && rows[2].extent.is_none(), "a missing base: no extent, and said");
+    assert!(
+        rows[1].incomplete && rows[1].extent.is_none(),
+        "a missing top: no extent, and said"
+    );
+    assert!(
+        rows[2].incomplete && rows[2].extent.is_none(),
+        "a missing base: no extent, and said"
+    );
 
     let point = of_rows(&cells, &IntervalColumns::Point { md: 0 }, None, None);
     let one = point[0].extent.as_ref().expect("a point");
     assert_eq!((one.from, one.to), (10.0, 10.0));
 
     let nothing = of_rows(&cells, &IntervalColumns::Ambiguous(vec![0, 1, 2]), None, None);
-    assert!(nothing.iter().all(|row| row.extent.is_none() && !row.incomplete), "three columns choose nothing");
+    assert!(
+        nothing.iter().all(|row| row.extent.is_none() && !row.incomplete),
+        "three columns choose nothing"
+    );
     // Break it: make a half pair `(x, x)`, and a missing base is drawn as a point.
 }
 
@@ -340,14 +390,24 @@ fn an_inherited_extent_says_through_which_column() {
         extent_of: &of_target,
     };
     let cells = vec![floats(vec![f64::NAN]), floats(vec![f64::NAN]), texts(&["i2"])];
-    let rows = of_rows(&cells, &IntervalColumns::Pair { top: 0, base: 1 }, Some("m"), Some(&inherit));
+    let rows = of_rows(
+        &cells,
+        &IntervalColumns::Pair { top: 0, base: 1 },
+        Some("m"),
+        Some(&inherit),
+    );
     let got = rows[0].extent.as_ref().expect("the extent of the row it names");
     assert_eq!((got.from, got.to), (2900.0, 3200.0));
     assert_eq!(got.basis, ExtentBasis::ThroughLink { column: 2 });
     assert!(!rows[0].incomplete);
 
     // The same row without a link to follow has no extent.
-    let alone = of_rows(&cells, &IntervalColumns::Pair { top: 0, base: 1 }, Some("m"), None);
+    let alone = of_rows(
+        &cells,
+        &IntervalColumns::Pair { top: 0, base: 1 },
+        Some("m"),
+        None,
+    );
     assert!(alone[0].extent.is_none());
     // Break it: give `basis: Declared` to an inherited extent, and the view cannot say it was borrowed.
 }
@@ -356,21 +416,49 @@ fn an_inherited_extent_says_through_which_column() {
 
 #[test]
 fn a_reversed_interval_is_kept_and_said() {
-    let found = extent_of(&trajectory(TRAJECTORY_A, DATUM_1, eml23::LengthUomExt::M, 10.0, 5.0));
-    assert_eq!((found.from, found.to), (10.0, 5.0), "kept as written, never swapped");
+    let found = extent_of(&trajectory(
+        TRAJECTORY_A,
+        DATUM_1,
+        eml23::LengthUomExt::M,
+        10.0,
+        5.0,
+    ));
+    assert_eq!(
+        (found.from, found.to),
+        (10.0, 5.0),
+        "kept as written, never swapped"
+    );
     assert!(found.is_reversed());
     let drawn = coverage(vec![item("a", found)], &[]);
-    assert!(drawn.notes.contains(&CoverageNote::Reversed { item: "a".to_string() }));
+    assert!(drawn.notes.contains(&CoverageNote::Reversed {
+        item: "a".to_string()
+    }));
     assert_eq!(drawn.groups[0].bars[0].from, 10.0, "drawn as written");
     // Break it: swap the bounds on reading, and the note and the order are both lost.
 }
 
 #[test]
 fn two_datums_are_two_groups() {
-    let first = extent_of(&trajectory(TRAJECTORY_A, DATUM_1, eml23::LengthUomExt::M, 0.0, 100.0));
-    let second = extent_of(&trajectory(TRAJECTORY_B, DATUM_2, eml23::LengthUomExt::M, 0.0, 100.0));
+    let first = extent_of(&trajectory(
+        TRAJECTORY_A,
+        DATUM_1,
+        eml23::LengthUomExt::M,
+        0.0,
+        100.0,
+    ));
+    let second = extent_of(&trajectory(
+        TRAJECTORY_B,
+        DATUM_2,
+        eml23::LengthUomExt::M,
+        0.0,
+        100.0,
+    ));
     let drawn = coverage(vec![item("a", first), item("b", second)], &[]);
-    assert_eq!(drawn.groups.len(), 2, "an MD is never moved from one datum to the other");
+    assert_eq!(
+        drawn.groups.len(),
+        2,
+        "an MD is never moved from one datum to the other"
+    );
     let why = drawn
         .notes
         .iter()
@@ -379,7 +467,10 @@ fn two_datums_are_two_groups() {
             _ => None,
         })
         .expect("a note on the second item");
-    assert!(why.contains("§6.48"), "the reason cites common TRG 2.3 §6.48: {why}");
+    assert!(
+        why.contains("§6.48"),
+        "the reason cites common TRG 2.3 §6.48: {why}"
+    );
     // Break it: put everything in one group, and there is neither a second group nor a note.
 }
 
@@ -387,8 +478,20 @@ fn two_datums_are_two_groups() {
 fn feet_and_metres_share_an_axis_converted() {
     // Same datum, same MD domain, two units that convert (a distinct trajectory each: one
     // trajectory counts in one unit, and `comparable` takes it at its word).
-    let metres = extent_of(&trajectory(TRAJECTORY_A, DATUM_1, eml23::LengthUomExt::M, 0.0, 100.0));
-    let feet = extent_of(&trajectory(TRAJECTORY_B, DATUM_1, eml23::LengthUomExt::Ft, 0.0, 100.0));
+    let metres = extent_of(&trajectory(
+        TRAJECTORY_A,
+        DATUM_1,
+        eml23::LengthUomExt::M,
+        0.0,
+        100.0,
+    ));
+    let feet = extent_of(&trajectory(
+        TRAJECTORY_B,
+        DATUM_1,
+        eml23::LengthUomExt::Ft,
+        0.0,
+        100.0,
+    ));
     let drawn = coverage(vec![item("m", metres), item("ft", feet)], &[]);
     assert_eq!(drawn.groups.len(), 1, "one datum, one domain: one axis");
     let bar = &drawn.groups[0].bars[1];
@@ -401,7 +504,13 @@ fn feet_and_metres_share_an_axis_converted() {
 #[test]
 fn an_alignment_merges_and_is_written() {
     // 07 §4.5: the person says "count this row's MDs as the trajectory's are counted".
-    let trajectory = extent_of(&trajectory(TRAJECTORY_A, DATUM_1, eml23::LengthUomExt::M, 0.0, 100.0));
+    let trajectory = extent_of(&trajectory(
+        TRAJECTORY_A,
+        DATUM_1,
+        eml23::LengthUomExt::M,
+        0.0,
+        100.0,
+    ));
     let row = row_extent(10.0, 20.0);
     let alignment = Alignment {
         item: "row".to_string(),
@@ -414,8 +523,22 @@ fn an_alignment_merges_and_is_written() {
     );
     assert_eq!(drawn.groups.len(), 1);
     assert_eq!(drawn.groups[0].bars.len(), 2);
-    assert!(drawn.groups[0].bars.iter().find(|bar| bar.key == "row").expect("the row").aligned);
-    assert!(!drawn.groups[0].bars.iter().find(|bar| bar.key == "traj").expect("the trajectory").aligned);
+    assert!(
+        drawn.groups[0]
+            .bars
+            .iter()
+            .find(|bar| bar.key == "row")
+            .expect("the row")
+            .aligned
+    );
+    assert!(
+        !drawn.groups[0]
+            .bars
+            .iter()
+            .find(|bar| bar.key == "traj")
+            .expect("the trajectory")
+            .aligned
+    );
     assert_eq!(drawn.applied, vec![alignment]);
     // Break it: ignore the alignment, and the row goes to a band of its own.
 }
@@ -426,8 +549,15 @@ fn an_alignment_onto_nothing_is_noted_and_ignored() {
         item: "row".to_string(),
         onto: "missing".to_string(),
     };
-    let drawn = coverage(vec![item("row", row_extent(1.0, 2.0))], std::slice::from_ref(&alignment));
-    assert!(drawn.notes.contains(&CoverageNote::UnknownAlignment { alignment }));
+    let drawn = coverage(
+        vec![item("row", row_extent(1.0, 2.0))],
+        std::slice::from_ref(&alignment),
+    );
+    assert!(
+        drawn
+            .notes
+            .contains(&CoverageNote::UnknownAlignment { alignment })
+    );
     assert!(drawn.applied.is_empty());
     assert_eq!(drawn.groups[0].reference, None);
     // Break it: apply it anyway, and `applied` lists an alignment that moved nothing.
@@ -435,8 +565,17 @@ fn an_alignment_onto_nothing_is_noted_and_ignored() {
 
 #[test]
 fn a_table_row_without_reference_goes_to_the_unstated_band() {
-    let trajectory = extent_of(&trajectory(TRAJECTORY_A, DATUM_1, eml23::LengthUomExt::M, 0.0, 100.0));
-    let drawn = coverage(vec![item("traj", trajectory), item("row", row_extent(10.0, 20.0))], &[]);
+    let trajectory = extent_of(&trajectory(
+        TRAJECTORY_A,
+        DATUM_1,
+        eml23::LengthUomExt::M,
+        0.0,
+        100.0,
+    ));
+    let drawn = coverage(
+        vec![item("traj", trajectory), item("row", row_extent(10.0, 20.0))],
+        &[],
+    );
     assert_eq!(drawn.groups.len(), 2);
     assert!(drawn.groups[0].reference.is_some());
     assert_eq!(drawn.groups[1].reference, None, "the band of unstated references");

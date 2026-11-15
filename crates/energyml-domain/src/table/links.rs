@@ -135,7 +135,9 @@ pub enum LinkRefusal {
         count: usize,
     },
     /// A facet and a description name two different targets.
-    #[error("the facet names `{facet}` and the description names `{description}`: two targets, none followed")]
+    #[error(
+        "the facet names `{facet}` and the description names `{description}`: two targets, none followed"
+    )]
     ConflictingDeclarations {
         /// The uri the facet names.
         facet: String,
@@ -338,9 +340,12 @@ fn declare(
         });
     }
     let qualified = parsed.qualified_type();
-    let is_table = qualified
-        .as_ref()
-        .is_some_and(|q| matches!(q.type_key(), "ColumnBasedTable" | "StringTableLookup" | "DoubleTableLookup"));
+    let is_table = qualified.as_ref().is_some_and(|q| {
+        matches!(
+            q.type_key(),
+            "ColumnBasedTable" | "StringTableLookup" | "DoubleTableLookup"
+        )
+    });
     if !is_table {
         return Err(LinkRefusal::NotATable {
             uri: uri.to_string(),
@@ -360,7 +365,8 @@ fn declare(
         }
     };
     let mut warnings = Vec::new();
-    let is_identifier = kind.is_some_and(|k| descends_from(k, IDENTIFIER) || descends_from(k, EXPLICIT_INDEX));
+    let is_identifier =
+        kind.is_some_and(|k| descends_from(k, IDENTIFIER) || descends_from(k, EXPLICIT_INDEX));
     if !is_identifier {
         warnings.push(LinkWarning::KindNotAnIdentifier);
     }
@@ -461,11 +467,13 @@ impl LinkReader for DescriptionText {
             }));
         }
         Some(
-            declare(table, column, &described.uri, kind, Convention::DescriptionText).map(|mut declaration| {
-                declaration.warnings.insert(0, LinkWarning::ByConvention);
-                declaration.key_named = Some(described.key);
-                declaration
-            }),
+            declare(table, column, &described.uri, kind, Convention::DescriptionText).map(
+                |mut declaration| {
+                    declaration.warnings.insert(0, LinkWarning::ByConvention);
+                    declaration.key_named = Some(described.key);
+                    declaration
+                },
+            ),
         )
     }
 }

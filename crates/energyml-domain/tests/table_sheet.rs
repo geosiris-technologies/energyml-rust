@@ -40,12 +40,14 @@ fn kind_reference() -> eml23::DataObjectReference {
 }
 
 fn integers(values: &[i64]) -> Option<eml23::AbstractValueArray> {
-    Some(eml23::AbstractValueArray::IntegerXmlArray(eml23::IntegerXmlArray {
-        values: values.to_vec(),
-        null_value: -999,
-        count_per_value: 1,
-        ..Default::default()
-    }))
+    Some(eml23::AbstractValueArray::IntegerXmlArray(
+        eml23::IntegerXmlArray {
+            values: values.to_vec(),
+            null_value: -999,
+            count_per_value: 1,
+            ..Default::default()
+        },
+    ))
 }
 
 fn strings(values: &[&str]) -> Option<eml23::AbstractValueArray> {

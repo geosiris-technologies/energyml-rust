@@ -122,7 +122,8 @@ use crate::min_curvature::Measured;
 use crate::source::ValueSource;
 
 pub use checks::{
-    CheckKind, CheckOutcome, Finding, MissingCorrection, SurveyCheck, SurveyDiagnosis, SurveyRefusal, diagnose,
+    CheckKind, CheckOutcome, Finding, MissingCorrection, SurveyCheck, SurveyDiagnosis, SurveyRefusal,
+    diagnose,
 };
 pub use north::NorthSource;
 pub use place::{BetweenStations, PlacedSurvey, placement_without_north, read_declaring, survey_path};
@@ -486,10 +487,7 @@ pub(crate) fn read_parts(survey: &dyn Reflect, source: &dyn ValueSource) -> Read
 /// `DeviationSurveyRepresentation`, told apart by the concept's name. Refuses only what makes the
 /// stations unreadable: no station, a depth or an angle with no number or no usable unit, an array
 /// that cannot be read. Everything else (method, datums, north, status) is read and left to `diagnose`.
-pub fn stations_of(
-    survey: &dyn Reflect,
-    source: &dyn ValueSource,
-) -> Result<SurveyStations, SurveyRefusal> {
+pub fn stations_of(survey: &dyn Reflect, source: &dyn ValueSource) -> Result<SurveyStations, SurveyRefusal> {
     let (facts, measured) = read_parts(survey, source).map_err(SurveyRefusal::from)?;
     let measured = measured.map_err(SurveyRefusal::from)?;
     Ok(facts.into_stations(measured))

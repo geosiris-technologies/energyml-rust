@@ -979,8 +979,8 @@ fn from_well_datum(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8) -> 
     // The placed x and y are in the projected system's unit; the elevation has been converted to
     // metres to meet the measured depths (`place_datum`). The unit is read by `stated_uom`, the one
     // reading of it.
-    let horizontal_uom = crs_object_of(datum, "HorizontalCoordinates", source)
-        .and_then(|crs| stated_uom(crs.as_reflect()));
+    let horizontal_uom =
+        crs_object_of(datum, "HorizontalCoordinates", source).and_then(|crs| stated_uom(crs.as_reflect()));
 
     let out = Crs {
         uuid: datum_uuid,

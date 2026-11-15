@@ -371,11 +371,25 @@ impl Sortable {
 
 /// A filter ready to be asked about many rows.
 enum Compiled {
-    Text { needle: String, columns: Option<Vec<usize>> },
-    Equals { column: usize, value: Cell },
-    Range { column: usize, min: Option<f64>, max: Option<f64> },
-    Absent { column: usize },
-    Empty { column: usize },
+    Text {
+        needle: String,
+        columns: Option<Vec<usize>>,
+    },
+    Equals {
+        column: usize,
+        value: Cell,
+    },
+    Range {
+        column: usize,
+        min: Option<f64>,
+        max: Option<f64>,
+    },
+    Absent {
+        column: usize,
+    },
+    Empty {
+        column: usize,
+    },
     /// Sorted, so a row is found by bisection.
     Rows(Vec<usize>),
     All(Vec<Compiled>),

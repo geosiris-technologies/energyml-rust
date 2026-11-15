@@ -251,7 +251,11 @@ pub fn rotation_fit(survey: &[[f64; 2]], other: &[[f64; 2]]) -> Result<RotationF
 }
 
 /// The gap between two paths sampled at the same MDs, in the datum frame.
-pub fn compare(survey: &[PathSample], other: &[PathSample], frames: Frames) -> Result<SurveyComparison, CompareError> {
+pub fn compare(
+    survey: &[PathSample],
+    other: &[PathSample],
+    frames: Frames,
+) -> Result<SurveyComparison, CompareError> {
     if survey.len() != other.len() {
         return Err(CompareError::LengthsDiffer {
             survey: survey.len(),

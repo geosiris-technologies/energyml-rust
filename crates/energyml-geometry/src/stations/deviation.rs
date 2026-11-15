@@ -42,10 +42,7 @@ pub(super) fn read(survey: &dyn Reflect, source: &dyn ValueSource) -> Reading {
                     field,
                     reason: "no array".into(),
                 },
-                Error::malformed(
-                    &at,
-                    "no array: a deviation survey states one value per station",
-                ),
+                Error::malformed(&at, "no array: a deviation survey states one value per station"),
             ));
         };
         let values = match read_doubles(array, source, &at) {
@@ -133,7 +130,8 @@ fn measured_of(
     (0..mds.len())
         .map(|k| -> Result<Measured, Fault> {
             Ok(Measured {
-                md: units::metres(mds[k], &md_unit).map_err(|why| unit_refused(None, "MdUom", &md_unit, why))?,
+                md: units::metres(mds[k], &md_unit)
+                    .map_err(|why| unit_refused(None, "MdUom", &md_unit, why))?,
                 // A `NaN` in an array stays a `NaN`: `checked_directions` refuses it, nothing fills it in.
                 inclination: Some(
                     units::convert(inclinations[k], &angle_unit, "dega")

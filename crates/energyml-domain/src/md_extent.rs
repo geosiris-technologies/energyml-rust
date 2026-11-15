@@ -24,8 +24,8 @@ use energyml_core::value::{FieldValue, Reflect};
 use crate::source::ArraySource;
 use crate::strata_by_md::{self, MdReference};
 use crate::table::{
-    Cell, CellState, ColumnCells, IntervalColumns, LinkDeclaration, LinkTarget, Resolved, TableRefusal, TargetIndexes,
-    resolve,
+    Cell, CellState, ColumnCells, IntervalColumns, LinkDeclaration, LinkTarget, Resolved, TableRefusal,
+    TargetIndexes, resolve,
 };
 use crate::units;
 
@@ -343,10 +343,12 @@ impl ExtentReader for PrimaryIndexIntervalReader {
         let shape = interval.type_info().name;
         Some(match shape {
             "MdInterval" => declared_interval(object, interval, "primary-index-interval"),
-            "DateTimeInterval" | "ElapsedTimeInterval" => Err(ExtentRefusal::NotDepth { axis: ExtentAxis::Time }),
-            "DatumTvdInterval" | "ReferencePointTvdInterval" => {
-                Err(ExtentRefusal::NotDepth { axis: ExtentAxis::Tvd })
-            }
+            "DateTimeInterval" | "ElapsedTimeInterval" => Err(ExtentRefusal::NotDepth {
+                axis: ExtentAxis::Time,
+            }),
+            "DatumTvdInterval" | "ReferencePointTvdInterval" => Err(ExtentRefusal::NotDepth {
+                axis: ExtentAxis::Tvd,
+            }),
             other => Err(ExtentRefusal::Unsupported {
                 shape: other.to_string(),
             }),
@@ -449,7 +451,10 @@ pub fn of_rows(
             _ => None,
         };
         match resolve(link, &state, sibling.as_ref(), inherit.own_uri, inherit.targets) {
-            Resolved::Row { table_uri, row: target } => {
+            Resolved::Row {
+                table_uri,
+                row: target,
+            } => {
                 let mut extent = (inherit.extent_of)(&table_uri, target)?;
                 extent.basis = ExtentBasis::ThroughLink { column: link.column };
                 Some(extent)
@@ -633,7 +638,9 @@ pub fn coverage(items: Vec<CoverageItem>, alignments: &[Alignment]) -> Coverage 
             continue;
         }
         if extent.is_reversed() {
-            notes.push(CoverageNote::Reversed { item: item.key.clone() });
+            notes.push(CoverageNote::Reversed {
+                item: item.key.clone(),
+            });
         }
 
         let (mut from, mut to) = (extent.from, extent.to);
@@ -652,7 +659,10 @@ pub fn coverage(items: Vec<CoverageItem>, alignments: &[Alignment]) -> Coverage 
             // The unit of the item is its own: only the counting is taken from `onto`.
             if let (Some(own), Some(theirs)) = (
                 &extent.uom,
-                onto.extent.reference.as_ref().and_then(|reference| reference.uom.as_ref()),
+                onto.extent
+                    .reference
+                    .as_ref()
+                    .and_then(|reference| reference.uom.as_ref()),
             ) && own != theirs
             {
                 match (units::convert(from, own, theirs), units::convert(to, own, theirs)) {
@@ -717,9 +727,10 @@ pub fn coverage(items: Vec<CoverageItem>, alignments: &[Alignment]) -> Coverage 
                         notes.push(CoverageNote::Incomparable {
                             item: item.key.clone(),
                             first_of_group: first.unwrap_or_default(),
-                            why: "the unit of one of the two is not stated, so their MDs are kept as written \
+                            why:
+                                "the unit of one of the two is not stated, so their MDs are kept as written \
                                   and not compared"
-                                .to_string(),
+                                    .to_string(),
                         });
                         (from, to)
                     }
@@ -765,5 +776,9 @@ pub fn coverage(items: Vec<CoverageItem>, alignments: &[Alignment]) -> Coverage 
         }
     }
 
-    Coverage { groups, notes, applied }
+    Coverage {
+        groups,
+        notes,
+        applied,
+    }
 }

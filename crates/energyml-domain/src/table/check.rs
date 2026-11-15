@@ -14,8 +14,8 @@
 use crate::source::{ObjectSource, Presence, object_chip};
 
 use super::{
-    Cell, CellState, ColumnCells, Convention, LinkDeclaration, LinkRefusal, LinkTarget, LinkWarning, Resolved,
-    TableRefusal, TableSheet, TargetIndexes, resolve, uri_column,
+    Cell, CellState, ColumnCells, Convention, LinkDeclaration, LinkRefusal, LinkTarget, LinkWarning,
+    Resolved, TableRefusal, TableSheet, TargetIndexes, resolve, uri_column,
 };
 
 /// What checking one link column found.
@@ -169,7 +169,8 @@ pub fn check_links(
                 Resolved::Unresolvable(why) => report.unresolvable.push((row, why)),
             }
         }
-        if kind_disagrees(&declaration.target, targets) && !report.warnings.contains(&LinkWarning::KindDisagreesWithTarget)
+        if kind_disagrees(&declaration.target, targets)
+            && !report.warnings.contains(&LinkWarning::KindDisagreesWithTarget)
         {
             report.warnings.push(LinkWarning::KindDisagreesWithTarget);
         }
@@ -224,14 +225,17 @@ pub fn check_links(
     }
 }
 
+/// One table of a set to check: its sheet, its columns as read, and the links its columns declare.
+pub type TableToCheck<'a, 'c> = (
+    &'a TableSheet,
+    &'a [Result<ColumnCells<'c>, TableRefusal>],
+    &'a [(usize, Result<LinkDeclaration, LinkRefusal>)],
+);
+
 /// One call for a set: `check_links` on each table, in order. The same function, called again: a
 /// set report is never computed another way.
 pub fn check_links_of_set(
-    tables: &[(
-        &TableSheet,
-        &[Result<ColumnCells<'_>, TableRefusal>],
-        &[(usize, Result<LinkDeclaration, LinkRefusal>)],
-    )],
+    tables: &[TableToCheck<'_, '_>],
     targets: &dyn TargetIndexes,
     objects: Option<(&dyn ObjectSource, Option<&str>)>,
 ) -> Vec<LinkReport> {

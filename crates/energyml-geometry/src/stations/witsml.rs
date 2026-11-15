@@ -239,7 +239,12 @@ fn read_tvd(station: &dyn Reflect) -> Option<Result<StatedTvd, UnitFault>> {
                 unit: fault.unit,
             }));
         }
-        None => return Some(Err(UnitFault { field: "Tvd", unit: None })),
+        None => {
+            return Some(Err(UnitFault {
+                field: "Tvd",
+                unit: None,
+            }));
+        }
     };
     let from = if tvd.field("ReferencePoint").is_some() {
         TvdReference::Point(reference_of(tvd, "ReferencePoint").unwrap_or_default())

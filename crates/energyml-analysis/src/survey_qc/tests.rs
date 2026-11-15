@@ -2,8 +2,8 @@
 
 use energyml_geometry::min_curvature::{Measured, courses, positions};
 use energyml_geometry::stations::{
-    BetweenStations, DatumFacts, Kept, MethodFacts, NorthCorrections, StatedSection, StatedStation, StatedTvd,
-    SurveyKind, SurveyStations, TvdReference, UnitFault, survey_path,
+    BetweenStations, DatumFacts, Kept, MethodFacts, NorthCorrections, StatedSection, StatedStation,
+    StatedTvd, SurveyKind, SurveyStations, TvdReference, UnitFault, survey_path,
 };
 
 use super::*;
@@ -89,7 +89,10 @@ fn the_azimuth_below_the_threshold_is_not_significant() {
     let stations = [station(0.0, 2.9, 10.0), station(30.0, 3.0, 10.0)];
     let answers = azimuth_significance(&stations, &InclinationAtLeast(3.0));
     // The threshold itself is included (`>=`).
-    assert_eq!(answers, vec![Significance::NotSignificant, Significance::Significant]);
+    assert_eq!(
+        answers,
+        vec![Significance::NotSignificant, Significance::Significant]
+    );
 }
 
 #[test]
@@ -108,14 +111,25 @@ fn a_station_without_azimuth_has_no_significance() {
         inclination: Some(0.0),
         azimuth: None,
     }];
-    assert_eq!(azimuth_significance(&stations, &Panics), vec![Significance::NoAzimuth]);
+    assert_eq!(
+        azimuth_significance(&stations, &Panics),
+        vec![Significance::NoAzimuth]
+    );
 }
 
 #[test]
 fn the_lateral_effect_counts_the_course_length() {
     // 30 m of hole at 3 degrees, a degree of azimuth error: 30 sin(3 deg) 0.017453 = 0.0274 m sideways.
     let stations = [station(0.0, 3.0, 0.0), station(30.0, 3.0, 0.0)];
-    let at = |length| azimuth_significance(&stations, &LateralEffectAtLeast { azimuth_error: 1.0, length });
+    let at = |length| {
+        azimuth_significance(
+            &stations,
+            &LateralEffectAtLeast {
+                azimuth_error: 1.0,
+                length,
+            },
+        )
+    };
     assert_eq!(at(0.02)[1], Significance::Significant);
     assert_eq!(at(0.03)[1], Significance::NotSignificant);
 }
@@ -236,7 +250,13 @@ fn a_survey_against_its_own_circle_has_no_gap() {
     let stations = circle_stations();
     let mds = mds_over(&stations, 7.0);
     let survey = arc_samples(&stations, &mds);
-    let other: Vec<PathSample> = mds.iter().map(|&md| PathSample { md, at: circle_at(md) }).collect();
+    let other: Vec<PathSample> = mds
+        .iter()
+        .map(|&md| PathSample {
+            md,
+            at: circle_at(md),
+        })
+        .collect();
     let result = compare(&survey, &other, Frames::Same).expect("a comparison");
     assert!(result.gaps.len() > 100);
     for gap in &result.gaps {
@@ -293,7 +313,12 @@ fn samples_outside_the_overlap_are_refused() {
         Err(CompareError::NoOverlap { .. })
     ));
     // Listed MDs are kept inside the overlap only, sorted, with no repeat.
-    let kept = sample_mds([0.0, 100.0], [50.0, 300.0], &CompareAt::Mds(vec![90.0, 10.0, 60.0, 60.0, 200.0])).unwrap();
+    let kept = sample_mds(
+        [0.0, 100.0],
+        [50.0, 300.0],
+        &CompareAt::Mds(vec![90.0, 10.0, 60.0, 60.0, 200.0]),
+    )
+    .unwrap();
     assert_eq!(kept, vec![60.0, 90.0]);
 }
 
@@ -314,23 +339,43 @@ fn a_step_too_fine_is_refused_before_allocating() {
 
 #[test]
 fn samples_that_do_not_line_up_are_refused() {
-    let a = [PathSample { md: 0.0, at: [0.0; 3] }];
-    let b = [PathSample { md: 5.0, at: [0.0; 3] }];
-    assert!(matches!(compare(&a, &b, Frames::Same), Err(CompareError::MdsDiffer { index: 0, .. })));
-    assert!(matches!(compare(&a, &[], Frames::Same), Err(CompareError::LengthsDiffer { .. })));
-    assert!(matches!(compare(&[], &[], Frames::Same), Err(CompareError::NoSample)));
+    let a = [PathSample {
+        md: 0.0,
+        at: [0.0; 3],
+    }];
+    let b = [PathSample {
+        md: 5.0,
+        at: [0.0; 3],
+    }];
+    assert!(matches!(
+        compare(&a, &b, Frames::Same),
+        Err(CompareError::MdsDiffer { index: 0, .. })
+    ));
+    assert!(matches!(
+        compare(&a, &[], Frames::Same),
+        Err(CompareError::LengthsDiffer { .. })
+    ));
+    assert!(matches!(
+        compare(&[], &[], Frames::Same),
+        Err(CompareError::NoSample)
+    ));
     let nan = [PathSample {
         md: 0.0,
         at: [f64::NAN, 0.0, 0.0],
     }];
-    assert!(matches!(compare(&a, &nan, Frames::Same), Err(CompareError::NotFinite { index: 0 })));
+    assert!(matches!(
+        compare(&a, &nan, Frames::Same),
+        Err(CompareError::NotFinite { index: 0 })
+    ));
 }
 
 // -- F15 : rotation_fit ------------------------------------------------------------------------------------------
 
 #[test]
 fn a_compound_turned_thirty_degrees_is_found() {
-    let measured: Vec<Measured> = (0..=10).map(|k| station(30.0 * k as f64, 4.0 * k as f64, 20.0)).collect();
+    let measured: Vec<Measured> = (0..=10)
+        .map(|k| station(30.0 * k as f64, 4.0 * k as f64, 20.0))
+        .collect();
     let located = positions(&measured).expect("positions");
     let survey: Vec<[f64; 2]> = located.iter().map(|l| [l.east, l.north]).collect();
     let other: Vec<[f64; 2]> = survey.iter().map(|&a| turn(a, 30.0)).collect();
@@ -347,7 +392,10 @@ fn a_compound_turned_thirty_degrees_is_found() {
 #[test]
 fn rotation_fit_refuses_what_has_no_horizontal_extent() {
     let vertical = [[0.0, 0.0], [0.0, 0.0]];
-    assert_eq!(rotation_fit(&vertical, &vertical), Err(FitError::NoHorizontalExtent));
+    assert_eq!(
+        rotation_fit(&vertical, &vertical),
+        Err(FitError::NoHorizontalExtent)
+    );
     assert!(matches!(
         rotation_fit(&vertical, &vertical[..1]),
         Err(FitError::LengthsDiffer { .. })
@@ -383,7 +431,11 @@ fn a_stated_tvd_off_by_half_a_metre_is_listed() {
     for gap in &report.gaps {
         let difference = gap.stated - gap.computed;
         let expected = if gap.station == 4 { 0.5 } else { 0.0 };
-        assert!((difference - expected).abs() < 1e-9, "station {}: {difference}", gap.station);
+        assert!(
+            (difference - expected).abs() < 1e-9,
+            "station {}: {difference}",
+            gap.station
+        );
     }
     // A TVD counted from another point is not compared.
     survey.stated[0].tvd = Some(Ok(StatedTvd {
@@ -406,7 +458,11 @@ fn a_stated_dls_is_compared_with_its_course() {
     assert_eq!(report.gaps.len(), measured.len() - 1);
     for gap in &report.gaps {
         assert_eq!(gap.field, StatedField::Dls);
-        assert!((gap.stated - gap.computed).abs() < 1e-12, "station {}", gap.station);
+        assert!(
+            (gap.stated - gap.computed).abs() < 1e-12,
+            "station {}",
+            gap.station
+        );
     }
     assert_eq!(report.not_compared.len(), 1);
     assert_eq!(report.not_compared[0].station, 1);

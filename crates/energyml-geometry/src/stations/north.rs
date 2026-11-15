@@ -62,9 +62,7 @@ pub(super) fn north_of(
             survey,
         ));
     }
-    let vertical = |station: &Measured| {
-        matches!(station.inclination, Some(i) if i.to_radians().sin().abs() <= min_curvature::VERTICAL)
-    };
+    let vertical = |station: &Measured| matches!(station.inclination, Some(i) if i.to_radians().sin().abs() <= min_curvature::VERTICAL);
     if kept.measured.iter().all(vertical) {
         return Ok((NorthSource::NotNeeded, None, kept.measured.clone()));
     }
@@ -91,7 +89,11 @@ pub(super) fn north_of(
                 DeclaredNorth::Grid => Frame::Grid,
                 DeclaredNorth::Plant => Frame::Plant,
             };
-            Ok((NorthSource::Declared(declared), Some(frame), kept.measured.clone()))
+            Ok((
+                NorthSource::Declared(declared),
+                Some(frame),
+                kept.measured.clone(),
+            ))
         }
         (Some(NorthReference::Grid), _) => Ok((
             NorthSource::Stated(NorthReference::Grid),
@@ -217,7 +219,9 @@ impl Horizontal {
     /// Metres per unit of the projected axes.
     pub(super) fn metres_per_unit(&self) -> f64 {
         match self {
-            Horizontal::Grid { metres_per_unit } | Horizontal::Plant { metres_per_unit, .. } => *metres_per_unit,
+            Horizontal::Grid { metres_per_unit } | Horizontal::Plant { metres_per_unit, .. } => {
+                *metres_per_unit
+            }
         }
     }
 
@@ -281,7 +285,7 @@ impl Horizontal {
                     .ok_or_else(|| fail(Finding::GridWithoutProjected))?;
                 let projected = projected.as_reflect();
                 match measure::enum_value(projected, "AxisOrder") {
-                    Some(order) => east_then_north(&order).map_err(&fail)?,
+                    Some(order) => east_then_north(&order).map_err(fail)?,
                     None => return Err(fail(Finding::AxisOrderUnstated)),
                 }
                 let unit = energyml_domain::crs::stated_uom(projected);

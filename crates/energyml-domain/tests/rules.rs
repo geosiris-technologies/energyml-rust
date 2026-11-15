@@ -959,6 +959,8 @@ fn the_weights_of_27_09_are_those_the_checks_and_rules_declare() {
         "trg/homogeneous-collection",
         "trg/homogeneous-association",
         "trg/wellbore-interpretation-set-holds-wellbores",
+        // A link that names no row is an error (ADR 0030); the other table rules are warnings.
+        "house/table/link-resolves",
     ];
     for check in energyml_domain::integrity::checks() {
         let expected = if errors.contains(&check.id) {

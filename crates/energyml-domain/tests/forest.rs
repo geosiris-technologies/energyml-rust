@@ -35,8 +35,18 @@ fn an_orphan_parent_is_a_marked_root() {
 #[test]
 fn a_cycle_names_its_nodes_and_never_hangs_on_a_root() {
     // 0 -> 2 -> 1 -> 0 is a cycle; 3 hangs under it; 4 is a root.
-    let found = forest(&[Parent::Of(2), Parent::Of(0), Parent::Of(1), Parent::Of(0), Parent::Root]);
-    assert_eq!(found.cycles, vec![vec![0, 2, 1]], "from the smallest node, following the parents");
+    let found = forest(&[
+        Parent::Of(2),
+        Parent::Of(0),
+        Parent::Of(1),
+        Parent::Of(0),
+        Parent::Root,
+    ]);
+    assert_eq!(
+        found.cycles,
+        vec![vec![0, 2, 1]],
+        "from the smallest node, following the parents"
+    );
     assert_eq!(found.unreached, vec![3]);
     assert_eq!(found.roots, vec![4]);
     assert_eq!(found.depth[0], None);

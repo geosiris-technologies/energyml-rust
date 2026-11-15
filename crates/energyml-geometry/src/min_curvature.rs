@@ -655,7 +655,12 @@ mod tests {
         for input in &faulty {
             let from_courses = courses(input).unwrap_err();
             let from_positions = positions(input).unwrap_err();
-            assert_eq!(from_courses, from_positions, "{input:?}");
+            // Compared as written: a refusal that carries the NaN it was given is never equal to itself.
+            assert_eq!(
+                format!("{from_courses:?}"),
+                format!("{from_positions:?}"),
+                "{input:?}"
+            );
         }
     }
 }

@@ -12,8 +12,8 @@ use energyml_core::registry::DynObject;
 use energyml_domain::property_kind::Resolver;
 use energyml_domain::source::{NoObjects, ObjectSource};
 use energyml_domain::table::{
-    Cell, ColumnCells, Convention, LinkDeclaration, LinkReaders, LinkRefusal, LinkTarget, LinkWarning, Lookup, Table,
-    TableRefusal, TableSet, TableSheet, check_links, check_links_of_set, resolve_kinds,
+    Cell, ColumnCells, Convention, LinkDeclaration, LinkReaders, LinkRefusal, LinkTarget, LinkWarning,
+    Lookup, Table, TableRefusal, TableSet, TableSheet, check_links, check_links_of_set, resolve_kinds,
 };
 use energyml_eml_2_3 as eml23;
 
@@ -62,7 +62,10 @@ fn lookup(table: &eml23::ColumnBasedTable) -> Lookup {
     Lookup::read(table, &NoObjects).expect("the table reads")
 }
 
-fn sheeted(table: &eml23::ColumnBasedTable, uri: &str) -> (TableSheet, Vec<Result<ColumnCells<'static>, TableRefusal>>) {
+fn sheeted(
+    table: &eml23::ColumnBasedTable,
+    uri: &str,
+) -> (TableSheet, Vec<Result<ColumnCells<'static>, TableRefusal>>) {
     let read = Table::read(table).expect("the table reads");
     (TableSheet::of_table(&read, uri), read.read_cells(&NoObjects))
 }
@@ -164,10 +167,18 @@ fn a_duplicated_target_key_is_ambiguous_and_said() {
             vec![column("v", strings(&["A", "A2", "B"]))],
         )),
     );
-    let table = object("00000000b001", Vec::new(), vec![column("l", strings(&["a", "b"]))]);
+    let table = object(
+        "00000000b001",
+        Vec::new(),
+        vec![column("l", strings(&["a", "b"]))],
+    );
     let (sheet, cells) = sheeted(&table, OWN);
     let report = check_links(&sheet, &cells, &[key_link(TEXT_TARGET)], &set, None);
-    assert_eq!(report.columns[0].ambiguous, vec![0], "'first match wins' is said, not silent");
+    assert_eq!(
+        report.columns[0].ambiguous,
+        vec![0],
+        "'first match wins' is said, not silent"
+    );
     assert_eq!(report.columns[0].found, 1);
     assert!(!report.is_clean());
 }
@@ -197,7 +208,9 @@ fn a_kind_outside_identifier_is_followed_and_warned() {
     assert!(report.refused.is_empty(), "{:?}", report.refused);
     assert_eq!(report.columns[0].found, 2, "followed, not refused");
     assert!(
-        report.columns[0].warnings.contains(&LinkWarning::KindNotAnIdentifier),
+        report.columns[0]
+            .warnings
+            .contains(&LinkWarning::KindNotAnIdentifier),
         "{:?}",
         report.columns[0].warnings
     );
@@ -220,16 +233,32 @@ fn an_identifier_link_into_a_keyless_table_is_read_by_rank_and_warned() {
     let (sheet, cells) = sheeted(&table, OWN);
     let report = check_links(&sheet, &cells, &[key_link(KEYLESS)], &set, None);
     assert_eq!(report.columns[0].found, 1);
-    assert!(report.columns[0].warnings.contains(&LinkWarning::KindDisagreesWithTarget));
+    assert!(
+        report.columns[0]
+            .warnings
+            .contains(&LinkWarning::KindDisagreesWithTarget)
+    );
     // A table with a key, linked by key: nothing to say.
     let report = check_links(&sheet, &cells, &[key_link(INT_TARGET)], &targets(), None);
-    assert!(!report.columns[0].warnings.contains(&LinkWarning::KindDisagreesWithTarget));
+    assert!(
+        !report.columns[0]
+            .warnings
+            .contains(&LinkWarning::KindDisagreesWithTarget)
+    );
 }
 
 #[test]
 fn the_set_check_repeats_the_table_check() {
-    let first = object("00000000b001", Vec::new(), vec![column("l", strings(&["a", "z"]))]);
-    let second = object("00000000b005", Vec::new(), vec![column("l", integers(&[1, 2, 9]))]);
+    let first = object(
+        "00000000b001",
+        Vec::new(),
+        vec![column("l", strings(&["a", "z"]))],
+    );
+    let second = object(
+        "00000000b005",
+        Vec::new(),
+        vec![column("l", integers(&[1, 2, 9]))],
+    );
     let (sheet_one, cells_one) = sheeted(&first, OWN);
     let second_uri = "eml:///eml23.ColumnBasedTable(00000000-0000-0000-0000-00000000b005)";
     let (sheet_two, cells_two) = sheeted(&second, second_uri);
@@ -246,8 +275,14 @@ fn the_set_check_repeats_the_table_check() {
         None,
     );
     assert_eq!(together.len(), 2);
-    assert_eq!(together[0], check_links(&sheet_one, &cells_one, &declarations_one, &set, None));
-    assert_eq!(together[1], check_links(&sheet_two, &cells_two, &declarations_two, &set, None));
+    assert_eq!(
+        together[0],
+        check_links(&sheet_one, &cells_one, &declarations_one, &set, None)
+    );
+    assert_eq!(
+        together[1],
+        check_links(&sheet_two, &cells_two, &declarations_two, &set, None)
+    );
     // And the two are not the same report: the comparison above can fail.
     assert_ne!(together[0], together[1]);
 }
@@ -295,7 +330,13 @@ fn a_uri_column_reports_its_missing_objects() {
     let blind = check_links(&sheet, &cells, &[], &none, None);
     assert!(blind.uri_columns.is_empty());
 
-    let report = check_links(&sheet, &cells, &[], &none, Some((&package as &dyn ObjectSource, None)));
+    let report = check_links(
+        &sheet,
+        &cells,
+        &[],
+        &none,
+        Some((&package as &dyn ObjectSource, None)),
+    );
     assert_eq!(report.uri_columns.len(), 1);
     let uris = &report.uri_columns[0];
     assert_eq!(uris.column, 0);

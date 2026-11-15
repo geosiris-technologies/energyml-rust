@@ -1150,8 +1150,8 @@ pub(crate) fn place_datum(datum_uri: &str, source: &dyn ValueSource, at: &str) -
         // A point in a projected CRS and a vertical CRS (`ReferencePointInACrs`): x and y stay in the
         // projected system's unit, the elevation goes to metres to meet the measured depths, by the
         // unit the vertical CRS states.
-        if let Some(unit) = vertical_crs_of(datum, source)
-            .and_then(|crs| energyml_domain::crs::stated_uom(crs.as_reflect()))
+        if let Some(unit) =
+            vertical_crs_of(datum, source).and_then(|crs| energyml_domain::crs::stated_uom(crs.as_reflect()))
         {
             elevation = units::metres(elevation, &unit).map_err(Error::Domain)?;
         }

@@ -79,22 +79,19 @@ pub mod sheet;
 pub mod window;
 
 pub use cells::{CellState, ColumnCells, TableRefusal, row_count};
-pub use check::{ColumnReport, LinkReport, UriColumnReport, check_links, check_links_of_set};
+pub use check::{ColumnReport, LinkReport, TableToCheck, UriColumnReport, check_links, check_links_of_set};
 pub use class::{
-    ColumnClass, DESCRIPTION, DepthKind, EXPLICIT_INDEX, IDENTIFIER, IntervalColumns,
-    MEASURED_DEPTH, TRUE_VERTICAL_DEPTH, classify_column, curve_pairs, descends_from, md_columns,
-    resolve_kinds,
+    ColumnClass, DESCRIPTION, DepthKind, EXPLICIT_INDEX, IDENTIFIER, IntervalColumns, MEASURED_DEPTH,
+    TRUE_VERTICAL_DEPTH, classify_column, curve_pairs, descends_from, md_columns, resolve_kinds,
 };
 pub use keys::{KeyIndex, NamingRefusal, RowMatch, row_named_by};
 pub use links::{
-    Convention, LinkDeclaration, LinkReader, LinkReaders, LinkRefusal, LinkTarget, LinkWarning,
-    UriColumn, uri_column,
+    Convention, LinkDeclaration, LinkReader, LinkReaders, LinkRefusal, LinkTarget, LinkWarning, UriColumn,
+    uri_column,
 };
 pub use resolve::{DanglingWhy, Resolved, TableSet, TargetIndexes, TargetTable, resolve};
 pub use sheet::{ColumnSheet, TableSheet};
-pub use window::{
-    ColumnAccess, RowFilter, SortKey, SortOrder, TableWindow, WindowRefusal,
-};
+pub use window::{ColumnAccess, RowFilter, SortKey, SortOrder, TableWindow, WindowRefusal};
 
 use energyml_core::identity;
 use energyml_core::value::{FieldValue, Reflect, Scalar};

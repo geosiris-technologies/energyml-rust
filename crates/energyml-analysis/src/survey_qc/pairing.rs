@@ -82,10 +82,12 @@ fn same_datum(a: &TrajectoryRefs, b: &TrajectoryRefs) -> bool {
 fn answers(by: PairedBy, subject: &TrajectoryRefs, candidate: &TrajectoryRefs) -> bool {
     match by {
         PairedBy::WitsmlTrajectory => {
-            names(&subject.witsml_trajectory, &candidate.uri) || names(&candidate.witsml_trajectory, &subject.uri)
+            names(&subject.witsml_trajectory, &candidate.uri)
+                || names(&candidate.witsml_trajectory, &subject.uri)
         }
         PairedBy::DeviationSurvey => {
-            names(&subject.deviation_survey, &candidate.uri) || names(&candidate.deviation_survey, &subject.uri)
+            names(&subject.deviation_survey, &candidate.uri)
+                || names(&candidate.deviation_survey, &subject.uri)
         }
         PairedBy::Activity => candidate.kind != subject.kind && shares_activity(subject, candidate),
         PairedBy::SameDatum => candidate.kind != subject.kind && same_datum(subject, candidate),
@@ -100,7 +102,10 @@ fn answers(by: PairedBy, subject: &TrajectoryRefs, candidate: &TrajectoryRefs) -
 /// `chosen` is set for the first three, when exactly one candidate answers: the file states it. The fourth is a
 /// proposal and is never chosen; the user confirms it.
 pub fn pairings(subject: &TrajectoryRefs, candidates: &[TrajectoryRefs]) -> Pairings {
-    let others: Vec<&TrajectoryRefs> = candidates.iter().filter(|c| !same_object(&c.uri, &subject.uri)).collect();
+    let others: Vec<&TrajectoryRefs> = candidates
+        .iter()
+        .filter(|c| !same_object(&c.uri, &subject.uri))
+        .collect();
     let rules = [
         PairedBy::WitsmlTrajectory,
         PairedBy::DeviationSurvey,
@@ -108,7 +113,11 @@ pub fn pairings(subject: &TrajectoryRefs, candidates: &[TrajectoryRefs]) -> Pair
         PairedBy::SameDatum,
     ];
     for by in rules {
-        let found: Vec<String> = others.iter().filter(|c| answers(by, subject, c)).map(|c| c.uri.clone()).collect();
+        let found: Vec<String> = others
+            .iter()
+            .filter(|c| answers(by, subject, c))
+            .map(|c| c.uri.clone())
+            .collect();
         if found.is_empty() {
             continue;
         }
