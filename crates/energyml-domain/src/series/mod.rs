@@ -306,9 +306,19 @@ pub struct Tally {
 impl Channel {
     /// The values as numbers, for a floating or integer channel.
     pub fn numbers(&self) -> Option<Vec<f64>> {
+        self.numbers_ref().map(std::borrow::Cow::into_owned)
+    }
+
+    /// The values as numbers without copying a floating channel: borrowed when
+    /// the channel is floating, converted (one allocation) when it is integer.
+    /// `None` for a boolean or text channel. [`Channel::numbers`] is the owned
+    /// form of this.
+    pub fn numbers_ref(&self) -> Option<std::borrow::Cow<'_, [f64]>> {
         match &self.values {
-            Values::Floating(values) => Some(values.clone()),
-            Values::Integer(values) => Some(values.iter().map(|value| *value as f64).collect()),
+            Values::Floating(values) => Some(std::borrow::Cow::Borrowed(values.as_slice())),
+            Values::Integer(values) => Some(std::borrow::Cow::Owned(
+                values.iter().map(|value| *value as f64).collect(),
+            )),
             _ => None,
         }
     }
@@ -322,7 +332,7 @@ impl Channel {
             min: None,
             max: None,
         };
-        let numbers = self.numbers();
+        let numbers = self.numbers_ref();
         for (at, quality) in self.quality.iter().enumerate() {
             match quality {
                 Quality::Good => {

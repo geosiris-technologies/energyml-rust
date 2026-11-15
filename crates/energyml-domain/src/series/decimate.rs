@@ -176,7 +176,7 @@ pub fn decimate(
             channels: series.channels.len(),
         });
     };
-    let Some(values) = chosen.numbers() else {
+    let Some(values) = chosen.numbers_ref() else {
         return Err(Refused::NotNumeric {
             channel: chosen.mnemonic.clone(),
             family: match chosen.values.family() {

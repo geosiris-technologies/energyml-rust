@@ -552,6 +552,9 @@ fn dataset_rows(
     let width = indexes.len() + listed.len();
     let dimensions = read.metadata.dimensions.clone();
     let cells = cells_of(&read.values);
+    // The dataset's own buffer is not needed once its cells exist: letting it
+    // go before the rows are built keeps one copy of the numbers fewer alive.
+    drop(read);
     let fits = dimensions.len() == 2
         && dimensions[1] == width as i64
         && dimensions[0] >= 0
@@ -565,10 +568,17 @@ fn dataset_rows(
             channels: listed.len(),
         });
     }
-    Ok(cells
-        .chunks(width)
-        .map(|row| Value::Array(row.to_vec()))
-        .collect())
+    // The cells are moved into their rows, not cloned row by row.
+    let mut rows: Vec<Value> = Vec::with_capacity(cells.len() / width.max(1));
+    let mut left = cells.into_iter();
+    loop {
+        let row: Vec<Value> = left.by_ref().take(width).collect();
+        if row.is_empty() {
+            break;
+        }
+        rows.push(Value::Array(row));
+    }
+    Ok(rows)
 }
 
 /// A dataset's values as the JSON cells of an inline row: `NaN` is `null`,

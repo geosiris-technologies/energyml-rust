@@ -507,6 +507,17 @@ pub fn paired(bag: &Pieces) -> Vec<Piece<'_>> {
     // `read::pieces_of_object` writes, and it is read here and nowhere
     // else.
     let companion = |name: &str| -> bool { name.ends_with(" (object)") };
+    // The companions by the name of the piece they belong to (`X (object)` is
+    // filed under `X`), built once: looking each piece up in it costs no
+    // allocation, where building the companion's name per piece and per
+    // candidate was quadratic. The first companion of a name wins, as the scan
+    // it replaces did.
+    let mut companions: std::collections::HashMap<&str, &Known> = std::collections::HashMap::new();
+    for (name, known) in objects.iter().copied() {
+        if let Some(of) = name.strip_suffix(" (object)") {
+            companions.entry(of).or_insert(known);
+        }
+    }
     let mut out: Vec<Piece<'_>> = bag
         .iter()
         .filter(|(name, source)| !matches!(source, Source::Object(_)) || !companion(name))
@@ -517,10 +528,7 @@ pub fn paired(bag: &Pieces) -> Vec<Piece<'_>> {
                 // An object piece **is** what is known of it: looking for a
                 // companion named `X (object)` would be expecting a second one.
                 Source::Object(known) => Some(known),
-                _ => objects
-                    .iter()
-                    .find(|(object, _)| *object == format!("{name} (object)"))
-                    .map(|(_, k)| *k),
+                _ => companions.get(name).copied(),
             },
         })
         .collect();

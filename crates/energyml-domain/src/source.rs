@@ -559,7 +559,13 @@ impl ArraySource for Prefetched {
     fn read_into(&self, location: &ArrayLocation, out: &mut ArrayBuffer<'_>) -> Result<ArrayMetadata> {
         use energyml_storage::array::ArrayValues;
 
-        let data = self.read(location)?;
+        // Borrowed from the cache: `read` hands out an owned `ArrayData`, and
+        // cloning the whole array only to copy it again into `out` would make a
+        // block reader pay a full-array clone per slab.
+        let data = self
+            .arrays
+            .get(&slot(location))
+            .ok_or_else(|| not_prefetched(location))?;
         // The typed copy, not a byte copy: a buffer of `f64` handed an array of
         // `i32` would take the bytes and read numbers that were never there.
         // The element types have to meet, and a refusal has to say so.
@@ -597,7 +603,7 @@ impl ArraySource for Prefetched {
                 ));
             }
         }
-        Ok(data.metadata)
+        Ok(data.metadata.clone())
     }
 }
 
