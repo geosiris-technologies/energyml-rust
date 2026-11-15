@@ -417,7 +417,13 @@ fn window_points(
             part.start = vec![k0 as i64, first as i64, 0];
             part.count = vec![(pk + 1) as i64, (pi + 1) as i64, 3];
             let data = source.read(&part)?;
-            let values = data.to_f64();
+            // A text array is no coordinate: refused by name, not read as a row of `NaN`.
+            let values = data.try_to_f64().ok_or_else(|| {
+                Error::malformed(
+                    at,
+                    "the window of coordinates is a string array, not numbers".to_string(),
+                )
+            })?;
             if values.len() != (pk + 1) * (pi + 1) * 3 {
                 return Err(Error::malformed(
                     at,

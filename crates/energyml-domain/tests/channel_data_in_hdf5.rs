@@ -508,6 +508,20 @@ fn a_dataset_that_is_not_the_rows_is_refused_by_its_shape() {
     assert!(matches!(refused(narrow), Refused::DatasetShape { dimensions, .. } if dimensions == vec![4, 3]));
 }
 
+/// A dataset of strings where the columns are numbers is refused at its first cell, by name: the values used to
+/// be widened through `to_f64`, a `NaN` per string, which an inline row reads as `null` - a missing value.
+///
+/// Break it: remove the `ArrayValues::Text` arm of `cells_of` in `channel_set.rs`; the set then reads, all `null`.
+#[test]
+fn a_dataset_of_strings_is_refused_not_read_as_missing_values() {
+    let text = ArrayData {
+        metadata: ArrayMetadata::new(vec![3, 4], "string"),
+        values: ArrayValues::Text(vec!["a".to_string(); 12]),
+    };
+    let read = channel_set::read_with(&in_file(FILE, PATH), &Datasets::with(FILE, PATH, text));
+    assert!(matches!(refused(read), Refused::ValueKind { .. }));
+}
+
 #[test]
 fn a_column_no_number_holds_is_refused_before_anything_is_read() {
     let source = Datasets::with(FILE, PATH, dataset());

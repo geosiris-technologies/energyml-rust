@@ -51,7 +51,7 @@ use energyml_core::value::{FieldValue, Reflect};
 use energyml_domain::ArraySource as ValueSource;
 use energyml_domain::color::Rgba;
 use energyml_domain::strata_by_md::{self, Painting};
-use energyml_domain::well_strata::{Known, Refusal};
+use energyml_domain::well_strata::{Known, Refusal, StrataCache};
 use energyml_geometry::{Placement, scene, well};
 
 use crate::model::{Interval, ObjectId, Refused, WellKind, WellRead};
@@ -91,6 +91,25 @@ pub fn read_well_with(
     uri: &str,
     scene: &Scene<'_>,
     context: &WellContext<'_>,
+) -> Result<WellRead, Refused> {
+    read_well_cached(source, store, uri, scene, context, &StrataCache::new())
+}
+
+/// [`read_well_with`] for a caller reading **many wells of one package** in one
+/// operation: the stratigraphic ranks, the merged colour sets and the frames'
+/// measured depths are read through `strata` and so once, not once per well.
+///
+/// The cache is tied to one state of the package (see [`StrataCache`]): the
+/// caller builds it for the operation and drops it with the operation. The
+/// answer is the one [`read_well_with`] gives.
+#[allow(clippy::result_large_err)]
+pub fn read_well_cached(
+    source: &dyn ValueSource,
+    store: &str,
+    uri: &str,
+    scene: &Scene<'_>,
+    context: &WellContext<'_>,
+    strata: &StrataCache,
 ) -> Result<WellRead, Refused> {
     let located = locate(source, store, uri)?;
     let Located {
@@ -144,8 +163,15 @@ pub fn read_well_with(
         }
     };
 
-    let (intervals, strata, borrowed) =
-        strata_of(root, name, source, md.as_deref(), no_md.as_deref(), context);
+    let (intervals, strata, borrowed) = strata_of(
+        root,
+        name,
+        source,
+        md.as_deref(),
+        no_md.as_deref(),
+        context,
+        strata,
+    );
     let wellbore = wellbore_of(root, trajectory, source);
 
     Ok(WellRead {
@@ -332,13 +358,15 @@ fn strata_of(
     md: Option<&[f64]>,
     no_md: Option<&str>,
     context: &WellContext<'_>,
+    cache: &StrataCache,
 ) -> (Vec<Interval>, Option<String>, bool) {
     let frames_of = |wellbore: &str| context.frames_of.map(|asked| asked(wellbore)).unwrap_or_default();
     let known = Known {
         graphics: context.graphics,
         units: &[],
     };
-    let painting = match strata_by_md::of_representation(root, &frames_of, None, source, &known) {
+    let painting = match strata_by_md::of_representation_cached(root, &frames_of, None, source, &known, cache)
+    {
         Ok(painting) => painting,
         Err(refusal) => {
             let mut why = refusal.to_string();

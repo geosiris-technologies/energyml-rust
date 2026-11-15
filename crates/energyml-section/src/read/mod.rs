@@ -186,12 +186,16 @@ pub fn contribution_bounded(
         store: asked.store.clone(),
         ..Contribution::default()
     };
+    // One strata cache for the wells of this call: a rank, its units and the
+    // colour sets are read once, not once per well (the package does not change
+    // while a contribution is read).
+    let strata = energyml_domain::well_strata::StrataCache::new();
     let read_in_full = |cache: &mut PackageCache, uri: &str, out: &mut Contribution| {
         // Nothing that is not finite leaves here (`finite`): a `NaN` becomes a
         // `null` in JSON, and the catalogue refused every package for it.
         match cache
             .well(uri, || {
-                wells::read_well_with(source, &asked.store, uri, scene, well_context)
+                wells::read_well_cached(source, &asked.store, uri, scene, well_context, &strata)
             })
             .and_then(finite::finite_well)
         {

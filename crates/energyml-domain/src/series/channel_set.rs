@@ -607,6 +607,11 @@ fn cells_of(values: &energyml_storage::ArrayValues) -> Vec<Value> {
         ArrayValues::U32(all) => all.iter().map(|value| Value::from(*value)).collect(),
         ArrayValues::U16(all) => all.iter().map(|value| Value::from(*value)).collect(),
         ArrayValues::U8(all) => all.iter().map(|value| Value::from(*value)).collect(),
+        // Text stays text: widened to a double it would be a `NaN` per string, and `null` in a row, which reads as a
+        // missing value. As strings the cell is refused by name where a number is expected (`read_number`).
+        ArrayValues::Text(all) => all.iter().map(|value| Value::from(value.as_str())).collect(),
+        // `ArrayValues` is `#[non_exhaustive]`: a numeric variant added later is widened to a double. Text, the one
+        // family `to_f64` cannot widen, is matched above.
         other => other.to_f64().into_iter().map(real).collect(),
     }
 }

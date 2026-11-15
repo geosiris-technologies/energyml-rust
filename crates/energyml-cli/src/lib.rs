@@ -2414,15 +2414,32 @@ fn preview(data: &energyml_storage::ArrayData, limit: usize) -> String {
         .map(|d| d.to_string())
         .collect::<Vec<_>>()
         .join("×");
-    let values = data.to_f64();
-    let shown = values
-        .iter()
-        .take(limit)
-        .map(|v| format!("{v}"))
-        .collect::<Vec<_>>()
-        .join(", ");
-    let head = if values.len() > limit {
-        format!("[{shown}, … {} more]", values.len() - limit)
+    // The strings of a text array are shown as they are: `to_f64` would print a `NaN` per string, which reads
+    // as missing data.
+    let (shown, count) = match data.try_to_f64() {
+        Some(values) => (
+            values
+                .iter()
+                .take(limit)
+                .map(|v| format!("{v}"))
+                .collect::<Vec<_>>()
+                .join(", "),
+            values.len(),
+        ),
+        None => {
+            let text = data.text().unwrap_or(&[]);
+            (
+                text.iter()
+                    .take(limit)
+                    .map(|v| format!("{v:?}"))
+                    .collect::<Vec<_>>()
+                    .join(", "),
+                text.len(),
+            )
+        }
+    };
+    let head = if count > limit {
+        format!("[{shown}, … {} more]", count - limit)
     } else {
         format!("[{shown}]")
     };
@@ -3503,4 +3520,30 @@ fn read_manifest(text: &str) -> Result<Vec<String>> {
         }
     }
     Ok(out)
+}
+
+#[cfg(test)]
+mod preview_tests {
+    use super::preview;
+    use energyml_storage::{ArrayData, ArrayMetadata, ArrayValues};
+
+    fn data(values: ArrayValues, element_type: &str) -> ArrayData {
+        ArrayData {
+            metadata: ArrayMetadata::new(vec![values.len() as i64], element_type),
+            values,
+        }
+    }
+
+    /// A text array is previewed as its strings, never as a row of `NaN`.
+    ///
+    /// Break it: go back to `data.to_f64()` in `preview`; the line then reads `NaN, NaN`.
+    #[test]
+    fn a_text_array_previews_its_strings_not_nan() {
+        let text = data(ArrayValues::Text(vec!["sand".into(), "shale".into()]), "string");
+        let line = preview(&text, 10);
+        assert!(!line.contains("NaN"), "{line}");
+        assert!(line.contains("\"sand\"") && line.contains("\"shale\""), "{line}");
+        let numbers = data(ArrayValues::F64(vec![1.5, 2.0]), "double");
+        assert_eq!(preview(&numbers, 10), "2 double [1.5, 2]");
+    }
 }
