@@ -744,6 +744,7 @@ dependencies = [
  "energyml-resqml-2-2",
  "energyml-schemas",
  "energyml-storage",
+ "flate2",
  "quick-xml",
  "resvg",
  "thiserror",

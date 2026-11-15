@@ -174,8 +174,8 @@ and takes the first and ninety-ninth percentiles as bounds, as everywhere else
 The SVG carries the **request and the view** in its metadata (element `along-well-view`).
 `redraw` reads them back and makes the same drawing again over the same package, byte
 for byte. A PNG is always the SVG rendered by `draw::png::render`, never a second
-drawing. With `embedCurtain` the curtain is written into the SVG as an image, which needs
-the `png` feature of `energyml-sheet`.
+drawing. With `embedCurtain` the curtain is written into the SVG as an image, in every
+build.
 
 An operation, `along-well-view` of [Creating objects](creating-objects.md), stores the
 drawing in a package on request: the SVG as an attachment of the frame and an `Activity`

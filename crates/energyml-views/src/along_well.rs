@@ -387,7 +387,7 @@ impl ViewKind for AlongWell {
             embed_curtain: true,
         };
 
-        // The writer of an SVG refuses the curtain's image by name without the `png` feature of the sheet.
+        // The curtain goes into the SVG as an image, written in every build.
         let sample = colours
             .as_ref()
             .map(|painted| move |value: f64| painted.sample(value));

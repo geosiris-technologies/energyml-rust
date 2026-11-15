@@ -568,7 +568,6 @@ fn write_item(out: &mut String, item: &Item, hatches: &[Hatch], d: usize) -> Res
     Ok(())
 }
 
-#[cfg(feature = "png")]
 fn write_image(
     out: &mut String,
     rect: &crate::draw::list::Rect,
@@ -586,19 +585,6 @@ fn write_image(
         base64(&bytes)
     );
     Ok(())
-}
-
-#[cfg(not(feature = "png"))]
-fn write_image(
-    _out: &mut String,
-    _rect: &crate::draw::list::Rect,
-    _raster: &crate::draw::raster::Raster,
-    _d: usize,
-) -> Result<(), DrawError> {
-    Err(DrawError::FeatureNotEnabled {
-        feature: "png",
-        what: "write a raster image into an SVG",
-    })
 }
 
 /// A marker's symbol: one group, centred on `at`, every shape a path or a
@@ -733,7 +719,6 @@ fn sector_commands(centre: [f64; 2], inner: f64, outer: f64, start: f64, end: f6
 }
 
 /// Standard base64 with padding (RFC 4648 section 4).
-#[cfg_attr(not(feature = "png"), allow(dead_code))]
 fn base64(bytes: &[u8]) -> String {
     const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);

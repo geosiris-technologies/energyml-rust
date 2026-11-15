@@ -369,10 +369,8 @@ fn a_grid_of_the_wrong_size_or_a_pick_out_of_it_is_refused() {
     ));
 }
 
-/// W3C PNG Specification (Second Edition), signature and IHDR chunk
-/// (TODO(verify): paragraph numbers). Casser : écrire la hauteur à la place de
-/// la largeur.
-#[cfg(feature = "png")]
+/// W3C PNG Specification (Second Edition), signature and IHDR chunk. Break it: write the height in place of the
+/// width.
 #[test]
 fn encoded_png_starts_with_the_signature_and_says_its_size() {
     use energyml_sheet::draw::raster::encode_png;
@@ -383,7 +381,27 @@ fn encoded_png_starts_with_the_signature_and_says_its_size() {
     assert_eq!(u32::from_be_bytes(bytes[20..24].try_into().unwrap()), 2);
 }
 
-/// Casser : ne pas prémultiplier avant d'encoder.
+/// The pixels are written exactly, straight alpha, in every build: the image data inflated gives each row, after
+/// its filter byte 0, the raster's bytes. Break it: premultiply the pixels before writing them.
+#[test]
+fn a_raster_is_written_exactly_whatever_the_build() {
+    use energyml_sheet::draw::raster::encode_png;
+    use std::io::Read as _;
+    let rgba = vec![255, 0, 0, 255, 0, 0, 0, 0, 10, 20, 30, 128, 0, 255, 0, 255];
+    let raster = Raster::from_rgba(2, 2, rgba.clone()).unwrap();
+    let bytes = encode_png(&raster).unwrap();
+    // IHDR is 8 + 4 + 4 + 13 + 4 bytes from the start; IDAT follows.
+    let at = 8 + 25;
+    let length = u32::from_be_bytes(bytes[at..at + 4].try_into().unwrap()) as usize;
+    assert_eq!(&bytes[at + 4..at + 8], b"IDAT");
+    let mut inflated = Vec::new();
+    flate2::read::ZlibDecoder::new(&bytes[at + 8..at + 8 + length])
+        .read_to_end(&mut inflated)
+        .unwrap();
+    assert_eq!(inflated, [&[0][..], &rgba[..8], &[0][..], &rgba[8..]].concat());
+}
+
+/// A decoder that is not this crate's reads the same pixels back. Break it: write the rows bottom up.
 #[cfg(feature = "png")]
 #[test]
 fn encode_then_decode_gives_the_same_opaque_pixels() {
@@ -396,16 +414,4 @@ fn encode_then_decode_gives_the_same_opaque_pixels() {
         let got = [p.red(), p.green(), p.blue(), p.alpha()];
         assert_eq!(Some(got), raster.pixel(x, y), "({x}, {y})");
     }
-}
-
-/// ADR-0005. Casser : rendre `Ok(vec![])`.
-#[cfg(not(feature = "png"))]
-#[test]
-fn encode_png_refuses_without_its_feature() {
-    use energyml_sheet::draw::raster::encode_png;
-    let raster = Raster::transparent(1, 1).unwrap();
-    assert!(matches!(
-        encode_png(&raster),
-        Err(DrawError::FeatureNotEnabled { feature: "png", .. })
-    ));
 }

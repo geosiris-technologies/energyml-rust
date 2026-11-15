@@ -97,8 +97,8 @@ pub struct View {
     pub colours: BTreeMap<String, String>,
     /// The legend, when asked.
     pub legend: Option<LegendAsk>,
-    /// Write the curtain into the SVG as an image (an `Item::Image`, which needs the `png` feature of
-    /// energyml-sheet); the PNG of that SVG, made by `draw::png::render`, shows it.
+    /// Write the curtain into the SVG as an image (an `Item::Image`, encoded in every build); the PNG of that
+    /// SVG, made by `draw::png::render`, shows it.
     pub embed_curtain: bool,
 }
 

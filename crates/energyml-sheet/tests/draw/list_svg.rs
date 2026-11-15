@@ -570,20 +570,9 @@ fn raster_list() -> DisplayList {
     )])
 }
 
-/// ADR-0005: a missing backend is `FeatureNotEnabled`, never an empty result.
-/// Breaks if: the group is written without its image.
-#[cfg(not(feature = "png"))]
-#[test]
-fn a_raster_without_the_png_feature_is_refused() {
-    assert!(matches!(
-        write(&raster_list(), None),
-        Err(DrawError::FeatureNotEnabled { feature: "png", .. })
-    ));
-}
-
 /// PNG specification section 5.2: the signature, in base64 `iVBORw0KGgo`.
+/// In every build: the one PNG encoder needs no feature.
 /// Breaks if: `xmlns:xlink` is not declared (the XML stops reading).
-#[cfg(feature = "png")]
 #[test]
 fn a_raster_is_embedded_as_a_png_image() {
     let svg = write(&raster_list(), None).expect("a valid list");

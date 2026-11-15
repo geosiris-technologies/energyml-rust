@@ -681,38 +681,58 @@ pub fn paint_quads(
     counts
 }
 
-/// The raster as PNG bytes. With the `png` feature only: without it, a
-/// `FeatureNotEnabled` refusal.
+/// A raster as a PNG: 8-bit RGBA, **straight alpha** (every pixel comes back exactly, a half-transparent one
+/// included), filter 0 on every row, the pixels compressed by zlib (W3C PNG Specification, Second Edition: the
+/// signature, the `IHDR`, `IDAT` and `IEND` chunks, each closed by its CRC-32).
 ///
-/// The pixels are premultiplied by tiny-skia's own function, then encoded (and
-/// un-premultiplied) by it: an opaque or a transparent pixel comes back exactly,
-/// a half-transparent one can lose a bit. This PNG is for a face that wants the
-/// raster alone; the PNG of a view is its SVG rasterised ([`crate::draw::png`]).
-#[cfg(feature = "png")]
+/// One encoder whatever the build: a view holding a raster (an image track, a curtain) writes its SVG without the
+/// `png` feature, and the same raster gives the same bytes in every build. The PNG **of a view** is still its SVG
+/// rasterised ([`crate::draw::png`]), which needs the feature.
+///
+/// # Errors
+///
+/// A raster of no pixel, or a compression that fails.
 pub fn encode_png(raster: &Raster) -> Result<Vec<u8>, DrawError> {
-    use resvg::tiny_skia::{ColorU8, IntSize, Pixmap};
+    use std::io::Write as _;
 
-    let size_error = || DrawError::Size {
-        width: u64::from(raster.width),
-        height: u64::from(raster.height),
-        limit: MAX_RASTER_PIXELS,
-    };
-    let mut data = Vec::with_capacity(raster.rgba.len());
-    for p in raster.rgba.as_chunks::<4>().0 {
-        let c = ColorU8::from_rgba(p[0], p[1], p[2], p[3]).premultiply();
-        data.extend_from_slice(&[c.red(), c.green(), c.blue(), c.alpha()]);
+    let (width, height) = (raster.width, raster.height);
+    if width == 0 || height == 0 {
+        return Err(DrawError::Size {
+            width: u64::from(width),
+            height: u64::from(height),
+            limit: MAX_RASTER_PIXELS,
+        });
     }
-    let size = IntSize::from_wh(raster.width, raster.height).ok_or_else(size_error)?;
-    let pixmap = Pixmap::from_vec(data, size).ok_or_else(size_error)?;
-    pixmap.encode_png().map_err(|e| DrawError::Encode(e.to_string()))
+    let row = width as usize * 4;
+    let mut scanlines = Vec::with_capacity((row + 1) * height as usize);
+    for pixels in raster.rgba.chunks_exact(row) {
+        scanlines.push(0);
+        scanlines.extend_from_slice(pixels);
+    }
+    let mut zlib = flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::default());
+    zlib.write_all(&scanlines)
+        .map_err(|why| DrawError::Encode(why.to_string()))?;
+    let compressed = zlib.finish().map_err(|why| DrawError::Encode(why.to_string()))?;
+
+    let mut header = Vec::with_capacity(13);
+    header.extend_from_slice(&width.to_be_bytes());
+    header.extend_from_slice(&height.to_be_bytes());
+    // Bit depth 8, colour type 6 (RGBA), compression 0, filter 0, no interlace.
+    header.extend_from_slice(&[8, 6, 0, 0, 0]);
+    let mut out = b"\x89PNG\r\n\x1a\n".to_vec();
+    png_chunk(&mut out, b"IHDR", &header);
+    png_chunk(&mut out, b"IDAT", &compressed);
+    png_chunk(&mut out, b"IEND", &[]);
+    Ok(out)
 }
 
-/// Without the `png` feature: the refusal, by name.
-#[cfg(not(feature = "png"))]
-pub fn encode_png(raster: &Raster) -> Result<Vec<u8>, DrawError> {
-    let _ = raster;
-    Err(DrawError::FeatureNotEnabled {
-        feature: "png",
-        what: "encode a raster as PNG",
-    })
+/// One chunk: its length, its type, its data, the CRC-32 of the type and the data.
+fn png_chunk(out: &mut Vec<u8>, kind: &[u8; 4], data: &[u8]) {
+    out.extend_from_slice(&(data.len() as u32).to_be_bytes());
+    out.extend_from_slice(kind);
+    out.extend_from_slice(data);
+    let mut crc = flate2::Crc::new();
+    crc.update(kind);
+    crc.update(data);
+    out.extend_from_slice(&crc.sum().to_be_bytes());
 }
