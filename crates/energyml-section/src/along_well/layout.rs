@@ -244,14 +244,10 @@ fn black() -> Colour {
     Colour::rgb(0, 0, 0)
 }
 
-/// `#rrggbb` as a colour.
+/// A colour's text as a colour: `energyml_domain::color::Rgba::parse`, the one
+/// reader (D3). A text that does not read is `None`, and the caller draws black.
 fn parse_hex(text: &str) -> Option<Colour> {
-    let digits = text.strip_prefix('#')?;
-    if digits.len() != 6 || !digits.is_ascii() {
-        return None;
-    }
-    let channel = |at: usize| u8::from_str_radix(&digits[at..at + 2], 16).ok();
-    Some(Colour::rgb(channel(0)?, channel(2)?, channel(4)?))
+    energyml_domain::color::Rgba::parse(text).ok().map(Colour::from)
 }
 
 fn colour_of(view: &View, key: &str) -> Colour {

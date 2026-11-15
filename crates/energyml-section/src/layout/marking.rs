@@ -61,10 +61,9 @@ pub(super) struct Resolved {
     placed: Vec<Placed>,
 }
 
+/// Whether a marker's colour reads: `energyml_domain::color::Rgba::parse`, the one reader (D3).
 fn valid_colour(colour: &str) -> bool {
-    colour
-        .strip_prefix('#')
-        .is_some_and(|hex| (hex.len() == 6 || hex.len() == 8) && hex.chars().all(|c| c.is_ascii_hexdigit()))
+    energyml_domain::color::Rgba::parse(colour).is_ok()
 }
 
 /// Why a marker has no point on a well.
@@ -119,7 +118,7 @@ pub(super) fn resolve(
             Some(format!("shape \"{}\" is not drawn by this build", marker.shape))
         } else if !valid_colour(&marker.colour) {
             Some(format!(
-                "colour \"{}\" is not #rrggbb or #rrggbbaa",
+                "colour \"{}\" is not #rrggbb, #rrggbbaa or #rgb",
                 marker.colour
             ))
         } else if !(marker.size_px.is_finite() && marker.size_px > 0.0 && marker.size_px <= MAX_SIZE_PX) {

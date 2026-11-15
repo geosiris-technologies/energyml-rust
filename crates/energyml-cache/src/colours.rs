@@ -78,9 +78,20 @@ impl<'a> Row<'a> {
 /// `name` itself (lowercased) when the package holds no such object: a cascade
 /// may ask about a target that lives elsewhere.
 fn walk_key(store: &EpcStore, name: &str) -> Result<String, Error> {
+    Ok(held_uri(store, name)?.unwrap_or_else(|| name.trim().to_ascii_lowercase()))
+}
+
+/// The uri of the object `name` names, through the store's one door
+/// ([`EpcStore::resolve`]), written **once**: `None` when the package holds no
+/// such object - a cascade may ask about a target that lives elsewhere - and an
+/// error for any other refusal (a name that fits two versions). What a caller
+/// does with the `None` is its own: [`walk_key`] keys the walk by the lowercased
+/// name; the maps this module answers (`file_colours_at`, `of_package`) keep the
+/// trimmed name as given, because their keys are the caller's own spelling.
+fn held_uri(store: &EpcStore, name: &str) -> Result<Option<String>, Error> {
     match store.resolve(name.trim()) {
-        Ok(summary) => Ok(summary.uri.clone()),
-        Err(energyml_storage::Error::NotFound(_)) => Ok(name.trim().to_ascii_lowercase()),
+        Ok(summary) => Ok(Some(summary.uri.clone())),
+        Err(energyml_storage::Error::NotFound(_)) => Ok(None),
         Err(other) => Err(other.into()),
     }
 }
@@ -166,13 +177,11 @@ pub fn kind_chain(store: &EpcStore, read: &Property<'_>) -> Vec<String> {
 /// names is the property read), or a bare uuid as an adapter. Empty when the
 /// store holds no such property; an error when the name fits two versions.
 pub fn kind_chain_at(store: &EpcStore, name: &str) -> Result<Vec<String>, Error> {
-    let summary = match store.resolve(name.trim()) {
-        Ok(summary) => summary,
-        Err(energyml_storage::Error::NotFound(_)) => return Ok(Vec::new()),
-        Err(other) => return Err(other.into()),
+    let Some(uri) = held_uri(store, name)? else {
+        return Ok(Vec::new());
     };
     Ok(store
-        .get_object(&summary.uri)
+        .get_object(&uri)
         .ok()
         .and_then(|object| {
             property::read(object.as_reflect())
@@ -330,11 +339,7 @@ impl Cache {
         let mut keys = Vec::with_capacity(names.len());
         let mut rows: Vec<Row<'_>> = Vec::with_capacity(names.len());
         for name in names {
-            let key = match store.resolve(name.trim()) {
-                Ok(summary) => summary.uri.clone(),
-                Err(energyml_storage::Error::NotFound(_)) => name.trim().to_string(),
-                Err(other) => return Err(other.into()),
-            };
+            let key = held_uri(store, name)?.unwrap_or_else(|| name.trim().to_string());
             rows.push(Row::at(store, name, Vec::new(), None)?);
             keys.push(key);
         }
@@ -368,10 +373,12 @@ impl Cache {
         let by_uri = self.file_colours_at(store, uuids)?;
         let mut out = HashMap::with_capacity(uuids.len());
         for uuid in uuids {
-            let key = match store.resolve(uuid.trim()) {
-                Ok(summary) => summary.uri.clone(),
-                Err(_) => uuid.trim().to_string(),
-            };
+            // Any refusal, a name that fits two versions included, was already
+            // raised by `file_colours_at` above: this one only spells the key.
+            let key = held_uri(store, uuid)
+                .ok()
+                .flatten()
+                .unwrap_or_else(|| uuid.trim().to_string());
             out.insert(uuid.to_ascii_lowercase(), by_uri.get(&key).cloned().flatten());
         }
         Ok(out)
@@ -527,11 +534,7 @@ pub fn of_package(cache: &Cache, store: &EpcStore, wanted: &Wanted<'_>) -> Resul
     // compared by its full uri so that one version of a uuid is not the other.
     let wanted_uri: Option<String> = match wanted.object {
         None => None,
-        Some(name) => match store.resolve(name.trim()) {
-            Ok(summary) => Some(summary.uri.clone()),
-            Err(energyml_storage::Error::NotFound(_)) => Some(name.trim().to_string()),
-            Err(other) => return Err(other.into()),
-        },
+        Some(name) => Some(held_uri(store, name)?.unwrap_or_else(|| name.trim().to_string())),
     };
 
     // One index for the whole walk: a cache that keeps nothing builds it once.

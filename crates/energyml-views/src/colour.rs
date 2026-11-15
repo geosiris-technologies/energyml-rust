@@ -109,6 +109,41 @@ fn bytes(rgba: Rgba) -> [u8; 4] {
     [channel(rgba.r), channel(rgba.g), channel(rgba.b), channel(rgba.a)]
 }
 
+/// The palette a view was asked for **by name**, the one reading of that request: the refusal when no palette has the
+/// name (it lists the known ones) and when the palette paints another reading (it lists those that fit `reading`;
+/// `what` ends the sentence: "for `what`: ..."). Every view that takes a `palette` setting goes through it.
+///
+/// # Errors
+///
+/// [`ViewRefusal::Palette`] in both cases.
+pub fn palette_named(
+    cx: &ViewContext<'_>,
+    name: &str,
+    reading: Reading,
+    what: &str,
+) -> Result<energyml_domain::palettes::Palette, ViewRefusal> {
+    let Some(found) = cx.palettes.named(name) else {
+        let known: Vec<&str> = cx.palettes.all().iter().map(|palette| palette.name).collect();
+        return Err(ViewRefusal::Palette {
+            asked: name.to_string(),
+            why: format!("no palette of that name; the palettes are {}", known.join(", ")),
+        });
+    };
+    if found.reading != reading {
+        let fitting: Vec<&str> = cx
+            .palettes
+            .for_reading(reading)
+            .iter()
+            .map(|palette| palette.name)
+            .collect();
+        return Err(ViewRefusal::Palette {
+            asked: name.to_string(),
+            why: format!("it paints another reading; for {what}: {}", fitting.join(", ")),
+        });
+    }
+    Ok(found)
+}
+
 /// The colours of the values of `object` (when it has one), over `bounds`, `logarithmic` or not.
 ///
 /// `palette` named: that palette, refused when no palette has the name or when it is for another reading. Else the
@@ -128,25 +163,7 @@ pub fn value_colours(
     reading: Reading,
 ) -> Result<ValueColours, ViewRefusal> {
     let by_palette = |name: &str| -> Result<ValueColours, ViewRefusal> {
-        let Some(found) = cx.palettes.named(name) else {
-            let known: Vec<&str> = cx.palettes.all().iter().map(|palette| palette.name).collect();
-            return Err(ViewRefusal::Palette {
-                asked: name.to_string(),
-                why: format!("no palette of that name; the palettes are {}", known.join(", ")),
-            });
-        };
-        if found.reading != reading {
-            let fitting: Vec<&str> = cx
-                .palettes
-                .for_reading(reading)
-                .iter()
-                .map(|palette| palette.name)
-                .collect();
-            return Err(ViewRefusal::Palette {
-                asked: name.to_string(),
-                why: format!("it paints another reading; for this one: {}", fitting.join(", ")),
-            });
-        }
+        let found = palette_named(cx, name, reading, "this one")?;
         Ok(ValueColours {
             painting: Painting::Mapped {
                 map: Box::new(found.ramp()),

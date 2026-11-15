@@ -149,28 +149,7 @@ impl ViewKind for TableCurve {
 
         // The palette: a categorical one, the request's or the default.
         let palette = match request.settings.text("palette") {
-            Some(name) => {
-                let Some(found) = cx.palettes.named(name) else {
-                    let known: Vec<&str> = cx.palettes.all().iter().map(|palette| palette.name).collect();
-                    return Err(ViewRefusal::Palette {
-                        asked: name.to_string(),
-                        why: format!("no palette of that name; the palettes are {}", known.join(", ")),
-                    });
-                };
-                if found.reading != Reading::Categorical {
-                    let fitting: Vec<&str> = cx
-                        .palettes
-                        .for_reading(Reading::Categorical)
-                        .iter()
-                        .map(|palette| palette.name)
-                        .collect();
-                    return Err(ViewRefusal::Palette {
-                        asked: name.to_string(),
-                        why: format!("it paints another reading; for curves: {}", fitting.join(", ")),
-                    });
-                }
-                found
-            }
+            Some(name) => crate::colour::palette_named(cx, name, Reading::Categorical, "curves")?,
             None => cx
                 .palettes
                 .default_for(Reading::Categorical)

@@ -394,7 +394,9 @@ fn shared_writes_one_entry_naming_every_object() {
 /// A colour that does not read is refused **by name**, all of them at once -
 /// never drawn as some default colour nobody chose.
 ///
-/// To break: a parser that falls back on grey, reads three digits, forgets the
+/// D3 reads `#rgb`, so four digits stand for the wrong length here.
+///
+/// To break: a parser that falls back on grey, reads four digits, forgets the
 /// `#`, or lets `u8::from_str_radix` take the sign in `#+f+f+f`; or a refusal
 /// that stops at the first bad colour.
 #[test]
@@ -406,7 +408,7 @@ fn a_colour_that_does_not_read_is_refused_by_name_and_never_replaced() {
     for bad in [
         "#12345g",
         "red",
-        "#fff",
+        "#ffff",
         "8b5a2b",
         "#8b5a2b0",
         "#+f+f+f",

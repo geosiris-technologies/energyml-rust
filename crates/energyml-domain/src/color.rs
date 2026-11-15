@@ -108,33 +108,67 @@ impl Rgba {
         [byte(self.r), byte(self.g), byte(self.b), byte(self.a)]
     }
 
-    /// `#rrggbbaa`.
+    /// The colour of four bytes, the inverse of [`Rgba::to_bytes`]: `from_bytes(c.to_bytes())`
+    /// gives back the same four bytes.
+    pub fn from_bytes(bytes: [u8; 4]) -> Rgba {
+        let channel = |value: u8| f64::from(value) / 255.0;
+        Rgba {
+            r: channel(bytes[0]),
+            g: channel(bytes[1]),
+            b: channel(bytes[2]),
+            a: channel(bytes[3]),
+        }
+    }
+
+    /// `#rrggbbaa`, lower case. One of the three writers of a colour's text -
+    /// with [`Rgba::to_hex_rgb`] and [`Rgba::to_hex_compact`] - and the only
+    /// ones: none of them is written by hand elsewhere (decision D3 of the review
+    /// of 15/11/2026).
     pub fn to_hex(self) -> String {
         let [r, g, b, a] = self.to_bytes();
         format!("#{r:02x}{g:02x}{b:02x}{a:02x}")
     }
 
-    /// `#rrggbb` or `#rrggbbaa` - six digits are opaque - the inverse of
-    /// [`Rgba::to_hex`].
+    /// `#rrggbb`, lower case: the alpha is not part of it. What an SVG
+    /// attribute that has a separate opacity wants.
+    pub fn to_hex_rgb(self) -> String {
+        let [r, g, b, _] = self.to_bytes();
+        format!("#{r:02x}{g:02x}{b:02x}")
+    }
+
+    /// `#rrggbb` when the colour is opaque, `#rrggbbaa` otherwise.
+    pub fn to_hex_compact(self) -> String {
+        let [_, _, _, a] = self.to_bytes();
+        if a == 255 {
+            self.to_hex_rgb()
+        } else {
+            self.to_hex()
+        }
+    }
+
+    /// `#rgb`, `#rrggbb` or `#rrggbbaa` - three and six digits are opaque -
+    /// the inverse of [`Rgba::to_hex`]. `#rgb` is the CSS shorthand: each digit
+    /// stands for itself twice (`#f80` is `#ff8800`).
     ///
     /// Everything else is refused, with the text it was given: a colour that
     /// silently becomes another is the failure a web front end's colour module
     /// was written about. Stricter than `u8::from_str_radix` alone, which takes
     /// a sign - `#+f+f+f` read as a dark grey in the front end's bridge until
     /// 24/09/2026, whose own doc promised *nothing else is accepted* - and the
-    /// `#` is required. The one reader of a colour's text: the front end's bridge
+    /// `#` is required. The one reader of a colour's text (decision D3 of the
+    /// review of 15/11/2026): the front end's bridge, the section and the sheet,
     /// and the `graphical-information` operation call it.
     pub fn parse(text: &str) -> std::result::Result<Rgba, String> {
         let text = text.trim();
         let refused = || {
             format!(
-                "`{text}` is not a colour written `#rrggbb` or `#rrggbbaa` - red, green, blue and, with eight digits, alpha, two hexadecimal digits each"
+                "`{text}` is not a colour written `#rgb`, `#rrggbb` or `#rrggbbaa` - red, green, blue and, with eight digits, alpha, one or two hexadecimal digits each"
             )
         };
         let Some(digits) = text.strip_prefix('#') else {
             return Err(refused());
         };
-        if !matches!(digits.len(), 6 | 8) || !digits.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        if !matches!(digits.len(), 3 | 6 | 8) || !digits.bytes().all(|byte| byte.is_ascii_hexdigit()) {
             return Err(refused());
         }
         let channel = |at: usize| -> std::result::Result<f64, String> {
@@ -142,6 +176,19 @@ impl Rgba {
                 .map(|value| f64::from(value) / 255.0)
                 .map_err(|_| refused())
         };
+        if digits.len() == 3 {
+            let nibble = |at: usize| -> std::result::Result<f64, String> {
+                u8::from_str_radix(&digits[at..at + 1], 16)
+                    .map(|value| f64::from(value * 17) / 255.0)
+                    .map_err(|_| refused())
+            };
+            return Ok(Rgba {
+                r: nibble(0)?,
+                g: nibble(1)?,
+                b: nibble(2)?,
+                a: 1.0,
+            });
+        }
         Ok(Rgba {
             r: channel(0)?,
             g: channel(2)?,
@@ -890,6 +937,24 @@ pub struct ElementInfo {
     pub active_color: Option<usize>,
 }
 
+impl ElementInfo {
+    /// `color` as drawn under this element's alpha - **the rule, written once**,
+    /// stated in the annotation of `OverwriteColorAlpha`: a constant alpha
+    /// replaces the colour's own when the element says so, and multiplies it
+    /// otherwise.
+    fn rgba(&self, color: &Hsv) -> Rgba {
+        let mut rgba = color.to_rgba();
+        if let Some(alpha) = self.constant_alpha {
+            rgba.a = if self.overwrite_color_alpha {
+                alpha
+            } else {
+                rgba.a * alpha
+            };
+        }
+        rgba
+    }
+}
+
 /// What one `GraphicalInformation` says.
 #[derive(Clone, PartialEq, Debug)]
 pub enum Information {
@@ -1155,20 +1220,12 @@ impl GraphicalSet {
     /// `address` is the uri of the object (its identity): an entry that names
     /// another version of it does not decorate it. A bare uuid, the library's
     /// entry adapter, names no version and takes the entries of every one.
+    ///
+    /// The one matcher is [`Cascade::targeting`]'s (a map of the set's entries by
+    /// target); this builds it for one question. A walk that asks many keeps its
+    /// [`Cascade`].
     pub fn targeting(&self, address: &str) -> Vec<&Entry> {
-        let (wanted, version) = identity::parse_address(address);
-        let mut found: Vec<&Entry> = self
-            .entries
-            .iter()
-            .filter(|entry| {
-                entry.addresses().iter().any(|named| {
-                    let (uuid, named_version) = identity::parse_address(named);
-                    uuid == wanted && identity::versions_agree(version.as_deref(), named_version.as_deref())
-                })
-            })
-            .collect();
-        found.reverse();
-        found
+        Cascade::new(self).targeting(address)
     }
 
     /// The entry at a positional index, as `Active*InformationIndex` means it.
@@ -1382,6 +1439,14 @@ impl<'a> Cascade<'a> {
             inherit: true,
             targets: RefCell::new(None),
         }
+    }
+
+    /// `Some((theirs, wanted))` when an entry meant for the `theirs` viewer must
+    /// not paint this cascade's `wanted` one - the rule written once: an entry
+    /// that names no viewer, or a cascade that asks for none, skips nothing.
+    fn other_viewer<'x>(&'x self, theirs: &'x Option<String>) -> Option<(&'x str, &'x str)> {
+        let (wanted, theirs) = (self.viewer_kind.as_ref()?, theirs.as_ref()?);
+        (!theirs.eq_ignore_ascii_case(wanted)).then_some((theirs.as_str(), wanted.as_str()))
     }
 
     /// The entries of the set that target this object, **latest first** - what
@@ -1657,9 +1722,7 @@ impl<'a> Cascade<'a> {
             else {
                 continue;
             };
-            if let (Some(wanted), Some(theirs)) = (&self.viewer_kind, viewer_kind)
-                && !theirs.eq_ignore_ascii_case(wanted)
-            {
+            if let Some((theirs, wanted)) = self.other_viewer(viewer_kind) {
                 skips.push(format!(
                     "entry {} on {uuid} is for the `{theirs}` viewer, not `{wanted}`; skipped",
                     entry.position
@@ -1676,14 +1739,7 @@ impl<'a> Cascade<'a> {
                 let Some(color) = &info.constant_color else {
                     continue;
                 };
-                let mut rgba = color.to_rgba();
-                if let Some(alpha) = info.constant_alpha {
-                    rgba.a = if info.overwrite_color_alpha {
-                        alpha
-                    } else {
-                        rgba.a * alpha
-                    };
-                }
+                let rgba = info.rgba(color);
                 out.slots[scope.index()] = Some(Decision {
                     paint: Paint::Constant(rgba),
                     level,
@@ -1721,9 +1777,7 @@ impl<'a> Cascade<'a> {
                 continue;
             };
             // An entry meant for another viewer must not paint this one.
-            if let (Some(wanted), Some(theirs)) = (&self.viewer_kind, viewer_kind)
-                && !theirs.eq_ignore_ascii_case(wanted)
-            {
+            if let Some((theirs, wanted)) = self.other_viewer(viewer_kind) {
                 notes.push(format!(
                     "entry {} on {uuid} is for the `{theirs}` viewer, not `{wanted}`; skipped",
                     entry.position
@@ -1753,16 +1807,7 @@ impl<'a> Cascade<'a> {
     ) -> Option<Decision> {
         let (entry, info) = self.constant_on(uuid, element, notes)?;
         let color = info.constant_color.as_ref()?;
-        let mut rgba = color.to_rgba();
-        if let Some(alpha) = info.constant_alpha {
-            // The schema's rule, stated in the annotation of
-            // `OverwriteColorAlpha`: replace, or multiply.
-            rgba.a = if info.overwrite_color_alpha {
-                alpha
-            } else {
-                rgba.a * alpha
-            };
-        }
+        let rgba = info.rgba(color);
         if info.scope != element {
             notes.push(format!(
                 "nothing for {element} on {uuid}; used what it says for the whole object"
@@ -1803,9 +1848,7 @@ impl<'a> Cascade<'a> {
             else {
                 continue;
             };
-            if let (Some(wanted), Some(theirs)) = (&self.viewer_kind, viewer_kind)
-                && !theirs.eq_ignore_ascii_case(wanted)
-            {
+            if self.other_viewer(viewer_kind).is_some() {
                 continue;
             }
             if let Some(info) = elements.iter().find(|info| info.scope == scope)
@@ -2101,22 +2144,58 @@ fn uuid_of_reference(object: &dyn Reflect) -> Option<String> {
 mod tests {
     use super::*;
 
-    /// The two forms, and nothing else: a sign, a missing `#`, three digits
-    /// or a stray character are refused by name - never read as some colour.
+    /// D3 of the review of 15/11/2026: `#rgb`, `#rrggbb` and `#rrggbbaa`, and
+    /// nothing else - a sign, a missing `#`, a wrong length or a stray
+    /// character are refused by name, never read as some colour.
     #[test]
     fn a_colour_reads_back_from_its_hex_and_nothing_else_reads() {
         let red = Rgba::parse("#ff0000").expect("six digits");
         assert_eq!(red.to_bytes(), [255, 0, 0, 255]);
         let clear = Rgba::parse("#00ff0080").expect("eight digits");
         assert_eq!(clear.to_bytes(), [0, 255, 0, 128]);
+        let short = Rgba::parse("#f80").expect("three digits");
+        assert_eq!(short.to_bytes(), [255, 136, 0, 255]);
+        assert_eq!(Rgba::parse(" #F80 ").map(Rgba::to_bytes), Ok(short.to_bytes()));
         assert_eq!(
             Rgba::parse(&clear.to_hex()).map(Rgba::to_bytes),
             Ok(clear.to_bytes())
         );
-        for wrong in ["ff0000", "#+f+f+f", "#fff", "#ff00zz", "#ff00000", ""] {
+        for wrong in [
+            "ff0000", "f80", "#+f+f+f", "#+f0", "#-f0", "#ffff", "#ff00zz", "#ff00000", "#", "",
+        ] {
             let why = Rgba::parse(wrong).expect_err(wrong);
             assert!(why.contains(&format!("`{wrong}`")), "{why}");
         }
+        // Break it: drop the `is_ascii_hexdigit` check in `Rgba::parse` (`#+f0` then reads) or
+        // remove the 3 from `matches!(digits.len(), 3 | 6 | 8)` (`#f80` is then refused).
+    }
+
+    /// The three writers say the same colour three ways, lower case, and each reads back
+    /// through the one reader (D3).
+    #[test]
+    fn the_three_writers_of_a_hex_colour_agree_with_the_reader() {
+        let solid = Rgba::from_bytes([18, 171, 255, 255]);
+        assert_eq!(solid.to_hex(), "#12abffff");
+        assert_eq!(solid.to_hex_rgb(), "#12abff");
+        assert_eq!(solid.to_hex_compact(), "#12abff");
+        let faint = Rgba::from_bytes([18, 171, 255, 128]);
+        assert_eq!(faint.to_hex_rgb(), "#12abff");
+        assert_eq!(faint.to_hex_compact(), "#12abff80");
+        for bytes in [
+            [0u8, 0, 0, 0],
+            [255, 255, 255, 255],
+            [1, 2, 3, 4],
+            [254, 127, 128, 200],
+        ] {
+            let colour = Rgba::from_bytes(bytes);
+            assert_eq!(colour.to_bytes(), bytes);
+            assert_eq!(Rgba::parse(&colour.to_hex()).map(Rgba::to_bytes), Ok(bytes));
+            assert_eq!(
+                Rgba::parse(&colour.to_hex_compact()).map(Rgba::to_bytes),
+                Ok(bytes)
+            );
+        }
+        // Break it: make `to_hex_compact` always write `to_hex_rgb` (the faint colour loses its alpha).
     }
 
     /// The rank an element carries is **the file's**, even past one this build
@@ -2392,12 +2471,7 @@ pub fn constant_colour_entry(
     let hsv = Hsv::from_rgba(colour);
     let title = match name {
         Some(name) if !name.trim().is_empty() => name.trim().to_string(),
-        _ => format!(
-            "#{:02x}{:02x}{:02x}",
-            (colour.r.clamp(0.0, 1.0) * 255.0).round() as u8,
-            (colour.g.clamp(0.0, 1.0) * 255.0).round() as u8,
-            (colour.b.clamp(0.0, 1.0) * 255.0).round() as u8
-        ),
+        _ => colour.to_hex_rgb(),
     };
     // The targets first and in the order given: the schema puts `TargetObject`
     // before the rest of the sequence, and a document that reorders it is one no
@@ -2894,6 +2968,11 @@ pub fn derived_colour(seed: &str) -> String {
         4 => (second, 0.0, chroma),
         _ => (chroma, 0.0, second),
     };
-    let byte = |value: f64| ((value + shift) * 255.0).round() as u8;
-    format!("#{:02x}{:02x}{:02x}", byte(r), byte(g), byte(b))
+    Rgba {
+        r: r + shift,
+        g: g + shift,
+        b: b + shift,
+        a: 1.0,
+    }
+    .to_hex_rgb()
 }

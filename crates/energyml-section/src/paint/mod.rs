@@ -38,24 +38,19 @@ const ABSENT_BELOW: u8 = 128;
 
 type Rgba = [u8; 4];
 
-/// `#rrggbbaa` (or `#rrggbb`, opaque) as four bytes.
+/// A colour's text as four bytes: `energyml_domain::color::Rgba::parse`, the one
+/// reader (D3), so `#rgb`, `#rrggbb` and `#rrggbbaa` read and nothing else.
 fn parse_colour(text: &str) -> Option<Rgba> {
-    let hex = text.strip_prefix('#')?;
-    if !(hex.len() == 6 || hex.len() == 8) || !hex.bytes().all(|b| b.is_ascii_hexdigit()) {
-        return None;
-    }
-    let byte = |i: usize| u8::from_str_radix(&hex[i..i + 2], 16).ok();
-    Some([
-        byte(0)?,
-        byte(2)?,
-        byte(4)?,
-        if hex.len() == 8 { byte(6)? } else { 255 },
-    ])
+    energyml_domain::color::Rgba::parse(text)
+        .ok()
+        .map(|colour| colour.to_bytes())
 }
 
+/// Channels in 0-255, rounded and clamped, written `#rrggbb` by the one writer
+/// (`Rgba::to_hex_rgb`).
 fn hex_of(rgb: [f64; 3]) -> String {
     let c = |v: f64| v.round().clamp(0.0, 255.0) as u8;
-    format!("#{:02x}{:02x}{:02x}", c(rgb[0]), c(rgb[1]), c(rgb[2]))
+    energyml_domain::color::Rgba::from_bytes([c(rgb[0]), c(rgb[1]), c(rgb[2]), 255]).to_hex_rgb()
 }
 
 fn mix(a: Rgba, b: Rgba, t: f64) -> [f64; 3] {

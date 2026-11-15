@@ -170,27 +170,31 @@ fn mix(a: Rgba, b: Rgba, t: f64) -> Rgba {
     [0, 1, 2, 3].map(|k| a[k] + (b[k] - a[k]) * t)
 }
 
-/// `#rrggbbaa` (or `#rrggbb`, opaque).
+/// A colour's text as four channels in 0-255: `energyml_domain::color::Rgba::parse`,
+/// the one reader (D3) - a sign inside the digits is refused, as it is everywhere.
 fn parse(text: &str) -> Result<Rgba, String> {
-    let digits = text
-        .strip_prefix('#')
-        .ok_or_else(|| format!("`{text}` is not `#rrggbbaa`"))?;
-    if !(digits.len() == 8 || digits.len() == 6) || !digits.is_ascii() {
-        return Err(format!("`{text}` is not `#rrggbbaa`"));
-    }
-    let channel = |at: usize| u8::from_str_radix(&digits[at..at + 2], 16).map(f64::from);
-    let read = |at: usize| channel(at).map_err(|_| format!("`{text}` is not `#rrggbbaa`"));
-    let alpha = if digits.len() == 8 { read(6)? } else { 255.0 };
-    Ok([read(0)?, read(2)?, read(4)?, alpha])
+    energyml_domain::color::Rgba::parse(text).map(|colour| colour.to_bytes().map(f64::from))
 }
 
-/// `#rrggbb`, lower case, rounded.
+/// `#rrggbb`, lower case, rounded: the section's one writer, [`super::hex_of`].
 fn hex_of(colour: Rgba) -> String {
-    let byte = |value: f64| value.round().clamp(0.0, 255.0) as u8;
-    format!(
-        "#{:02x}{:02x}{:02x}",
-        byte(colour[0]),
-        byte(colour[1]),
-        byte(colour[2])
-    )
+    super::hex_of([colour[0], colour[1], colour[2]])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// D3 of the review of 15/11/2026: the section reads a colour through
+    /// `Rgba::parse`, so the sign `from_str_radix` takes is refused here as everywhere.
+    #[test]
+    fn a_colour_with_a_sign_inside_is_refused_and_the_forms_of_d3_read() {
+        assert!(parse("#+f+f+f").is_err());
+        assert!(parse("#12345").is_err());
+        assert_eq!(parse("#f80"), Ok([255.0, 136.0, 0.0, 255.0]));
+        assert_eq!(parse("#ff880040"), Ok([255.0, 136.0, 0.0, 64.0]));
+        assert_eq!(hex_of([255.0, 136.0, 0.4, 64.0]), "#ff8800");
+        assert_eq!(super::super::over("#ff0000", 0.5, "#0000ff"), "#800080");
+        // Break it: read the digits by `u8::from_str_radix` alone (`#+f+f+f` then reads).
+    }
 }

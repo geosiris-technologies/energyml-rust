@@ -405,14 +405,10 @@ fn strata_of(
     (intervals, None, borrowed)
 }
 
-/// `#rrggbb`, or `#rrggbbaa` when the colour is not opaque.
+/// `#rrggbb`, or `#rrggbbaa` when the colour is not opaque: the one writer,
+/// `Rgba::to_hex_compact`.
 fn hex(colour: Rgba) -> String {
-    let [r, g, b, a] = colour.to_bytes();
-    if a == 255 {
-        format!("#{r:02x}{g:02x}{b:02x}")
-    } else {
-        format!("#{r:02x}{g:02x}{b:02x}{a:02x}")
-    }
+    colour.to_hex_compact()
 }
 
 /// What makes a frame and its trajectory one wellbore.
