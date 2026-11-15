@@ -7,7 +7,7 @@
 //! every module, so existing `energyml_analysis::…` paths keep resolving.
 //!
 //! Contents: interpolation (`idw`, `kriging`, `variogram`, `rbf`, `mba`,
-//! `mba_frame`), meshing (`triangulate`, `isocontour`, `resample`, `densify`,
+//! `mba_frame`), meshing (`triangulate`, `isocontour`, `isosurface`, `resample`, `densify`,
 //! `loft`, `outline`, `cells`, `nodes`, `extend`) and tools (`measure`,
 //! `barrier`, the private `solve`).
 //!
@@ -31,6 +31,7 @@ pub mod densify;
 pub mod extend;
 pub mod idw;
 pub mod isocontour;
+pub mod isosurface;
 pub mod kriging;
 pub mod loft;
 pub mod mba;
@@ -115,6 +116,18 @@ pub enum Error {
     NotTriangles { given: usize },
     #[error("a triangle names node {at} where the surface has {nodes}")]
     NodeOutOfRange { at: usize, nodes: usize },
+
+    // -- Iso-surfaces -----------------------------------------------------
+    #[error("a lattice of {dims:?} nodes has no cell: each of its three dimensions needs at least two nodes")]
+    NotAVolume { dims: [usize; 3] },
+    #[error("{nodes} nodes - a lattice is indexed in 32 bits, {most} at most")]
+    TooManyNodes { nodes: usize, most: usize },
+    #[error("{values} value(s) for a lattice of {nodes} node(s) - one value per node, the slowest dimension first")]
+    LatticeValues { values: usize, nodes: usize },
+    #[error("slice {slice} gives {given} position(s) where the lattice has {expected} nodes per slice")]
+    SliceLength { slice: usize, given: usize, expected: usize },
+    #[error("a level of {given} has no logarithm - a log10 spacing needs a level > 0")]
+    LevelNotPositive { given: f64 },
 
     // -- Thickness --------------------------------------------------------
     #[error("{given} index(es) - quadrilaterals are four node indices each")]
