@@ -75,13 +75,8 @@ fn ident(name: &str) -> String {
         .collect()
 }
 
-/// XML text, escaped.
-fn esc(text: &str) -> String {
-    text.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-}
+// XML text or attribute, escaped: the one door, `energyml_core::xml::escape_attr`.
+use energyml_core::xml::escape_attr as esc;
 
 /// A scalar default for a parameter, from the slot's suggestion on an empty bag.
 fn default_of(slot: &Slot) -> Option<String> {

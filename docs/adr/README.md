@@ -53,6 +53,7 @@ new record that supersedes the old one, which keeps its text and a status line.
 | [0041](0041-declared-conventions-and-the-vertical-without-crs.md) | A convention the file does not state is declared by the caller; a vertical without a CRS is signalled |
 | [0042](0042-what-a-property-says-of-itself.md) | What a property says of itself: dimensions reduced together, scalars for a wrong declared count, facets of 2.0.1 outside the 2.3 list, the `synthetic` mark, observations beside those of the values |
 | [0043](0043-the-views-of-a-package-through-one-door.md) | The views of a package are drawn through one door, as a display list written to SVG |
+| [0045](0045-text-and-numbers-one-copy.md) | Text and numbers written by hand (XML, JSON, base 64, calendar, numbers) have one copy each |
 
 Decisions about the ETP protocol implementation are recorded in the
 [`retp`](https://github.com/geosiris-technologies/retp) repository.

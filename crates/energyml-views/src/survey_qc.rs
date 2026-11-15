@@ -48,7 +48,7 @@ use serde_json::Value;
 use crate::kind::{Drawn, ObjectSlot, Offer, Request, ViewContext, ViewKind, ViewNote, local_type};
 use crate::refusal::ViewRefusal;
 use crate::setting::ViewSetting;
-use crate::style::{self, PlotFrame};
+use crate::style::{self, PlotFrame, short};
 
 /// The id of the view.
 pub const ID: &str = "survey-qc";
@@ -608,18 +608,6 @@ fn rate(per_metre: f64) -> f64 {
 
 fn numbers(values: &[usize]) -> String {
     values.iter().map(usize::to_string).collect::<Vec<_>>().join(", ")
-}
-
-/// A number written short: no trailing zeros, two decimals at most.
-fn short(value: f64) -> String {
-    let text = format!("{value:.2}");
-    let text = text.trim_end_matches('0').trim_end_matches('.');
-    // A value that rounds to nothing is written 0, never -0.
-    if text == "-0" {
-        "0".to_string()
-    } else {
-        text.to_string()
-    }
 }
 
 /// The first and the last measured depth of the stations.

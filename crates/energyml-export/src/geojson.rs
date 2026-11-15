@@ -496,21 +496,5 @@ fn position(point: [f64; 3]) -> String {
 }
 
 fn pair(key: &str, value: &str) -> String {
-    format!("\"{key}\":\"{}\"", escape(value))
-}
-
-fn escape(value: &str) -> String {
-    let mut out = String::with_capacity(value.len());
-    for c in value.chars() {
-        match c {
-            '"' => out.push_str("\\\""),
-            '\\' => out.push_str("\\\\"),
-            '\n' => out.push_str("\\n"),
-            '\r' => out.push_str("\\r"),
-            '\t' => out.push_str("\\t"),
-            c if (c as u32) < 0x20 => out.push_str(&format!("\\u{:04x}", c as u32)),
-            c => out.push(c),
-        }
-    }
-    out
+    format!("\"{key}\":{}", energyml_core::json::quote(value))
 }

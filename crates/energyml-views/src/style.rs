@@ -32,6 +32,13 @@ pub const TITLE: f64 = 14.0;
 /// The size of a graduation's label, pixels.
 pub const SMALL: f64 = 9.5;
 
+/// A number written short, two decimals at most: [`energyml_sheet::text::short`],
+/// the one short formatter, so that the titles and the keys of every view
+/// (`#md=...`) write a depth the same way.
+pub fn short(value: f64) -> String {
+    energyml_sheet::text::short(value, 2)
+}
+
 /// A text style: a size, an ink, an anchor, no rotation.
 pub fn text(size: f64, colour: Colour, anchor: Anchor) -> TextStyle {
     TextStyle {

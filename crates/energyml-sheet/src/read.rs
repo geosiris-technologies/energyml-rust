@@ -815,8 +815,12 @@ fn build_property_track(
 /// [`crate::layout`]'s own (private) `format_md` uses, kept separate because
 /// a property value is not a measured depth and does not need to share code
 /// with it to agree on what "no useless zeros" means.
+///
+/// A value within 1e-9 of an integer is written as that integer, but only
+/// below 1e15 in magnitude: beyond it the cast to `i64` saturates (1e20 would
+/// print as `i64::MAX`, a number nobody wrote).
 fn format_number(value: f64) -> String {
-    if (value - value.round()).abs() < 1e-9 {
+    if value.abs() < 1e15 && (value - value.round()).abs() < 1e-9 {
         format!("{}", value.round() as i64)
     } else {
         format!("{value}")
@@ -830,5 +834,24 @@ fn format_value(value: f64, uom: Option<&str>) -> String {
     match uom {
         Some(unit) if !unit.is_empty() => format!("{} {unit}", format_number(value)),
         _ => format_number(value),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::format_number;
+
+    /// A value above `i64::MAX` is written as itself, not saturated; the rule
+    /// for near-integers below 1e15 is unchanged.
+    ///
+    /// Break it: remove the `value.abs() < 1e15` guard of `format_number` (1e20
+    /// then prints 9223372036854775807).
+    #[test]
+    fn format_number_does_not_saturate() {
+        assert_eq!(format_number(1e20), "100000000000000000000");
+        assert_eq!(format_number(-1e20), "-100000000000000000000");
+        assert_eq!(format_number(10.0), "10");
+        assert_eq!(format_number(2.9999999999), "3");
+        assert_eq!(format_number(0.25), "0.25");
     }
 }

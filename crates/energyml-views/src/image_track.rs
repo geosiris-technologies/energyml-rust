@@ -34,7 +34,7 @@ use crate::colour::value_colours;
 use crate::kind::{Drawn, ObjectSlot, Offer, Request, ViewContext, ViewKind, ViewNote, local_type};
 use crate::refusal::ViewRefusal;
 use crate::setting::ViewSetting;
-use crate::style::{self, PlotFrame};
+use crate::style::{self, PlotFrame, short};
 
 /// The id of the view.
 pub const ID: &str = "image-track";
@@ -732,10 +732,4 @@ fn legend_layer(
     ));
     layer.elements.push(Element::new(marks));
     layer
-}
-
-/// A number written short: no trailing zeros, two decimals at most.
-fn short(value: f64) -> String {
-    let text = format!("{value:.2}");
-    text.trim_end_matches('0').trim_end_matches('.').to_string()
 }

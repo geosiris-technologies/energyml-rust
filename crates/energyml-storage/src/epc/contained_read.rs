@@ -351,13 +351,9 @@ fn fresh_prefix(bound: &[(String, String)], wanted: &str) -> String {
         .unwrap_or_else(|| base.to_string())
 }
 
-/// Escape a value written between double quotes.
-fn escape_attr(value: &str) -> String {
-    value
-        .replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('"', "&quot;")
-}
+// A value written between double quotes: the one door,
+// `energyml_core::xml::escape_attr`.
+use energyml_core::xml::escape_attr;
 
 /// Write one namespace declaration.
 fn push_declaration(out: &mut String, prefix: &str, uri: &str) {

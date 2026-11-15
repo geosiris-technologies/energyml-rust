@@ -280,7 +280,7 @@ pub fn read_metadata(svg: &str) -> Result<crate::layout::Metadata, MetadataError
             known: crate::model::FORMAT,
         });
     }
-    let json = unescape(body).map_err(MetadataError::Unreadable)?;
+    let json = energyml_core::xml::unescape(body).map_err(MetadataError::Unreadable)?;
     serde_json::from_str(&json).map_err(|why| MetadataError::Unreadable(why.to_string()))
 }
 
@@ -289,43 +289,7 @@ fn attribute(attributes: &str, name: &str) -> Option<String> {
     let key = format!("{name}=\"");
     let from = attributes.find(&key)? + key.len();
     let to = attributes[from..].find('"')? + from;
-    unescape(&attributes[from..to]).ok()
-}
-
-/// XML 1.0 text, unescaped: the five predefined entities and `&#…;` / `&#x…;`.
-fn unescape(text: &str) -> Result<String, String> {
-    let mut out = String::with_capacity(text.len());
-    let mut rest = text;
-    while let Some(at) = rest.find('&') {
-        out.push_str(&rest[..at]);
-        let after = &rest[at + 1..];
-        let end = after
-            .find(';')
-            .ok_or_else(|| format!("an `&` with no `;` at `{}`", &rest[at..rest.len().min(at + 12)]))?;
-        let name = &after[..end];
-        let ch = match name {
-            "amp" => '&',
-            "lt" => '<',
-            "gt" => '>',
-            "quot" => '"',
-            "apos" => '\'',
-            _ => {
-                let code = if let Some(hex) = name.strip_prefix("#x").or_else(|| name.strip_prefix("#X")) {
-                    u32::from_str_radix(hex, 16).ok()
-                } else if let Some(decimal) = name.strip_prefix('#') {
-                    decimal.parse().ok()
-                } else {
-                    None
-                };
-                code.and_then(char::from_u32)
-                    .ok_or_else(|| format!("`&{name};` is not an entity XML 1.0 knows"))?
-            }
-        };
-        out.push(ch);
-        rest = &after[end + 1..];
-    }
-    out.push_str(rest);
-    Ok(out)
+    energyml_core::xml::unescape(&attributes[from..to]).ok()
 }
 
 fn write_axes(out: &mut String, layout: &Layout, zoom: bool) {
@@ -843,36 +807,16 @@ fn points(p: &[[f64; 2]]) -> String {
     s
 }
 
-/// A number, two decimals at most, no trailing zeros, no "-0", never `NaN`.
+/// A number, two decimals at most, no trailing zeros, no "-0", never `NaN`:
+/// [`energyml_sheet::draw::svg::num`].
 fn fmt(v: f64) -> String {
-    if !v.is_finite() {
-        return "0".to_string();
-    }
-    let t = format!("{v:.2}");
-    let t = t.trim_end_matches('0').trim_end_matches('.');
-    if t == "-0" || t.is_empty() {
-        "0".to_string()
-    } else {
-        t.to_string()
-    }
+    energyml_sheet::draw::svg::num(v, 2)
 }
 
-/// Text made safe for XML content and attribute values: the five characters
-/// that mean something, and the control characters XML 1.0 cannot carry at all
-/// are dropped (a title from a file may hold anything).
+/// Text made safe for XML content and attribute values:
+/// [`energyml_core::xml::escape_attr`] (the five characters that mean
+/// something are replaced, and the control characters XML 1.0 cannot carry at
+/// all are dropped - a title from a file may hold anything).
 pub fn escape(text: &str) -> String {
-    let mut out = String::with_capacity(text.len());
-    for ch in text.chars() {
-        match ch {
-            '&' => out.push_str("&amp;"),
-            '<' => out.push_str("&lt;"),
-            '>' => out.push_str("&gt;"),
-            '"' => out.push_str("&quot;"),
-            '\'' => out.push_str("&apos;"),
-            '\t' | '\n' | '\r' => out.push(ch),
-            c if (c as u32) < 0x20 || c == '\u{FFFE}' || c == '\u{FFFF}' => {}
-            c => out.push(c),
-        }
-    }
-    out
+    energyml_core::xml::escape_attr(text)
 }

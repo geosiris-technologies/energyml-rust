@@ -14,7 +14,7 @@ use quick_xml::events::{BytesEnd, BytesStart};
 use crate::error::Result;
 use crate::reflect::{EnergymlType, Roles, TypeInfo, TypeKind};
 use crate::value::{AsFieldValue, FieldValue, FromOwnedValue, OwnedValue, Reflect, downcast_owned};
-use crate::xml::{XmlDeserialize, XmlEvent, XmlReader, XmlSerialize, XmlWriter};
+use crate::xml::{XmlDeserialize, XmlEvent, XmlReader, XmlSerialize, XmlWriter, escape_attr, escape_text};
 
 /// An XML subtree carried verbatim.
 ///
@@ -231,16 +231,6 @@ fn write_end(out: &mut String, e: &BytesEnd<'_>) {
     out.push_str("</");
     out.push_str(&String::from_utf8_lossy(e.name().as_ref()));
     out.push('>');
-}
-
-fn escape_text(text: &str) -> String {
-    text.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-}
-
-fn escape_attr(value: &str) -> String {
-    escape_text(value).replace('"', "&quot;")
 }
 
 // ---------------------------------------------------------------------------

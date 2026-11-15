@@ -165,6 +165,14 @@ pub fn write_value_with(object: &dyn Reflect, source: &dyn ObjectSource) -> Valu
     write_object(object, source, &mut expanded)
 }
 
+/// `text` as a JSON string literal, quotes included: the one door for a string
+/// written into JSON by hand (a graph, a GeoJSON property). `serde_json` does
+/// the escaping (quote, backslash, `\b`, `\f`, `\n`, `\r`, `\t`, any other
+/// control character as `\u00xx`), so no crate keeps an escaper of its own.
+pub fn quote(text: &str) -> String {
+    Value::String(text.to_string()).to_string()
+}
+
 /// Encode an object as JSON text.
 pub fn write_string(object: &dyn Reflect, pretty: bool) -> Result<String> {
     write_string_with(object, &NoObjects, pretty)
@@ -641,6 +649,16 @@ fn kind_of(value: &Value) -> &'static str {
 mod tests {
     use super::*;
     use crate::reflect::EnergymlType;
+
+    /// A string is quoted and escaped as JSON says (RFC 8259 section 7).
+    ///
+    /// Break it: return `format!("\"{text}\"")`.
+    #[test]
+    fn quote_escapes_what_json_requires() {
+        assert_eq!(quote("plain"), "\"plain\"");
+        assert_eq!(quote("a\"b\\c\nd\u{1}"), "\"a\\\"b\\\\c\\nd\\u0001\"");
+        assert_eq!(quote("caf\u{e9}"), "\"caf\u{e9}\"");
+    }
 
     #[test]
     fn a_qualified_type_covers_nested_types_too() {

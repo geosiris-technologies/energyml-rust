@@ -199,42 +199,23 @@ pub enum MetadataError {
     },
 }
 
-/// A number, `decimals` decimals at most, no trailing zeros, no "-0", never `NaN`.
-pub(crate) fn num(v: f64, decimals: usize) -> String {
-    if !v.is_finite() {
-        return "0".to_string();
-    }
-    let text = format!("{v:.decimals$}");
-    let text = if text.contains('.') {
-        text.trim_end_matches('0').trim_end_matches('.')
+/// A number, `decimals` decimals at most, no trailing zeros, no "-0", never `NaN`
+/// (an SVG attribute that is not a number is not an SVG): a value that is not
+/// finite is written `0`. Otherwise [`crate::text::short`].
+pub fn num(v: f64, decimals: usize) -> String {
+    if v.is_finite() {
+        crate::draw::text::short(v, decimals)
     } else {
-        text.as_str()
-    };
-    if text == "-0" || text.is_empty() {
         "0".to_string()
-    } else {
-        text.to_string()
     }
 }
 
-/// Text made safe for XML content and attribute values: the five characters
-/// that mean something are replaced, and the control characters XML 1.0
-/// cannot carry at all are dropped (a title from a file may hold anything).
+/// Text made safe for XML content and attribute values: [`energyml_core::xml::escape_attr`]
+/// (the five characters that mean something are replaced, and the control
+/// characters XML 1.0 cannot carry at all are dropped - a title from a file may
+/// hold anything).
 pub fn escape(text: &str) -> String {
-    let mut out = String::with_capacity(text.len());
-    for ch in text.chars() {
-        match ch {
-            '&' => out.push_str("&amp;"),
-            '<' => out.push_str("&lt;"),
-            '>' => out.push_str("&gt;"),
-            '"' => out.push_str("&quot;"),
-            '\'' => out.push_str("&apos;"),
-            '\t' | '\n' | '\r' => out.push(ch),
-            c if (c as u32) < 0x20 || c == '\u{FFFE}' || c == '\u{FFFF}' => {}
-            c => out.push(c),
-        }
-    }
-    out
+    energyml_core::xml::escape_attr(text)
 }
 
 /// Writes `list` as an SVG document, with `meta` in its `<metadata>` if given.
@@ -582,7 +563,7 @@ fn write_image(
         num(rect.y, d),
         num(rect.w, d),
         num(rect.h, d),
-        base64(&bytes)
+        energyml_core::base64::encode(&bytes)
     );
     Ok(())
 }
@@ -718,29 +699,6 @@ fn sector_commands(centre: [f64; 2], inner: f64, outer: f64, start: f64, end: f6
     }
 }
 
-/// Standard base64 with padding (RFC 4648 section 4).
-fn base64(bytes: &[u8]) -> String {
-    const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
-    for chunk in bytes.chunks(3) {
-        let b = [chunk[0], *chunk.get(1).unwrap_or(&0), *chunk.get(2).unwrap_or(&0)];
-        let n = (u32::from(b[0]) << 16) | (u32::from(b[1]) << 8) | u32::from(b[2]);
-        out.push(ALPHABET[(n >> 18) as usize & 63] as char);
-        out.push(ALPHABET[(n >> 12) as usize & 63] as char);
-        out.push(if chunk.len() > 1 {
-            ALPHABET[(n >> 6) as usize & 63] as char
-        } else {
-            '='
-        });
-        out.push(if chunk.len() > 2 {
-            ALPHABET[n as usize & 63] as char
-        } else {
-            '='
-        });
-    }
-    out
-}
-
 /// Reads back the `<{element}>` metadata a caller put in an SVG. The format is
 /// not checked here: the caller knows which formats it reads.
 pub fn read_metadata(svg: &str, element: &str) -> Result<Metadata, MetadataError> {
@@ -777,7 +735,7 @@ pub fn read_metadata(svg: &str, element: &str) -> Result<Metadata, MetadataError
         let close = format!("</{element}>");
         let body_start = tag_end + 1;
         let body_end = svg[body_start..].find(&close).ok_or_else(missing)? + body_start;
-        unescape(&svg[body_start..body_end]).map_err(unreadable)?
+        energyml_core::xml::unescape(&svg[body_start..body_end]).map_err(unreadable)?
     };
     Ok(Metadata {
         element: element.to_string(),
@@ -793,71 +751,12 @@ fn attribute(attributes: &str, name: &str) -> Option<String> {
     let key = format!(" {name}=\"");
     let from = attributes.find(&key)? + key.len();
     let to = attributes[from..].find('"')? + from;
-    unescape(&attributes[from..to]).ok()
-}
-
-/// XML 1.0 text, unescaped: the five predefined entities and `&#...;` / `&#x...;`.
-fn unescape(text: &str) -> Result<String, String> {
-    let mut out = String::with_capacity(text.len());
-    let mut rest = text;
-    while let Some(at) = rest.find('&') {
-        out.push_str(&rest[..at]);
-        let after = &rest[at + 1..];
-        let end = after.find(';').ok_or_else(|| {
-            format!(
-                "an `&` with no `;` near `{}`",
-                rest[at..].chars().take(12).collect::<String>()
-            )
-        })?;
-        let name = &after[..end];
-        let ch = match name {
-            "amp" => '&',
-            "lt" => '<',
-            "gt" => '>',
-            "quot" => '"',
-            "apos" => '\'',
-            _ => {
-                let code = if let Some(hex) = name.strip_prefix("#x").or_else(|| name.strip_prefix("#X")) {
-                    u32::from_str_radix(hex, 16).ok()
-                } else if let Some(decimal) = name.strip_prefix('#') {
-                    decimal.parse().ok()
-                } else {
-                    None
-                };
-                code.and_then(char::from_u32)
-                    .ok_or_else(|| format!("`&{name};` is not an entity XML 1.0 knows"))?
-            }
-        };
-        out.push(ch);
-        rest = &after[end + 1..];
-    }
-    out.push_str(rest);
-    Ok(out)
+    energyml_core::xml::unescape(&attributes[from..to]).ok()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn base64_matches_the_vectors_of_rfc_4648_section_10() {
-        let cases = [
-            ("", ""),
-            ("f", "Zg=="),
-            ("fo", "Zm8="),
-            ("foo", "Zm9v"),
-            ("foob", "Zm9vYg=="),
-            ("fooba", "Zm9vYmE="),
-            ("foobar", "Zm9vYmFy"),
-        ];
-        for (plain, encoded) in cases {
-            assert_eq!(
-                base64(plain.as_bytes()),
-                encoded,
-                "RFC 4648 section 10: {plain:?}"
-            );
-        }
-    }
 
     #[test]
     fn num_drops_trailing_zeros_and_negative_zero() {

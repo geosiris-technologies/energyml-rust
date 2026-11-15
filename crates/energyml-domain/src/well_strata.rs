@@ -1417,14 +1417,8 @@ fn cell_text(cell: &Cell) -> String {
     }
 }
 
-/// A number without useless zeros - `10`, not `10.0`.
-fn number(value: f64) -> String {
-    if value == value.trunc() && value.abs() < 1e15 {
-        format!("{}", value as i64)
-    } else {
-        format!("{value}")
-    }
-}
+// A number without useless zeros - `10`, not `10.0`: the one copy, in core.
+use energyml_core::text::plain_number as number;
 
 #[cfg(test)]
 mod tests {

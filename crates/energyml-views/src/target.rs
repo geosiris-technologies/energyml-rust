@@ -36,7 +36,7 @@ use crate::colour::{ValueColours, value_colours};
 use crate::kind::{Drawn, ObjectSlot, Offer, Request, ViewContext, ViewKind, ViewNote, local_type};
 use crate::refusal::ViewRefusal;
 use crate::setting::{Settled, ViewSetting};
-use crate::style;
+use crate::style::{self, short};
 
 /// The id of the view.
 pub const ID: &str = "target";
@@ -1038,10 +1038,4 @@ fn origin_words(origin: AngleOrigin) -> &'static str {
         AngleOrigin::Left => "the left",
         AngleOrigin::North => "grid north",
     }
-}
-
-/// A number written short: no trailing zeros, two decimals at most.
-fn short(value: f64) -> String {
-    let text = format!("{value:.2}");
-    text.trim_end_matches('0').trim_end_matches('.').to_string()
 }

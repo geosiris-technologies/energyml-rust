@@ -206,9 +206,43 @@ fn split_word(word: &str, max_width_pt: f64, size_pt: f64, hard_cuts: &mut usize
     fragments
 }
 
+/// A number written short: `decimals` decimals at most, no trailing zeros and
+/// no trailing point, and a value that rounds to nothing is `0`, never `-0`.
+///
+/// The one short formatter of the workspace (`energyml_sheet::text::short`):
+/// the views write their titles and the keys of their elements (`#md=...`)
+/// with it, so two views agree on what a depth looks like. A value that is not
+/// finite is written as Rust writes it (`NaN`, `inf`); an SVG attribute, which
+/// cannot carry it, goes through [`crate::draw::svg::num`] instead.
+pub fn short(value: f64, decimals: usize) -> String {
+    let text = format!("{value:.decimals$}");
+    let text = if text.contains('.') {
+        text.trim_end_matches('0').trim_end_matches('.')
+    } else {
+        text.as_str()
+    };
+    if text == "-0" || text.is_empty() {
+        "0".to_string()
+    } else {
+        text.to_string()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Break it: stop mapping `-0` to `0`, or trim a number without a point
+    /// (`100` would become `1`).
+    #[test]
+    fn short_trims_zeros_and_never_writes_negative_zero() {
+        assert_eq!(short(10.0, 2), "10");
+        assert_eq!(short(40.256, 2), "40.26");
+        assert_eq!(short(-0.001, 2), "0");
+        assert_eq!(short(100.0, 0), "100");
+        assert_eq!(short(1.25, 4), "1.25");
+        assert_eq!(short(f64::NAN, 2), "NaN");
+    }
 
     #[test]
     fn no_line_is_wider_than_the_measured_width() {

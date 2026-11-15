@@ -673,12 +673,8 @@ fn content_type_for(extension: &str) -> Option<&'static str> {
     })
 }
 
-fn escape(value: &str) -> String {
-    value
-        .replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('"', "&quot;")
-}
+// An attribute value: the one door, `energyml_core::xml::escape_attr`.
+use energyml_core::xml::escape_attr as escape;
 
 // ---------------------------------------------------------------------------
 // One uuid, several objects

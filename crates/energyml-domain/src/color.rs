@@ -2615,21 +2615,9 @@ fn number(value: f64) -> String {
     }
 }
 
-/// The five characters XML text cannot carry as they are.
-fn escape(text: &str) -> String {
-    let mut out = String::with_capacity(text.len());
-    for c in text.chars() {
-        match c {
-            '&' => out.push_str("&amp;"),
-            '<' => out.push_str("&lt;"),
-            '>' => out.push_str("&gt;"),
-            '"' => out.push_str("&quot;"),
-            '\'' => out.push_str("&apos;"),
-            _ => out.push(c),
-        }
-    }
-    out
-}
+// The five characters XML text cannot carry as they are: the one door,
+// `energyml_core::xml::escape_attr`.
+use energyml_core::xml::escape_attr as escape;
 
 /// Where a constant colour is stated - [`Cascade::constant_written`].
 #[derive(Clone, Debug, PartialEq, Eq)]

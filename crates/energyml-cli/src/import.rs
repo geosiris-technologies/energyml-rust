@@ -250,30 +250,7 @@ pub fn run(args: ImportArgs) -> Result<ExitCode> {
 /// The one place this command reads a clock, and `--now` exists so a caller can
 /// take even that away.
 pub(crate) fn now() -> String {
-    let seconds = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0);
-    // Days since the epoch to a civil date - Howard Hinnant's algorithm, the
-    // one every implementation uses. Written out rather than pulled in: this is
-    // the only date this binary formats, and `chrono` is a dependency for it.
-    let (days, rest) = (seconds / 86_400, seconds % 86_400);
-    let z = days as i64 + 719_468;
-    let era = z.div_euclid(146_097);
-    let doe = z.rem_euclid(146_097);
-    let yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096) / 365;
-    let y = yoe + era * 400;
-    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
-    let mp = (5 * doy + 2) / 153;
-    let d = doy - (153 * mp + 2) / 5 + 1;
-    let m = if mp < 10 { mp + 3 } else { mp - 9 };
-    let y = if m <= 2 { y + 1 } else { y };
-    format!(
-        "{y:04}-{m:02}-{d:02}T{:02}:{:02}:{:02}Z",
-        rest / 3_600,
-        (rest % 3_600) / 60,
-        rest % 60
-    )
+    energyml_storage::epc::core_props::now_w3cdtf()
 }
 
 pub(crate) fn truncate(text: &str, at: usize) -> String {

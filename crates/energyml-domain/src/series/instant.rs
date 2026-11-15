@@ -16,6 +16,8 @@
 //!
 //! `24:00:00` is read as midnight of the next day, which §3.2.7 allows.
 
+use energyml_core::calendar::days_from_civil;
+
 /// Seconds since 1970-01-01T00:00:00Z, fractions kept.
 pub fn unix_seconds(text: &str) -> Result<f64, String> {
     let text = text.trim();
@@ -123,16 +125,4 @@ fn days_in_month(year: i64, month: i64) -> i64 {
         _ if leap(year) => 29,
         _ => 28,
     }
-}
-
-/// Days since 1970-01-01 of a proleptic Gregorian date - Howard Hinnant's
-/// `days_from_civil` (*chrono-Compatible Low-Level Date Algorithms*).
-fn days_from_civil(year: i64, month: i64, day: i64) -> i64 {
-    let y = if month <= 2 { year - 1 } else { year };
-    let era = y.div_euclid(400);
-    let yoe = y.rem_euclid(400);
-    let mp = if month > 2 { month - 3 } else { month + 9 };
-    let doy = (153 * mp + 2) / 5 + day - 1;
-    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
-    era * 146_097 + doe - 719_468
 }

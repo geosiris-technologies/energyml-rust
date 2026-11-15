@@ -947,10 +947,5 @@ fn one_line(value: &str) -> String {
     value.replace(['\n', '\r'], " ")
 }
 
-fn escape(value: &str) -> String {
-    value
-        .replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-}
+// XML attribute text: the one door, `energyml_core::xml::escape_attr`.
+use energyml_core::xml::escape_attr as escape;

@@ -19,6 +19,7 @@ use energyml_sheet::draw::ticks::{label, nice_ticks};
 use energyml_sheet::draw::{
     Anchor, Colour, DisplayList, Element, Item, Layer, PageUnit, Rect, Stroke, SymbolKind, TextStyle,
 };
+use energyml_sheet::text::short;
 use serde_json::Value;
 
 use crate::colour::ColourSource;
@@ -604,7 +605,7 @@ fn picture(
                     stroke: colour,
                 }],
             );
-            point.title = format!("row {row}: {}, {}", short(data[0]), short(data[1]));
+            point.title = format!("row {row}: {}, {}", short(data[0], 4), short(data[1], 4));
             layer.elements.push(point);
         }
     }
@@ -684,10 +685,4 @@ fn right_axis_layer(frame: &PlotFrame, y_title: &str) -> Layer {
     });
     layer.elements.push(Element::new(marks));
     layer
-}
-
-/// A number written short: no trailing zeros, four decimals at most.
-fn short(value: f64) -> String {
-    let text = format!("{value:.4}");
-    text.trim_end_matches('0').trim_end_matches('.').to_string()
 }
