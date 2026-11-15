@@ -691,13 +691,9 @@ fn from_object(object: &dyn Reflect, uuid: &str) -> Kind {
     }
 }
 
-fn text(object: &dyn Reflect, field: &str) -> Option<String> {
-    match object.field(field)?.as_scalar()? {
-        Scalar::Str(s) if !s.is_empty() => Some(s.to_string()),
-        Scalar::Str(_) => None,
-        other => Some(other.to_string()),
-    }
-}
+// The readers of a field are the door's (ADR 0046), under the names this file
+// already uses.
+use energyml_core::reflect::fields::text;
 
 #[cfg(test)]
 mod tests {

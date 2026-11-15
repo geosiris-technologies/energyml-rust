@@ -1108,52 +1108,106 @@ pub struct RefEdge<'a> {
 /// object that writes the reference, see
 /// [`identity_owned::collect_refs_owned`](crate::identity_owned::collect_refs_owned).
 pub fn collect_refs(root: &dyn Reflect) -> Vec<RefEdge<'_>> {
-    let mut out = Vec::new();
-    walk_refs(root, String::new(), &mut out);
-    out
+    let mut refs = Refs { out: Vec::new() };
+    walk(root, &mut refs);
+    refs.out
 }
 
-fn walk_refs<'a>(object: &'a dyn Reflect, prefix: String, out: &mut Vec<RefEdge<'a>>) {
+/// The visitor behind [`collect_refs`]: every reference, with its full path.
+struct Refs<'a> {
+    out: Vec<RefEdge<'a>>,
+}
+
+impl<'a> Visitor<'a> for Refs<'a> {
+    fn reference(&mut self, path: &str, child: &'a dyn Reflect, expected: Option<&'static TypeInfo>) {
+        if let Some(target) = key_of_reflect(child) {
+            self.out.push(RefEdge {
+                path: path.to_string(),
+                target,
+                expected,
+            });
+        }
+    }
+
+    fn untyped(&mut self, path: &str, any: &'a crate::any_xml::AnyXml) {
+        // The model could not type this subtree, so its references are in the
+        // text. Read them rather than lose them.
+        refs_in_source(&any.content, path, &mut self.out);
+    }
+}
+
+/// What a reflection walk meets.
+///
+/// **The one walk.** Three readers used to carry their own copy of *for each
+/// field, extend the dotted path, recurse into an object, number the items of a
+/// list, treat a reference and a kept-verbatim subtree apart*, and differed
+/// only in what they did at a leaf. [`walk`] is that skeleton once; a reader is
+/// a `Visitor` that says what to do with the three things it can meet. The path
+/// is one buffer pushed and truncated as the walk goes down and up, not a
+/// `format!` per field.
+pub(crate) trait Visitor<'a> {
+    /// A data object reference (a type with `is_object_ref`) at `path`;
+    /// `expected` is the field's declared type.
+    fn reference(&mut self, path: &str, child: &'a dyn Reflect, expected: Option<&'static TypeInfo>);
+
+    /// A subtree the model could not type, kept as source text.
+    fn untyped(&mut self, path: &str, any: &'a crate::any_xml::AnyXml);
+
+    /// An ordinary object about to be entered (its fields are walked next).
+    fn enter(&mut self, _path: &str, _child: &'a dyn Reflect) {}
+
+    /// The object entered by the last unmatched [`Visitor::enter`] is done.
+    fn leave(&mut self) {}
+}
+
+/// Walk `root` by reflection, reporting to `visitor`. Paths are the dotted XML
+/// names from the root, `[i]` after a list item (`ChannelSet[0].Channel[2]`);
+/// the root itself is not entered.
+pub(crate) fn walk<'a>(root: &'a dyn Reflect, visitor: &mut impl Visitor<'a>) {
+    walk_fields(root, &mut String::new(), visitor);
+}
+
+fn walk_fields<'a>(object: &'a dyn Reflect, path: &mut String, visitor: &mut impl Visitor<'a>) {
     for field in object.type_info().fields {
         let Some(value) = object.field(field.name) else {
             continue;
         };
-        let base = if prefix.is_empty() {
-            field.xml_name.to_string()
-        } else {
-            format!("{prefix}.{}", field.xml_name)
-        };
-        visit_value(value, base, field.ty.type_info(), out);
+        let mark = path.len();
+        if !path.is_empty() {
+            path.push('.');
+        }
+        path.push_str(field.xml_name);
+        walk_value(value, path, field.ty.type_info(), visitor);
+        path.truncate(mark);
     }
 }
 
-fn visit_value<'a>(
+fn walk_value<'a>(
     value: FieldValue<'a>,
-    path: String,
+    path: &mut String,
     expected: Option<&'static TypeInfo>,
-    out: &mut Vec<RefEdge<'a>>,
+    visitor: &mut impl Visitor<'a>,
 ) {
+    use std::fmt::Write as _;
+
     match value {
         FieldValue::Object(child) => {
             if child.type_info().is_object_ref {
-                if let Some(target) = key_of_reflect(child) {
-                    out.push(RefEdge {
-                        path,
-                        target,
-                        expected,
-                    });
-                }
+                visitor.reference(path.as_str(), child, expected);
             } else if let Some(any) = child.as_any().downcast_ref::<crate::any_xml::AnyXml>() {
-                // The model could not type this subtree, so its references are
-                // in the text. Read them rather than lose them.
-                refs_in_source(&any.content, &path, out);
+                visitor.untyped(path.as_str(), any);
             } else {
-                walk_refs(child, path, out);
+                visitor.enter(path.as_str(), child);
+                walk_fields(child, path, visitor);
+                visitor.leave();
             }
         }
         FieldValue::List(items) => {
             for (i, item) in items.into_iter().enumerate() {
-                visit_value(item, format!("{path}[{i}]"), expected, out);
+                let mark = path.len();
+                let _ = write!(path, "[{i}]");
+                walk_value(item, path, expected, visitor);
+                path.truncate(mark);
             }
         }
         _ => {}
@@ -1189,49 +1243,33 @@ pub struct NestedObject<'a> {
 /// Only a type that can be a part (`is_top_level`) and that carries a uuid
 /// counts: a nested `Citation` is no data object.
 pub fn nested_objects(root: &dyn Reflect) -> Vec<NestedObject<'_>> {
-    let mut out = Vec::new();
-    walk_nested(root, String::new(), &mut out);
-    out
+    let mut nested = Nested { out: Vec::new() };
+    walk(root, &mut nested);
+    nested.out
 }
 
-fn walk_nested<'a>(object: &'a dyn Reflect, prefix: String, out: &mut Vec<NestedObject<'a>>) {
-    for field in object.type_info().fields {
-        let Some(value) = object.field(field.name) else {
-            continue;
-        };
-        let base = if prefix.is_empty() {
-            field.xml_name.to_string()
-        } else {
-            format!("{prefix}.{}", field.xml_name)
-        };
-        visit_nested(value, base, out);
-    }
+/// The visitor behind [`nested_objects`]: a data object is a type that can be a
+/// part and has a non-empty uuid; a reference is not entered, and a kept-verbatim
+/// subtree holds none.
+struct Nested<'a> {
+    out: Vec<NestedObject<'a>>,
 }
 
-fn visit_nested<'a>(value: FieldValue<'a>, path: String, out: &mut Vec<NestedObject<'a>>) {
-    match value {
-        FieldValue::Object(child) => {
-            let info = child.type_info();
-            if info.is_object_ref {
-                return;
-            }
-            if info.is_top_level
-                && let Some(key) = key_of_reflect(child)
-                && !key.uuid.trim().is_empty()
-            {
-                out.push(NestedObject {
-                    path: path.clone(),
-                    key,
-                });
-            }
-            walk_nested(child, path, out);
+impl<'a> Visitor<'a> for Nested<'a> {
+    fn reference(&mut self, _path: &str, _child: &'a dyn Reflect, _expected: Option<&'static TypeInfo>) {}
+
+    fn untyped(&mut self, _path: &str, _any: &'a crate::any_xml::AnyXml) {}
+
+    fn enter(&mut self, path: &str, child: &'a dyn Reflect) {
+        if child.type_info().is_top_level
+            && let Some(key) = key_of_reflect(child)
+            && !key.uuid.trim().is_empty()
+        {
+            self.out.push(NestedObject {
+                path: path.to_string(),
+                key,
+            });
         }
-        FieldValue::List(items) => {
-            for (i, item) in items.into_iter().enumerate() {
-                visit_nested(item, format!("{path}[{i}]"), out);
-            }
-        }
-        _ => {}
     }
 }
 

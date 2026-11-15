@@ -88,3 +88,4 @@
 - [0043 The views of a package through one door](adr/0043-the-views-of-a-package-through-one-door.md)
 - [0044 The vectors in geostat](adr/0044-vectors-in-geostat.md)
 - [0045 Text and numbers, one copy each](adr/0045-text-and-numbers-one-copy.md)
+- [0046 Reading a field through one door](adr/0046-reading-a-field-through-one-door.md)

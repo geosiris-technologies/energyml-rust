@@ -88,6 +88,33 @@ let title = path::get_string(object.as_reflect(), "Citation.Title")?;
 let repr = object.as_reflect().downcast_ref::<resqml::TriangulatedSetRepresentation>();
 ```
 
+### Reading a field as a plain value: one door
+
+To read one field of a reflected object as a string, a number, a flag or a
+nested object, use `energyml_core::reflect::fields` rather than matching on
+`FieldValue` yourself. Its policy is the same for every reader:
+
+- an absent or unset field is `None` (an empty `Vec` for the plural readers),
+  never zero or `false`;
+- a blank string is absent for `text`, and the text is returned as written;
+- a field of the wrong shape is `None`; a string is never parsed as a number
+  unless you ask for the `_lexical` reader, and a double is an integer only when
+  it is whole;
+- `require_text`, `require_number`, `require_integer`, `require_unsigned` and
+  `require_flag` refuse by name (`MissingRequired`, `TypeMismatch`) when the
+  caller cannot go on without the value.
+
+```rust
+use energyml_core::reflect::fields;
+
+let title = fields::text(citation, "Title");           // Option<String>
+let count = fields::unsigned(array, "Count");          // Option<u64>
+let leaves = fields::objects(parent, "Patch");         // one or repeated
+let first = fields::require_text(object, "Uuid")?;     // a named refusal
+```
+
+See [ADR 0046](adr/0046-reading-a-field-through-one-door.md).
+
 ## Opening a package
 
 ```rust

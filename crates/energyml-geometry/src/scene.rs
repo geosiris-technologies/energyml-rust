@@ -27,7 +27,7 @@ use energyml_domain::crs::{self, Crs};
 use energyml_domain::metadata::{Metadata, Spec};
 
 use crate::error::Result;
-use crate::geometry::{self, Geometry};
+use crate::geometry::{self, Geometry, field_text};
 use crate::points::Point;
 use crate::readers::Readers;
 use crate::shape::Shape;
@@ -865,9 +865,9 @@ fn related(object: &dyn Reflect, fields: &[&str]) -> Option<Related> {
         }
         return Some(Related {
             uuid: uuid.to_string(),
-            title: string_field(reference, "Title").unwrap_or_default(),
-            qualified_type: string_field(reference, "QualifiedType")
-                .or_else(|| string_field(reference, "ContentType"))
+            title: field_text(reference, "Title").unwrap_or_default(),
+            qualified_type: field_text(reference, "QualifiedType")
+                .or_else(|| field_text(reference, "ContentType"))
                 .unwrap_or_default(),
         });
     }
@@ -880,13 +880,6 @@ fn title_of(object: &dyn Reflect) -> String {
     energyml_core::identity::title_of_reflect(object)
         .unwrap_or_default()
         .to_string()
-}
-
-fn string_field(object: &dyn Reflect, field: &str) -> Option<String> {
-    match object.field(field)? {
-        FieldValue::Scalar(scalar) => scalar.as_str().map(str::to_string).filter(|s| !s.is_empty()),
-        _ => None,
-    }
 }
 
 #[cfg(test)]

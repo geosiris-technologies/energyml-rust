@@ -889,9 +889,7 @@ fn node_mds_of(store: &EpcStore, reflect: &dyn energyml_core::value::Reflect) ->
 /// and handing back its local numbers would put it where the compound's
 /// origin is not.
 fn wellhead_of(store: &EpcStore, reflect: &dyn energyml_core::value::Reflect) -> Option<[f64; 3]> {
-    fn number(reflect: &dyn energyml_core::value::Reflect, field: &str) -> Option<f64> {
-        reflect.field(field)?.as_scalar()?.as_f64()
-    }
+    use energyml_core::reflect::fields::number;
     fn follow(
         store: &EpcStore,
         reflect: &dyn energyml_core::value::Reflect,

@@ -129,6 +129,7 @@
 use energyml_core::value::{FieldValue, Reflect};
 
 use crate::error::{Error, Result};
+use crate::geometry::field_object;
 use crate::points::Point;
 use crate::source::ValueSource;
 use crate::values;
@@ -549,7 +550,7 @@ impl Lines {
             return Self::borrowed(object, source, at, vertical);
         }
         if !name.ends_with("ParametricLineArray") {
-            return Err(Error::unsupported(leak(name), at));
+            return Err(Error::unsupported(name, at));
         }
         let knots = values::scalar_i64(object, "KnotCount").unwrap_or(0).max(0) as usize;
         if knots == 0 {
@@ -843,7 +844,7 @@ impl Line {
             return Self::borrowed_one(geometry, source, at);
         }
         if !name.ends_with("ParametricLineGeometry") {
-            return Err(Error::unsupported(leak(name), at));
+            return Err(Error::unsupported(name, at));
         }
         // Resolved before anything is read: the geometry names its own
         // `LocalCrs`, so no caller has to remember to pass it and none can pass
@@ -1455,17 +1456,6 @@ fn derived_tangents(knots: &[f64], control: &[Point]) -> Vec<Point> {
         out[n - 1] = sub(mul(slope, 1.5), mul(out[n - 2], 0.5));
     }
     out
-}
-
-fn field_object<'a>(object: &'a dyn Reflect, field: &str) -> Option<&'a dyn Reflect> {
-    match object.field(field)? {
-        FieldValue::Object(child) => Some(child),
-        _ => None,
-    }
-}
-
-fn leak(key: &str) -> &'static str {
-    Box::leak(key.to_string().into_boxed_str())
 }
 
 /// A direction, or `None` below [`TINY`]: this module's own floor on the shared

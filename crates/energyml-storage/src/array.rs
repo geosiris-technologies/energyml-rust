@@ -47,7 +47,7 @@
 
 use energyml_core::identity;
 use energyml_core::reflect::TypeKind;
-use energyml_core::value::{FieldValue, Reflect, Scalar};
+use energyml_core::value::{FieldValue, Reflect};
 
 /// Where one array - or one slice of one - actually lives.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -454,27 +454,9 @@ fn from_old_form(object: &dyn Reflect, path: &str, resolver: &dyn ProxyResolver)
     }
 }
 
-fn string_field(object: &dyn Reflect, name: &str) -> Option<String> {
-    match object.field(name)? {
-        FieldValue::Scalar(Scalar::Str(s)) if !s.is_empty() => Some(s.to_string()),
-        _ => None,
-    }
-}
-
-fn int_list(object: &dyn Reflect, name: &str) -> Vec<i64> {
-    let Some(value) = object.field(name) else {
-        return Vec::new();
-    };
-    let one = |v: &FieldValue<'_>| match v {
-        FieldValue::Scalar(Scalar::Int(i)) => Some(*i),
-        FieldValue::Scalar(Scalar::UInt(u)) => i64::try_from(*u).ok(),
-        _ => None,
-    };
-    match value {
-        FieldValue::List(items) => items.iter().filter_map(one).collect(),
-        other => one(&other).into_iter().collect(),
-    }
-}
+// The readers of a field are the door's (ADR 0046), under the names this file
+// already uses.
+use energyml_core::reflect::fields::{integers as int_list, text as string_field};
 
 /// Which end of a multi-byte number the file writes first.
 ///

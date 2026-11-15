@@ -67,7 +67,7 @@ use energyml_core::value::{FieldValue, Reflect};
 use energyml_domain::values;
 
 use crate::error::{Error, Result};
-use crate::geometry::{Patch, Topology};
+use crate::geometry::{Patch, Topology, field_object};
 use crate::points::{self, Point};
 use crate::source::ValueSource;
 use crate::values::scalar_i64;
@@ -525,13 +525,6 @@ fn dimension(object: &dyn Reflect, field: &str, at: &str) -> Result<usize> {
         Some(value) if value > 0 => Ok(value as usize),
         Some(value) => Err(Error::malformed(at, format!("`{field}` is {value}"))),
         None => Err(Error::malformed(at, format!("no `{field}`"))),
-    }
-}
-
-fn field_object<'a>(object: &'a dyn Reflect, field: &str) -> Option<&'a dyn Reflect> {
-    match object.field(field)? {
-        FieldValue::Object(child) => Some(child),
-        _ => None,
     }
 }
 

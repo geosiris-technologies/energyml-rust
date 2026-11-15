@@ -1308,61 +1308,14 @@ fn flatten(value: FieldValue<'_>) -> Vec<FieldValue<'_>> {
     }
 }
 
-fn text(object: &dyn Reflect, field: &str) -> Option<String> {
-    match object.field(field)?.as_scalar()? {
-        Scalar::Str(s) => Some(s.to_string()),
-        other => Some(other.to_string()),
-    }
-}
+// The readers of a field are the door's (ADR 0046), under the names this file
+// already uses.
+use energyml_core::reflect::fields::{
+    integer as signed, text, texts as strings, unsigned as integer, unsigneds as integers,
+};
 
 fn text_at(object: &dyn Reflect, field: &str, inner: &str) -> Option<String> {
     text(object.field(field)?.as_object()?, inner)
-}
-
-fn integer(object: &dyn Reflect, field: &str) -> Option<u64> {
-    match object.field(field)?.as_scalar()? {
-        Scalar::UInt(v) => Some(v),
-        Scalar::Int(v) if v >= 0 => Some(v as u64),
-        Scalar::Double(v) if v >= 0.0 => Some(v as u64),
-        _ => None,
-    }
-}
-
-/// A signed integer field.
-fn signed(object: &dyn Reflect, field: &str) -> Option<i64> {
-    match object.field(field)?.as_scalar()? {
-        Scalar::Int(v) => Some(v),
-        Scalar::UInt(v) => i64::try_from(v).ok(),
-        _ => None,
-    }
-}
-
-/// The strings of a field, in document order (any other scalar by its text).
-fn strings(object: &dyn Reflect, field: &str) -> Vec<String> {
-    let Some(value) = object.field(field) else {
-        return Vec::new();
-    };
-    flatten(value)
-        .into_iter()
-        .filter_map(|item| match item.as_scalar()? {
-            Scalar::Str(s) => Some(s.to_string()),
-            other => Some(other.to_string()),
-        })
-        .collect()
-}
-
-fn integers(object: &dyn Reflect, field: &str) -> Vec<u64> {
-    let Some(value) = object.field(field) else {
-        return Vec::new();
-    };
-    flatten(value)
-        .into_iter()
-        .filter_map(|item| match item.as_scalar()? {
-            Scalar::UInt(v) => Some(v),
-            Scalar::Int(v) if v >= 0 => Some(v as u64),
-            _ => None,
-        })
-        .collect()
 }
 
 /// A count the object declares, or that its `Geometry` does.

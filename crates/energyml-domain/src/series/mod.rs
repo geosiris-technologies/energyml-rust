@@ -1117,44 +1117,13 @@ fn resolve_named<'a>(
 // Reading by shape
 // ---------------------------------------------------------------------------
 
-use energyml_core::value::{FieldValue, Reflect, Scalar};
+use energyml_core::value::Reflect;
 
-/// A scalar field as its wire text; `None` when absent or blank.
-pub(crate) fn text(object: &dyn Reflect, name: &str) -> Option<String> {
-    match object.field(name)? {
-        FieldValue::Scalar(Scalar::Str(value)) => {
-            Some(value.to_string()).filter(|value| !value.trim().is_empty())
-        }
-        FieldValue::Scalar(scalar) => Some(scalar.to_string()),
-        _ => None,
-    }
-}
-
-/// A numeric scalar field.
-pub(crate) fn number_of(object: &dyn Reflect, name: &str) -> Option<f64> {
-    match object.field(name)? {
-        FieldValue::Scalar(Scalar::Int(value)) => Some(value as f64),
-        FieldValue::Scalar(Scalar::UInt(value)) => Some(value as f64),
-        FieldValue::Scalar(Scalar::Double(value)) => Some(value),
-        FieldValue::Scalar(Scalar::Str(value)) => value.trim().parse().ok(),
-        _ => None,
-    }
-}
-
-/// The objects of a field, one or repeated.
-pub(crate) fn objects<'a>(object: &'a dyn Reflect, name: &str) -> Vec<&'a dyn Reflect> {
-    match object.field(name) {
-        Some(FieldValue::Object(child)) => vec![child],
-        Some(FieldValue::List(items)) => items
-            .into_iter()
-            .filter_map(|item| match item {
-                FieldValue::Object(child) => Some(child),
-                _ => None,
-            })
-            .collect(),
-        _ => Vec::new(),
-    }
-}
+// The readers of a field are the door's (ADR 0046), shared with the modules of
+// this directory under the names they already use. A number may be kept as
+// text by a schema version (a WITSML 1.4 measure), so `number_of` is the
+// lexical reader.
+pub(crate) use energyml_core::reflect::fields::{number_lexical as number_of, objects, text};
 
 /// A reference held by a field: its uuid and the title it caches.
 pub(crate) fn reference(object: &dyn Reflect, name: &str) -> Option<(String, String)> {

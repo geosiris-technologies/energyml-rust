@@ -1724,44 +1724,9 @@ fn unverifiable(check: &Integrity, uuid: &str, why: String) -> Finding {
     }
 }
 
-/// A scalar field as its wire text - an enumeration's value, `true` for a
-/// boolean. `None` when absent.
-fn text(object: &dyn Reflect, name: &str) -> Option<String> {
-    match object.field(name)? {
-        FieldValue::Scalar(scalar) => Some(scalar.to_string()),
-        _ => None,
-    }
-}
-
-/// Every scalar of a field, repeated or not, as wire text.
-fn scalars(object: &dyn Reflect, name: &str) -> Vec<String> {
-    match object.field(name) {
-        Some(FieldValue::Scalar(scalar)) => vec![scalar.to_string()],
-        Some(FieldValue::List(items)) => items
-            .iter()
-            .filter_map(|item| match item {
-                FieldValue::Scalar(scalar) => Some(scalar.to_string()),
-                _ => None,
-            })
-            .collect(),
-        _ => Vec::new(),
-    }
-}
-
-/// Every object of a field, repeated or not.
-fn objects<'a>(object: &'a dyn Reflect, name: &str) -> Vec<&'a dyn Reflect> {
-    match object.field(name) {
-        Some(FieldValue::Object(child)) => vec![child],
-        Some(FieldValue::List(items)) => items
-            .into_iter()
-            .filter_map(|item| match item {
-                FieldValue::Object(child) => Some(child),
-                _ => None,
-            })
-            .collect(),
-        _ => Vec::new(),
-    }
-}
+// The readers of a field are the door's (ADR 0046), under the names this file
+// already uses.
+use energyml_core::reflect::fields::{objects, text, texts as scalars};
 
 /// The reference held by a field, read with nothing opened.
 fn reference(object: &dyn Reflect, name: &str) -> Option<Member> {

@@ -57,7 +57,7 @@ use std::collections::HashMap;
 
 use energyml_core::any_xml::AnyXml;
 use energyml_core::identity;
-use energyml_core::value::{FieldValue, Reflect, Scalar};
+use energyml_core::value::{Reflect, Scalar};
 
 use crate::error::{Error, Result};
 use crate::inherit::uuid_of_identity;
@@ -2107,33 +2107,9 @@ fn level_of_reference(reference: &dyn Reflect) -> Option<Level> {
 // Reflection helpers
 // ---------------------------------------------------------------------------
 
-fn list<'a>(object: &'a dyn Reflect, field: &str) -> Vec<FieldValue<'a>> {
-    match object.field(field) {
-        Some(FieldValue::List(items)) => items,
-        Some(FieldValue::Null) | None => Vec::new(),
-        Some(other) => vec![other],
-    }
-}
-
-fn text(object: &dyn Reflect, field: &str) -> Option<String> {
-    match object.field(field)?.as_scalar()? {
-        Scalar::Str(s) if !s.is_empty() => Some(s.to_string()),
-        Scalar::Str(_) => None,
-        other => Some(other.to_string()),
-    }
-}
-
-fn scalar_f64(object: &dyn Reflect, field: &str) -> Option<f64> {
-    object.field(field)?.as_scalar()?.as_f64()
-}
-
-fn scalar_u64(object: &dyn Reflect, field: &str) -> Option<u64> {
-    match object.field(field)?.as_scalar()? {
-        Scalar::UInt(v) => Some(v),
-        Scalar::Int(v) if v >= 0 => Some(v as u64),
-        _ => None,
-    }
-}
+// The readers of a field are the door's (ADR 0046), under the names this file
+// already uses.
+use energyml_core::reflect::fields::{items as list, number as scalar_f64, text, unsigned as scalar_u64};
 
 #[cfg(test)]
 mod tests {

@@ -13,7 +13,7 @@
 //! [`energyml_domain::values::read_into`], which do not widen and do not
 //! allocate.
 
-use energyml_core::value::{FieldValue, Reflect, Scalar};
+use energyml_core::value::Reflect;
 use energyml_domain::values;
 
 use crate::error::{Error, Result};
@@ -69,20 +69,6 @@ pub fn count(array: &dyn Reflect, source: &dyn ValueSource, at: &str) -> Result<
     Ok(values::count(array, source, at)?)
 }
 
-pub(crate) fn scalar_f64(object: &dyn Reflect, field: &str) -> Option<f64> {
-    match object.field(field)? {
-        FieldValue::Scalar(Scalar::Double(v)) => Some(v),
-        FieldValue::Scalar(Scalar::Int(v)) => Some(v as f64),
-        FieldValue::Scalar(Scalar::UInt(v)) => Some(v as f64),
-        _ => None,
-    }
-}
-
-pub(crate) fn scalar_i64(object: &dyn Reflect, field: &str) -> Option<i64> {
-    match object.field(field)? {
-        FieldValue::Scalar(Scalar::Int(v)) => Some(v),
-        FieldValue::Scalar(Scalar::UInt(v)) => i64::try_from(v).ok(),
-        FieldValue::Scalar(Scalar::Double(v)) => Some(v as i64),
-        _ => None,
-    }
-}
+/// The readers of a numeric field are the door's (ADR 0046): a double is an
+/// integer only when it is whole, and a string is never a number.
+pub(crate) use energyml_core::reflect::fields::{integer as scalar_i64, number as scalar_f64};

@@ -55,6 +55,7 @@ new record that supersedes the old one, which keeps its text and a status line.
 | [0043](0043-the-views-of-a-package-through-one-door.md) | The views of a package are drawn through one door, as a display list written to SVG |
 | [0044](0044-vectors-in-geostat.md) | The vector arithmetic and the small plan geometry live in `energyml_geostat::vector`; `energyml_geometry::vector` re-exports it |
 | [0045](0045-text-and-numbers-one-copy.md) | Text and numbers written by hand (XML, JSON, base 64, calendar, numbers) have one copy each |
+| [0046](0046-reading-a-field-through-one-door.md) | Reading a field of a reflected object goes through one door, `energyml_core::reflect::fields`, with its policy for absent, blank and mistyped fields |
 
 Decisions about the ETP protocol implementation are recorded in the
 [`retp`](https://github.com/geosiris-technologies/retp) repository.

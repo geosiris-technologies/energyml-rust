@@ -120,13 +120,13 @@ fn text_any(object: &dyn Reflect, names: &[&str]) -> Option<String> {
     }
 }
 
-/// An integer from a named field, or `None` - an absent field is not zero.
-fn integer(object: &dyn Reflect, name: &str) -> Option<i64> {
-    match object.field(name)? {
-        FieldValue::Scalar(scalar) => scalar.to_string().trim().parse().ok(),
-        _ => None,
-    }
-}
+// The readers of a field are the door's (ADR 0046), under the names this file
+// already uses.
+// An integer from a named field, or `None` - an absent field is not zero. The
+// releases keep these as text, so the lexical reader.
+use energyml_core::reflect::fields::{
+    flag_lexical as flag, integer_lexical as integer, text, texts as scalars,
+};
 
 /// Read the order a package's structural organisations state.
 ///
@@ -297,21 +297,6 @@ impl Statements {
     ///
     pub fn contacts(&self) -> &[Contact] {
         &self.contacts
-    }
-}
-
-/// A field's lexical value, whatever its scalar type.
-fn scalars(object: &dyn Reflect, name: &str) -> Vec<String> {
-    match object.field(name) {
-        Some(FieldValue::Scalar(scalar)) => vec![scalar.to_string()],
-        Some(FieldValue::List(items)) => items
-            .iter()
-            .filter_map(|item| match item {
-                FieldValue::Scalar(scalar) => Some(scalar.to_string()),
-                _ => None,
-            })
-            .collect(),
-        _ => Vec::new(),
     }
 }
 
@@ -614,14 +599,6 @@ pub struct Columns {
     pub loose_ranks: Vec<ColumnRank>,
     /// What could not be read, named.
     pub notes: Vec<String>,
-}
-
-/// The first non-empty scalar of a field, or `None`.
-fn text(object: &dyn Reflect, name: &str) -> Option<String> {
-    match object.field(name)? {
-        FieldValue::Scalar(scalar) => Some(scalar.to_string()).filter(|s| !s.is_empty()),
-        _ => None,
-    }
 }
 
 /// The objects of a package, by uuid - and **every version of a uuid** the
@@ -1507,18 +1484,6 @@ fn measure(object: &dyn Reflect, name: &str) -> Option<String> {
         Some(uom) => format!("{value} {uom}"),
         None => value,
     })
-}
-
-/// A boolean field, or `None`: absent is not false.
-fn flag(object: &dyn Reflect, name: &str) -> Option<bool> {
-    match object.field(name)? {
-        FieldValue::Scalar(scalar) => match scalar.to_string().as_str() {
-            "true" | "1" => Some(true),
-            "false" | "0" => Some(false),
-            _ => None,
-        },
-        _ => None,
-    }
 }
 
 /// Read a fault interpretation - the object when the package holds it, the

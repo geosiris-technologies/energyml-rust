@@ -88,9 +88,10 @@
 
 use std::cell::Cell;
 
-use energyml_core::value::{FieldValue, Reflect};
+use energyml_core::value::Reflect;
 
 use crate::error::{Error, Result};
+use crate::geometry::{field_list, field_object};
 use crate::points::Point;
 use crate::source::ValueSource;
 use crate::values::scalar_i64;
@@ -306,14 +307,7 @@ impl Selection {
     fn read(lattice: &dyn Reflect, at: &str) -> Result<Self> {
         let start = scalar_i64(lattice, "StartValue").unwrap_or(0);
 
-        let offsets = match lattice.field("Offset") {
-            Some(FieldValue::List(items)) => items
-                .iter()
-                .filter_map(|item| item.as_object())
-                .collect::<Vec<_>>(),
-            Some(FieldValue::Object(one)) => vec![one],
-            _ => Vec::new(),
-        };
+        let offsets = field_list(lattice, "Offset");
         if offsets.is_empty() {
             return Err(Error::malformed(at, "a node selection with no `Offset`"));
         }
@@ -372,11 +366,4 @@ fn shape_of(support: &dyn Reflect) -> Option<Vec<usize>> {
     // Everything else - a triangulated set, a point set - is a flat list, and
     // `None` says so rather than guessing a length.
     None
-}
-
-fn field_object<'a>(object: &'a dyn Reflect, field: &str) -> Option<&'a dyn Reflect> {
-    match object.field(field)? {
-        FieldValue::Object(child) => Some(child),
-        _ => None,
-    }
 }

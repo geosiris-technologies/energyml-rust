@@ -47,7 +47,7 @@
 //! under two names, and so are `IntegerHdf5Array` and `IntegerExternalArray`.
 //! The family comes from the prefix. One branch reads both versions.
 
-use energyml_core::value::{FieldValue, Reflect, Scalar};
+use energyml_core::value::{FieldValue, Reflect};
 
 use crate::error::{Error, Result};
 use crate::property::shape::{NarrowedPick, PropertyShape, StoredLayout};
@@ -647,15 +647,10 @@ fn lattice_dims(array: &dyn Reflect) -> Option<Vec<u64>> {
     if !array.type_info().name.ends_with("LatticeArray") {
         return None;
     }
-    let counts: Vec<i64> = match array.field("Offset") {
-        Some(FieldValue::List(offsets)) => offsets
-            .iter()
-            .filter_map(|offset| offset.as_object())
-            .map(|offset| scalar_i64(offset, "Count").unwrap_or(0).max(0))
-            .collect(),
-        Some(FieldValue::Object(offset)) => vec![scalar_i64(offset, "Count").unwrap_or(0).max(0)],
-        _ => Vec::new(),
-    };
+    let counts: Vec<i64> = objects(array, "Offset")
+        .into_iter()
+        .map(|offset| scalar_i64(offset, "Count").unwrap_or(0).max(0))
+        .collect();
     if counts.is_empty() {
         return Some(vec![1]);
     }
@@ -1057,30 +1052,12 @@ fn slice(values: &Values, start: usize, end: usize) -> Values {
     }
 }
 
-fn field_object<'a>(object: &'a dyn Reflect, field: &str) -> Option<&'a dyn Reflect> {
-    match object.field(field)? {
-        FieldValue::Object(child) => Some(child),
-        _ => None,
-    }
-}
-
-fn scalar_f64(object: &dyn Reflect, field: &str) -> Option<f64> {
-    match object.field(field)? {
-        FieldValue::Scalar(Scalar::Double(v)) => Some(v),
-        FieldValue::Scalar(Scalar::Int(v)) => Some(v as f64),
-        FieldValue::Scalar(Scalar::UInt(v)) => Some(v as f64),
-        _ => None,
-    }
-}
-
-fn scalar_i64(object: &dyn Reflect, field: &str) -> Option<i64> {
-    match object.field(field)? {
-        FieldValue::Scalar(Scalar::Int(v)) => Some(v),
-        FieldValue::Scalar(Scalar::UInt(v)) => i64::try_from(v).ok(),
-        FieldValue::Scalar(Scalar::Double(v)) => Some(v as i64),
-        _ => None,
-    }
-}
+// The readers of a field are the door's (ADR 0046), under the names this file
+// already uses.
+use energyml_core::reflect::fields::{
+    flag, flags as list_bool, integer as scalar_i64, integers as list_i64, number as scalar_f64,
+    numbers as list_f64, object as field_object, objects, text, texts as list_text,
+};
 
 /// The `NullValue` an integer array declares, when it declares one.
 ///
@@ -1094,85 +1071,7 @@ fn scalar_i64(object: &dyn Reflect, field: &str) -> Option<i64> {
 /// The one reading of it: the copies of `integrity`, `well_strata` and
 /// `energyml-build` are replaced by this.
 pub fn null_value(array: &dyn Reflect) -> Option<i64> {
-    match array.field("NullValue")?.as_scalar()? {
-        Scalar::Int(v) => Some(v),
-        Scalar::UInt(v) => i64::try_from(v).ok(),
-        Scalar::Double(v)
-            if v.is_finite() && v.fract() == 0.0 && v >= i64::MIN as f64 && v <= i64::MAX as f64 =>
-        {
-            Some(v as i64)
-        }
-        Scalar::Str(v) => v.trim().parse::<i64>().ok(),
-        _ => None,
-    }
-}
-
-fn flag(object: &dyn Reflect, field: &str) -> Option<bool> {
-    match object.field(field)? {
-        FieldValue::Scalar(Scalar::Bool(v)) => Some(v),
-        _ => None,
-    }
-}
-
-fn text(object: &dyn Reflect, field: &str) -> Option<String> {
-    match object.field(field)? {
-        FieldValue::Scalar(Scalar::Str(v)) => Some(v.to_string()),
-        _ => None,
-    }
-}
-
-/// The items of a list-bound field, whether the schema spelled it as one
-/// element holding many values or as many elements.
-fn items<'a>(object: &'a dyn Reflect, field: &str) -> Vec<FieldValue<'a>> {
-    match object.field(field) {
-        Some(FieldValue::List(list)) => list,
-        Some(single) => vec![single],
-        None => Vec::new(),
-    }
-}
-
-fn list_f64(object: &dyn Reflect, field: &str) -> Vec<f64> {
-    items(object, field)
-        .iter()
-        .filter_map(|item| match item {
-            FieldValue::Scalar(Scalar::Double(v)) => Some(*v),
-            FieldValue::Scalar(Scalar::Int(v)) => Some(*v as f64),
-            FieldValue::Scalar(Scalar::UInt(v)) => Some(*v as f64),
-            _ => None,
-        })
-        .collect()
-}
-
-fn list_i64(object: &dyn Reflect, field: &str) -> Vec<i64> {
-    items(object, field)
-        .iter()
-        .filter_map(|item| match item {
-            FieldValue::Scalar(Scalar::Int(v)) => Some(*v),
-            FieldValue::Scalar(Scalar::UInt(v)) => i64::try_from(*v).ok(),
-            FieldValue::Scalar(Scalar::Double(v)) => Some(*v as i64),
-            _ => None,
-        })
-        .collect()
-}
-
-fn list_bool(object: &dyn Reflect, field: &str) -> Vec<bool> {
-    items(object, field)
-        .iter()
-        .filter_map(|item| match item {
-            FieldValue::Scalar(Scalar::Bool(v)) => Some(*v),
-            _ => None,
-        })
-        .collect()
-}
-
-fn list_text(object: &dyn Reflect, field: &str) -> Vec<String> {
-    items(object, field)
-        .iter()
-        .filter_map(|item| match item {
-            FieldValue::Scalar(Scalar::Str(v)) => Some(v.to_string()),
-            _ => None,
-        })
-        .collect()
+    energyml_core::reflect::fields::integer_lexical(array, "NullValue")
 }
 
 fn missing(at: &str, field: &str) -> Error {

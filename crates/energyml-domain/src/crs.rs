@@ -597,13 +597,7 @@ fn of_within(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8) -> Result
         // reading bug in the connection set: it was one hop short in the
         // system that places it.
         for field in BORROWED_GEOMETRY_FIELDS {
-            let lenders: Vec<&dyn Reflect> = match object.field(field) {
-                Some(FieldValue::Object(lender)) => vec![lender],
-                Some(FieldValue::List(items)) => {
-                    items.into_iter().filter_map(|item| item.as_object()).collect()
-                }
-                _ => continue,
-            };
+            let lenders = objects(object, field);
             // **Every lender must agree, or nothing is claimed.** Two grids in
             // two systems are two systems, and taking the first would be *a
             // guess wearing a number* - the phrase this file already uses, two
@@ -656,11 +650,7 @@ fn of_within(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8) -> Result
 /// on, or `None` - no patch, no readable support, or two supports in two
 /// systems (a guess wearing a number, as for `Grid`).
 fn patch_supports_agree(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8) -> Result<Option<Crs>> {
-    let patches: Vec<&dyn Reflect> = match object.field("SubRepresentationPatch") {
-        Some(FieldValue::Object(patch)) => vec![patch],
-        Some(FieldValue::List(items)) => items.into_iter().filter_map(|item| item.as_object()).collect(),
-        _ => return Ok(None),
-    };
+    let patches = objects(object, "SubRepresentationPatch");
     let mut agreed: Option<Crs> = None;
     for patch in patches {
         let Some(FieldValue::Object(support)) = patch.field("SupportingRepresentation") else {
@@ -1602,25 +1592,14 @@ fn angle(owner: &dyn Reflect, field: &str) -> Result<f64> {
     }
 }
 
+// The readers of a field are the door's (ADR 0046), under the names this file
+// already uses. A flag the file does not state is not set.
+use energyml_core::reflect::fields::{
+    integer as scalar_i64, number as scalar_f64, object as field_object, objects,
+};
+
 fn flag(object: &dyn Reflect, field: &str) -> bool {
-    matches!(
-        object.field(field),
-        Some(FieldValue::Scalar(energyml_core::value::Scalar::Bool(true)))
-    )
-}
-
-fn scalar_f64(object: &dyn Reflect, field: &str) -> Option<f64> {
-    match object.field(field)? {
-        FieldValue::Scalar(scalar) => scalar.as_f64(),
-        _ => None,
-    }
-}
-
-fn scalar_i64(object: &dyn Reflect, field: &str) -> Option<i64> {
-    match object.field(field)? {
-        FieldValue::Scalar(scalar) => scalar.as_f64().map(|v| v as i64),
-        _ => None,
-    }
+    energyml_core::reflect::fields::flag(object, field).unwrap_or(false)
 }
 
 /// The reference a field holds, when it names an object at all.
@@ -1638,13 +1617,6 @@ fn uri_or_uuid(reference: &dyn Reflect) -> String {
     identity::uri_of_reflect(reference)
         .or_else(|| identity::uuid_of_reflect(reference).map(str::to_string))
         .unwrap_or_default()
-}
-
-fn field_object<'a>(object: &'a dyn Reflect, field: &str) -> Option<&'a dyn Reflect> {
-    match object.field(field)? {
-        FieldValue::Object(child) => Some(child),
-        _ => None,
-    }
 }
 
 #[cfg(test)]

@@ -19,6 +19,7 @@
 //! that the picture and the export can write it; it is never stored in the package.
 
 use energyml_core::identity;
+use energyml_core::reflect::fields;
 use energyml_core::value::{FieldValue, Reflect};
 
 use crate::source::ArraySource;
@@ -187,20 +188,11 @@ fn no_extent(object: &dyn Reflect) -> ExtentRefusal {
 // ---------------------------------------------------------------------------
 
 fn number_of(object: &dyn Reflect, names: &[&str]) -> Option<f64> {
-    names.iter().find_map(|name| match object.field(name)? {
-        FieldValue::Scalar(scalar) => scalar.as_f64(),
-        _ => None,
-    })
+    names.iter().find_map(|name| fields::number(object, name))
 }
 
 fn string_of(object: &dyn Reflect, name: &str) -> Option<String> {
-    match object.field(name)? {
-        FieldValue::Scalar(scalar) => scalar
-            .as_str()
-            .map(str::to_string)
-            .filter(|text| !text.trim().is_empty()),
-        _ => None,
-    }
+    fields::text(object, name)
 }
 
 fn uuid_of(object: &dyn Reflect) -> Option<String> {

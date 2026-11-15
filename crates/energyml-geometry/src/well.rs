@@ -1101,10 +1101,7 @@ pub(crate) fn place_datum(datum_uri: &str, source: &dyn ValueSource, at: &str) -
     let datum = datum.as_reflect();
     let type_key = datum.type_info().type_key;
     if !DATUM_TYPES.contains(&type_key) {
-        return Err(Error::unsupported(
-            crate::geometry::leak(type_key),
-            format!("{at}.Datum"),
-        ));
+        return Err(Error::unsupported(type_key, format!("{at}.Datum")));
     }
 
     let (x, y, vertical) = Anchor::coordinates(datum, at)?;
@@ -1233,7 +1230,7 @@ fn vertical_sense(datum: &dyn Reflect, source: &dyn ValueSource, at: &str) -> Re
             VerticalSense::Up
         });
     }
-    match string_of(crs, "Direction").as_deref() {
+    match crate::geometry::field_text(crs, "Direction").as_deref() {
         Some("up") => Ok(VerticalSense::Up),
         Some("down") => Ok(VerticalSense::Down),
         _ => Err(Error::unsupported("a vertical CRS that states no direction", at)),
@@ -1275,7 +1272,9 @@ fn scalar_any(object: &dyn Reflect, names: &[&str]) -> Option<f64> {
 
 /// The first of these fields that holds a string.
 fn string_any(object: &dyn Reflect, names: &[&str]) -> Option<String> {
-    names.iter().find_map(|name| string_of(object, name))
+    names
+        .iter()
+        .find_map(|name| crate::geometry::field_text(object, name))
 }
 
 /// The first of these fields that holds a reference.
@@ -1284,10 +1283,7 @@ fn reference_any(object: &dyn Reflect, names: &[&str]) -> Option<String> {
 }
 
 pub(crate) fn reference_of(object: &dyn Reflect, field: &str) -> Option<String> {
-    let energyml_core::value::FieldValue::Object(reference) = object.field(field)? else {
-        return None;
-    };
-    crate::follow::address_of(reference)
+    crate::follow::address_of(crate::geometry::field_object(object, field)?)
 }
 
 /// Whether two uris name the same object: the same uuid, and object versions
@@ -1297,12 +1293,4 @@ pub(crate) fn reference_of(object: &dyn Reflect, field: &str) -> Option<String> 
 /// dataspace) is the same as nothing.
 pub(crate) fn same_uri(a: &str, b: &str) -> bool {
     energyml_core::identity::same_address(a, b)
-}
-
-/// A scalar string field.
-fn string_of(object: &dyn Reflect, field: &str) -> Option<String> {
-    match object.field(field)? {
-        energyml_core::value::FieldValue::Scalar(scalar) => scalar.as_str().map(|s| s.to_string()),
-        _ => None,
-    }
 }

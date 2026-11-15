@@ -29,7 +29,7 @@
 //! which is the same across versions: one branch reads RESQML 2.0.1 and
 //! RESQML 2.2 without knowing which it has.
 
-use energyml_core::value::{FieldValue, Reflect};
+use energyml_core::value::Reflect;
 
 use crate::error::{Error, Result};
 use crate::points::{self, Point};
@@ -886,7 +886,7 @@ pub fn of_with(
 ) -> Result<Geometry> {
     let info = representation.type_info();
     let Some(reader) = readers.find(info.type_key) else {
-        return Err(Error::unsupported(leak(info.type_key), info.name));
+        return Err(Error::unsupported(info.type_key, info.name));
     };
     let patches = reader.read(representation, source)?;
     // The crate's rule, applied to every reader at once: a representation that
@@ -1115,7 +1115,7 @@ fn sum_over(representation: &dyn Reflect, patches: &[&str], field: &str) -> Opti
     let mut total = 0u64;
     let mut stated = false;
     for name in patches {
-        for patch in list(representation, name) {
+        for patch in field_list(representation, name) {
             let Some(count) = crate::values::scalar_i64(patch, field) else {
                 continue;
             };
@@ -1155,7 +1155,7 @@ struct PatchParts<'a> {
 fn patches_of<'a>(representation: &'a dyn Reflect, fields: &[&str]) -> Vec<PatchParts<'a>> {
     let mut out = Vec::new();
     for field in fields {
-        for item in list(representation, field) {
+        for item in field_list(representation, field) {
             // An element holding `Points` *is* the geometry; one holding a
             // `Geometry` child is a wrapper around it.
             let geometry = if field_object(item, "Points").is_some() {
@@ -1454,36 +1454,14 @@ fn geometry_points(owner: &dyn Reflect, source: &dyn ValueSource, at: &str) -> R
     )
 }
 
-/// A field's objects, whether the schema made it a list or a single element.
+/// The readers of a field: one door, `energyml_core::reflect::fields`.
 ///
-/// Shared with the readers that live in their own modules - one implementation
-/// of *what does this field hold*, because two would differ the first time one
-/// of them met a field the schema declares singular and a file repeats.
-pub(crate) fn field_list<'a>(object: &'a dyn Reflect, field: &str) -> Vec<&'a dyn Reflect> {
-    list(object, field)
-}
-
-fn list<'a>(object: &'a dyn Reflect, field: &str) -> Vec<&'a dyn Reflect> {
-    match object.field(field) {
-        Some(FieldValue::List(items)) => items.iter().filter_map(|item| item.as_object()).collect(),
-        Some(FieldValue::Object(one)) => vec![one],
-        _ => Vec::new(),
-    }
-}
-
-pub(crate) fn field_object<'a>(object: &'a dyn Reflect, field: &str) -> Option<&'a dyn Reflect> {
-    match object.field(field)? {
-        FieldValue::Object(child) => Some(child),
-        _ => None,
-    }
-}
-
-/// `type_key` is `&'static str` already; this only re-borrows it for the error.
-pub(crate) fn leak(key: &str) -> &'static str {
-    // Every `type_key` comes from a `&'static TypeInfo`, so the lifetime is
-    // real; the signature of `field` just does not carry it.
-    Box::leak(key.to_string().into_boxed_str())
-}
+/// Re-exported under the names the readers of this crate already use, so a
+/// module that meets a field the schema declares singular and a file repeats
+/// asks the same function as every other (ADR 0046).
+pub(crate) use energyml_core::reflect::fields::{
+    object as field_object, objects as field_list, text as field_text,
+};
 
 #[cfg(test)]
 mod tests {

@@ -928,22 +928,9 @@ fn reference_of(object: &dyn Reflect, field: &str) -> Option<String> {
     identity::reference_uuid(object, field)
 }
 
-fn string_of(object: &dyn Reflect, field: &str) -> Option<String> {
-    match object.field(field)? {
-        FieldValue::Scalar(scalar) => scalar
-            .as_str()
-            .map(str::to_string)
-            .filter(|text| !text.trim().is_empty()),
-        _ => None,
-    }
-}
-
-fn number_of(object: &dyn Reflect, field: &str) -> Option<f64> {
-    match object.field(field)? {
-        FieldValue::Scalar(scalar) => scalar.as_f64(),
-        _ => None,
-    }
-}
+// The readers of a field are the door's (ADR 0046), under the names this file
+// already uses.
+use energyml_core::reflect::fields::{number as number_of, text as string_of};
 
 fn doubles(array: &dyn Reflect, source: &dyn ArraySource, at: &str) -> Result<Vec<f64>, Refusal> {
     match values::read(array, source, at)? {
