@@ -18,8 +18,8 @@ meshing, structural and well computations all follow the same contract:
 > page lists the modules by family. The modules of the tables below are in
 > `energyml-geostat`, except `surface`, `intersect`, `project`, `fault_throw`,
 > `fault_sticks`, `horizon_law`, `t2d`, `survey`, `well_plan`, `tops`, `profile`,
-> `well_logs`, `fake`, `step_rate`, `hall`, `flow_law`, `ion_balance` and
-> `water_diagrams`, which are in `energyml-analysis`.
+> `well_logs`, `fake`, `step_rate`, `hall`, `flow_law`, `ion_balance`,
+> `water_diagrams` and `combine`, which are in `energyml-analysis`.
 
 Three pictures from the Lutetia reference model, with the call that draws each in the
 [Gallery](gallery.md):
@@ -57,6 +57,7 @@ flagged for verification.
 |---|---|---|
 | `triangulate` | 2D Delaunay and constrained Delaunay triangulation of a point cloud (faults as constraints), each point keeping its own z. Built on the `spade` crate for its exact geometric predicates, because floating-point predicates give overlapping triangles over nearly collinear points such as an alignment of boreholes | `spade` library; TODO(reference) |
 | `isocontour` | Iso-lines of a per-node scalar over a triangulated surface. Inside one triangle a linear field crosses a level along one segment or not at all, so there is no ambiguous case; segments are then chained into polylines | TODO(reference) |
+| `isosurface` | The iso-surface of a scalar over a structured lattice of `ni x nj x nl` nodes, by marching tetrahedra: each cell is cut into six tetrahedra by the Kuhn subdivision, which all share one diagonal, so two neighbouring cells cut their common face the same way (no crack) and a tetrahedron has no ambiguous case (no table of 256 cases). Vertices are keyed by the edge of the lattice they lie on, so the mesh is welded and the same lattice gives the same mesh bit for bit. The value may vary linearly or linearly in its base-10 logarithm along an edge. When nothing is cut the answer says why (`Crossing::AllBelow`, `AllAbove`, `Grazed`, `InSetAsideCells`), never a silent empty mesh. A lattice that folds back on itself gives a wrong surface and the function cannot see it: the caller refuses first, with the fold check of the well geometry | Kuhn (1960) for the subdivision, Doi and Koide (1991) for the method; TODO(reference): neither has been re-read |
 | `surface` | Dip, dip azimuth and curvature (mean, Gaussian, principal) of a triangulated surface, with the cotangent Laplacian over the mixed area | Meyer, Desbrun, Schröder and Barr (2003), *Discrete Differential-Geometry Operators for Triangulated 2-Manifolds*. TODO(reference): venue and DOI are not in the code |
 | `resample`, `densify` | Resample a polyline at a spacing, or add points between vertices while keeping every vertex | - |
 | `loft` | A surface between polylines (two lines, or successive sticks of a fault) | - |
@@ -76,6 +77,12 @@ flagged for verification.
 | `fault_sticks` | Fault sticks drawn from a plane and the orientation of the surface they make | - |
 | `horizon_law` | A horizon laid by a law over a reference surface | - |
 | `t2d` | Analytic time-to-depth with a linear velocity-depth law `V(z) = V0 + k z`; `k = 0` is a legitimate constant-velocity law | TODO(reference) |
+
+## Derived values
+
+| Module | What it does | Reference |
+|---|---|---|
+| `combine` | Two sets of values combined cell by cell: a ratio, a difference, the log of a ratio. The combinations are a registry (`Combines`, the caller's own tried first). The second input is converted to the unit of the first when they are two units of one family, and refused otherwise. A pair where an input is absent (NaN) and a pair whose result is undefined (a division by zero, the logarithm of a value <= 0) are counted apart, and the cell is NaN, never an infinity. The result is a list of values: writing it back as a property is the `combine` operation of [Creating objects](creating-objects.md) | - |
 
 ## Wells
 

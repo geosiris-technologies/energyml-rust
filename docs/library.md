@@ -163,6 +163,42 @@ Strict is the default. `ReadMode::Lenient` (CLI: `--lenient`) tolerates missing
 required elements and reports one diagnostic per invention. Parts no parser can
 read are listed by `energyml repair`. See [ADR 0004](adr/0004-reading-policy.md).
 
+### The members of a wellbore
+
+What does this well have? Its trajectories, the frames that sample along it, its marker
+frames (the tops), and the properties that hang on them. The question needs no array and no
+geometry, only the type, the uri and the title of each object and the references between
+them, so the answer is a pure function in `energyml_domain::well_members`, and a grid of
+wells and the depth coverage walk the same members.
+
+```rust
+use energyml_domain::well_members::well_members_of_index;
+
+for well in well_members_of_index(&index) {
+    println!("{}: {} trajectories, {} frames, {} properties",
+        well.title, well.trajectories.len(), well.frames.len(), well.properties.len());
+}
+```
+
+`well_members(objects, outgoing)` is the same walk over any inventory: `objects` are
+`ObjectFact`s (uri, qualified type, title) and `outgoing(uri)` gives the uris an object
+references, so a dataspace of a server can give its own edges. It is asked once per
+relevant object.
+
+- **A well is seeded from both ends.** A feature is a row even with nothing on it, and a
+  representation that reaches no well makes its own row. A representation reaches its well
+  by its interpretation and the interpretation's feature; a WITSML trajectory by its
+  wellbore and the feature that names that wellbore.
+- **The kinds are a table** (`MEMBER_KINDS`), read by the local name of the type without the
+  `obj_` of release 2.0.1, so one concept is the same in every release.
+- **A property is categorical** when it references a table of categories; the entry lists
+  those apart.
+- **The walk does not judge.** Whether a member can be drawn, the wording of a state and the
+  telling apart of two wells with one title are the business of the face. The result is
+  sorted by lower-case title, then by key.
+
+See [ADR 0040](adr/0040-the-members-of-a-wellbore.md).
+
 ## Editing and saving
 
 ```rust

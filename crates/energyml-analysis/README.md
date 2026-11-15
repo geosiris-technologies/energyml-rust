@@ -2,7 +2,7 @@
 
 What is computed from EnergyML shapes, as opposed to what a file states (which is the job of `energyml-geometry`). Inputs are plain samples and query points: nothing here reads a package, so the crate compiles to wasm and works over any storage.
 
-The domain-neutral algorithms (IDW, kriging with variograms, RBF, multilevel B-splines, triangulation, iso-contours, resampling, lofting, ...) now live in [`energyml-geostat`](../energyml-geostat/) and are re-exported from this crate, so existing paths such as `energyml_analysis::kriging::...` keep working. What stays here is the domain computation over wells and grids: surveys, well plans, tops, time-to-depth, fault throw and sticks, IJK grids and their faults, thickness, flow laws, step-rate and Hall tests, water chemistry and well logs.
+The domain-neutral algorithms (IDW, kriging with variograms, RBF, multilevel B-splines, triangulation, iso-contours, resampling, lofting, ...) now live in [`energyml-geostat`](../energyml-geostat/) and are re-exported from this crate, so existing paths such as `energyml_analysis::kriging::...` keep working. What stays here is the domain computation over wells and grids: surveys, well plans, tops, time-to-depth, fault throw and sticks, IJK grids and their faults, thickness, flow laws, step-rate and Hall tests, water chemistry and well logs, and `combine` (two properties combined value by value: a ratio, a difference, the log of a ratio, in a registry).
 
 Conventions: a `NaN` sample is set aside and counted, never averaged; refusals are named (no samples, mismatched lengths, invalid parameter) so a malformed call is never confused with an interpolated `NaN`. The result of an interpolation is meant to be written back as an EnergyML object by the caller.
 

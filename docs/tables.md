@@ -143,6 +143,37 @@ for (column, declaration) in LinkReaders::builtin().declarations(&sheet, &kinds)
 }
 ```
 
+## Writing a link
+
+The library reads convention B; the `table-link` operation of
+[Creating objects](creating-objects.md) writes it, on an explicit gesture and never as a
+side effect. It takes the object that holds the link (a table whose column links, or a
+property whose component axes the target holds) and the target table, and writes what the
+reader above reads first:
+
+- **The facet.** One `qualifier` facet whose value is the **complete ETP uri** of the
+  target, its version included when it has one, never a bare uuid. A column that already
+  has a `qualifier` facet of the same value has nothing to write; one of another value is
+  refused, because a column links to one table.
+- **By key or by rank.** `by = key` needs the target to have exactly one key column and the
+  column to have the kind `identifier`; `by = rank` takes a column of kind `explicit index`
+  or `classification index`, and a target with no key column is accepted. The kind is
+  checked with the same rule and the same constants as the reader, and **never changed
+  silently**: a column of another kind is refused, and the refusal says to set the kind
+  first with `edit-object`.
+- **The description.** For a link by key, when the column has no description, the
+  operation also writes convention A in the exact grammar the reader accepts
+  (`key of the table <title>: <uri>, KeyColumn <key>`, or `key of this table (self
+  reference): ...` when the target is the table itself, as for a tree), for a human
+  reader. A description that is already there is kept, and refused when it names another
+  target than the facet. A link by rank has no form A and gets no description.
+- **A property.** For a property, no column is named; the facet is written on the
+  property itself.
+
+The write is the one of `edit-object`, and the operation records an `Activity` with the
+column, the way, and the target's uri. What was written reads back as convention B with no
+warning, which is how the operation is tested against the reader.
+
 ## Checking the links
 
 `check_links` follows every cell of every link column and counts what it finds:

@@ -1,6 +1,6 @@
 # energyml-section - architecture
 
-Related decisions: [ADR 0015](../../docs/adr/0015-section-view.md) (the view: three stages, `model.rs` as contract, one drawer), [ADR 0005](../../docs/adr/0005-refuse-rather-than-draw.md), [ADR 0011](../../docs/adr/0011-tests-follow-the-specification.md), [ADR 0012](../../docs/adr/0012-no-face-carries-logic.md).
+Related decisions: [ADR 0015](../../docs/adr/0015-section-view.md) (the view: three stages, `model.rs` as contract, one drawer), [ADR 0038](../../docs/adr/0038-geosteering-section.md) (the geosteering section, `along_well`), [ADR 0005](../../docs/adr/0005-refuse-rather-than-draw.md), [ADR 0011](../../docs/adr/0011-tests-follow-the-specification.md), [ADR 0012](../../docs/adr/0012-no-face-carries-logic.md).
 
 ## Purpose and position
 
@@ -29,6 +29,19 @@ The section view: wells projected and surfaces cut along a trace, as long profil
 - **Several packages, one cache per package.** `Inputs::objects` holds one `Asked` per package; an object whose package is not opened is refused by name. The per-object cache (`read::cache::PackageCache`) keeps the read well and the placed surface (independent of the trace) and the cuts keyed by (surface, line); the epoch key is package, revision, scene system and time factor. Tests count work (`Work`), never time.
 - **A grid is cut as an envelope** with the reader of `energyml-geometry` (never a second reader); what is approximated is written at the head of the module.
 - **`redraw` rebuilds a drawing from its own metadata**: same packages, same bytes.
+
+## The geosteering section (`along_well`)
+
+A second view in the same crate, with its own model: it does not use the catalogue, `read` or `layout` above. Its rules:
+
+- **One frame, one door.** Everything is computed in the frame of the hole, `(md, dn)` (`dn` along the high side, positive up), and carried into the drawing by `WellProjection::place` and nothing else. The cells, the boundaries, the horizons and the tops are consistent by construction.
+- **Three stages.** `build` reads and places (once); `layout` and `draw` arrange a `Model` under a `View` and read nothing; `pick` and `pixel_of` go between a pixel and the data. A change of window costs a drawing, not a reading.
+- **The drawing is the shared one.** It is a `DisplayList` of `energyml_sheet::draw`, written by its one SVG writer; there is no second drawing path, and a PNG is the SVG rendered, never a second drawing.
+- **What the file does not state is declared in the request** (the roles and signs of the curtain's dimensions, the axes when the file gives none); a rank is never an offset. The request and the view travel in the SVG metadata and `redraw` gives the same bytes.
+- **Folds are marked, never straightened; gaps are never bridged; angles of the boundaries are searched by value.** A node with no high side is counted, never a refusal of the section.
+- **Registries.** Projections (`WellProjections`), curtain sources (`CurtainSources`, a source declared and not built refuses by name) and interpolations: the caller's own are tried first.
+- **No reader of markers exists.** A marker uri is refused by name and the section still draws; `marker_ticks` is written and tested for a caller that holds markers.
+- No native dependency, no file, no thread: the module compiles to wasm.
 
 ## Not done
 

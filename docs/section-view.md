@@ -133,5 +133,6 @@ The signatures, in `crates/energyml-section/src/lib.rs`:
 - `redraw(svg: &str, packages: &mut [Opened<'_>], reprojector: &dyn Reprojector) -> Result<String, RedrawError>`,
   which draws again a drawing from what its own metadata says it was made of.
 
-See also [Well sheet](well-sheet.md) and
+See also [Well sheet](well-sheet.md), [the geosteering section](along-well-section.md)
+(a section along a well, with a curtain of values either side of the hole) and
 [ADR 0015](adr/0015-section-view.md).

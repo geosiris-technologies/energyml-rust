@@ -13,6 +13,7 @@
 - [Editing a scene](scene-editing.md)
 - [Section view](section-view.md)
 - [Around the well](around-the-well.md)
+- [The geosteering section](along-well-section.md)
 - [Provenance](provenance.md)
 - [The MCP server](mcp.md)
 - [Well sheet](well-sheet.md)
