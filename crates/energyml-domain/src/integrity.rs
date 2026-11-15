@@ -53,10 +53,15 @@ use energyml_core::identity;
 use energyml_core::value::{FieldValue, Reflect};
 
 use crate::property;
+use crate::property_kind::Resolver;
 use crate::rules::{Finding, Gravity, Outcome, concepts_of};
-use crate::source::{ArraySource, ObjectSource};
-use crate::table::{Cell, Lookup};
-use crate::values::Values;
+use crate::source::{ArraySource, NoObjects, ObjectSource, Presence, object_chip};
+use crate::table::{
+    Cell, CellState, ColumnCells, Convention, LinkDeclaration, LinkReaders, LinkRefusal, LinkReport, LinkTarget,
+    Lookup, NamingRefusal, Resolved, RowMatch, Table, TableRefusal, TableSet, TableSheet, TargetIndexes,
+    check_links, resolve, resolve_kinds, row_named_by, uri_column,
+};
+use crate::values::{Family, Values};
 
 /// One cross-object check: its id, what it means, and the code that judges.
 pub struct Integrity {
@@ -89,9 +94,33 @@ pub fn checks() -> &'static [Integrity] {
 const CHECKS: &[Integrity] = &[
     Integrity {
         id: "house/discrete-value-in-lookup",
-        says: "every value of a property with a category lookup is a key of its table's key column (the reading is ours: common TRG 2.3 §9.1 says a KeyColumn makes the table a lookup table, not how a value names a row)",
+        says: "every value of a property with a category lookup names a row of its table, by its key column or by rank from 0 when it has none (the reading is ours: common TRG 2.3 §9.1 says a KeyColumn makes the table a lookup table, not how a value names a row)",
         gravity: Gravity::Error,
         judge: discrete_value_in_lookup,
+    },
+    Integrity {
+        id: "house/table/link-resolves",
+        says: "every non-empty value of a link column names a row of its target table, by its one key column or by rank when it has none (the convention is ours: common TRG 2.3 §9.1 p. 190 has no column naming another table; the declaration is a qualifier facet, §11.11 p. 294)",
+        gravity: Gravity::Error,
+        judge: table_link_resolves,
+    },
+    Integrity {
+        id: "house/table/link-target-key-unique",
+        says: "a key a link names is held by one row of its target (nothing in common TRG 2.3 §9.1 p. 190 requires keys to be unique; the first row is used and the ambiguity reported)",
+        gravity: Gravity::Warning,
+        judge: table_link_target_key_unique,
+    },
+    Integrity {
+        id: "house/table/link-declared-by-facet",
+        says: "a link column is declared by one qualifier facet holding the target table's uri (common TRG 2.3 §11.11 p. 294, §11.3 p. 285); a description or a title is read and reported",
+        gravity: Gravity::Warning,
+        judge: table_link_declared_by_facet,
+    },
+    Integrity {
+        id: "house/table/uri-value-resolves",
+        says: "a uri written as a value names an object of the package (Identifier Specification v4.0 §6.3 p. 14); another dataspace is not judged",
+        gravity: Gravity::Warning,
+        judge: table_uri_value_resolves,
     },
     Integrity {
         id: "house/time-series-asset-resolves",
@@ -159,11 +188,12 @@ pub fn run(
 // ---------------------------------------------------------------------------
 
 /// **House rule**, and the reading is written down: the value is looked up in the
-/// key column - because neither
+/// key column, or by its rank from 0 when the table has none - because neither
 /// the common TRG 2.3 §9.1-9.2 (p. 190-191) nor the RESQML TRG 2.2 §7.7
 /// (p. 230) says how a value designates a row, beyond *"Defines a key column
-/// which make the table a lookup table"*. `energyml-domain::table` and the front end
-/// read it the same way; a value no key matches is a value no legend can name.
+/// which make the table a lookup table"*. The one door is
+/// [`crate::table::row_named_by`] (`house/table/row-rank-without-key`,
+/// ADR-0030); a value that names no row is a value no legend can name.
 ///
 /// A value equal to the array's own `NullValue` is not a value, and `NaN` is
 /// how floating arrays say the same thing.
@@ -201,30 +231,35 @@ fn discrete_value_in_lookup(context: &Context<'_>, check: &Integrity, out: &mut 
                 continue;
             }
         };
-        let [key] = lookup.key_columns.as_slice() else {
+        // The index is built once per table, and `row_named_by` is the one door.
+        let index = lookup.key_index();
+        if let Err(NamingRefusal::SeveralKeyColumns { count }) = row_named_by(&index, &Cell::Number(0.0)) {
             out.push(cant(format!(
-                "its lookup `{table_uuid}` has {} key column(s), and a value can name a row by one",
-                lookup.key_columns.len()
+                "its lookup `{table_uuid}` has {count} key column(s), and a value can name a row by one"
             )));
             continue;
-        };
-        match lookup.rows.columns.get(*key) {
-            Some(Some(Values::Text(_))) => {
-                out.push(cant(format!(
-                    "the key column of `{table_uuid}` holds text, and the property's values are numbers"
-                )));
-                continue;
-            }
-            Some(Some(_)) => {}
-            _ => {
-                out.push(cant(format!(
-                    "the key column of `{table_uuid}` does not read: {}",
-                    lookup.notes.join("; ")
-                )));
-                continue;
+        }
+        // A keyed table is read by its key; the checks on the key column apply to it only.
+        let key = index.key_columns().first().copied();
+        if let Some(key) = key {
+            match lookup.rows.columns.get(key) {
+                Some(Some(Values::Text(_))) => {
+                    out.push(cant(format!(
+                        "the key column of `{table_uuid}` holds text, and the property's values are numbers"
+                    )));
+                    continue;
+                }
+                Some(Some(_)) => {}
+                _ => {
+                    out.push(cant(format!(
+                        "the key column of `{table_uuid}` does not read: {}",
+                        lookup.notes.join("; ")
+                    )));
+                    continue;
+                }
             }
         }
-        let key_title = lookup.titles.get(*key).cloned().flatten();
+        let key_title = key.and_then(|key| lookup.titles.get(key).cloned().flatten());
 
         // Value → how many elements carry it, in order of first appearance.
         let mut missing: Vec<(f64, usize)> = Vec::new();
@@ -245,7 +280,10 @@ fn discrete_value_in_lookup(context: &Context<'_>, check: &Integrity, out: &mut 
                 if value.is_nan() || Some(value) == null {
                     continue;
                 }
-                if !lookup.find(&[Cell::Number(value)]).is_empty() {
+                if matches!(
+                    row_named_by(&index, &Cell::Number(value)),
+                    Ok(RowMatch::One(_) | RowMatch::Several(_))
+                ) {
                     continue;
                 }
                 match missing.iter_mut().find(|(known, _)| *known == value) {
@@ -259,15 +297,413 @@ fn discrete_value_in_lookup(context: &Context<'_>, check: &Integrity, out: &mut 
                 .iter()
                 .map(|(value, count)| format!("{value} ({count} element(s))"))
                 .collect();
-            out.push(violation(
-                check,
-                uuid,
+            let read = if key.is_some() {
                 format!(
                     "{} not in the key column{} of `{table_uuid}`",
                     listed.join(", "),
                     key_title.map(|title| format!(" `{title}`")).unwrap_or_default()
-                ),
+                )
+            } else {
+                format!(
+                    "{} not a row of `{table_uuid}` ({} row(s), named by rank from 0: house/table/row-rank-without-key)",
+                    listed.join(", "),
+                    index.row_count()
+                )
+            };
+            out.push(violation(check, uuid, read));
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Links between tables, and uris written as values
+// ---------------------------------------------------------------------------
+
+/// The object types a link column can sit in: the ones the table checks judge.
+const TABLE_TYPE: &str = "ColumnBasedTable";
+
+/// A table read for the link checks: its sheet, and what each of its columns
+/// declares. Nothing here reads an array.
+struct LinkedTable {
+    sheet: TableSheet,
+    declarations: Vec<(usize, std::result::Result<LinkDeclaration, LinkRefusal>)>,
+}
+
+/// The sheet of a table object and the declarations of its columns: the kinds
+/// are resolved through the package then the dictionary, and `LinkReaders`
+/// reads the conventions (ADR-0030). `None` when the table does not read: that
+/// is the business of `Table::read`, not of a link check.
+fn table_context(object: &dyn Reflect, source: &dyn ObjectSource) -> Option<LinkedTable> {
+    let sheet = TableSheet::of(object).ok()?;
+    let resolver = Resolver::new(source);
+    let kinds = resolve_kinds(&sheet, &resolver);
+    let declarations = LinkReaders::builtin().declarations(&sheet, &kinds);
+    Some(LinkedTable { sheet, declarations })
+}
+
+/// The title of a column, or its rank when it has none.
+fn column_name(sheet: &TableSheet, column: usize) -> String {
+    sheet
+        .columns
+        .get(column)
+        .and_then(|c| c.title.as_deref())
+        .map(str::to_owned)
+        .unwrap_or_else(|| column.to_string())
+}
+
+/// Rows as a list, ten at most, then how many more.
+fn rows_listed(rows: &[usize]) -> String {
+    const SHOWN: usize = 10;
+    let mut text = rows
+        .iter()
+        .take(SHOWN)
+        .map(usize::to_string)
+        .collect::<Vec<_>>()
+        .join(", ");
+    if rows.len() > SHOWN {
+        text.push_str(&format!(" and {} more", rows.len() - SHOWN));
+    }
+    text
+}
+
+/// The value of a cell as text, when it holds a value.
+fn value_at(cells: &[std::result::Result<ColumnCells<'static>, TableRefusal>], column: usize, row: usize) -> Option<String> {
+    match cells.get(column)?.as_ref().ok()?.cell(row)? {
+        CellState::Value(cell) => Some(cell.to_string()),
+        _ => None,
+    }
+}
+
+/// What the links of one table were checked against.
+struct LinksChecked {
+    report: LinkReport,
+    cells: Vec<std::result::Result<ColumnCells<'static>, TableRefusal>>,
+    targets: TableSet,
+    /// The declared targets that could not be read, with why.
+    unread: Vec<(String, String)>,
+}
+
+/// Read the table, its targets, and run `check_links`. `Err` is the reason the
+/// table could not be checked: an *uncheckable*, never a pass.
+fn check_table_links(
+    context: &Context<'_>,
+    object: &dyn Reflect,
+    links: &LinkedTable,
+    arrays: &dyn ArraySource,
+) -> std::result::Result<LinksChecked, String> {
+    let table = Table::read(object).map_err(|why| format!("it does not read: {why}"))?;
+    let cells = table.read_cells(arrays);
+
+    let mut declared: Vec<String> = Vec::new();
+    let mut by_title = false;
+    for (_, declaration) in &links.declarations {
+        let Ok(declaration) = declaration else { continue };
+        match &declaration.target {
+            LinkTarget::Key { table_uri } | LinkTarget::Rank { table_uri } => {
+                if !declared.contains(table_uri) {
+                    declared.push(table_uri.clone());
+                }
+            }
+            LinkTarget::ByTitleIn { .. } => by_title = true,
+            _ => {}
+        }
+    }
+    // A title names a table of the package: every other table is a candidate.
+    let mut uris = declared.clone();
+    if by_title {
+        for (_, other) in context.objects {
+            if other.type_info().type_key != TABLE_TYPE {
+                continue;
+            }
+            if let Some(uri) = identity::uri_of_reflect(*other)
+                && uri.as_str() != &*links.sheet.uri
+                && !uris.contains(&uri)
+            {
+                uris.push(uri);
+            }
+        }
+    }
+    let wanted: Vec<&str> = uris.iter().map(String::as_str).collect();
+    let (mut targets, unread) = TableSet::read(&wanted, arrays);
+    // The table itself: a self reference lands in it.
+    if let Ok(lookup) = Lookup::read(object, arrays) {
+        targets.insert(
+            &links.sheet.uri,
+            links.sheet.title.as_ref().map(|title| title.to_string()),
+            lookup,
+        );
+    }
+    let unread = unread.into_iter().filter(|(uri, _)| declared.contains(uri)).collect();
+    let report = check_links(&links.sheet, &cells, &links.declarations, &targets, None);
+    Ok(LinksChecked {
+        report,
+        cells,
+        targets,
+        unread,
+    })
+}
+
+/// The tables of the package that declare at least one link they can follow.
+fn tables_with_links<'a>(context: &'a Context<'a>) -> impl Iterator<Item = (&'a str, &'a dyn Reflect, LinkedTable)> {
+    context.objects.iter().filter_map(move |(uuid, object)| {
+        if object.type_info().type_key != TABLE_TYPE {
+            return None;
+        }
+        let links = table_context(*object, context.source)?;
+        if links.declarations.iter().all(|(_, declaration)| declaration.is_err()) {
+            return None;
+        }
+        Some((*uuid, *object, links))
+    })
+}
+
+/// **House rule** (ADR-0030). A link column names a row of its target table by
+/// its one key column, or by rank from 0 when the target has none; a non-empty
+/// value that names no row is an error, with its rows. An empty string names no
+/// row. A target that is not in the package, or a declaration that cannot be
+/// followed, makes the table *uncheckable*, never a pass.
+fn table_link_resolves(context: &Context<'_>, check: &Integrity, out: &mut Vec<Finding>) {
+    for (uuid, object, links) in tables_with_links(context) {
+        let Some(arrays) = context.arrays else {
+            out.push(unverifiable(
+                check,
+                uuid,
+                "its link columns are values, and this check was given nothing to read arrays with".into(),
             ));
+            continue;
+        };
+        let checked = match check_table_links(context, object, &links, arrays) {
+            Ok(checked) => checked,
+            Err(why) => {
+                out.push(unverifiable(check, uuid, why));
+                continue;
+            }
+        };
+        for (uri, _) in &checked.unread {
+            out.push(unverifiable(check, uuid, format!("its target `{uri}` is not in this package")));
+        }
+        let mut dangling: Vec<String> = Vec::new();
+        for column in &checked.report.columns {
+            if !column.dangling.is_empty() {
+                let values: Vec<String> = column
+                    .dangling
+                    .iter()
+                    .take(10)
+                    .filter_map(|row| value_at(&checked.cells, column.column, *row))
+                    .map(|value| format!("`{value}`"))
+                    .collect();
+                dangling.push(format!(
+                    "column `{}`: row(s) {} (values {})",
+                    column_name(&links.sheet, column.column),
+                    rows_listed(&column.dangling),
+                    values.join(", ")
+                ));
+            }
+            // A target that is not held is said above, once.
+            let refused: Vec<&(usize, LinkRefusal)> = column
+                .unresolvable
+                .iter()
+                .filter(|(_, why)| !matches!(why, LinkRefusal::TargetUnknown { .. }))
+                .collect();
+            if let Some((_, why)) = refused.first() {
+                let rows: Vec<usize> = refused.iter().map(|(row, _)| *row).collect();
+                out.push(unverifiable(
+                    check,
+                    uuid,
+                    format!(
+                        "column `{}`: row(s) {} cannot be followed: {why}",
+                        column_name(&links.sheet, column.column),
+                        rows_listed(&rows)
+                    ),
+                ));
+            }
+        }
+        for (column, why) in &checked.report.refused {
+            if !matches!(why, LinkRefusal::TargetUnknown { .. }) {
+                out.push(unverifiable(
+                    check,
+                    uuid,
+                    format!("column `{}`: {why}", column_name(&links.sheet, *column)),
+                ));
+            }
+        }
+        if !dangling.is_empty() {
+            out.push(violation(check, uuid, dangling.join("; ")));
+        }
+    }
+}
+
+/// **House rule** (ADR-0030). Nothing in the specification requires keys to be
+/// unique: when the target holds the key a link names on several rows, the
+/// first row is used and the link is reported as ambiguous.
+fn table_link_target_key_unique(context: &Context<'_>, check: &Integrity, out: &mut Vec<Finding>) {
+    for (uuid, object, links) in tables_with_links(context) {
+        let Some(arrays) = context.arrays else {
+            out.push(unverifiable(
+                check,
+                uuid,
+                "its link columns are values, and this check was given nothing to read arrays with".into(),
+            ));
+            continue;
+        };
+        let checked = match check_table_links(context, object, &links, arrays) {
+            Ok(checked) => checked,
+            Err(why) => {
+                out.push(unverifiable(check, uuid, why));
+                continue;
+            }
+        };
+        let mut ambiguous: Vec<String> = Vec::new();
+        for column in &checked.report.columns {
+            let Some(Ok(declaration)) = links
+                .declarations
+                .iter()
+                .find(|(at, _)| *at == column.column)
+                .map(|(_, declaration)| declaration)
+            else {
+                continue;
+            };
+            // Which keys, held by which rows of which table: the same resolution
+            // `check_links` made, asked again for the rows it flagged.
+            let mut named: Vec<(String, String, Vec<usize>)> = Vec::new();
+            for row in &column.ambiguous {
+                let Some(state) = checked.cells.get(column.column).and_then(|c| c.as_ref().ok()).and_then(|c| c.cell(*row))
+                else {
+                    continue;
+                };
+                let sibling = match &declaration.target {
+                    LinkTarget::ByTitleIn { column: sibling } => checked
+                        .cells
+                        .get(*sibling)
+                        .and_then(|c| c.as_ref().ok())
+                        .and_then(|c| c.cell(*row)),
+                    _ => None,
+                };
+                let Resolved::Ambiguous { table_uri, rows } =
+                    resolve(declaration, &state, sibling.as_ref(), &links.sheet.uri, &checked.targets)
+                else {
+                    continue;
+                };
+                let CellState::Value(key) = &state else { continue };
+                let key = key.to_string();
+                let target = checked
+                    .targets
+                    .target(&table_uri)
+                    .and_then(|t| t.title.clone())
+                    .unwrap_or(table_uri);
+                if !named.iter().any(|(k, t, _)| *k == key && *t == target) {
+                    named.push((key, target, rows));
+                }
+            }
+            for (key, target, rows) in named {
+                ambiguous.push(format!(
+                    "column `{}`: key(s) `{key}` held by rows {} of `{target}`",
+                    column_name(&links.sheet, column.column),
+                    rows_listed(&rows)
+                ));
+            }
+        }
+        if !ambiguous.is_empty() {
+            out.push(violation(check, uuid, ambiguous.join("; ")));
+        }
+    }
+}
+
+/// **House rule** (ADR-0030, convention B). A link column is declared by one
+/// `qualifier` facet holding the complete uri of the target table. A
+/// declaration in the description (A), or a target named by title in a sibling
+/// column (D), is read and reported; so is a declaration that is refused.
+/// Nothing here reads an array.
+fn table_link_declared_by_facet(context: &Context<'_>, check: &Integrity, out: &mut Vec<Finding>) {
+    for (uuid, object) in context.objects {
+        if object.type_info().type_key != TABLE_TYPE {
+            continue;
+        }
+        let Some(links) = table_context(*object, context.source) else {
+            continue;
+        };
+        let mut read: Vec<String> = Vec::new();
+        for (column, declaration) in &links.declarations {
+            let name = column_name(&links.sheet, *column);
+            match declaration {
+                Ok(declaration) if declaration.convention == Convention::DescriptionText => {
+                    read.push(format!("column `{name}` (description)"));
+                }
+                Ok(declaration) if declaration.convention == Convention::SiblingColumn => {
+                    read.push(format!("column `{name}` (title in a sibling column)"));
+                }
+                Ok(_) => {}
+                Err(why) => read.push(format!("column `{name}`: {why}")),
+            }
+        }
+        if !read.is_empty() {
+            out.push(violation(check, uuid, read.join("; ")));
+        }
+    }
+}
+
+/// **House rule** (ADR-0030, Identifier Specification v4.0 §6.3 p. 14). In a
+/// column whose every non-empty value is a complete ETP uri, each uri names an
+/// object the package holds. A uri of another dataspace is not judged: an
+/// object may legitimately live elsewhere. A column in an array file nobody
+/// gave a reader for is *uncheckable*, named.
+fn table_uri_value_resolves(context: &Context<'_>, check: &Integrity, out: &mut Vec<Finding>) {
+    let nothing = NoObjects;
+    let arrays: &dyn ArraySource = match context.arrays {
+        Some(arrays) => arrays,
+        None => &nothing,
+    };
+    for (uuid, object) in context.objects {
+        if object.type_info().type_key != TABLE_TYPE {
+            continue;
+        }
+        let Some(links) = table_context(*object, context.source) else {
+            continue;
+        };
+        let Ok(table) = Table::read(*object) else {
+            continue;
+        };
+        let mut missing: Vec<String> = Vec::new();
+        for (column, cells) in table.read_cells(arrays).into_iter().enumerate() {
+            let name = column_name(&links.sheet, column);
+            let cells = match cells {
+                Ok(cells) => cells,
+                Err(why) => {
+                    // Only a text column can hold uris: another one, unread, is not this rule's.
+                    let text = links.sheet.columns.get(column).and_then(|c| c.family) == Some(Family::Text);
+                    if text {
+                        out.push(unverifiable(check, uuid, format!("column `{name}` cannot be read: {why}")));
+                    }
+                    continue;
+                }
+            };
+            // A column that declares a link is the link rules' business.
+            if links.declarations.iter().any(|(at, _)| *at == column) || uri_column(&cells).is_none() {
+                continue;
+            }
+            let mut rows: Vec<usize> = Vec::new();
+            let mut uris: Vec<String> = Vec::new();
+            let mut row = 0;
+            while let Some(state) = cells.cell(row) {
+                if let CellState::Value(Cell::Text(value)) = state
+                    && let Ok(chip) = object_chip(&value, None, context.source)
+                    && chip.presence == Presence::NotInPackage
+                {
+                    rows.push(row);
+                    uris.push(format!("`{}`", chip.uri));
+                }
+                row += 1;
+            }
+            if !rows.is_empty() {
+                missing.push(format!(
+                    "column `{name}`: row(s) {} ({}) name(s) no object of this package",
+                    rows_listed(&rows),
+                    uris.iter().take(10).cloned().collect::<Vec<_>>().join(", ")
+                ));
+            }
+        }
+        if !missing.is_empty() {
+            out.push(violation(check, uuid, missing.join("; ")));
         }
     }
 }

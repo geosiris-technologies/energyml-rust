@@ -39,6 +39,7 @@ new record that supersedes the old one, which keeps its text and a status line.
 | [0027](0027-gaps-seams-scales-and-quantiles.md) | Gaps, seams, scales and quantiles: the numbers the views share |
 | [0028](0028-one-drawing-for-every-view.md) | One drawing for every view: `draw` knows no format, one display list, one rule for graduations, a PNG is always the SVG rasterised |
 | [0029](0029-convention-b-links-by-qualifier-facet.md) | A link to a table is one `qualifier` facet holding the uri of the table, read once; the axes of a property come from the table it names |
+| [0030](0030-table-links-keys-and-ranks.md) | Table links: a column links by key or by rank, the target decides, one key column or none; description and title are read with a warning; an empty string is a value; the rules `house/table/*` |
 | [0031](0031-tangent-at-a-knot.md) | The direction of a line at a knot is that of the interval that ends there |
 | [0032](0032-hole-frame-in-a-direct-placed-frame.md) | The frame of a hole is the physical one, whatever hand the placed frame has |
 | [0033](0033-tvd-below-the-md-datum.md) | A true vertical depth along a well is counted below the MD datum |

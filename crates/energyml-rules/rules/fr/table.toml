@@ -1,0 +1,38 @@
+# Traduction française du thème table : titres et textes. Pas encore relue par
+# un relecteur francophone ; ce qui manque se lit en anglais, et le dit.
+
+[[rule]]
+id = "house/discrete-value-in-lookup"
+title = "Toute valeur d'une propriété catégorielle nomme une ligne de sa table de correspondance"
+text = """
+Toute valeur d'une propriété qui a une table de catégories nomme une ligne de cette table : par la colonne-clé quand la table en a une, par le rang à partir de 0 quand elle n'en a pas (`house/table/row-rank-without-key`). Une valeur qui ne nomme aucune ligne est une erreur."""
+
+[[rule]]
+id = "house/table/link-resolves"
+title = "Toute valeur non vide d'une colonne-lien nomme une ligne de sa cible"
+text = """
+Une colonne-lien (déclarée par la convention B, A ou D) nomme une ligne de sa table cible par son unique colonne-clé, ou par le rang quand la cible n'en a pas (`house/table/row-rank-without-key`). Une valeur non vide qui ne nomme aucune ligne est une erreur, signalée avec sa ligne. Une chaîne vide ne nomme aucune ligne."""
+
+[[rule]]
+id = "house/table/link-target-key-unique"
+title = "Une clé que nomme un lien n'est pas dupliquée dans sa cible"
+text = """
+Quand la table cible porte la clé nommée sur plusieurs lignes, la première ligne est utilisée et le lien est signalé comme ambigu. Un avertissement."""
+
+[[rule]]
+id = "house/table/link-declared-by-facet"
+title = "Une colonne-lien est déclarée par une facette qualifier qui porte l'uri de la table cible"
+text = """
+Convention B : un kind `identifier` (par la clé) ou `explicit index` (par le rang), et une facette `qualifier` dont la valeur est l'uri ETP complète de la table cible. Une déclaration dans la seule description (A), ou une cible nommée par son titre dans une colonne sœur (D), est lue et signalée ; une déclaration refusée est signalée. Un avertissement."""
+
+[[rule]]
+id = "house/table/uri-value-resolves"
+title = "Une uri écrite comme valeur nomme un objet du paquet"
+text = """
+Dans une colonne dont toute valeur non vide est une uri ETP complète, chaque uri nomme un objet que le paquet contient. Une uri d'un autre dataspace n'est pas jugée. Un avertissement : un objet peut légitimement vivre ailleurs."""
+
+[[rule]]
+id = "house/table/row-rank-without-key"
+title = "Une table sans colonne-clé nomme ses lignes par leur rang, à partir de 0"
+text = """
+Une valeur nomme une ligne d'une table sans KeyColumn par son rang, compté à partir de 0. Une table à une colonne-clé n'est jamais lue par le rang ; avec plusieurs, une valeur ne nomme aucune ligne. Cette règle dit comment lire : ses manquements sont ceux des règles qui lisent (`house/discrete-value-in-lookup`, `house/table/link-resolves`)."""

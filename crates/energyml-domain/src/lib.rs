@@ -17,7 +17,10 @@
 //! | [`property`] | what do these numbers hang on, and how many should there be |
 //! | [`property_kind`] | what kind of quantity is it, and what is it a kind *of* |
 //! | [`color`] | what colour is this drawn in, and who said so |
-//! | [`table`] | what does the integer 3 mean in this property |
+//! | [`table`] | what does the integer 3 mean here, and which row does this cell name |
+//! | [`table_structure`] | how these tables hold together: links, row trees, key-value sheets |
+//! | [`forest`] | which node hangs under which, and which loop |
+//! | [`md_extent`] | from which MD to which, and on which reference |
 //! | [`well_strata`] | which unit is this well in, from which MD to which |
 //! | [`strata_by_md`] | and on its other frames and trajectories, looked up by MD |
 //! | [`series`] | what does this log or time series say, sample by sample |
@@ -80,12 +83,14 @@ mod scan {
     include!("dictionary_xml.rs");
 }
 pub mod error;
+pub mod forest;
 pub mod geolts;
 pub mod geolts_rank;
 /// What an object inherits, by which path - the order of ADR-0009, over the
 /// package index.
 pub mod inherit;
 pub mod integrity;
+pub mod md_extent;
 pub mod metadata;
 /// What the module keeps of a package: links and property sheets, never the
 /// objects (ADR-0010).
@@ -107,6 +112,7 @@ pub mod stats;
 pub mod strata_by_md;
 pub mod stratigraphy;
 pub mod table;
+pub mod table_structure;
 pub mod units;
 pub mod values;
 pub mod water_analysis;

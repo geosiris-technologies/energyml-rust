@@ -1,7 +1,8 @@
 # Tables and categories. The two published `house/` check ids live here and in
-# series.toml, with their flat form kept (cited by reports and tests). They are
-# crossed with `energyml_domain::integrity::checks()` in both directions by a
-# test of this crate.
+# series.toml, with their flat form kept (cited by reports and tests). The
+# theme also holds the rules of the links between tables (ADR-0030). Every
+# `finding` anchor is crossed with `energyml_domain::integrity::checks()` in
+# both directions by a test of this crate.
 
 [[rule]]
 id = "house/discrete-value-in-lookup"
@@ -10,20 +11,162 @@ status = "active"
 stance = "ambiguous"
 level = 1
 since = "2026-09-27"
-title = "Every value of a categorical property is a key of its lookup table"
+title = "Every value of a categorical property names a row of its lookup table"
 text = """
-Every value of a property with a category lookup is a key of its table's key column. The reading is ours: a KeyColumn makes the table a lookup table, but the standard does not say how a value names a row. A value that is not a key is an error."""
+Every value of a property with a category lookup names a row of its table: by the key column when the table has one, by rank from 0 when it has none (`house/table/row-rank-without-key`). A value that names no row is an error."""
 why = """
 A category value that names no row is a defect of the package, whatever the specification leaves unsaid about how a value finds its row. Weighed as an error on 27/09."""
 rulings = [
   { by = "maintainer", on = "2026-09-27" },
+  { by = "maintainer", on = "2026-11-14" },
 ]
 refs = [
   { kind = "spec", doc = "common TRG 2.3", at = "§9.1", note = "KeyColumn makes the table a lookup; the way a value names a row is not described" },
   { kind = "code", path = "crates/energyml-domain/src/integrity.rs", at = "discrete_value_in_lookup" },
+  { kind = "code", path = "crates/energyml-domain/src/table/keys.rs", at = "row_named_by" },
   { kind = "design", path = "docs/adr/0018-synthetic-reference-model.md" },
+  { kind = "design", path = "docs/adr/0030-table-links-keys-and-ranks.md" },
 ]
 at = [
   { type = "finding", key = "house/discrete-value-in-lookup" },
+  { type = "view", key = "check.report" },
+]
+
+[[rule]]
+id = "house/table/link-resolves"
+theme = "table"
+status = "active"
+stance = "silent"
+level = 1
+since = "2026-11-14"
+title = "Every non-empty value of a link column names a row of its target"
+text = """
+A link column (declared by convention B, A or D) names a row of its target table by its one key column, or by rank when the target has none (`house/table/row-rank-without-key`). A non-empty value that names no row is an error, reported with its row. An empty string names no row."""
+why = """
+A link that leads nowhere is a defect of the package that no reader can repair: the row it should have named is unknown. The specification has no column naming another table, so the declaration is ours (a qualifier facet), and so is the rule that what it names must exist (ADR-0030)."""
+rulings = [
+  { by = "maintainer", on = "2026-11-14" },
+]
+refs = [
+  { kind = "spec", doc = "common TRG 2.3", at = "§9.1 p. 190", note = "KeyColumn makes the table a lookup; no column names another table" },
+  { kind = "code", path = "crates/energyml-domain/src/integrity.rs", at = "table_link_resolves" },
+  { kind = "code", path = "crates/energyml-domain/src/table/check.rs", at = "check_links" },
+  { kind = "code", path = "crates/energyml-domain/tests/integrity_tables.rs", at = "a_dangling_link_is_found_once_with_its_row" },
+  { kind = "design", path = "docs/adr/0030-table-links-keys-and-ranks.md" },
+]
+at = [
+  { type = "finding", key = "house/table/link-resolves" },
+  { type = "view", key = "check.report" },
+  { type = "view", key = "table.view" },
+]
+
+[[rule]]
+id = "house/table/link-target-key-unique"
+theme = "table"
+status = "active"
+stance = "silent"
+level = 1
+since = "2026-11-14"
+title = "A key a link names is not duplicated in its target"
+text = """
+When the target table holds the named key on several rows, the first row is used and the link is reported as ambiguous. A warning."""
+why = """
+Nothing requires keys to be unique, so a duplicated key is not an error of the package; but a link into it lands on a row chosen by order, and a reader must be told that another row could have been meant (ADR-0030)."""
+rulings = [
+  { by = "maintainer", on = "2026-11-14" },
+]
+refs = [
+  { kind = "spec", doc = "common TRG 2.3", at = "§9.1 p. 190", note = "nothing requires keys to be unique" },
+  { kind = "code", path = "crates/energyml-domain/src/integrity.rs", at = "table_link_target_key_unique" },
+  { kind = "code", path = "crates/energyml-domain/tests/integrity_tables.rs", at = "a_link_into_a_duplicated_key_is_a_warning" },
+  { kind = "design", path = "docs/adr/0030-table-links-keys-and-ranks.md" },
+]
+at = [
+  { type = "finding", key = "house/table/link-target-key-unique" },
+  { type = "view", key = "check.report" },
+  { type = "view", key = "table.view" },
+]
+
+[[rule]]
+id = "house/table/link-declared-by-facet"
+theme = "table"
+status = "active"
+stance = "extends"
+level = 1
+since = "2026-11-14"
+title = "A link column is declared by one qualifier facet holding the target table's uri"
+text = """
+Convention B: kind `identifier` (by key) or `explicit index` (by rank), and one `qualifier` facet whose value is the complete ETP uri of the target table. A declaration in the description only (A), or a target named by title in a sibling column (D), is read and reported; a refused declaration is reported. A warning."""
+why = """
+The specification has no way to say that a column names another table. A facet is the one open slot it gives a column, and one facet per kind is what it asks; a description or a title is read so that no package is lost, and reported so that writers move to the facet (ADR-0030)."""
+rulings = [
+  { by = "maintainer", on = "2026-11-14" },
+]
+refs = [
+  { kind = "spec", doc = "common TRG 2.3", at = "§11.11 p. 294", note = "do not use several facets of the same kind for the same property" },
+  { kind = "spec", doc = "common TRG 2.3", at = "§11.3 p. 285", note = "qualifier: any other context" },
+  { kind = "spec", doc = "common TRG 2.3", at = "§11.2 p. 284", note = "FacetExt is open: a value outside the list is an extension" },
+  { kind = "code", path = "crates/energyml-domain/src/integrity.rs", at = "table_link_declared_by_facet" },
+  { kind = "code", path = "crates/energyml-domain/src/table/links.rs", at = "LinkReaders" },
+  { kind = "code", path = "crates/energyml-domain/tests/integrity_tables.rs", at = "a_description_only_link_is_reported_and_followed" },
+  { kind = "design", path = "docs/adr/0030-table-links-keys-and-ranks.md" },
+]
+at = [
+  { type = "finding", key = "house/table/link-declared-by-facet" },
+  { type = "view", key = "check.report" },
+  { type = "view", key = "table.view" },
+]
+
+[[rule]]
+id = "house/table/uri-value-resolves"
+theme = "table"
+status = "active"
+stance = "silent"
+level = 1
+since = "2026-11-14"
+title = "A uri written as a value names an object of the package"
+text = """
+In a column whose every non-empty value is a complete ETP uri, each uri names an object the package holds. A uri of another dataspace is not judged. A warning: an object may legitimately live elsewhere."""
+why = """
+A uri that names nothing the package holds is a pointer into the void for whoever opens the package alone; it may be right (the object lives elsewhere), so it is a warning and never a refusal (ADR-0030)."""
+rulings = [
+  { by = "maintainer", on = "2026-11-14" },
+]
+refs = [
+  { kind = "spec", doc = "Identifier Specification 4.0", at = "§6.3 p. 14", note = "the grammar of the uri of an object" },
+  { kind = "code", path = "crates/energyml-domain/src/source.rs", at = "object_chip" },
+  { kind = "code", path = "crates/energyml-domain/src/integrity.rs", at = "table_uri_value_resolves" },
+  { kind = "code", path = "crates/energyml-domain/tests/integrity_tables.rs", at = "a_uri_naming_no_object_is_a_warning" },
+  { kind = "design", path = "docs/adr/0030-table-links-keys-and-ranks.md" },
+]
+at = [
+  { type = "finding", key = "house/table/uri-value-resolves" },
+  { type = "view", key = "check.report" },
+  { type = "view", key = "table.view" },
+]
+
+[[rule]]
+id = "house/table/row-rank-without-key"
+theme = "table"
+status = "active"
+stance = "silent"
+level = 1
+since = "2026-11-14"
+title = "A table without a key column names its rows by rank, from 0"
+text = """
+A value names a row of a table without a KeyColumn by its rank, counted from 0. A table with one key column is never read by rank; with several, a value names no row. This rule says how to read: its breaches are those of the rules that read (`house/discrete-value-in-lookup`, `house/table/link-resolves`)."""
+why = """
+Row identity is positional in every column, so the rank is the only name a keyless row has; counting from 0 is what the readers of the library and the tools around it already do. A keyed table is never read by rank: a key that finds nothing would otherwise land on an unrelated row (ADR-0030)."""
+rulings = [
+  { by = "maintainer", on = "2026-11-14" },
+]
+refs = [
+  { kind = "spec", doc = "common TRG 2.3", at = "§9.1 p. 190", note = "ordering matters since it will be the same in all columns" },
+  { kind = "code", path = "crates/energyml-domain/src/table/keys.rs", at = "row_named_by" },
+  { kind = "code", path = "crates/energyml-domain/tests/table_keys.rs", at = "a_keyed_table_is_never_read_by_rank" },
+  { kind = "design", path = "docs/adr/0030-table-links-keys-and-ranks.md" },
+]
+at = [
+  { type = "view", key = "table.view" },
   { type = "view", key = "check.report" },
 ]

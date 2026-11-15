@@ -50,5 +50,5 @@ fn every_finding_anchor_names_a_check_that_exists() {
             );
         }
     }
-    assert_eq!(seen, 2, "the two published ids");
+    assert_eq!(seen, 6, "the two published ids and the four table checks");
 }
