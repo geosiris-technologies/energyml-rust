@@ -219,16 +219,7 @@ fn prefix_of(qualified: &[u8]) -> String {
     }
 }
 
-fn local_name(raw: &[u8]) -> String {
-    String::from_utf8_lossy(raw.rsplit(|b| *b == b':').next().unwrap_or_default()).into_owned()
-}
-
-fn unescape_attr(raw: &[u8]) -> String {
-    let text = String::from_utf8_lossy(raw);
-    quick_xml::escape::unescape(&text)
-        .map(|c| c.into_owned())
-        .unwrap_or_else(|_| text.into_owned())
-}
+use super::raw_xml::{local_name, unescape_attr};
 
 fn non_empty(value: String) -> Option<String> {
     let trimmed = value.trim();

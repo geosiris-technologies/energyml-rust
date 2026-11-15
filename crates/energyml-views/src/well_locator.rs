@@ -7,7 +7,7 @@
 
 use energyml_core::value::FieldValue;
 use energyml_domain::md_extent::{self, ExtentReaders};
-use energyml_domain::package_index::{NodeState, PackageIndex};
+use energyml_domain::package_index::PackageIndex;
 use energyml_geometry::around_well::projection::{
     LocatorLine, Plan, VerticalSection, WellAxis, WellProjection, WellProjections, locator_line,
     locator_mark, locator_spans,
@@ -16,7 +16,10 @@ use energyml_geometry::well::{MdRange, PlacedPath};
 use energyml_sheet::draw::{Anchor, DisplayList, Element, Item, Layer, PageUnit, Rect, Stroke, SymbolKind};
 use serde_json::Value;
 
-use crate::kind::{Drawn, ObjectSlot, Offer, Request, ViewContext, ViewKind, ViewNote, local_type};
+use crate::kind::{
+    Drawn, ObjectSlot, Offer, Request, ViewContext, ViewKind, ViewNote, local_type, offers_of_types,
+    title_or_uri,
+};
 use crate::refusal::ViewRefusal;
 use crate::setting::ViewSetting;
 use crate::style::{self, PlotFrame, short};
@@ -79,18 +82,7 @@ impl ViewKind for WellLocator {
     }
 
     fn offers(&self, index: &PackageIndex) -> Vec<Offer> {
-        index
-            .nodes()
-            .filter(|node| {
-                node.state == NodeState::Present && TYPES.contains(&local_type(&node.qualified_type))
-            })
-            .map(|node| Offer {
-                view: ID,
-                objects: vec![node.uri.to_string()],
-                title: node.title.as_deref().unwrap_or(&node.uuid).to_string(),
-                missing: Vec::new(),
-            })
-            .collect()
+        offers_of_types(index, ID, TYPES, |_| true)
     }
 
     fn draw(&self, request: &Request, cx: &ViewContext<'_>) -> Result<Drawn, ViewRefusal> {
@@ -201,12 +193,7 @@ impl ViewKind for WellLocator {
             }
         };
 
-        let title = cx
-            .index
-            .node(uri)
-            .and_then(|node| node.title.as_deref())
-            .unwrap_or(uri)
-            .to_string();
+        let title = title_or_uri(cx.index, uri);
         let list = picture(
             request.size,
             mode,

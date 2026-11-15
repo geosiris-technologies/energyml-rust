@@ -44,6 +44,7 @@ mod rules;
 mod select;
 mod series;
 mod sources;
+mod target;
 mod terrain;
 mod view;
 
@@ -90,7 +91,9 @@ struct Cli {
     /// - `--h5 path/to/data.h5` offers the file without naming it. Offers are
     ///   opened in the order given and the first that holds the dataset wins.
     /// - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the
-    ///   document uses, for when you know which name is wrong.
+    ///   document uses, for when you know which name is wrong. The text before
+    ///   the first `=` is a name only when it is a bare file name: a path that
+    ///   contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
     ///
     /// The name is optional because the whole point is not having to open a
     /// `.rels` in a text editor to find out what your file used to be called.
@@ -799,17 +802,8 @@ pub fn open(file: &PathBuf, modes: &Modes) -> Result<Opened> {
     store.set_lenient(modes.lenient);
     store.set_strict(modes.strict);
     for spec in &modes.h5 {
-        // `name=path`, or just `path`. Split on the **first** `=` so a path
-        // containing one still works on the right-hand side; a Windows drive
-        // letter uses `:` and is unaffected either way.
-        match spec.split_once('=') {
-            Some((name, path)) if !name.is_empty() && !path.is_empty() => {
-                store.external_files_mut().set(name, path);
-            }
-            _ => {
-                store.external_files_mut().offer(spec.trim_start_matches('='));
-            }
-        }
+        // `NAME=PATH` or `PATH`: the one reading is the library's.
+        store.external_files_mut().apply_spec(spec);
     }
     // A path given to `--h5` that is not on disk takes no part in the search,
     // and used to be dropped without a word: a typo looked like a package that
@@ -2230,6 +2224,8 @@ fn export(args: ExportArgs, modes: Modes) -> Result<()> {
     // the two things a person needs to know are opposite sides of the same
     // fact: without the flag those objects are silently absent from the file,
     // and with it their Z is a number somebody chose.
+    let stdout = std::io::stdout();
+    let mut stdout_lock = stdout.lock();
     let in_time = objects
         .iter()
         .filter(|o| o.crs.as_ref().is_some_and(|crs| crs.is_time()))
@@ -2261,75 +2257,34 @@ fn export(args: ExportArgs, modes: Modes) -> Result<()> {
         }
     }
 
-    let writable: Vec<_> = objects
-        .iter()
-        .filter(|o| exporter.handles_with(o, &options))
-        .cloned()
-        .collect();
-    let skipped = objects.len() - writable.len();
-
-    let mut written = 0usize;
+    // **The writing is the library's** (`energyml_export::run`), the same call
+    // the Python bridge makes. This face only chooses to skip what the exporter
+    // cannot write, and shows it below.
+    let sink = match &args.out {
+        // A directory: one file per representation, `qualifiedType_uuid.ext`.
+        Some(path) if path.is_dir() || path.extension().is_none() => {
+            energyml_export::run::Sink::Directory(path)
+        }
+        Some(path) => energyml_export::run::Sink::File(path),
+        None => energyml_export::run::Sink::Stream(&mut stdout_lock),
+    };
+    let report = energyml_export::run::run(
+        &objects,
+        exporter,
+        &options,
+        energyml_export::run::OnUnhandled::Skip,
+        sink,
+    )?;
+    let written = report.written;
+    let skipped = report.skipped.len();
     // Objects the exporter itself refused, one line each. Separate from
     // `refused` - that one is the geometry saying it cannot evaluate; this is
     // the writing saying it cannot place, convert or encode what was evaluated.
-    let mut unwritable: Vec<String> = Vec::new();
-    match &args.out {
-        // A directory: one file per representation, named
-        // `qualifiedType_uuid.ext`.
-        //
-        // The uuid is what makes it unique - two objects share a title far more
-        // often than anyone expects, and a folder of `Horizon.vtu` overwriting
-        // itself is a silent loss. The qualified type in front is what makes it
-        // *readable*: a folder of thirty uuids says nothing, and the one thing a
-        // person wants to know before opening a file is what kind of thing it
-        // is. It carries the release too (`resqml20.` against `resqml22.`),
-        // which matters because a package may hold both - this one does.
-        Some(path) if path.is_dir() || path.extension().is_none() => {
-            std::fs::create_dir_all(path)?;
-            for object in &writable {
-                let name = format!(
-                    "{}_{}.{}",
-                    file_safe(&qualified_type_of(object)),
-                    object.uuid,
-                    exporter.extension()
-                );
-                let target = path.join(&name);
-                let file = std::fs::File::create(&target)?;
-                let mut out = std::io::BufWriter::new(file);
-                // **One object failing is not the run failing.** A directory
-                // export is a batch, and a batch that stops at the first
-                // refusal leaves the caller with a folder that looks like a
-                // finished export and holds a fraction of one - which is the
-                // failure this whole workspace is arranged against. A time-based
-                // CRS reaching a metre conversion is exactly that case: one
-                // object of thirty-three, and it used to take the other
-                // thirty-two with it.
-                match exporter.write(object, &mut out, &options) {
-                    Ok(()) => written += 1,
-                    Err(e) => {
-                        // And take the stub with it. A zero-byte `.vtk` sitting
-                        // in the output is worse than no file: it reads as a
-                        // representation with nothing in it.
-                        drop(out);
-                        let _ = std::fs::remove_file(&target);
-                        unwritable.push(format!("{}  {}  {e}", object.uuid, object.qualified_type));
-                    }
-                }
-            }
-        }
-        Some(path) => {
-            let file = std::fs::File::create(path)?;
-            let mut out = std::io::BufWriter::new(file);
-            exporter.write_all(&writable, &mut out, &options)?;
-            written = writable.len();
-        }
-        None => {
-            let stdout = std::io::stdout();
-            let mut out = stdout.lock();
-            exporter.write_all(&writable, &mut out, &options)?;
-            written = writable.len();
-        }
-    }
+    let unwritable = report.failed;
+    let writable: Vec<&energyml_geometry::SceneObject> = objects
+        .iter()
+        .filter(|o| !report.skipped.iter().any(|s| s.uri == o.uri))
+        .collect();
 
     eprintln!();
     eprintln!("{written} representation(s) written as {}", exporter.name());
@@ -2374,6 +2329,17 @@ fn export(args: ExportArgs, modes: Modes) -> Result<()> {
     // against.
     if skipped > 0 {
         eprintln!("{skipped} skipped: `{}` cannot write them", exporter.name());
+        // Named, one per line, with the library's reason: the Python bridge
+        // refuses the same objects by name, and this face shows them and goes on.
+        for one in report.skipped.iter().take(10) {
+            eprintln!(
+                "  skipped: {} {} ({}): {}",
+                one.uuid, one.qualified_type, one.title, one.reason
+            );
+        }
+        if skipped > 10 {
+            eprintln!("  … and {} more", skipped - 10);
+        }
         if exporter.name() == "geojson" && !args.native_crs {
             // The most common reason, and it has an exit: no usable EPSG code.
             eprintln!(
@@ -2386,15 +2352,7 @@ fn export(args: ExportArgs, modes: Modes) -> Result<()> {
             // objects, and the code lives in the third: a compound CRS whose
             // `LocalEngineering2dCrs` is not in the package resolves to a CRS
             // that says "unknown system", and nothing else complains.
-            let mut named: Vec<String> = objects
-                .iter()
-                .filter(|o| !exporter.handles_with(o, &options))
-                .filter_map(|o| o.crs.as_ref())
-                .filter(|crs| crs.projected.epsg().is_none())
-                .map(|crs| format!("{} ({})", crs.uuid, crs.kind))
-                .collect();
-            named.sort();
-            named.dedup();
+            let named = energyml_export::run::crs_without_epsg(&objects, exporter, &options);
             if !named.is_empty() {
                 eprintln!("  the CRS they name gives no EPSG code:");
                 for line in named.iter().take(5) {
@@ -2937,10 +2895,7 @@ fn graph_command(args: GraphArgs, modes: Modes) -> Result<()> {
         .resources()
         .into_iter()
         .filter(|summary| match &args.filter {
-            Some(needle) => summary
-                .qualified_type
-                .to_ascii_lowercase()
-                .contains(&needle.to_ascii_lowercase()),
+            Some(needle) => energyml_storage::resource::type_matches(&summary.qualified_type, needle),
             None => true,
         })
         .collect();
@@ -3013,35 +2968,9 @@ fn h5_command(args: H5Args, modes: Modes) -> Result<ExitCode> {
     let mut store = open(&args.file, &modes)?;
     store.answers_itself();
 
-    // One row per *declared name*, not per array pointer: a package has
-    // thousands of pointers and two or three files, and a person wants the
-    // files.
-    #[derive(Default)]
-    struct Row {
-        pointers: usize,
-        found: Option<energyml_storage::Resolution>,
-        proxies: std::collections::BTreeSet<String>,
-        example: String,
-    }
-    let mut rows: std::collections::BTreeMap<String, Row> = std::collections::BTreeMap::new();
-
-    for summary in store.resources() {
-        let Ok(object) = store.get_object(&summary.uri) else {
-            continue;
-        };
-        for location in store.arrays_of(object.as_reflect()) {
-            let declared = location.file.clone();
-            let row = rows.entry(declared).or_default();
-            row.pointers += 1;
-            if let Some(proxy) = &location.proxy_uuid {
-                row.proxies.insert(proxy.to_ascii_lowercase());
-            }
-            if row.found.is_none() {
-                row.example = location.path_in_file.clone();
-                row.found = store.resolve_array(&location).ok();
-            }
-        }
-    }
+    // The survey, the rewrite and the verdict are the library's
+    // (`energyml_storage::repair`); this face asks, prints and chooses the exit code.
+    let mut rows = energyml_storage::repair::survey(&store);
 
     if rows.is_empty() {
         println!("no external array in this package");
@@ -3100,21 +3029,7 @@ fn h5_command(args: H5Args, modes: Modes) -> Result<ExitCode> {
             store.external_files_mut().set(declared.clone(), path);
         }
         // Ask again, now that the caller has said where things are.
-        for (declared, row) in rows.iter_mut() {
-            if row.found.is_some() {
-                continue;
-            }
-            for summary in store.resources() {
-                let Ok(object) = store.get_object(&summary.uri) else {
-                    continue;
-                };
-                for location in store.arrays_of(object.as_reflect()) {
-                    if &location.file == declared && row.found.is_none() {
-                        row.found = store.resolve_array(&location).ok();
-                    }
-                }
-            }
-        }
+        energyml_storage::repair::resolve_again(&store, &mut rows);
     }
 
     let Some(out) = args.fix else {
@@ -3125,188 +3040,37 @@ fn h5_command(args: H5Args, modes: Modes) -> Result<ExitCode> {
         });
     };
 
-    // Writing the answer down. Two places carry a file name and both are
-    // rewritten, because a package may use either - and a package that has
-    // been through several tools may use both.
-    let mut fixed = 0usize;
-    for (declared, row) in &rows {
-        let Some(found) = &row.found else { continue };
-        if found.agrees() {
-            continue;
-        }
-        let name = found.name();
-
-        // The older form: the name lives in the `.rels` of an
-        // `EpcExternalPartReference`, and `save` regenerates those from what
-        // the store knows.
-        for proxy in &row.proxies {
-            store.register_external_file(proxy, name.clone());
-            fixed += 1;
-        }
-
-        // The eml 2.3 form: the name is in the object, in every
-        // `ExternalDataArrayPart.URI` that carries it.
-        let users: Vec<String> = store
-            .resources()
-            .iter()
-            .filter(|summary| {
-                store
-                    .get_object(&summary.uri)
-                    .map(|object| {
-                        store
-                            .arrays_of(object.as_reflect())
-                            .iter()
-                            .any(|location| &location.file == declared)
-                    })
-                    .unwrap_or(false)
-            })
-            .map(|summary| summary.uri.clone())
-            .collect();
-        for uri in users {
-            let object = store.edit(&uri)?;
-            if rename_uris(object, declared, &name) > 0 {
-                fixed += 1;
-            }
-        }
-        println!("`{declared}` → `{name}`");
-    }
-
-    if fixed == 0 {
+    // Writing the answer down: the library rewrites both places a file name
+    // lives in, saves, reopens the result and counts.
+    let Some(fixed) = energyml_storage::repair::fix(&mut store, &rows, &out)? else {
         println!("nothing to fix: every array names the file it is in");
         return Ok(ExitCode::SUCCESS);
+    };
+    for (declared, name) in &fixed.renamed {
+        println!("`{declared}` → `{name}`");
     }
-
-    // Carry over every file name the package *had*. A save regenerates the
-    // `.rels` from what the store knows, and what it knows about external files
-    // is `declared_files` - so a name that was only ever read out of a `.rels`
-    // is dropped unless it is put back first. Repairing a package by losing
-    // half its pointers would be a poor repair.
-    let found: Vec<(String, String)> = store.external_file_map().into_iter().collect();
-    for (uuid, file) in found {
-        store.register_external_file(&uuid, file);
-    }
-
-    let before = unresolved_pointers(&store);
-    let diagnostics = store.save_as(&out, &energyml_storage::SaveOptions::default())?;
-    for diagnostic in &diagnostics {
+    for diagnostic in &fixed.diagnostics {
         eprintln!("  [{:?}] {}", diagnostic.severity, diagnostic.message);
     }
-    println!("{fixed} declaration(s) rewritten → {}", out.display());
-
-    // Did the repair repair? Reopening and counting is the only answer that
-    // does not take the writer's word for it - and the failure it guards
-    // against is real: an `externalResource` relationship on a part that is not
-    // a proxy has no counterpart in the writer, so a package that used one
-    // comes back with fewer pointers than it went in with.
+    println!(
+        "{} declaration(s) rewritten → {}",
+        fixed.declarations,
+        out.display()
+    );
     let written = open(&out, &modes)?;
-    let after = unresolved_pointers(&written);
-    if after > before {
+    let lost = fixed.lost(&written);
+    if lost > 0 {
         eprintln!(
-            "warning: {} array pointer(s) named a file before and name none now (was {before}). \
+            "warning: {} array pointer(s) named a file before and name none now (was {}). \
              The package used an `externalResource` relationship the writer does not reproduce; \
              `{}` still reads, because the search finds the file, but another tool may not.",
-            after - before,
+            lost,
+            fixed.before,
             out.display()
         );
         return Ok(ExitCode::from(1));
     }
     Ok(ExitCode::SUCCESS)
-}
-
-/// How many array pointers name no file at all.
-fn unresolved_pointers(store: &EpcStore) -> usize {
-    store
-        .resources()
-        .iter()
-        .filter_map(|summary| store.get_object(&summary.uri).ok())
-        .flat_map(|object| store.arrays_of(object.as_reflect()))
-        .filter(|location| location.file.is_empty())
-        .count()
-}
-
-/// Replace a file name wherever an object writes one, and say how many times.
-///
-/// Reflection rather than a typed walk, for the reason the whole workspace is
-/// arranged around: the field is `URI` on an eml 2.3 `ExternalDataArrayPart`
-/// and `PathInHdfFile` has no name at all in 2.0, and a version this build
-/// learns tomorrow will be handled by the same code.
-fn rename_uris(object: &mut dyn energyml_core::value::Reflect, from: &str, to: &str) -> usize {
-    use energyml_core::value::{FieldValue, OwnedValue};
-
-    let mut changed = 0usize;
-    let fields: Vec<(&'static str, usize)> = object
-        .type_info()
-        .fields
-        .iter()
-        .map(|f| {
-            let occurrences = object.field(f.name).map(|v| v.occurrences()).unwrap_or(0);
-            (f.name, occurrences)
-        })
-        .collect();
-
-    for (name, occurrences) in fields {
-        // The scalar that carries a file name, whatever the release calls the
-        // element around it.
-        if name.eq_ignore_ascii_case("URI")
-            && let Some(FieldValue::Scalar(scalar)) = object.field(name)
-        {
-            let text = scalar.to_string();
-            let bare = text.rsplit(['/', '\\']).next().unwrap_or(&text);
-            if text == from || bare == from {
-                if object.set_field(name, OwnedValue::Str(to.to_string())).is_ok() {
-                    changed += 1;
-                }
-                continue;
-            }
-        }
-        // Descend. `field_object_mut` is the only mutable way in, so a list is
-        // walked by index rather than by iterator.
-        match occurrences {
-            0 => {
-                if let Some(child) = object.field_object_mut(name, None) {
-                    changed += rename_uris(child, from, to);
-                }
-            }
-            n => {
-                for index in 0..n {
-                    if let Some(child) = object.field_object_mut(name, Some(index)) {
-                        changed += rename_uris(child, from, to);
-                    }
-                }
-            }
-        }
-    }
-    changed
-}
-
-/// The qualified type of a scene object, `resqml22.TriangulatedSetRepresentation`.
-///
-/// Read out of the ETP URI rather than from `SceneObject::qualified_type`,
-/// which - despite its name and its doc comment - carries only the bare type
-/// name. Left alone deliberately: that field is written into every export's
-/// metadata (`type` in VTK field data, in GeoJSON properties, in an OBJ
-/// comment), and changing what it holds would change files people already read.
-fn qualified_type_of(object: &energyml_geometry::SceneObject) -> String {
-    // The one reading of a uri into an identity - which also knows a dataspace
-    // segment and a version qualifier.
-    energyml_core::identity::ObjectId::parse(&object.uri)
-        .map(|(_, id)| id.qualified_type())
-        .unwrap_or_else(|_| object.qualified_type.clone())
-}
-
-/// The same string, with anything a file system objects to replaced.
-///
-/// A qualified type holds none of these today. It is here because the cost of
-/// being wrong is a run that dies halfway through a batch on one object's name,
-/// and the cost of being right is six characters in a match.
-fn file_safe(name: &str) -> String {
-    name.chars()
-        .map(|c| match c {
-            '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|' => '_',
-            c if c.is_control() => '_',
-            c => c,
-        })
-        .collect()
 }
 
 // ---------------------------------------------------------------------------

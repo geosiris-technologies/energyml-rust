@@ -17,7 +17,7 @@ use energyml_sheet::read::{self, Options, PropertyLabel, TrackSelection};
 use energyml_storage::ObjectSummary;
 use serde_json::Value;
 
-use crate::kind::{Drawn, ObjectSlot, Offer, Request, ViewContext, ViewKind, ViewNote, local_type};
+use crate::kind::{Drawn, ObjectSlot, Offer, Request, ViewContext, ViewKind, ViewNote, offers_of_types};
 use crate::refusal::ViewRefusal;
 use crate::setting::ViewSetting;
 use crate::style;
@@ -96,18 +96,7 @@ impl ViewKind for WellSheet {
     }
 
     fn offers(&self, index: &PackageIndex) -> Vec<Offer> {
-        index
-            .nodes()
-            .filter(|node| {
-                node.state == NodeState::Present && TYPES.contains(&local_type(&node.qualified_type))
-            })
-            .map(|node| Offer {
-                view: ID,
-                objects: vec![node.uri.to_string()],
-                title: node.title.as_deref().unwrap_or(&node.uuid).to_string(),
-                missing: Vec::new(),
-            })
-            .collect()
+        offers_of_types(index, ID, TYPES, |_| true)
     }
 
     fn draw(&self, request: &Request, cx: &ViewContext<'_>) -> Result<Drawn, ViewRefusal> {

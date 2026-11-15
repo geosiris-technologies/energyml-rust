@@ -16,7 +16,7 @@
 
 use std::sync::Arc;
 
-use energyml_domain::package_index::{NodeState, PackageIndex};
+use energyml_domain::package_index::PackageIndex;
 use energyml_domain::palettes::Reading;
 use energyml_domain::property::chunks::{
     AxisId, ChunkSelection, PairWalk, PropertyChunks, keep_ordered_axes,
@@ -41,7 +41,9 @@ use energyml_sheet::draw::{
 use serde_json::Value;
 
 use crate::colour::{ValueColours, value_colours};
-use crate::kind::{Drawn, ObjectSlot, Offer, Request, ViewContext, ViewKind, ViewNote, local_type};
+use crate::kind::{
+    Drawn, ObjectSlot, Offer, Request, ViewContext, ViewKind, ViewNote, local_type, offers_of_types,
+};
 use crate::refusal::ViewRefusal;
 use crate::setting::ViewSetting;
 use crate::style;
@@ -130,19 +132,9 @@ impl ViewKind for PropertyInsight {
     }
 
     fn offers(&self, index: &PackageIndex) -> Vec<Offer> {
-        index
-            .nodes()
-            .filter(|node| {
-                node.state == NodeState::Present && TYPES.contains(&local_type(&node.qualified_type))
-            })
-            .filter(|node| index.sheet(&node.uri).is_some_and(|sheet| sheet.lookup.is_none()))
-            .map(|node| Offer {
-                view: ID,
-                objects: vec![node.uri.to_string()],
-                title: node.title.as_deref().unwrap_or(&node.uuid).to_string(),
-                missing: Vec::new(),
-            })
-            .collect()
+        offers_of_types(index, ID, TYPES, |node| {
+            index.sheet(&node.uri).is_some_and(|sheet| sheet.lookup.is_none())
+        })
     }
 
     fn draw(&self, request: &Request, cx: &ViewContext<'_>) -> Result<Drawn, ViewRefusal> {
@@ -948,7 +940,7 @@ fn count_ticks(most: u64, target: f64) -> Vec<(f64, String)> {
 }
 
 /// The frame of a plot, its grid and its graduations, each at a fraction along its axis (a value axis can be
-/// logarithmic, which [`style::axes_layer`] does not graduate): `x` runs left to right, `y` bottom to top.
+/// logarithmic), by `style::graduated_layer`: `x` runs left to right, `y` bottom to top.
 fn plot_axes(
     name: &str,
     area: Rect,
@@ -957,55 +949,21 @@ fn plot_axes(
     x_title: &str,
     y_title: &str,
 ) -> Layer {
-    let mut layer = Layer::new(name);
-    let mut grid = Vec::new();
-    let mut marks = Vec::new();
-    for (at, words) in x_ticks {
-        let x = area.x + at * area.w;
-        grid.push(Item::Polyline {
-            points: vec![[x, area.y], [x, area.y + area.h]],
-            stroke: Stroke::solid(style::GRID, 1.0),
-        });
-        marks.push(style::label_item(
-            [x, area.y + area.h + 13.0],
-            words.clone(),
-            style::text(style::SMALL, style::MUTED, Anchor::Middle),
-        ));
-    }
-    for (at, words) in y_ticks {
-        let y = area.y + area.h * (1.0 - at);
-        grid.push(Item::Polyline {
-            points: vec![[area.x, y], [area.x + area.w, y]],
-            stroke: Stroke::solid(style::GRID, 1.0),
-        });
-        marks.push(style::label_item(
-            [area.x - 5.0, y + 3.5],
-            words.clone(),
-            style::text(style::SMALL, style::MUTED, Anchor::End),
-        ));
-    }
-    layer.elements.push(Element::new(grid));
-    layer.elements.push(Element::new(vec![Item::Rect {
-        rect: area,
-        corner: 0.0,
-        fill: None,
-        stroke: Some(Stroke::solid(style::MUTED, 1.0)),
-    }]));
-    marks.push(style::label_item(
-        [area.x + area.w / 2.0, area.y + area.h + 30.0],
-        x_title,
-        style::text(style::TEXT, style::MUTED, Anchor::Middle),
-    ));
-    marks.push(Item::Text {
-        at: [area.x - 42.0, area.y + area.h / 2.0],
-        text: y_title.to_string(),
-        style: energyml_sheet::draw::TextStyle {
-            rotate: -90.0,
-            ..style::text(style::TEXT, style::MUTED, Anchor::Middle)
-        },
-    });
-    layer.elements.push(Element::new(marks));
-    layer
+    let x: Vec<style::Tick> = x_ticks
+        .iter()
+        .map(|(at, words)| style::Tick {
+            at: area.x + at * area.w,
+            label: words.clone(),
+        })
+        .collect();
+    let y: Vec<style::Tick> = y_ticks
+        .iter()
+        .map(|(at, words)| style::Tick {
+            at: area.y + area.h * (1.0 - at),
+            label: words.clone(),
+        })
+        .collect();
+    style::graduated_layer(name, area, Some((&x, x_title)), (&y, y_title))
 }
 
 /// The histogram: one bar per bin of the [`Binned`], as high as its count, coloured at its middle value; the modes

@@ -78,6 +78,8 @@ pub mod context;
 /// each implementation's tests (design note `deux-sources-un-contrat.md` §4).
 #[cfg(feature = "contract")]
 pub mod contract;
+#[cfg(feature = "contract")]
+mod contract_support;
 /// The rules of objects contained by value (WITSML containers), played on a
 /// WITSML model written from the ETP 1.2 specification and the XSD.
 #[cfg(feature = "contract")]
@@ -97,6 +99,7 @@ pub mod raw;
 /// Changing what a part declares itself to be, without parsing what it holds.
 pub mod relabel;
 pub mod rename;
+pub mod repair;
 pub mod resource;
 pub mod search;
 pub mod storage;

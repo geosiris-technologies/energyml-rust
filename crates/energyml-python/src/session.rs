@@ -534,6 +534,8 @@ pub struct CheckReport {
     pub errors: usize,
     /// How many are worth knowing without condemning it.
     pub warnings: usize,
+    /// Whether the file is sound, by the report's own rule (`is_sound`), not a rule of this bridge.
+    pub sound: bool,
     /// What the reader noticed: severity, part, message.
     pub diagnostics: Vec<(String, String, String)>,
     /// Parts that could not be read: uri, and why.
@@ -1408,21 +1410,21 @@ impl Package {
                     ),
                 }
             })?;
-            let prepared =
-                energyml_export::registry::prepare(built, &options).map_err(|why| format!("{uri}: {why}"))?;
-            if !exporter.handles_with(&prepared, &options) {
-                return Err(format!(
-                    "`{format}` does not write {} ({})",
-                    prepared.qualified_type, uri
-                ));
-            }
-            ready.push(prepared.into_owned());
+            ready.push(built.clone());
         }
 
+        // **The writing is the library's** (`energyml_export::run`), the same
+        // call the command line makes: here an object the format cannot write
+        // is a refusal naming it, there the command line shows it and goes on.
         let mut out = Vec::new();
-        exporter
-            .write_all(&ready, &mut out, &options)
-            .map_err(|why| format!("{why}"))?;
+        energyml_export::run::run(
+            &ready,
+            exporter,
+            &options,
+            energyml_export::run::OnUnhandled::Refuse,
+            energyml_export::run::Sink::Stream(&mut out),
+        )
+        .map_err(|why| format!("{why}"))?;
         Ok(out)
     }
 
@@ -1485,6 +1487,7 @@ impl Package {
         CheckReport {
             errors: report.errors(),
             warnings: report.warnings(),
+            sound: report.is_sound(),
             diagnostics: report
                 .diagnostics
                 .iter()

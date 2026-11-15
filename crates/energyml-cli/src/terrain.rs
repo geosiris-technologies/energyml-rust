@@ -17,9 +17,9 @@ use std::time::Instant;
 
 use anyhow::{Context, Result, bail};
 use clap::Parser;
+use energyml_build::apply;
 use energyml_build::operation::{Choices, Identity, Registry, When};
 use energyml_build::pieces::{Pieces, Source};
-use energyml_build::{apply, epc};
 use energyml_domain::reproject::Reprojector;
 use energyml_providers::terrain::{self, TerrainCatalogue};
 use energyml_providers::transport::{Native, Transport};
@@ -174,13 +174,7 @@ pub fn run(args: TerrainArgs) -> Result<ExitCode> {
         choices = choices.set("dataFile", format!("{stem}.h5"));
     }
     for one in &args.choices {
-        let Some((name, value)) = one.split_once('=') else {
-            bail!("`--set {one}`: expected `name=value`");
-        };
-        let value: serde_json::Value = match serde_json::from_str(value) {
-            Ok(json @ (serde_json::Value::Number(_) | serde_json::Value::Bool(_))) => json,
-            _ => serde_json::Value::String(value.to_string()),
-        };
+        let (name, value) = super::target::parse_choice(one)?;
         choices = choices.set(name, value);
     }
 
@@ -209,28 +203,9 @@ pub fn run(args: TerrainArgs) -> Result<ExitCode> {
         println!("  [{}] {}", note.key, note.detail);
     }
 
-    let name = out
-        .file_name()
-        .map(|n| n.to_string_lossy().to_string())
-        .unwrap_or_else(|| out.display().to_string());
-    let mut store = epc::open(
-        args.into.as_deref(),
-        &name,
-        std::sync::Arc::new(super::registry::all()),
-    )
-    .with_context(|| match &args.into {
-        Some(path) => format!("opening {}", path.display()),
-        None => "making an empty package".to_string(),
-    })?;
-    let parent = out
-        .parent()
-        .filter(|p| !p.as_os_str().is_empty())
-        .unwrap_or(std::path::Path::new("."));
-    store.external_files_mut().set_root(parent);
+    let mut store = super::target::open(args.into.as_deref(), &out)?;
     let made = apply::apply(&plan, &mut store, &when);
-    store
-        .save_as(&out, &energyml_storage::SaveOptions::default())
-        .with_context(|| format!("writing {}", out.display()))?;
+    super::target::save(&store, &out)?;
     println!("\n{} object(s) written to {}", made.written.len(), out.display());
     for why in &made.refused {
         eprintln!("  [refused] {why}");

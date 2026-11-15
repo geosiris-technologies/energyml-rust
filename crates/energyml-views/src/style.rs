@@ -150,47 +150,64 @@ fn widen(range: [f64; 2]) -> [f64; 2] {
     }
 }
 
-/// The frame of a plot, its grid and its graduated axes, with their titles: one layer, `axes`.
-pub fn axes_layer(frame: &PlotFrame, x_title: &str, y_title: &str) -> Layer {
-    let mut layer = Layer::new("axes");
-    let area = frame.area;
+/// One graduation of an axis: where it falls on the page along its axis, and its label.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Tick {
+    /// The page position along the axis (x for a horizontal axis, y for a vertical one).
+    pub at: f64,
+    /// The label written beside it.
+    pub label: String,
+}
+
+/// The linear graduations of a scale, about `target` of them: each value [`nice_ticks`] picks, placed by the scale.
+/// No graduation when the range gives none.
+pub fn linear_ticks(scale: &Scale, target: f64) -> Vec<Tick> {
+    let range = [scale.data[0].min(scale.data[1]), scale.data[0].max(scale.data[1])];
+    match nice_ticks(range[0], range[1], target) {
+        Ok(ticks) => ticks
+            .values
+            .iter()
+            .copied()
+            .map(|value| Tick {
+                at: scale.at(value),
+                label: label(value, ticks.step),
+            })
+            .collect(),
+        Err(_) => Vec::new(),
+    }
+}
+
+/// The frame of a plot with its grid and its graduations: **the one axis drawing**, whatever scale made the
+/// graduations (a linear one by [`linear_ticks`], a logarithmic one by the caller's `Tick`s: the graduations are
+/// data here, so a logarithmic axis is drawn the way a linear one is). `x` is the horizontal axis (graduations and
+/// title), `None` for a plot with a single graduated axis (a band of bars); `y` the vertical one, its title turned.
+pub fn graduated_layer(name: &str, area: Rect, x: Option<(&[Tick], &str)>, y: (&[Tick], &str)) -> Layer {
+    let mut layer = Layer::new(name);
     let mut grid = Vec::new();
     let mut marks = Vec::new();
-    let x_range = [
-        frame.x.data[0].min(frame.x.data[1]),
-        frame.x.data[0].max(frame.x.data[1]),
-    ];
-    let y_range = [
-        frame.y.data[0].min(frame.y.data[1]),
-        frame.y.data[0].max(frame.y.data[1]),
-    ];
-    if let Ok(ticks) = nice_ticks(x_range[0], x_range[1], (area.w / 90.0).max(2.0)) {
-        for value in ticks.values.iter().copied() {
-            let x = frame.x.at(value);
+    if let Some((ticks, _)) = x {
+        for tick in ticks {
             grid.push(Item::Polyline {
-                points: vec![[x, area.y], [x, area.y + area.h]],
+                points: vec![[tick.at, area.y], [tick.at, area.y + area.h]],
                 stroke: Stroke::solid(GRID, 1.0),
             });
             marks.push(label_item(
-                [x, area.y + area.h + 13.0],
-                label(value, ticks.step),
+                [tick.at, area.y + area.h + 13.0],
+                tick.label.clone(),
                 text(SMALL, MUTED, Anchor::Middle),
             ));
         }
     }
-    if let Ok(ticks) = nice_ticks(y_range[0], y_range[1], (area.h / 60.0).max(2.0)) {
-        for value in ticks.values.iter().copied() {
-            let y = frame.y.at(value);
-            grid.push(Item::Polyline {
-                points: vec![[area.x, y], [area.x + area.w, y]],
-                stroke: Stroke::solid(GRID, 1.0),
-            });
-            marks.push(label_item(
-                [area.x - 5.0, y + 3.5],
-                label(value, ticks.step),
-                text(SMALL, MUTED, Anchor::End),
-            ));
-        }
+    for tick in y.0 {
+        grid.push(Item::Polyline {
+            points: vec![[area.x, tick.at], [area.x + area.w, tick.at]],
+            stroke: Stroke::solid(GRID, 1.0),
+        });
+        marks.push(label_item(
+            [area.x - 5.0, tick.at + 3.5],
+            tick.label.clone(),
+            text(SMALL, MUTED, Anchor::End),
+        ));
     }
     layer.elements.push(Element::new(grid));
     layer.elements.push(Element::new(vec![Item::Rect {
@@ -199,14 +216,16 @@ pub fn axes_layer(frame: &PlotFrame, x_title: &str, y_title: &str) -> Layer {
         fill: None,
         stroke: Some(Stroke::solid(MUTED, 1.0)),
     }]));
-    marks.push(label_item(
-        [area.x + area.w / 2.0, area.y + area.h + 30.0],
-        x_title,
-        text(TEXT, MUTED, Anchor::Middle),
-    ));
+    if let Some((_, title)) = x {
+        marks.push(label_item(
+            [area.x + area.w / 2.0, area.y + area.h + 30.0],
+            title,
+            text(TEXT, MUTED, Anchor::Middle),
+        ));
+    }
     marks.push(Item::Text {
         at: [area.x - 42.0, area.y + area.h / 2.0],
-        text: y_title.to_string(),
+        text: y.1.to_string(),
         style: TextStyle {
             rotate: -90.0,
             ..text(TEXT, MUTED, Anchor::Middle)
@@ -214,6 +233,17 @@ pub fn axes_layer(frame: &PlotFrame, x_title: &str, y_title: &str) -> Layer {
     });
     layer.elements.push(Element::new(marks));
     layer
+}
+
+/// The frame of a plot, its grid and its graduated axes, with their titles: one layer, `axes`.
+pub fn axes_layer(frame: &PlotFrame, x_title: &str, y_title: &str) -> Layer {
+    let area = frame.area;
+    graduated_layer(
+        "axes",
+        area,
+        Some((&linear_ticks(&frame.x, (area.w / 90.0).max(2.0)), x_title)),
+        (&linear_ticks(&frame.y, (area.h / 60.0).max(2.0)), y_title),
+    )
 }
 
 /// The notes, one line each, in a band added under the picture: the page grows by the band's height. The band is

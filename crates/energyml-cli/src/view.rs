@@ -267,14 +267,38 @@ fn refuse_png_without_the_feature(out: &Output) -> Result<()> {
     Ok(())
 }
 
-fn parse_size(text: &str) -> Result<(f64, f64)> {
+/// Read `--size WIDTHxHEIGHT`, in pixels: two finite numbers above zero.
+///
+/// The one reading for `view` and `profile`: `NaN`, `inf`, zero and a negative
+/// size draw nothing and say nothing, so they are refused by name.
+pub(crate) fn parse_size(text: &str) -> Result<(f64, f64)> {
     let (width, height) = text
         .split_once(['x', 'X'])
         .ok_or_else(|| anyhow!("`--size {text}`: write WIDTHxHEIGHT, in pixels"))?;
     let number = |word: &str| -> Result<f64> {
-        word.trim()
+        let value = word
+            .trim()
             .parse::<f64>()
-            .map_err(|_| anyhow!("`--size {text}`: `{word}` is not a number"))
+            .map_err(|_| anyhow!("`--size {text}`: `{word}` is not a number"))?;
+        if !value.is_finite() || value <= 0.0 {
+            bail!("`--size {text}`: `{word}` must be a finite number above zero");
+        }
+        Ok(value)
     };
     Ok((number(width)?, number(height)?))
+}
+
+#[cfg(test)]
+mod size_tests {
+    use super::parse_size;
+
+    #[test]
+    fn a_size_is_two_finite_positive_numbers() {
+        assert_eq!(parse_size("800x600").expect("parses"), (800.0, 600.0));
+        assert!(parse_size("NaNx600").is_err());
+        assert!(parse_size("0x600").is_err());
+        assert!(parse_size("800x-1").is_err());
+        assert!(parse_size("infx3").is_err());
+        // Break it: remove the `is_finite`/`<= 0.0` check in `parse_size`.
+    }
 }

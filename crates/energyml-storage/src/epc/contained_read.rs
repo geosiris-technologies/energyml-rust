@@ -90,13 +90,7 @@ pub(crate) struct Scope {
     pub schema_version: Option<String>,
 }
 
-/// A raw attribute value, unescaped (a namespace uri never needs more).
-fn unescape(raw: &[u8]) -> String {
-    let text = String::from_utf8_lossy(raw);
-    quick_xml::escape::unescape(&text)
-        .map(|unescaped| unescaped.into_owned())
-        .unwrap_or_else(|_| text.into_owned())
-}
+use super::raw_xml::unescape_attr as unescape;
 
 /// The [`Scope`] at the start of each wanted element, in the order of `entries`,
 /// from **one** pass over `part`; the pass stops at the last wanted start.

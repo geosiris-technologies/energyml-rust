@@ -1,8 +1,9 @@
 //! One kind of view ([`ViewKind`]) and the registry of them ([`ViewKinds`]).
 
 use energyml_domain::ArraySource;
-use energyml_domain::package_index::PackageIndex;
+use energyml_domain::package_index::{IndexNode, NodeState, PackageIndex};
 use energyml_domain::palettes::Palettes;
+use energyml_domain::table::TableSheet;
 use energyml_sheet::draw::DisplayList;
 use serde::Serialize;
 
@@ -49,6 +50,56 @@ pub struct Offer {
     pub title: String,
     /// What a request must still give (a setting the file does not say), in words; empty: ready.
     pub missing: Vec<String>,
+}
+
+/// The offers of a view that shows **one object** of a few types: every present node whose local type is in `types`
+/// and that `keep` accepts, titled by its title (else its uuid), nothing missing. The one `offers` a view that
+/// takes a single object writes; a view with its own conditions on what is missing writes its own.
+pub fn offers_of_types(
+    index: &PackageIndex,
+    view: &'static str,
+    types: &[&str],
+    keep: impl Fn(&IndexNode) -> bool,
+) -> Vec<Offer> {
+    index
+        .nodes()
+        .filter(|node| node.state == NodeState::Present && types.contains(&local_type(&node.qualified_type)))
+        .filter(|node| keep(node))
+        .map(|node| Offer {
+            view,
+            objects: vec![node.uri.to_string()],
+            title: node.title.as_deref().unwrap_or(&node.uuid).to_string(),
+            missing: Vec::new(),
+        })
+        .collect()
+}
+
+/// The title of a table, or its uri.
+pub fn table_name(sheet: &TableSheet) -> String {
+    sheet
+        .title
+        .as_deref()
+        .map(str::to_string)
+        .unwrap_or_else(|| sheet.uri.to_string())
+}
+
+/// The title of a column, or `column N` (from 0).
+pub fn column_name(sheet: &TableSheet, column: usize) -> String {
+    sheet
+        .columns
+        .get(column)
+        .and_then(|found| found.title.as_deref())
+        .map(str::to_string)
+        .unwrap_or_else(|| format!("column {column}"))
+}
+
+/// The title the index holds for an object, else its uri: what a view puts at the top of its picture.
+pub fn title_or_uri(index: &PackageIndex, uri: &str) -> String {
+    index
+        .node(uri)
+        .and_then(|node| node.title.as_deref())
+        .unwrap_or(uri)
+        .to_string()
 }
 
 /// A part a view left out while drawing the rest.

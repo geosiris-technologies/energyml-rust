@@ -302,22 +302,15 @@ fn move_file(store: &mut EpcStore, plan: &Rename) -> Result<FileMove> {
 /// would rename a file the package did not mean, and a zip entry is
 /// case-sensitive.
 fn names_file(declared: &str, wanted: &str) -> bool {
-    !declared.is_empty() && (declared == wanted || last_segment(declared) == wanted)
+    !declared.is_empty() && (declared == wanted || crate::backend::bare_name(declared) == wanted)
 }
 
 /// The same location with its file name replaced, **keeping whatever led to
 /// it**: `./data/model.h5` renamed to `new.h5` is `./data/new.h5`, not a bare
 /// name in a package that was pointing into a subdirectory.
-fn renamed(declared: &str, to: &str) -> String {
+pub(crate) fn renamed(declared: &str, to: &str) -> String {
     match declared.rfind(['/', '\\']) {
         Some(at) => format!("{}{to}", &declared[..=at]),
         None => to.to_string(),
-    }
-}
-
-fn last_segment(declared: &str) -> &str {
-    match declared.rfind(['/', '\\']) {
-        Some(at) => &declared[at + 1..],
-        None => declared,
     }
 }

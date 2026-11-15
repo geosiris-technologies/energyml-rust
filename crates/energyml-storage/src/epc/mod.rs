@@ -35,6 +35,7 @@ pub mod header;
 pub mod media;
 pub mod overlay;
 pub mod package;
+mod raw_xml;
 pub mod revision;
 pub mod write;
 mod writer;
@@ -2196,19 +2197,7 @@ impl EpcStore {
             tracing::info_span!("epc.write_arrays", file = file_name, datasets = items.len()).entered();
         let checked: Vec<Result<()>> = items
             .iter()
-            .map(|(path_in_file, data)| {
-                let promised: i64 = data.metadata.dimensions.iter().product::<i64>().max(0);
-                if promised as usize != data.values.len() {
-                    return Err(Error::ExternalData {
-                        location: format!("{file_name}:{path_in_file}"),
-                        reason: ExternalDataReason::ShapeDisagrees {
-                            promised,
-                            held: data.values.len(),
-                        },
-                    });
-                }
-                Ok(())
-            })
+            .map(|(path_in_file, data)| check_shape(file_name, path_in_file, data))
             .collect();
         let refuse_all = |why: String| -> Vec<Result<()>> {
             items
@@ -2291,16 +2280,7 @@ impl EpcStore {
         // zeros at the end. Every writer gets this - the command line, the
         // build layer, the Python bridge - because it is the file that would be
         // wrong, not one caller.
-        let promised: i64 = data.metadata.dimensions.iter().product::<i64>().max(0);
-        if promised as usize != data.values.len() {
-            return Err(Error::ExternalData {
-                location: format!("{file_name}:{path_in_file}"),
-                reason: ExternalDataReason::ShapeDisagrees {
-                    promised,
-                    held: data.values.len(),
-                },
-            });
-        }
+        check_shape(file_name, path_in_file, data)?;
         let probe = ArrayLocation {
             file: file_name.to_string(),
             path_in_file: path_in_file.to_string(),
@@ -4963,13 +4943,51 @@ fn uuid_in_uri(uri: &str) -> Result<String> {
     address_of(uri).map(|address| address.uuid)
 }
 
-fn local_name(raw: &[u8]) -> String {
-    String::from_utf8_lossy(raw.rsplit(|b| *b == b':').next().unwrap_or_default()).into_owned()
+use raw_xml::local_name;
+
+/// The shape an array promises must be the number of values it holds.
+///
+/// **The one check for every writer** ([`EpcStore::write_array_to`] and
+/// [`EpcStore::write_arrays_to`]): a shape promising more numbers than there
+/// are writes without error in some formats and reads back with zeros at the
+/// end. The product is checked: on hostile dimensions it overflows to a value
+/// no length can equal, so a wrong shape never wraps into a passing one.
+fn check_shape(file_name: &str, path_in_file: &str, data: &crate::array::ArrayData) -> Result<()> {
+    let promised: i64 = data
+        .metadata
+        .dimensions
+        .iter()
+        .try_fold(1i64, |product, &dimension| product.checked_mul(dimension))
+        .map_or(i64::MAX, |product| product.max(0));
+    if usize::try_from(promised).ok() != Some(data.values.len()) {
+        return Err(Error::ExternalData {
+            location: format!("{file_name}:{path_in_file}"),
+            reason: ExternalDataReason::ShapeDisagrees {
+                promised,
+                held: data.values.len(),
+            },
+        });
+    }
+    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_shape_whose_product_overflows_is_refused_not_wrapped() {
+        use crate::array::{ArrayData, ArrayMetadata, ArrayValues};
+        let data = |dimensions: Vec<i64>, values: usize| ArrayData {
+            metadata: ArrayMetadata::new(dimensions, "double"),
+            values: ArrayValues::F64(vec![0.0; values]),
+        };
+        assert!(check_shape("a.h5", "/x", &data(vec![2, 3], 6)).is_ok());
+        assert!(check_shape("a.h5", "/x", &data(vec![2, 3], 5)).is_err());
+        // 2^32 * 2^32 wraps to 0 in a release build, and an empty array then passed.
+        assert!(check_shape("a.h5", "/x", &data(vec![1 << 32, 1 << 32], 0)).is_err());
+        // Break it: compute the product with `.product::<i64>()` again.
+    }
 
     #[test]
     fn a_missing_capability_never_comes_out_as_a_missing_file() {

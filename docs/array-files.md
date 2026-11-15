@@ -25,8 +25,12 @@ the next one.
 | 4 | The file beside the package with the **package's name** | `model.epc` gives `model.h5` |
 | 5 | **Any other file** in the package's folder, in a stable order | the folder, not its subfolders |
 
-Two details:
+Three details:
 
+- `--h5` is read once, by the library (`ExternalFiles::apply_spec`), for the command line
+  and the MCP server alike. The text before the first `=` is a name only when it is a
+  bare file name: `--h5 /data/run=1/x.h5` offers that path, it does not pin `1/x.h5`
+  to the name `/data/run`.
 - An offer comes before the document's own name, because offering a file is an
   instruction, and people give one precisely when the package is wrong.
 - Another `.epc` in the folder is never a candidate: a folder holding two

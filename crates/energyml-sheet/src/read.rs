@@ -58,7 +58,7 @@ use energyml_core::value::{FieldValue, Reflect};
 use energyml_domain::color::GraphicalSet;
 use energyml_domain::property::{self, IndexableElement};
 use energyml_domain::property_kind::Resolver;
-use energyml_domain::source::{ArraySource, ObjectSource};
+use energyml_domain::source::ArraySource;
 use energyml_domain::values::{self, Values};
 use energyml_domain::well_strata::{self, Known, Wanted};
 use energyml_storage::ObjectSummary;
@@ -71,19 +71,6 @@ use crate::layout::{Board, Interval, IntervalTrack, MdTrack, Track};
 /// through - rather than through `well_strata`, so a board can still be built
 /// for a frame with properties and no stratigraphy at all.
 const NODE_MD: &str = "NodeMd";
-
-/// The frame's own stratigraphic mappings - the two spellings
-/// `energyml_domain::well_strata`'s own (private) `MAPPINGS` constant reads;
-/// duplicated as literal strings rather than imported, because listing
-/// *which ranks a frame names* is not reading what they say - the indices,
-/// the units and the colours stay `well_strata`'s alone (see the module doc).
-const MAPPINGS: &[&str] = &["IntervalStratigraphicUnits", "IntervalStratigraphiUnits"];
-/// And what a mapping names as the rank its indices count in -
-/// `well_strata`'s own (private) `ORGANISATION`.
-const ORGANISATION: &[&str] = &[
-    "StratigraphicOrganizationInterpretation",
-    "StratigraphicOrganization",
-];
 
 // ---------------------------------------------------------------------------
 // What is asked
@@ -218,36 +205,6 @@ pub enum Refusal {
 }
 
 // ---------------------------------------------------------------------------
-// `&dyn ArraySource` as an `ObjectSource`
-// ---------------------------------------------------------------------------
-
-/// The same workaround `energyml_domain::well_strata`'s own (private)
-/// `Objects` type exists for: trait upcasting needs Rust 1.86, and this
-/// workspace's `rust-version` is 1.85.
-struct AsObjects<'a>(&'a dyn ArraySource);
-
-impl ObjectSource for AsObjects<'_> {
-    fn object(&self, uuid: &str) -> Option<Box<dyn DynObject>> {
-        self.0.object(uuid)
-    }
-
-    fn read_object(&self, uuid: &str) -> Result<Box<dyn DynObject>, String> {
-        self.0.read_object(uuid)
-    }
-
-    // The uri doors are forwarded too: left to the defaults they would ask the
-    // wrapped source by uuid, and a reference followed through this wrapper
-    // would lose the version it names.
-    fn object_at(&self, uri: &str) -> Option<Box<dyn DynObject>> {
-        self.0.object_at(uri)
-    }
-
-    fn read_object_at(&self, uri: &str) -> Result<Box<dyn DynObject>, String> {
-        self.0.read_object_at(uri)
-    }
-}
-
-// ---------------------------------------------------------------------------
 // Reading the frame
 // ---------------------------------------------------------------------------
 
@@ -342,7 +299,7 @@ pub fn board_of_frame(
     };
 
     // -- one track per stratigraphic rank the frame carries -----
-    let ranks = stratigraphy_ranks(frame);
+    let ranks = well_strata::ranks_of_frame(frame);
     if !ranks.is_empty() {
         match well_strata::of_frame(frame, &Wanted::IntervalUnits { rank: None }, source, &known) {
             Ok(strata) => {
@@ -511,40 +468,6 @@ pub fn board_of_frame(
     })
 }
 
-/// Distinct stratigraphic ranks the frame's mapping names - read on the
-/// document alone, the same two field-name pairs `well_strata` reads under
-/// its own private `MAPPINGS`/`ORGANISATION` (see the module doc): *which*
-/// ranks are named, never their indices, their units or their colours.
-///
-/// Each rank as `(uuid, uri)`: the uuid is what `well_strata::Wanted` asks by
-/// and what tells two ranks apart, the uri is what the header is read by.
-fn stratigraphy_ranks(frame: &dyn Reflect) -> Vec<(String, String)> {
-    let maps: Vec<&dyn Reflect> = match MAPPINGS.iter().find_map(|name| frame.field(name)) {
-        Some(FieldValue::List(items)) => items.into_iter().filter_map(|item| item.as_object()).collect(),
-        Some(FieldValue::Object(one)) => vec![one],
-        _ => Vec::new(),
-    };
-    let mut ranks: Vec<(String, String)> = Vec::new();
-    for map in maps {
-        let Some(reference) = ORGANISATION.iter().find_map(|name| match map.field(name) {
-            Some(FieldValue::Object(reference)) => Some(reference),
-            _ => None,
-        }) else {
-            continue;
-        };
-        let Some(uuid) = identity::uuid_of_reflect(reference) else {
-            continue;
-        };
-        // A reference that names no type has no uri: its uuid is then its address.
-        let uri = identity::uri_of_reflect(reference).unwrap_or_else(|| uuid.to_string());
-        let uuid = uuid.to_ascii_lowercase();
-        if !uuid.is_empty() && !ranks.iter().any(|(known, _)| *known == uuid) {
-            ranks.push((uuid, uri));
-        }
-    }
-    ranks
-}
-
 /// A rank's own title, for a track header - "Stratigraphy" (the sheet design's own
 /// fallback wording, not a French or English phrase invented here) when the
 /// package does not hold the rank or it has no title.
@@ -597,7 +520,7 @@ fn column_label(read: &property::Property<'_>, source: &dyn ArraySource, options
         PropertyLabel::Kind => read
             .kind
             .as_ref()
-            .and_then(|kind_ref| Resolver::new(&AsObjects(source)).resolve(kind_ref).ok())
+            .and_then(|kind_ref| Resolver::new(source).resolve(kind_ref).ok())
             .map(|resolution| resolution.kind().title.clone())
             .filter(|title| !title.is_empty())
             .or_else(|| read.title.clone())

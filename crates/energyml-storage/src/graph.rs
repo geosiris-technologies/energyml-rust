@@ -1777,8 +1777,16 @@ struct Held {
     version: Option<String>,
 }
 
+/// The type key of a node: the object type of its qualified type without the
+/// `obj_` prefix, or the qualified type itself when it does not parse.
+fn type_key_of(qualified_type: &str) -> String {
+    identity::parse_qualified_type(qualified_type)
+        .map(|parts| naming::strip_obj_prefix(parts.object_type).to_string())
+        .unwrap_or_else(|_| qualified_type.to_string())
+}
+
 /// The `objectVersion` an object states, as an identity: blank is none.
-fn version_of(object: &dyn Reflect) -> Option<String> {
+pub(crate) fn version_of(object: &dyn Reflect) -> Option<String> {
     identity::object_version_of_reflect(object)
         .map(str::trim)
         .filter(|version| !version.is_empty())
@@ -1832,9 +1840,7 @@ pub fn build<'a>(objects: impl IntoIterator<Item = (&'a ObjectSummary, &'a dyn R
             uri: summary.uri.clone(),
             uuid: summary.uuid.clone(),
             qualified_type: summary.qualified_type.clone(),
-            type_key: identity::parse_qualified_type(&summary.qualified_type)
-                .map(|parts| naming::strip_obj_prefix(parts.object_type).to_string())
-                .unwrap_or_else(|_| summary.qualified_type.clone()),
+            type_key: type_key_of(&summary.qualified_type),
             title: title_of(*object),
             present: true,
             externally_defined: is_externally_defined(&summary.qualified_type),
@@ -1957,9 +1963,7 @@ pub fn assemble<'a>(
             uri: summary.uri.clone(),
             uuid: summary.uuid.clone(),
             qualified_type: summary.qualified_type.clone(),
-            type_key: identity::parse_qualified_type(&summary.qualified_type)
-                .map(|parts| naming::strip_obj_prefix(parts.object_type).to_string())
-                .unwrap_or_else(|_| summary.qualified_type.clone()),
+            type_key: type_key_of(&summary.qualified_type),
             title: titles(&summary.uri),
             present: true,
             externally_defined: is_externally_defined(&summary.qualified_type),
@@ -1986,9 +1990,7 @@ pub fn assemble<'a>(
             nodes.push(Node {
                 uri: uri.clone(),
                 uuid,
-                type_key: identity::parse_qualified_type(&qualified_type)
-                    .map(|parts| naming::strip_obj_prefix(parts.object_type).to_string())
-                    .unwrap_or_else(|_| qualified_type.clone()),
+                type_key: type_key_of(&qualified_type),
                 externally_defined: is_externally_defined(&qualified_type),
                 qualified_type,
                 title: None,

@@ -83,9 +83,10 @@ use energyml_core::registry::{DynObject, Registry};
 use crate::array::{ArrayData, ArrayLocation, ArrayMetadata, ArrayValues};
 use crate::capabilities::StoreTimes;
 use crate::context::{Context, DeletedFilter, Found, Navigable, Scope, types_of};
+use crate::contract_support::{self as support, dataspace_of, pairs, set, uuid_of, uuids_of};
 use crate::dataspaces::EnergymlDataspaces;
 use crate::error::{Error, Result};
-use crate::graph::{Edge, EdgeKind};
+use crate::graph::EdgeKind;
 use crate::raw::{RawFormat, RawObject};
 use crate::resource::{ActiveStatus, Dataspace, ObjectSummary};
 use crate::storage::EnergymlStorage;
@@ -581,14 +582,6 @@ async fn listing<S: EnergymlStorage + Sync>(store: &S, rule: &Rule) -> Vec<Objec
     must(rule, "resources()", store.resources().await)
 }
 
-fn dataspace_of(uri: &str) -> String {
-    EtpUri::dataspace_uri_of(uri)
-}
-
-fn uuid_of(uri: &str) -> String {
-    EtpUri::uuid_of(uri).unwrap_or_else(|| uri.to_string())
-}
-
 fn label(uuid: &str) -> String {
     let lower = uuid.to_ascii_lowercase();
     for (name, known) in [
@@ -609,44 +602,11 @@ fn label(uuid: &str) -> String {
 }
 
 fn show(uuids: &BTreeSet<String>) -> String {
-    format!(
-        "{{{}}}",
-        uuids
-            .iter()
-            .map(|uuid| label(uuid))
-            .collect::<Vec<_>>()
-            .join(", ")
-    )
-}
-
-fn set(uuids: &[&str]) -> BTreeSet<String> {
-    uuids.iter().map(|uuid| uuid.to_ascii_lowercase()).collect()
-}
-
-fn uuids_of(found: &Found) -> BTreeSet<String> {
-    found
-        .resources
-        .iter()
-        .map(|summary| summary.uuid.to_ascii_lowercase())
-        .collect()
-}
-
-fn pairs(edges: &[Edge]) -> BTreeSet<(String, String)> {
-    edges
-        .iter()
-        .map(|edge| (uuid_of(&edge.from), uuid_of(&edge.to)))
-        .collect()
+    support::show(uuids, label)
 }
 
 fn show_pairs(pairs: &BTreeSet<(String, String)>) -> String {
-    format!(
-        "{{{}}}",
-        pairs
-            .iter()
-            .map(|(from, to)| format!("{} -> {}", label(from), label(to)))
-            .collect::<Vec<_>>()
-            .join(", ")
-    )
+    support::show_pairs(pairs, label)
 }
 
 fn wanted_pairs(pairs: &[(&str, &str)]) -> BTreeSet<(String, String)> {

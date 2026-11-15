@@ -22,7 +22,9 @@ use energyml_sheet::draw::layered::LayerInput;
 use serde_json::Value;
 
 use crate::graph::{self, BoxLook, EdgeLook, Frame, LegendEntry, Line, Tone};
-use crate::kind::{Drawn, ObjectSlot, Offer, Request, ViewContext, ViewKind, ViewNote, local_type};
+use crate::kind::{
+    Drawn, ObjectSlot, Offer, Request, ViewContext, ViewKind, ViewNote, column_name, local_type, table_name,
+};
 use crate::refusal::ViewRefusal;
 use crate::setting::ViewSetting;
 use crate::style;
@@ -233,25 +235,6 @@ impl ViewKind for TableSchemaView {
             notes: graph::capped(notes),
         })
     }
-}
-
-/// The title of a table, or its uri.
-fn table_name(sheet: &TableSheet) -> String {
-    sheet
-        .title
-        .as_deref()
-        .map(str::to_string)
-        .unwrap_or_else(|| sheet.uri.to_string())
-}
-
-/// The title of a column, or `column N` (from 0).
-fn column_name(sheet: &TableSheet, column: usize) -> String {
-    sheet
-        .columns
-        .get(column)
-        .and_then(|found| found.title.as_deref())
-        .map(str::to_string)
-        .unwrap_or_else(|| format!("column {column}"))
 }
 
 /// What reading the columns of a table gives the schema.

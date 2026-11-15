@@ -422,9 +422,9 @@ impl ExternalFiles {
                 out.push(Candidate { origin, path });
             }
         };
-        let bare_declared = declared.rsplit(['/', '\\']).next().unwrap_or(declared);
+        let bare_declared = bare_name(declared);
         for (rank, name) in self.present.iter().enumerate() {
-            let bare = name.rsplit(['/', '\\']).next().unwrap_or(name);
+            let bare = bare_name(name);
             // The one the document asks for comes first, then the rest in the
             // order declared - the same shape as pinned before offered.
             let origin = match name == declared || bare == bare_declared {
@@ -437,7 +437,7 @@ impl ExternalFiles {
 
         // 1. Pinned by name, spelled either way: a package may write the whole
         //    URI or the bare file name for the same file.
-        let bare = declared.rsplit(['/', '\\']).next().unwrap_or(declared);
+        let bare = bare_declared;
         for key in [declared, bare] {
             if let Some(path) = self.overrides.get(key) {
                 push(Origin::Pinned, path.clone(), &mut out);
@@ -504,6 +504,35 @@ impl ExternalFiles {
         self
     }
 
+    /// The path pinned for this name: by the whole name first, then by its bare
+    /// file name, since a package may spell the same file either way.
+    ///
+    /// The one precedence of [`resolve`][Self::resolve] and
+    /// [`destination_for`][Self::destination_for]: a file created by the
+    /// second is found by the first because they ask this.
+    fn pinned(&self, name: &str) -> Option<&PathBuf> {
+        [name, bare_name(name)]
+            .into_iter()
+            .find_map(|key| self.overrides.get(key))
+    }
+
+    /// Apply one `--h5` argument: `NAME=PATH` pins `PATH` to the file name the
+    /// package declares, and a bare `PATH` offers the file without naming it.
+    ///
+    /// **The one reading of the argument**, for the command line and the MCP
+    /// server alike. The text is split on the first `=`, and the left side is a
+    /// name only when it is a bare file name: a left side holding a path
+    /// separator (`/data/run=1/x.h5`) is part of a path, so the whole text is a
+    /// path to offer.
+    pub fn apply_spec(&mut self, spec: &str) -> &mut Self {
+        match spec.split_once('=') {
+            Some((name, path)) if !name.is_empty() && !path.is_empty() && !name.contains(['/', '\\']) => {
+                self.set(name, path)
+            }
+            _ => self.offer(spec.trim_start_matches('=')),
+        }
+    }
+
     /// Turn the name an array pointer carries into a path that exists.
     pub fn resolve(&self, name: &str) -> Result<PathBuf> {
         let missing = || Error::ExternalData {
@@ -515,12 +544,10 @@ impl ExternalFiles {
         }
         // What the caller pinned wins, by whole name and by file name, since a
         // package may spell the same file either way.
-        let bare = name.rsplit(['/', '\\']).next().unwrap_or(name);
-        for key in [name, bare] {
-            if let Some(path) = self.overrides.get(key) {
-                return Ok(path.clone());
-            }
+        if let Some(path) = self.pinned(name) {
+            return Ok(path.clone());
         }
+        let bare = bare_name(name);
 
         let candidate = Path::new(name);
         if candidate.is_absolute() && candidate.exists() {
@@ -556,11 +583,8 @@ impl ExternalFiles {
         if name.is_empty() {
             return Err(nowhere());
         }
-        let bare = name.rsplit(['/', '\\']).next().unwrap_or(name);
-        for key in [name, bare] {
-            if let Some(path) = self.overrides.get(key) {
-                return Ok(path.clone());
-            }
+        if let Some(path) = self.pinned(name) {
+            return Ok(path.clone());
         }
         let candidate = Path::new(name);
         if candidate.is_absolute() {
@@ -628,9 +652,31 @@ impl Backends {
     }
 }
 
+/// The last segment of a file name written with either separator.
+pub(crate) fn bare_name(name: &str) -> &str {
+    name.rsplit(['/', '\\']).next().unwrap_or(name)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_h5_argument_with_an_equals_in_its_path_is_a_path() {
+        let mut files = ExternalFiles::default();
+        files.apply_spec("/data/run=1/x.h5");
+        files.apply_spec("model.h5=/data/renamed.h5");
+        files.apply_spec("C:\\data\\run=1\\x.h5");
+        assert_eq!(
+            files.offered(),
+            [
+                PathBuf::from("/data/run=1/x.h5"),
+                PathBuf::from("C:\\data\\run=1\\x.h5")
+            ]
+        );
+        assert_eq!(files.pinned("model.h5"), Some(&PathBuf::from("/data/renamed.h5")));
+        // Break it: drop the separator guard on the name in `apply_spec`.
+    }
 
     #[test]
     fn a_pinned_file_wins_over_the_package() {

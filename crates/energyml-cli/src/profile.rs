@@ -191,12 +191,7 @@ pub fn run(args: ProfileArgs, modes: Modes) -> Result<()> {
         bail!("give `--track`, `--left` and `--right`");
     };
     let track = read_track(track)?;
-    let placement = match args.placement.as_str() {
-        "projected" => Placement::Projected,
-        "metres" => Placement::Metres,
-        "local" => Placement::Local,
-        other => bail!("placement `{other}`: one of projected, metres, local"),
-    };
+    let placement = Placement::parse(&args.placement).map_err(anyhow::Error::msg)?;
     let asked: Vec<String> = if args.wells.is_empty() {
         heads::trajectories_of(&store.resources())
     } else {
@@ -382,11 +377,7 @@ fn draw_svg(stores: &[crate::Opened], args: &ProfileArgs) -> Result<()> {
                 None => bail!("`--draw {other}`: one of long, plan, cross:N"),
             },
         };
-        let (width, height) = args
-            .size
-            .split_once('x')
-            .and_then(|(w, h)| Some((w.trim().parse::<f64>().ok()?, h.trim().parse::<f64>().ok()?)))
-            .ok_or_else(|| anyhow!("`--size {}`: expected WIDTHxHEIGHT", args.size))?;
+        let (width, height) = super::view::parse_size(&args.size)?;
         let mut view = View::new(target, [width, height]);
         view.zoom_script = !args.static_svg;
         view.strata_legend = args.strata_legend;

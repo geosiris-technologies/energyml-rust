@@ -46,12 +46,12 @@ use std::sync::Arc;
 use anyhow::{Context, Result, bail};
 use clap::Args;
 
+use energyml_build::apply;
 use energyml_build::entries::{self, Reader};
 use energyml_build::operation::{Applies, Choices, Fitness, Identity, Otherwise, Plan, Registry, Slot, When};
 use energyml_build::pieces::Pieces;
 use energyml_build::recipe;
 use energyml_build::source::Source as FromWhere;
-use energyml_build::{apply, epc};
 use energyml_storage::EpcStore;
 
 /// How the command line gives a table its template - what a refusal names.
@@ -222,19 +222,7 @@ pub fn run(args: CreateArgs) -> Result<ExitCode> {
 
     let mut choices = Choices::new();
     for one in &args.choices {
-        let Some((name, value)) = one.split_once('=') else {
-            bail!("`--set {one}`: expected `name=value`");
-        };
-        let value: serde_json::Value = match serde_json::from_str(value) {
-            // A list, for a slot that takes several values: `--set 'units=["Cretaceous","Jurassic"]'`.
-            // Without it no such slot could be answered from the command line.
-            Ok(
-                json @ (serde_json::Value::Number(_)
-                | serde_json::Value::Bool(_)
-                | serde_json::Value::Array(_)),
-            ) => json,
-            _ => serde_json::Value::String(value.to_string()),
-        };
+        let (name, value) = super::target::parse_choice(one)?;
         choices = choices.set(name, value);
     }
     let when = When {
@@ -266,29 +254,9 @@ pub fn run(args: CreateArgs) -> Result<ExitCode> {
         return Ok(ExitCode::SUCCESS);
     };
 
-    let name = out
-        .file_name()
-        .map(|n| n.to_string_lossy().to_string())
-        .unwrap_or_else(|| out.display().to_string());
-    let registry_of_schemas = std::sync::Arc::new(super::registry::all());
-    let mut store =
-        epc::open(args.into.as_deref(), &name, registry_of_schemas).with_context(|| match &args.into {
-            Some(path) => format!("opening {}", path.display()),
-            None => "making an empty package".to_string(),
-        })?;
-    // **A bare name is in the current folder**, and the store has to be told:
-    // without a root, `--out package.epc` wrote the package and refused each of
-    // its arrays (`data.h5`: file not found), two thousand lines of refusals
-    // for a file that looks as if it came out fine.
-    let parent = out
-        .parent()
-        .filter(|p| !p.as_os_str().is_empty())
-        .unwrap_or(std::path::Path::new("."));
-    store.external_files_mut().set_root(parent);
+    let mut store = super::target::open(args.into.as_deref(), &out)?;
     let made = apply::apply(&plan, &mut store, &when);
-    store
-        .save_as(&out, &energyml_storage::SaveOptions::default())
-        .with_context(|| format!("writing {}", out.display()))?;
+    super::target::save(&store, &out)?;
 
     println!("\n{} object(s) written to {}", made.written.len(), out.display());
     print_made(&made);

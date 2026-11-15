@@ -70,6 +70,7 @@ pub mod error;
 pub mod geojson;
 pub mod obj;
 pub mod registry;
+pub mod run;
 pub mod shapes;
 pub mod vtk;
 

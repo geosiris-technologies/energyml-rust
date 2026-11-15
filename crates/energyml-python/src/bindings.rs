@@ -593,7 +593,7 @@ impl PyEpc {
         let out = PyDict::new(py);
         out.set_item("errors", report.errors)?;
         out.set_item("warnings", report.warnings)?;
-        out.set_item("sound", report.errors == 0)?;
+        out.set_item("sound", report.sound)?;
 
         let rows = |items: Vec<Bound<'py, PyDict>>| -> PyResult<Vec<Bound<'py, PyDict>>> { Ok(items) };
 

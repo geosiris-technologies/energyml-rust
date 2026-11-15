@@ -161,15 +161,8 @@ pub fn run(args: ImportArgs) -> Result<ExitCode> {
         return Ok(ExitCode::SUCCESS);
     };
 
-    let registry = std::sync::Arc::new(super::registry::all());
-    let mut store = epc::open(args.into.as_deref(), &name, registry).with_context(|| match &args.into {
-        Some(path) => format!("opening {}", path.display()),
-        None => "making an empty package".to_string(),
-    })?;
     // The arrays go beside the package, which is where a reader will look.
-    if let Some(parent) = out.parent().filter(|p| !p.as_os_str().is_empty()) {
-        store.external_files_mut().set_root(parent);
-    }
+    let mut store = super::target::open_named(args.into.as_deref(), &name, &out)?;
 
     let options = epc::Options {
         name: name.clone(),
@@ -189,9 +182,7 @@ pub fn run(args: ImportArgs) -> Result<ExitCode> {
         stage,
     };
     let report = epc::write(&mut store, &plan, &options);
-    store
-        .save_as(&out, &energyml_storage::SaveOptions::default())
-        .with_context(|| format!("writing {}", out.display()))?;
+    super::target::save(&store, &out)?;
 
     println!(
         "\n{} object(s) written to {}",

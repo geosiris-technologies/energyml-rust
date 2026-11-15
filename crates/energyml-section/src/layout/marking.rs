@@ -353,42 +353,15 @@ impl Resolved {
         if self.entries.is_empty() {
             return Vec::new();
         }
-        let room = (((bottom - top) - LINE_PX - 8.0) / LINE_PX).floor().max(1.0) as usize;
-        let shown = if self.entries.len() > room {
-            room.saturating_sub(1)
-        } else {
-            self.entries.len()
-        };
-        let height = LINE_PX * (shown + 1 + usize::from(shown < self.entries.len())) as f64 + 10.0;
-        let mut frame = vec![
-            Shape::Polygon {
-                points: vec![
-                    [x, top],
-                    [x + width, top],
-                    [x + width, top + height],
-                    [x, top + height],
-                ],
-                fill: "#ffffff".into(),
-                opacity: 0.92,
-                stroke: Some("#999999".into()),
-                dash: false,
-            },
-            Shape::Text {
-                at: [x + 8.0, top + LINE_PX],
-                text: "Markers".into(),
-                anchor: Anchor::Start,
-                size: FONT_PX,
-                fill: INK.into(),
-            },
-        ];
+        let super::LegendBox { shown, mut frame } =
+            super::legend_box(x, width, top, bottom, "Markers", self.entries.len(), 0);
         if shown < self.entries.len() {
-            frame.push(Shape::Text {
-                at: [x + 8.0, top + LINE_PX * (shown as f64 + 2.0)],
-                text: format!("+ {} more markers", self.entries.len() - shown),
-                anchor: Anchor::Start,
-                size: SMALL_PX,
-                fill: INK.into(),
-            });
+            frame.push(super::more_line(
+                x,
+                top,
+                shown,
+                format!("+ {} more markers", self.entries.len() - shown),
+            ));
         }
         let mut out = vec![decor("markers-box", frame)];
         for (i, e) in self.entries.iter().take(shown).enumerate() {

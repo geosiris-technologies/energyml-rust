@@ -15,7 +15,6 @@ use energyml_domain::table::{
     Cell, CellState, ColumnCells, ColumnClass, Table, TableSheet, classify_column, curve_pairs, resolve_kinds,
 };
 use energyml_domain::units::{self, Dimension};
-use energyml_sheet::draw::ticks::{label, nice_ticks};
 use energyml_sheet::draw::{
     Anchor, Colour, DisplayList, Element, Item, Layer, PageUnit, Rect, Stroke, SymbolKind, TextStyle,
 };
@@ -23,7 +22,10 @@ use energyml_sheet::text::short;
 use serde_json::Value;
 
 use crate::colour::ColourSource;
-use crate::kind::{Drawn, ObjectSlot, Offer, Request, ViewContext, ViewKind, ViewNote, local_type};
+use crate::kind::{
+    Drawn, ObjectSlot, Offer, Request, ViewContext, ViewKind, ViewNote, column_name, local_type, table_name,
+    title_or_uri,
+};
 use crate::refusal::ViewRefusal;
 use crate::setting::ViewSetting;
 use crate::style::{self, PlotFrame};
@@ -262,12 +264,7 @@ impl ViewKind for TableCurve {
             )));
         }
 
-        let title = cx
-            .index
-            .node(uri)
-            .and_then(|node| node.title.as_deref())
-            .unwrap_or(uri)
-            .to_string();
+        let title = title_or_uri(cx.index, uri);
         let list = picture(
             request.size,
             uri,
@@ -353,25 +350,6 @@ fn uom_of(sheet: &TableSheet, column: usize) -> Option<String> {
         .get(column)
         .and_then(|found| found.uom.as_deref())
         .map(str::to_string)
-}
-
-/// The title of a table, or its uri.
-fn table_name(sheet: &TableSheet) -> String {
-    sheet
-        .title
-        .as_deref()
-        .map(str::to_string)
-        .unwrap_or_else(|| sheet.uri.to_string())
-}
-
-/// The title of a column, or `column N` (from 0).
-fn column_name(sheet: &TableSheet, column: usize) -> String {
-    sheet
-        .columns
-        .get(column)
-        .and_then(|found| found.title.as_deref())
-        .map(str::to_string)
-        .unwrap_or_else(|| format!("column {column}"))
 }
 
 /// A column with its unit, as the legend and the axes write it.
@@ -657,23 +635,17 @@ fn right_axis_layer(frame: &PlotFrame, y_title: &str) -> Layer {
     let mut layer = Layer::new("axis-right");
     let area = frame.area;
     let mut marks = Vec::new();
-    let range = [
-        frame.y.data[0].min(frame.y.data[1]),
-        frame.y.data[0].max(frame.y.data[1]),
-    ];
-    if let Ok(ticks) = nice_ticks(range[0], range[1], (area.h / 60.0).max(2.0)) {
-        for value in ticks.values.iter().copied() {
-            let y = frame.y.at(value);
-            marks.push(Item::Polyline {
-                points: vec![[area.x + area.w, y], [area.x + area.w + 4.0, y]],
-                stroke: Stroke::solid(style::MUTED, 1.0),
-            });
-            marks.push(style::label_item(
-                [area.x + area.w + 7.0, y + 3.5],
-                label(value, ticks.step),
-                style::text(style::SMALL, style::MUTED, Anchor::Start),
-            ));
-        }
+    // The graduations are the plot's (`style::linear_ticks`): the same values the left axis writes.
+    for tick in style::linear_ticks(&frame.y, (area.h / 60.0).max(2.0)) {
+        marks.push(Item::Polyline {
+            points: vec![[area.x + area.w, tick.at], [area.x + area.w + 4.0, tick.at]],
+            stroke: Stroke::solid(style::MUTED, 1.0),
+        });
+        marks.push(style::label_item(
+            [area.x + area.w + 7.0, tick.at + 3.5],
+            tick.label,
+            style::text(style::SMALL, style::MUTED, Anchor::Start),
+        ));
     }
     marks.push(Item::Text {
         at: [area.x + area.w + 62.0, area.y + area.h / 2.0],

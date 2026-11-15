@@ -29,7 +29,7 @@ use energyml_analysis::survey_qc::{
 };
 use energyml_analysis::well_plan::RATE_LENGTH;
 use energyml_domain::crs::CompassAxes;
-use energyml_domain::package_index::{NodeState, PackageIndex};
+use energyml_domain::package_index::PackageIndex;
 use energyml_geometry::around_well::projection::{
     Plan, VerticalSection, WellAxis, WellProjection, locator_line,
 };
@@ -45,7 +45,9 @@ use energyml_sheet::draw::{
 };
 use serde_json::Value;
 
-use crate::kind::{Drawn, ObjectSlot, Offer, Request, ViewContext, ViewKind, ViewNote, local_type};
+use crate::kind::{
+    Drawn, ObjectSlot, Offer, Request, ViewContext, ViewKind, ViewNote, offers_of_types, title_or_uri,
+};
 use crate::refusal::ViewRefusal;
 use crate::setting::ViewSetting;
 use crate::style::{self, PlotFrame, short};
@@ -170,18 +172,7 @@ impl ViewKind for SurveyQc {
     }
 
     fn offers(&self, index: &PackageIndex) -> Vec<Offer> {
-        index
-            .nodes()
-            .filter(|node| {
-                node.state == NodeState::Present && SURVEY_TYPES.contains(&local_type(&node.qualified_type))
-            })
-            .map(|node| Offer {
-                view: ID,
-                objects: vec![node.uri.to_string()],
-                title: node.title.as_deref().unwrap_or(&node.uuid).to_string(),
-                missing: Vec::new(),
-            })
-            .collect()
+        offers_of_types(index, ID, SURVEY_TYPES, |_| true)
     }
 
     fn draw(&self, request: &Request, cx: &ViewContext<'_>) -> Result<Drawn, ViewRefusal> {
@@ -451,12 +442,7 @@ impl ViewKind for SurveyQc {
         }
 
         // The page: the panels in order, two to a row, an odd one last across the page.
-        let title = cx
-            .index
-            .node(uri)
-            .and_then(|node| node.title.as_deref())
-            .unwrap_or(uri)
-            .to_string();
+        let title = title_or_uri(cx.index, uri);
         let mut order: Vec<Panel> = Vec::new();
         if plan.is_some() {
             order.push(Panel::Plan);

@@ -37,6 +37,7 @@
 //! [`Broken::in_source`] tells them apart, because a report that mixed them
 //! would blame the cut for the package's own state.
 
+use crate::backend::bare_name;
 use crate::epc::{EpcStore, SaveOptions};
 use crate::error::{Error, Result};
 use crate::graph::Graph;
@@ -658,14 +659,6 @@ fn prepare(
         .collect();
     cut.plan = made;
     Ok((cut, target))
-}
-
-/// The last segment of a declared location - how the rename compares names.
-fn bare_name(declared: &str) -> &str {
-    match declared.rfind(['/', '\\']) {
-        Some(at) => &declared[at + 1..],
-        None => declared,
-    }
 }
 
 // ---------------------------------------------------------------------------

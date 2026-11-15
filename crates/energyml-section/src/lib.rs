@@ -62,13 +62,13 @@ pub fn compute(
     inputs: &Inputs,
     mut read_one: impl FnMut(&Asked, &[SectionTrace]) -> Contribution,
 ) -> Result<Catalogue, InputsError> {
-    let (sections, _) = crosses::traces(inputs)?;
+    let (sections, notes) = crosses::traces(inputs)?;
     let contributions: Vec<Contribution> = inputs
         .objects
         .iter()
         .map(|asked| read_one(asked, &sections))
         .collect();
-    assemble::assemble(inputs, &contributions)
+    assemble::assemble_with(inputs, sections, notes, &contributions)
 }
 
 /// One package handed to [`compute_packages`]: the store id its objects are

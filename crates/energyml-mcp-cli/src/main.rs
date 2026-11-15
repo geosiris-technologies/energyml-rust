@@ -154,17 +154,13 @@ fn open(args: &Args) -> Result<EpcStore> {
     let mut store = EpcStore::open(&args.file, Arc::new(energyml_schemas::all()))
         .with_context(|| format!("opening {}", args.file.display()))?;
     for spec in &args.h5 {
-        // `name=path`, or just `path`. Split on the first `=` so a path that
-        // contains one still works on the right-hand side; a Windows drive
-        // letter uses `:` and is unaffected.
-        match spec.split_once('=') {
-            Some((name, path)) if !name.is_empty() && !path.is_empty() => {
-                store.external_files_mut().set(name, path);
-            }
-            _ => {
-                store.external_files_mut().offer(spec.trim_start_matches('='));
-            }
-        }
+        // `NAME=PATH` or `PATH`: the one reading is the library's.
+        store.external_files_mut().apply_spec(spec);
+    }
+    // Said once, on stderr (stdout carries the protocol): a mistyped path
+    // would otherwise look like a package with no data file.
+    for path in store.external_files_ref().missing_offers() {
+        eprintln!("warning: --h5 `{}` does not exist and is ignored", path.display());
     }
     Ok(store)
 }

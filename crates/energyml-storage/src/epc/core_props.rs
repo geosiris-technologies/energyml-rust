@@ -172,11 +172,8 @@ impl CoreProperties {
 }
 
 // Element text: the one door, `energyml_core::xml::escape_text`.
+use super::raw_xml::local_name;
 use energyml_core::xml::escape_text as escape;
-
-fn local_name(raw: &[u8]) -> String {
-    String::from_utf8_lossy(raw.rsplit(|b| *b == b':').next().unwrap_or_default()).into_owned()
-}
 
 // ---------------------------------------------------------------------------
 // Time

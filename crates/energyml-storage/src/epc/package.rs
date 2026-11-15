@@ -379,10 +379,7 @@ pub fn parse_relationships_counting(xml: &[u8], part: &str) -> (Vec<Relationship
     (out, diagnostics, seen.probes)
 }
 
-/// Local name of a possibly prefixed XML name.
-fn local_name(raw: &[u8]) -> String {
-    String::from_utf8_lossy(raw.rsplit(|b| *b == b':').next().unwrap_or_default()).into_owned()
-}
+use super::raw_xml::local_name;
 
 #[cfg(test)]
 mod tests {

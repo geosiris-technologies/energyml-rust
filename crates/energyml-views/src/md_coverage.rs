@@ -21,7 +21,6 @@ use energyml_domain::md_extent::{
 };
 use energyml_domain::package_index::{NodeState, PackageIndex};
 use energyml_domain::well_members::{WellMembers, well_members_of_index};
-use energyml_sheet::draw::ticks::{label, nice_ticks};
 use energyml_sheet::draw::{
     Anchor, Colour, DisplayList, Element, Hatch, Item, Layer, PageUnit, Paint, Rect, Stroke, SymbolKind,
     TextStyle,
@@ -611,48 +610,16 @@ pub fn coverage_list(spec: &CoverageSpec<'_>) -> Result<DisplayList, String> {
     Ok(list)
 }
 
-/// The frame of a band, its horizontal grid and its graduated MD axis. (`style::axes_layer` graduates a second
-/// axis across, which a band has not: the bars are side by side with no scale between them.)
+/// The frame of a band, its horizontal grid and its graduated MD axis, by `style::graduated_layer`. (A band has no
+/// second axis: the bars are side by side with no scale between them.)
 fn axis_layer(band: usize, frame: &PlotFrame, title: &str) -> Layer {
-    let mut layer = Layer::new(format!("axes-{band}"));
     let area = frame.area;
-    let mut grid = Vec::new();
-    let mut marks = Vec::new();
-    let range = [
-        frame.y.data[0].min(frame.y.data[1]),
-        frame.y.data[0].max(frame.y.data[1]),
-    ];
-    if let Ok(ticks) = nice_ticks(range[0], range[1], (area.h / 50.0).max(2.0)) {
-        for value in ticks.values.iter().copied() {
-            let y = frame.y.at(value);
-            grid.push(Item::Polyline {
-                points: vec![[area.x, y], [area.x + area.w, y]],
-                stroke: Stroke::solid(style::GRID, 1.0),
-            });
-            marks.push(style::label_item(
-                [area.x - 5.0, y + 3.5],
-                label(value, ticks.step),
-                style::text(style::SMALL, style::MUTED, Anchor::End),
-            ));
-        }
-    }
-    layer.elements.push(Element::new(grid));
-    layer.elements.push(Element::new(vec![Item::Rect {
-        rect: area,
-        corner: 0.0,
-        fill: None,
-        stroke: Some(Stroke::solid(style::MUTED, 1.0)),
-    }]));
-    marks.push(Item::Text {
-        at: [area.x - 42.0, area.y + area.h / 2.0],
-        text: title.to_string(),
-        style: TextStyle {
-            rotate: -90.0,
-            ..style::text(style::TEXT, style::MUTED, Anchor::Middle)
-        },
-    });
-    layer.elements.push(Element::new(marks));
-    layer
+    style::graduated_layer(
+        &format!("axes-{band}"),
+        area,
+        None,
+        (&style::linear_ticks(&frame.y, (area.h / 50.0).max(2.0)), title),
+    )
 }
 
 fn axis_word(axis: ExtentAxis) -> &'static str {

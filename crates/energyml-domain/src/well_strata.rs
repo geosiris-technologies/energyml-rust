@@ -631,6 +631,39 @@ pub fn states_units(frame: &dyn Reflect) -> bool {
         .any(|name| frame.field(name).is_some_and(|value| !value.is_empty()))
 }
 
+/// The distinct stratigraphic ranks a frame's mappings name, read on the document alone (no array opened): each as
+/// `(uuid, uri)`, the uuid lower case.
+///
+/// The uuid is what [`Wanted`] asks by and what tells two ranks apart; the uri is what the rank's header is read by (a
+/// reference that names no type has no uri: its uuid is then its address). *Which* ranks are named, never their
+/// indices, their units or their colours. The one reading of the two spellings (`MAPPINGS`, `ORGANISATION`), for
+/// every caller that lists ranks.
+pub fn ranks_of_frame(frame: &dyn Reflect) -> Vec<(String, String)> {
+    let maps: Vec<&dyn Reflect> = match MAPPINGS.iter().find_map(|name| frame.field(name)) {
+        Some(FieldValue::List(items)) => items.into_iter().filter_map(|item| item.as_object()).collect(),
+        Some(FieldValue::Object(one)) => vec![one],
+        _ => Vec::new(),
+    };
+    let mut ranks: Vec<(String, String)> = Vec::new();
+    for map in maps {
+        let Some(reference) = ORGANISATION.iter().find_map(|name| match map.field(name) {
+            Some(FieldValue::Object(reference)) => Some(reference),
+            _ => None,
+        }) else {
+            continue;
+        };
+        let Some(uuid) = identity::uuid_of_reflect(reference) else {
+            continue;
+        };
+        let uri = identity::uri_of_reflect(reference).unwrap_or_else(|| uuid.to_string());
+        let uuid = uuid.to_ascii_lowercase();
+        if !uuid.is_empty() && !ranks.iter().any(|(known, _)| *known == uuid) {
+            ranks.push((uuid, uri));
+        }
+    }
+    ranks
+}
+
 /// Where an interval is, for a message: its rank and its two MDs.
 fn interval(title: &str, mds: &[f64], at: usize) -> String {
     format!(
