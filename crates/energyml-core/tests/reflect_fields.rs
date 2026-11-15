@@ -7,38 +7,53 @@ use energyml_core::prelude::*;
 use energyml_core::reflect::fields;
 use energyml_core::value::Reflect;
 
+/// A child object with one text field.
 #[derive(Debug, Default, Clone, PartialEq, EnergymlObject)]
 #[energyml(package = "eml", version = "2.3", xml_name = "Leaf")]
 pub struct Leaf {
+    /// The `Name` element.
     #[energyml(elem, xml_name = "Name")]
     pub name: String,
 }
 
+/// One field of each kind the door reads, plain, optional and repeated.
 #[derive(Debug, Default, Clone, PartialEq, EnergymlObject)]
 #[energyml(package = "eml", version = "2.3", xml_name = "Probe")]
 pub struct Probe {
+    /// The `Text` element.
     #[energyml(elem, xml_name = "Text")]
     pub text: String,
+    /// The `MaybeText` element.
     #[energyml(elem, xml_name = "MaybeText")]
     pub maybe_text: Option<String>,
+    /// The `Real` element.
     #[energyml(elem, xml_name = "Real")]
     pub real: f64,
+    /// The `MaybeReal` element.
     #[energyml(elem, xml_name = "MaybeReal")]
     pub maybe_real: Option<f64>,
+    /// The `Signed` element.
     #[energyml(elem, xml_name = "Signed")]
     pub signed: i64,
+    /// The `Unsigned` element.
     #[energyml(elem, xml_name = "Unsigned")]
     pub unsigned: u64,
+    /// The `On` element.
     #[energyml(elem, xml_name = "On")]
     pub on: bool,
+    /// The `MaybeOn` element.
     #[energyml(elem, xml_name = "MaybeOn")]
     pub maybe_on: Option<bool>,
+    /// The `Words` element.
     #[energyml(elem, xml_name = "Words")]
     pub words: Vec<String>,
+    /// The `Reals` element.
     #[energyml(elem, xml_name = "Reals")]
     pub reals: Vec<f64>,
+    /// The `One` element.
     #[energyml(elem, xml_name = "One")]
     pub one: Option<Leaf>,
+    /// The `Many` element.
     #[energyml(elem, xml_name = "Many")]
     pub many: Vec<Leaf>,
 }
