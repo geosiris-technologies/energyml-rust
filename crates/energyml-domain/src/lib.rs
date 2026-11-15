@@ -26,6 +26,7 @@
 //! | [`series`] | what does this log or time series say, sample by sample |
 //! | [`along_md`] | where an MD falls between the nodes, and what the value is there |
 //! | [`component_axes`] | what each component of a vector property stands for |
+//! | [`activity`] | what an activity did, with which parameters, and what its template says of them |
 //!
 //! # The rule the whole crate follows
 //!
@@ -59,6 +60,7 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+pub mod activity;
 pub mod along_md;
 pub mod attachments;
 pub mod check;
