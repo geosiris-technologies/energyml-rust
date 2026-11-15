@@ -606,9 +606,9 @@ pub struct Columns {
 /// ([`Held::of`]) instead of whichever came last.
 #[derive(Default)]
 struct Held<'a> {
-    /// What a bare uuid names: the last object held with it.
-    by_uuid: HashMap<String, &'a dyn Reflect>,
-    /// Every object of a uuid, in the order held.
+    /// Every object of a uuid, in the order held. There is no "the object of a
+    /// uuid": an object is reached through a reference ([`Held::of`]) or an
+    /// address ([`Held::at`]), which name the version.
     versions: HashMap<String, Vec<&'a dyn Reflect>>,
 }
 
@@ -616,7 +616,6 @@ impl<'a> FromIterator<(String, &'a dyn Reflect)> for Held<'a> {
     fn from_iter<T: IntoIterator<Item = (String, &'a dyn Reflect)>>(pairs: T) -> Self {
         let mut held = Held::default();
         for (uuid, object) in pairs {
-            held.by_uuid.insert(uuid.clone(), object);
             held.versions.entry(uuid).or_default().push(object);
         }
         held
@@ -624,11 +623,6 @@ impl<'a> FromIterator<(String, &'a dyn Reflect)> for Held<'a> {
 }
 
 impl<'a> Held<'a> {
-    /// The object a bare uuid names.
-    fn get(&self, uuid: &str) -> Option<&&'a dyn Reflect> {
-        self.by_uuid.get(uuid)
-    }
-
     /// **The object a reference names**: of the objects held under its uuid,
     /// the one at the version it names (`identity::version_fit`, the one rule -
     /// the exact version, then one that contradicts nothing). A uuid held once
@@ -637,12 +631,23 @@ impl<'a> Held<'a> {
     /// a uuid held twice whose versions the reference contradicts answers
     /// `None`: guessing would show the wrong version under the right name.
     fn of(&self, reference: &dyn Reflect) -> Option<&'a dyn Reflect> {
-        let uuid = identity::uuid_of_reflect(reference)?.to_ascii_lowercase();
-        let all = self.versions.get(&uuid)?;
+        let uuid = identity::uuid_of_reflect(reference)?;
+        self.pick(uuid, identity::object_version_of_reflect(reference))
+    }
+
+    /// The object an **address** names (a uri, which carries its version; a bare
+    /// uuid names none): [`Held::of`]'s rule, for the sites that hold a
+    /// [`Named`] and no longer the reference it was made from.
+    fn at(&self, address: &str) -> Option<&'a dyn Reflect> {
+        let (uuid, version) = identity::parse_address(address);
+        self.pick(&uuid, version.as_deref())
+    }
+
+    fn pick(&self, uuid: &str, wanted: Option<&str>) -> Option<&'a dyn Reflect> {
+        let all = self.versions.get(&uuid.to_ascii_lowercase())?;
         if let [only] = all.as_slice() {
             return Some(*only);
         }
-        let wanted = identity::object_version_of_reflect(reference);
         let mut best: Option<(identity::VersionFit, &'a dyn Reflect)> = None;
         for object in all {
             let fit = identity::version_fit(wanted, identity::object_version_of_reflect(*object));
@@ -769,7 +774,7 @@ fn read_unconformities(
         let horizon = contact
             .part_of
             .as_ref()
-            .and_then(|part| held.get(&part.uuid).map(|object| (part, *object)));
+            .and_then(|part| held.at(&part.uri).map(|object| (part, object)));
         if let (Some((part, horizon)), Some(position)) = (horizon, position) {
             let at = |named: &Named| position.get(&named.uuid).copied();
             if let (Some(a), Some(b)) = (at(&contact.subject), at(&contact.object)) {
@@ -1002,8 +1007,8 @@ pub fn columns<'a>(objects: impl Iterator<Item = &'a dyn Reflect>) -> Columns {
                 .unwrap_or_default()
                 .to_ascii_lowercase();
             listed.push(uuid.clone());
-            match held.get(&uuid) {
-                Some(target) => ranks.push(read_rank(*target, &held, &represents)),
+            match held.of(*reference) {
+                Some(target) => ranks.push(read_rank(target, &held, &represents)),
                 None => out.notes.push(format!(
                     "column {} lists rank {uuid}, which is not in the package",
                     column.uuid
@@ -1489,7 +1494,7 @@ fn measure(object: &dyn Reflect, name: &str) -> Option<String> {
 /// Read a fault interpretation - the object when the package holds it, the
 /// reference alone otherwise.
 fn read_fault(reference: Named, held: &Held<'_>) -> Fault {
-    let object = held.get(&reference.uuid).copied();
+    let object = held.at(&reference.uri);
     let mut throws: Vec<String> = Vec::new();
     let mut active = None;
     if let Some(object) = object {
@@ -1559,7 +1564,7 @@ fn read_organisation(object: &dyn Reflect, held: &Held<'_>) -> Organisation {
             }
             continue;
         }
-        let target = held.get(&surface.uuid).copied();
+        let target = held.of(reference);
         horizons.push((
             integer(*entry, INDEX).unwrap_or(position as i64),
             Surface {

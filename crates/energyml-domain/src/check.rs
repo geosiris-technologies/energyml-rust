@@ -106,11 +106,24 @@ pub struct Part<'a> {
     pub relationships: &'a [Relationship],
 }
 
+/// What an object is filed under in the rule findings: its uri, the identity.
+/// An inventory entry that carries no uri (a hand-built summary) is filed under
+/// its uuid, the only address it has.
+fn identity_of(summary: &ObjectSummary) -> &str {
+    let is_uri = summary
+        .uri
+        .get(..4)
+        .is_some_and(|scheme| scheme.eq_ignore_ascii_case("eml:"));
+    if is_uri { &summary.uri } else { &summary.uuid }
+}
+
 /// One object failing its schema.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SchemaIssue {
     /// Uuid of the object.
     pub uuid: String,
+    /// Uri of the object: the identity, which tells two versions of one uuid apart.
+    pub uri: String,
     /// How much it matters.
     pub severity: IssueSeverity,
     /// Dotted path to the offending value.
@@ -126,6 +139,8 @@ pub struct SchemaIssue {
 pub struct PropertyIssue {
     /// Uuid of the property.
     pub uuid: String,
+    /// Uri of the property: the identity, which tells two versions of one uuid apart.
+    pub uri: String,
     /// What is wrong, in the words the check gives.
     pub says: String,
     /// Whether it is a defect of the file or a remark.
@@ -146,6 +161,8 @@ pub struct PropertyIssue {
 pub struct CountIssue {
     /// Uuid of the property.
     pub uuid: String,
+    /// Uri of the property: the identity, which tells two versions of one uuid apart.
+    pub uri: String,
     /// What is wrong, in the words `Discrepancy` gives.
     pub says: String,
     /// Whether it condemns the file. **A whole multiple of what is declared is
@@ -163,6 +180,9 @@ pub struct CountIssue {
 pub struct RuleFinding {
     /// Uuid of the object judged.
     pub uuid: String,
+    /// Identity the finding is filed under: the object's uri, which tells two
+    /// versions of one uuid apart (a finding filed under a uuid only carries it).
+    pub uri: String,
     /// The rule's id.
     pub rule: String,
     /// What the rule means.
@@ -462,6 +482,7 @@ pub fn check_with_arrays(
             for issue in found.issues {
                 report.schema.push(SchemaIssue {
                     uuid: one.summary.uuid.clone(),
+                    uri: one.summary.uri.clone(),
                     severity: issue.severity,
                     path: issue.path,
                     code: issue.code,
@@ -495,6 +516,7 @@ pub fn check_with_arrays(
             for issue in property_kind::check(&resolution, read.uom.as_deref()) {
                 report.properties.push(PropertyIssue {
                     uuid: one.summary.uuid.clone(),
+                    uri: one.summary.uri.clone(),
                     is_a_defect: issue.is_a_defect(),
                     is_error: matches!(issue, property_kind::KindIssue::AbstractKindUsed { .. }),
                     says: format!("{issue}"),
@@ -562,6 +584,7 @@ pub fn check_with_arrays(
                         };
                         report.counts.push(CountIssue {
                             uuid: one.summary.uuid.clone(),
+                            uri: one.summary.uri.clone(),
                             says,
                             is_error: !multiple,
                         });
@@ -588,10 +611,12 @@ pub fn check_with_arrays(
         set.extend(options.extra_rules.clone());
         report.rule_count = set.len() + crate::integrity::checks().len();
 
+        // Filed under the **uri**, the identity: two versions of one uuid are
+        // two objects with two findings, and `Finding::uuid` is read from it.
         let pairs: Vec<(&str, &dyn energyml_core::value::Reflect)> = package
             .objects
             .iter()
-            .map(|one| (one.summary.uuid.as_str(), one.object.as_reflect()))
+            .map(|one| (identity_of(one.summary), one.object.as_reflect()))
             .collect();
         let found = rules::run(&set, pairs.iter().copied(), package.source, package.known)
             .into_iter()
@@ -603,6 +628,7 @@ pub fn check_with_arrays(
             };
             report.rules.push(RuleFinding {
                 uuid: finding.uuid,
+                uri: finding.uri,
                 rule: finding.rule,
                 says: finding.says,
                 read,

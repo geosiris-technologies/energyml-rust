@@ -184,6 +184,21 @@ pub struct IndexNode {
     seen: u64,
 }
 
+/// One outgoing reference of a node, borrowed from the index
+/// ([`PackageIndex::references_at`]): the node it resolves to and the path that
+/// carries it. The borrowed form of [`Pointer`].
+#[derive(Clone, Copy, Debug)]
+pub struct ReferenceRef<'a> {
+    /// The uri of the node the reference resolves to.
+    pub uri: &'a str,
+    /// Its qualified type.
+    pub qualified_type: &'a str,
+    /// Its concept without `obj_`: the key the carrier rules are written in.
+    pub type_key: &'a str,
+    /// The path of the reference in the object that holds it.
+    pub path: &'a str,
+}
+
 /// The version a node's uri names (`…(uuid,version='1')`), when it names one.
 fn version_in_uri(uri: &str) -> Option<String> {
     identity::parse_address(uri).1
@@ -720,6 +735,31 @@ impl PackageIndex {
             .iter()
             .map(|&(target, path)| self.pointer(&self.nodes[target as usize], path))
             .collect()
+    }
+
+    /// What the node an **address** names references, borrowed from the index.
+    ///
+    /// The uri-addressed form of [`PackageIndex::references_of`]: the address is
+    /// read by the one door ([`PackageIndex::node`]), so an object held in two
+    /// versions answers the references of the version the uri names, not of the
+    /// uuid's default node. Nothing is allocated per edge - a [`ReferenceRef`]
+    /// borrows the node's uri, its type and the interned path - so a caller that
+    /// filters (a walk that follows only some fields) pays for the edges it
+    /// keeps. Empty when the address names no node.
+    pub fn references_at<'a>(&'a self, address: &str) -> impl Iterator<Item = ReferenceRef<'a>> + use<'a> {
+        let edges: &'a [(NodeId, PathId)] = match self.find(address) {
+            Some(id) => &*self.out[id as usize],
+            None => &[],
+        };
+        edges.iter().map(move |&(target, path)| {
+            let node = &self.nodes[target as usize];
+            ReferenceRef {
+                uri: &node.uri,
+                qualified_type: &node.qualified_type,
+                type_key: &node.type_key,
+                path: self.strings.get(path),
+            }
+        })
     }
 
     fn pointer(&self, node: &IndexNode, path: PathId) -> Pointer {

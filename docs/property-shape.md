@@ -28,6 +28,12 @@ slowest first, with their labels (`LabelPerComponent`, linearised like the value
 A scalar is `[1]`. `ravel` and `unravel` are the only multi-index arithmetic of the
 library; a zero dimension is refused.
 
+How many elements a representation has is `property::element_count`, and it
+refuses a pair the guides do not define. A wellbore frame has `NodeCount` nodes and
+`NodeCount - 1` intervals; **`interval edges` is refused on a frame**: the Usage
+Guide 2.2 §4.2.1 Table 1 (p. 38) lists `intervals` for "wellbore frames,
+column-layer grids" and `interval edges` for "column-layer grids" only.
+
 `PropertyShape` is the whole shape, `[realizations][time][elements...][components...]`.
 The elements are `ElementAxes::Ordered` when the guide states an order (an IJK grid
 is `[nk, nj, ni]`, a frame's nodes `[n]`) and `Unordered` otherwise (triangles,

@@ -302,8 +302,11 @@ pub fn read(array: &dyn Reflect, source: &dyn ArraySource, at: &str) -> Result<V
 
     // A single value repeated, which the corpus uses more than any other
     // computed form.
+    //
+    // A missing `Value` or `Count` is a refusal for every family: an empty
+    // array, a `false` or an empty string would look like data (ADR 0005).
     if name.ends_with("ConstantArray") {
-        let count = scalar_i64(array, "Count").unwrap_or(0).max(0) as usize;
+        let count = declared_count(array, at)?;
         return Ok(match family {
             Family::Floating => Values::Floating(vec![
                 scalar_f64(array, "Value")
@@ -315,8 +318,20 @@ pub fn read(array: &dyn Reflect, source: &dyn ArraySource, at: &str) -> Result<V
                     .ok_or_else(|| missing(at, "Value"))?;
                 count
             ]),
-            Family::Boolean => Values::Boolean(vec![flag(array, "Value").unwrap_or(false); count]),
-            Family::Text => Values::Text(vec![text(array, "Value").unwrap_or_default(); count]),
+            Family::Boolean => Values::Boolean(vec![
+                flag(array, "Value")
+                    .ok_or_else(|| missing(at, "Value"))?;
+                count
+            ]),
+            // `texts` rather than `text`: an empty string is a value of a
+            // string constant, where `text` reads a blank as absent.
+            Family::Text => Values::Text(vec![
+                list_text(array, "Value")
+                    .into_iter()
+                    .next()
+                    .ok_or_else(|| missing(at, "Value"))?;
+                count
+            ]),
         });
     }
 
@@ -332,23 +347,32 @@ pub fn read(array: &dyn Reflect, source: &dyn ArraySource, at: &str) -> Result<V
     // 2.0.1 only: consecutive integers from a start.
     if name.ends_with("RangeArray") {
         let start = scalar_i64(array, "Value").ok_or_else(|| missing(at, "Value"))?;
-        let count = scalar_i64(array, "Count").unwrap_or(0).max(0);
-        return Ok(Values::Integer((0..count).map(|i| start + i).collect()));
+        let count = declared_count(array, at)?;
+        // `start + count` must stay an `i64`: no index of the range may wrap.
+        let end = start.checked_add(count as i64).ok_or_else(|| {
+            Error::malformed(
+                at,
+                format!("a range of {count} from {start} overflows a 64-bit integer"),
+            )
+        })?;
+        return Ok(Values::Integer((start..end).collect()));
     }
 
-    // 2.2 only: the values are in the document.
+    // 2.2 only: the values are in the document. An element of the wrong type is
+    // a refusal, never skipped: skipping shortens the array and shifts every
+    // value after it.
     if name.ends_with("XmlArray") {
         return Ok(match family {
-            Family::Floating => Values::Floating(list_f64(array, "Values")),
-            Family::Integer => Values::Integer(list_i64(array, "Values")),
-            Family::Boolean => Values::Boolean(list_bool(array, "Values")),
-            Family::Text => Values::Text(list_text(array, "Values")),
+            Family::Floating => Values::Floating(inline(array, at, "a number", list_f64)?),
+            Family::Integer => Values::Integer(inline(array, at, "a whole number", list_i64)?),
+            Family::Boolean => Values::Boolean(inline(array, at, "a boolean", list_bool)?),
+            Family::Text => Values::Text(inline(array, at, "a string", list_text)?),
         });
     }
 
     // A boolean array written as the indices that are true (or false).
     if name == "BooleanArrayFromIndexArray" {
-        let count = scalar_i64(array, "Count").unwrap_or(0).max(0) as usize;
+        let count = declared_count(array, at)?;
         let listed = flag(array, "IndexIsTrue").unwrap_or(true);
         let mut values = vec![!listed; count];
         if let Some(indices) = field_object(array, "Indices") {
@@ -449,15 +473,24 @@ pub fn read_into(
 pub fn count(array: &dyn Reflect, source: &dyn ArraySource, at: &str) -> Result<usize> {
     let name = array.type_info().name;
     if name.ends_with("ConstantArray") || name.ends_with("RangeArray") {
-        return Ok(scalar_i64(array, "Count").unwrap_or(0).max(0) as usize);
+        return declared_count(array, at);
     }
     if is_external(array) {
-        let mut total = 0usize;
+        // The window each part designates, the one `stored_dims` and
+        // `read_block` honour: counting the whole dataset of a part that names a
+        // slice of it would disagree with what is read.
+        let too_many = || Error::malformed(at, "the parts hold more values than a count can express");
+        let mut total = 0u64;
         for location in source.locate(array) {
             let metadata = source.metadata(&location)?;
-            total += metadata.dimensions.iter().product::<i64>().max(0) as usize;
+            let (_, counts) = window(&location, &metadata.dimensions, at)?;
+            let part = counts
+                .iter()
+                .try_fold(1u64, |product, c| product.checked_mul(*c))
+                .ok_or_else(too_many)?;
+            total = total.checked_add(part).ok_or_else(too_many)?;
         }
-        return Ok(total);
+        return usize::try_from(total).map_err(|_| too_many());
     }
     // Everything else is cheap enough to evaluate, and evaluating it is the
     // only way to be right about a lattice or a mask.
@@ -486,7 +519,7 @@ pub fn stored_dims(array: &dyn Reflect, source: &dyn ArraySource, at: &str) -> R
         let (location, dimensions) = single_part(array, source, at)?;
         return Ok(window(&location, &dimensions, at)?.1);
     }
-    match lattice_dims(array) {
+    match lattice_dims(array, at)? {
         Some(dims) => Ok(dims),
         None => Ok(vec![read(array, source, at)?.len() as u64]),
     }
@@ -542,7 +575,7 @@ pub fn read_block(array: &dyn Reflect, source: &dyn ArraySource, at: &str, block
 
     // A computed form: evaluate, then cut like a stored one.
     let values = read(array, source, at)?;
-    let dims = lattice_dims(array).unwrap_or_else(|| vec![values.len() as u64]);
+    let dims = lattice_dims(array, at)?.unwrap_or_else(|| vec![values.len() as u64]);
     check_bounds(block, &dims, at)?;
     Ok(cut(&values, &dims, block))
 }
@@ -643,18 +676,19 @@ fn check_bounds(block: &Block, dims: &[u64], at: &str) -> Result<()> {
 
 /// The dimensions of a lattice, slowest first: `[count + 1, ...]` in the order
 /// of its `Offset`s. `None` for any other form.
-fn lattice_dims(array: &dyn Reflect) -> Option<Vec<u64>> {
+/// An `Offset` without a `Count` is refused, as in [`read`].
+fn lattice_dims(array: &dyn Reflect, at: &str) -> Result<Option<Vec<u64>>> {
     if !array.type_info().name.ends_with("LatticeArray") {
-        return None;
+        return Ok(None);
     }
-    let counts: Vec<i64> = objects(array, "Offset")
-        .into_iter()
-        .map(|offset| scalar_i64(offset, "Count").unwrap_or(0).max(0))
-        .collect();
-    if counts.is_empty() {
-        return Some(vec![1]);
+    let mut dims = Vec::new();
+    for offset in objects(array, "Offset") {
+        dims.push(declared_count(offset, &format!("{at}.Offset"))? as u64 + 1);
     }
-    Some(counts.into_iter().map(|c| c as u64 + 1).collect())
+    if dims.is_empty() {
+        return Ok(Some(vec![1]));
+    }
+    Ok(Some(dims))
 }
 
 /// The block of a flat array of the given dimensions, row-major.
@@ -966,14 +1000,47 @@ fn widen(values: ArrayValues, family: Family, at: &str) -> Result<Values> {
                 family_word(family)
             ),
         )),
+        // Nonzero stays nonzero through `f64`, so the boolean reading is exact.
         (Family::Boolean, v) => Ok(Values::Boolean(
-            numbers(&v, at)?.into_iter().map(|x| x != 0.0).collect(),
+            numbers(v, at)?.into_iter().map(|x| x != 0.0).collect(),
         )),
-        (Family::Integer, v) => Ok(Values::Integer(
-            numbers(&v, at)?.into_iter().map(|x| x as i64).collect(),
-        )),
-        (Family::Floating, v) => Ok(Values::Floating(numbers(&v, at)?)),
+        // Integers never go through `f64`: above 2^53 it rounds (a `NullValue`
+        // or an id near the 64-bit range would come back changed).
+        (Family::Integer, v) => Ok(Values::Integer(integers(v, at)?)),
+        (Family::Floating, v) => Ok(Values::Floating(numbers(v, at)?)),
     }
+}
+
+/// The integers of a file's values, widened to `i64` without a detour through
+/// `f64`. An `u64` above `i64::MAX` is a named refusal, not a saturated value.
+/// A float is truncated, as before: that reading is the file's declaring a
+/// floating dataset for an integer array, not a loss this function introduces.
+fn integers(values: ArrayValues, at: &str) -> Result<Vec<i64>> {
+    Ok(match values {
+        ArrayValues::I64(v) => v,
+        ArrayValues::I32(v) => v.into_iter().map(i64::from).collect(),
+        ArrayValues::I16(v) => v.into_iter().map(i64::from).collect(),
+        ArrayValues::I8(v) => v.into_iter().map(i64::from).collect(),
+        ArrayValues::U32(v) => v.into_iter().map(i64::from).collect(),
+        ArrayValues::U16(v) => v.into_iter().map(i64::from).collect(),
+        ArrayValues::U8(v) => v.into_iter().map(i64::from).collect(),
+        ArrayValues::U64(v) => v
+            .into_iter()
+            .map(|x| {
+                i64::try_from(x).map_err(|_| {
+                    Error::malformed(at, format!("the value {x} does not fit a signed 64-bit integer"))
+                })
+            })
+            .collect::<Result<Vec<i64>>>()?,
+        ArrayValues::F64(v) => v.into_iter().map(|x| x as i64).collect(),
+        ArrayValues::F32(v) => v.into_iter().map(|x| x as i64).collect(),
+        other => {
+            return Err(Error::unsupported(
+                format!("`{}` values in a numeric array", other.element_type()),
+                at.to_string(),
+            ));
+        }
+    })
 }
 
 /// The family named in a sentence.
@@ -986,18 +1053,20 @@ fn family_word(family: Family) -> &'static str {
     }
 }
 
-fn numbers(values: &ArrayValues, at: &str) -> Result<Vec<f64>> {
+/// The values as `f64`, taking the buffer: a floating-point buffer is moved,
+/// not cloned.
+fn numbers(values: ArrayValues, at: &str) -> Result<Vec<f64>> {
     Ok(match values {
-        ArrayValues::F64(v) => v.clone(),
-        ArrayValues::F32(v) => v.iter().map(|x| *x as f64).collect(),
-        ArrayValues::I64(v) => v.iter().map(|x| *x as f64).collect(),
-        ArrayValues::I32(v) => v.iter().map(|x| *x as f64).collect(),
-        ArrayValues::I16(v) => v.iter().map(|x| *x as f64).collect(),
-        ArrayValues::I8(v) => v.iter().map(|x| *x as f64).collect(),
-        ArrayValues::U64(v) => v.iter().map(|x| *x as f64).collect(),
-        ArrayValues::U32(v) => v.iter().map(|x| *x as f64).collect(),
-        ArrayValues::U16(v) => v.iter().map(|x| *x as f64).collect(),
-        ArrayValues::U8(v) => v.iter().map(|x| *x as f64).collect(),
+        ArrayValues::F64(v) => v,
+        ArrayValues::F32(v) => v.into_iter().map(f64::from).collect(),
+        ArrayValues::I64(v) => v.into_iter().map(|x| x as f64).collect(),
+        ArrayValues::I32(v) => v.into_iter().map(f64::from).collect(),
+        ArrayValues::I16(v) => v.into_iter().map(f64::from).collect(),
+        ArrayValues::I8(v) => v.into_iter().map(f64::from).collect(),
+        ArrayValues::U64(v) => v.into_iter().map(|x| x as f64).collect(),
+        ArrayValues::U32(v) => v.into_iter().map(f64::from).collect(),
+        ArrayValues::U16(v) => v.into_iter().map(f64::from).collect(),
+        ArrayValues::U8(v) => v.into_iter().map(f64::from).collect(),
         other => {
             return Err(Error::unsupported(
                 format!("`{}` values in a numeric array", other.element_type()),
@@ -1008,29 +1077,29 @@ fn numbers(values: &ArrayValues, at: &str) -> Result<Vec<f64>> {
 }
 
 fn lattice(array: &dyn Reflect, family: Family, at: &str) -> Result<Values> {
-    let steps: Vec<(f64, i64)> = match array.field("Offset") {
-        Some(FieldValue::List(offsets)) => offsets
-            .iter()
-            .filter_map(|offset| offset.as_object())
-            .map(|offset| {
-                (
-                    scalar_f64(offset, "Value").unwrap_or(0.0),
-                    scalar_i64(offset, "Count").unwrap_or(0).max(0),
-                )
-            })
-            .collect(),
-        Some(FieldValue::Object(offset)) => vec![(
-            scalar_f64(offset, "Value").unwrap_or(0.0),
-            scalar_i64(offset, "Count").unwrap_or(0).max(0),
-        )],
-        _ => Vec::new(),
-    };
+    // An `Offset` with no `Value` or no `Count` is refused: a step of 0.0 or a
+    // count of 0 would invent a lattice the file does not describe.
+    let offset_at = format!("{at}.Offset");
+    let mut steps: Vec<(f64, usize)> = Vec::new();
+    for offset in objects(array, "Offset") {
+        let step = scalar_f64(offset, "Value").ok_or_else(|| missing(&offset_at, "Value"))?;
+        steps.push((step, declared_count(offset, &offset_at)?));
+    }
     let start = scalar_f64(array, "StartValue").ok_or_else(|| missing(at, "StartValue"))?;
+
+    // The product of the dimensions, checked before anything is allocated.
+    let mut total: u64 = 1;
+    for (_, count) in &steps {
+        total = total
+            .checked_mul(*count as u64 + 1)
+            .filter(|total| *total <= MAX_COMPUTED_VALUES)
+            .ok_or_else(|| too_many(at, "the lattice"))?;
+    }
 
     let mut values = vec![start];
     for (step, count) in steps {
         let outer = std::mem::take(&mut values);
-        values.reserve(outer.len() * (count as usize + 1));
+        values.reserve(outer.len() * (count + 1));
         for value in &outer {
             for i in 0..=count {
                 values.push(value + step * i as f64);
@@ -1055,8 +1124,8 @@ fn slice(values: &Values, start: usize, end: usize) -> Values {
 // The readers of a field are the door's (ADR 0046), under the names this file
 // already uses.
 use energyml_core::reflect::fields::{
-    flag, flags as list_bool, integer as scalar_i64, integers as list_i64, number as scalar_f64,
-    numbers as list_f64, object as field_object, objects, text, texts as list_text,
+    flag, flags as list_bool, integer as scalar_i64, integers as list_i64, items as field_items,
+    number as scalar_f64, numbers as list_f64, object as field_object, objects, texts as list_text, unsigned,
 };
 
 /// The `NullValue` an integer array declares, when it declares one.
@@ -1076,4 +1145,63 @@ pub fn null_value(array: &dyn Reflect) -> Option<i64> {
 
 fn missing(at: &str, field: &str) -> Error {
     Error::malformed(at, format!("no `{field}`"))
+}
+
+/// The most values a computed array (constant, range, lattice, index list) may
+/// declare. The `Count` comes straight from the file: without a ceiling a
+/// hostile or corrupt package asks for an allocation that aborts the host
+/// (and a wasm face with it) instead of being refused by name.
+const MAX_COMPUTED_VALUES: u64 = 1 << 30;
+
+fn too_many(at: &str, what: impl std::fmt::Display) -> Error {
+    Error::malformed(
+        at,
+        format!("{what} is above the ceiling of {MAX_COMPUTED_VALUES} values for a computed array"),
+    )
+}
+
+/// The `Count` a computed array declares: present, not negative, and not
+/// above [`MAX_COMPUTED_VALUES`]. A missing `Count` is a refusal, not an empty
+/// array.
+fn declared_count(array: &dyn Reflect, at: &str) -> Result<usize> {
+    let Some(count) = scalar_i64(array, "Count") else {
+        // An unsigned `Count` above `i64::MAX` is not absent, it is absurd.
+        return Err(match unsigned(array, "Count") {
+            Some(huge) => too_many(at, format!("`Count` {huge}")),
+            None => missing(at, "Count"),
+        });
+    };
+    if count < 0 {
+        return Err(Error::malformed(at, format!("`Count` is negative ({count})")));
+    }
+    if count as u64 > MAX_COMPUTED_VALUES {
+        return Err(too_many(at, format!("`Count` {count}")));
+    }
+    Ok(count as usize)
+}
+
+/// The elements of an inline `Values` list, all of them or a refusal: an
+/// element that is not of the array's type is named, never dropped.
+///
+/// `read` is one of the door's plural readers, which leave out an element of
+/// the wrong shape; comparing what it kept with what the list holds finds the
+/// ones it left out.
+fn inline<T>(
+    array: &dyn Reflect,
+    at: &str,
+    expected: &str,
+    read: fn(&dyn Reflect, &str) -> Vec<T>,
+) -> Result<Vec<T>> {
+    let declared = field_items(array, "Values").len();
+    let kept = read(array, "Values");
+    if kept.len() != declared {
+        return Err(Error::malformed(
+            at,
+            format!(
+                "`Values` holds {declared} element(s) and {} of them are not {expected}; none is dropped",
+                declared - kept.len()
+            ),
+        ));
+    }
+    Ok(kept)
 }

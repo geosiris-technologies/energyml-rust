@@ -1137,9 +1137,15 @@ pub fn element_count(representation: &dyn Reflect, element: IndexableElement) ->
                 // compute rather than refuse; it is not enough to stop
                 // reporting a property whose own data disagrees, which
                 // `Property::check` still does.
-                Intervals | Interval | IntervalEdges | IntervalsFromDatum => {
+                Intervals | Interval | IntervalsFromDatum => {
                     Ok(required(representation, "NodeCount")?.saturating_sub(1))
                 }
+                // `interval edges` is **refused** on a frame. RESQML Technical
+                // Usage Guide v2.2, section 4.2.1, Table 1 (printed page 38,
+                // "RESQML Indexable Elements and Applicable Representations"),
+                // lists `intervals` for "wellbore frames, column-layer grids"
+                // and `interval edges` for "column-layer grids" only. The pair
+                // is not defined, so no count is invented for it.
                 _ => refuse(),
             }
         }

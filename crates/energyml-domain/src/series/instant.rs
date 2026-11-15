@@ -18,6 +18,11 @@
 
 use energyml_core::calendar::days_from_civil;
 
+/// The largest year read: 100 million years put the seconds near 3.2e15, under
+/// 2^53 (9.0e15), so a whole second is exact in an `f64` and no integer product
+/// below can overflow an `i64`.
+const MAX_YEAR: i64 = 100_000_000;
+
 /// Seconds since 1970-01-01T00:00:00Z, fractions kept.
 pub fn unix_seconds(text: &str) -> Result<f64, String> {
     let text = text.trim();
@@ -39,6 +44,15 @@ pub fn unix_seconds(text: &str) -> Result<f64, String> {
     }
     let year: i64 = year_text.parse().map_err(|_| "the year does not read")?;
     let year = if negative { -year } else { year };
+    // XML Schema §3.2.7 allows a year of any length, but a value outside
+    // ±MAX_YEAR has no exact place on an axis of `f64` seconds: the arithmetic
+    // below would overflow (a panic in debug, a wrapped, plausible-looking
+    // instant in release). Refused by name.
+    if year.abs() > MAX_YEAR {
+        return Err(format!(
+            "the year {year} is outside ±{MAX_YEAR}: its seconds are not exact in a 64-bit float"
+        ));
+    }
     let month = two_digits(month_text).ok_or("the month does not read")?;
     let day = two_digits(day_text).ok_or("the day does not read")?;
     if !(1..=12).contains(&month) {

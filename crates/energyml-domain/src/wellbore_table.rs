@@ -40,7 +40,7 @@ use crate::error::Result;
 use crate::property::{self, IndexableElement};
 use crate::source::ArraySource;
 use crate::table::{Cell, KeyIndex, Lookup, RowMatch, row_named_by};
-use crate::values::Values;
+use crate::values::{self, Values};
 use energyml_core::value::Reflect;
 
 /// Where a column comes from.
@@ -269,7 +269,10 @@ pub fn of_frame(
 
     for object in properties {
         match one_property(*object, &well, rows, wanted, arrays) {
-            Ok(made) => columns.extend(made),
+            Ok((made, said)) => {
+                columns.extend(made);
+                notes.extend(said);
+            }
             Err(why) => notes.push(why),
         }
     }
@@ -294,7 +297,7 @@ fn one_property(
     rows: usize,
     wanted: IndexableElement,
     arrays: &dyn ArraySource,
-) -> std::result::Result<Vec<Column>, String> {
+) -> std::result::Result<(Vec<Column>, Vec<String>), String> {
     let read = property::read(object).map_err(|why| why.to_string())?;
     let title = read.title.clone().unwrap_or_else(|| read.uuid.clone());
     let column = heading(&title, well);
@@ -330,17 +333,41 @@ fn one_property(
         ));
     }
 
+    // The `NullValue` of the integer array: a code equal to it is no code.
+    let null = values::null_value(patch.array);
+
     // The label rather than the code, when a table gives one.
-    let labels = read.lookup.as_deref().and_then(|uuid| {
-        // By the uri the property names: the version named is the version read.
-        let object = match read.lookup_uri.as_deref() {
-            Some(uri) => arrays.object_at(uri)?,
-            None => arrays.object(uuid)?,
-        };
-        // An unreadable table is not a refusal: the property keeps its codes,
-        // and that is the best the file says.
-        Lookup::read(object.as_reflect(), arrays).ok()
-    });
+    //
+    // **A property that names a lookup it cannot be read through is refused**,
+    // not written as raw codes: the module doc says an integer looks like a
+    // measurement, so a column of codes under a label's heading would be worse
+    // than an absence. The note carries the reason.
+    let labels = match read.lookup.as_deref() {
+        None => None,
+        Some(uuid) => {
+            // By the uri the property names: the version named is the version read.
+            let object = match read.lookup_uri.as_deref() {
+                Some(uri) => arrays.object_at(uri),
+                None => arrays.object(uuid),
+            };
+            let Some(object) = object else {
+                return Err(format!(
+                    "`{title}` names a category lookup ({}) that is not here, so its codes have no label; \
+                     they are not written as if they were values",
+                    read.lookup_uri.as_deref().unwrap_or(uuid)
+                ));
+            };
+            match Lookup::read(object.as_reflect(), arrays) {
+                Ok(table) => Some(table),
+                Err(why) => {
+                    return Err(format!(
+                        "`{title}` names a category lookup that cannot be read ({why}), so its codes have no label; \
+                         they are not written as if they were values"
+                    ));
+                }
+            }
+        }
+    };
     let kind = read.kind.as_ref().and_then(kind_uuid);
     let kind_title = read.kind.as_ref().and_then(|kind| match kind {
         property::PropertyKindRef::Object { title, .. } => title.clone(),
@@ -360,8 +387,35 @@ fn one_property(
     // The table's key index, built **once** and asked for every cell: a code
     // names its row by the table's key, or by its rank when it has none.
     let index: Option<KeyIndex> = labels.as_ref().map(Lookup::key_index);
+
+    // **A code no row names is an absence, said in the notes**, never the raw
+    // number written under the label's heading. A code that is the array's
+    // `NullValue` is an absence too, without a note: that is what it is for.
+    let mut said = Vec::new();
+    if let Some(index) = &index {
+        let unmatched: Vec<String> = (0..rows)
+            .filter(|at| !is_absent(&values, *at, null))
+            .filter(|at| row_of(index, &values, *at).is_none())
+            .filter_map(|at| cell_text(&values, at))
+            .collect();
+        if !unmatched.is_empty() {
+            let mut distinct: Vec<&str> = Vec::new();
+            for code in &unmatched {
+                if !distinct.contains(&code.as_str()) {
+                    distinct.push(code);
+                }
+            }
+            said.push(format!(
+                "`{title}`: {} code(s) name no row of their category lookup, and are left empty \
+                 rather than written as values (code(s) {})",
+                unmatched.len(),
+                distinct.iter().take(5).copied().collect::<Vec<_>>().join(", ")
+            ));
+        }
+    }
+
     if let (Some(table), Some(index), true) = (&labels, &index, table_columns.len() > 1) {
-        return Ok(table_columns
+        let made = table_columns
             .iter()
             .enumerate()
             .map(|(rank, &at_column)| Column {
@@ -376,31 +430,49 @@ fn one_property(
                 kind_title: if rank == 0 { kind_title.clone() } else { None },
                 from: From::Property(read.uuid.clone()),
                 values: (0..rows)
-                    .map(|at| {
-                        cell_of(table, index, &values, at, at_column).or_else(|| cell_text(&values, at))
-                    })
+                    .map(|at| cell_of(table, index, &values, at, at_column))
                     .collect(),
             })
-            .collect());
+            .collect();
+        return Ok((made, said));
     }
 
     let cells = (0..rows)
         .map(|at| match (&labels, &index) {
-            (Some(table), Some(index)) => {
-                label_at(table, index, &values, at).or_else(|| cell_text(&values, at))
-            }
-            _ => cell_text(&values, at),
+            (Some(table), Some(index)) => label_at(table, index, &values, at),
+            _ => code_text(&values, at, null),
         })
         .collect();
 
-    Ok(vec![Column {
-        title: column,
-        uom: read.uom.clone(),
-        kind,
-        kind_title,
-        from: From::Property(read.uuid.clone()),
-        values: cells,
-    }])
+    Ok((
+        vec![Column {
+            title: column,
+            uom: read.uom.clone(),
+            kind,
+            kind_title,
+            from: From::Property(read.uuid.clone()),
+            values: cells,
+        }],
+        said,
+    ))
+}
+
+/// Whether the value at `at` is the file's absence: an integer equal to the
+/// array's `NullValue`, a floating value that is not a number.
+fn is_absent(values: &Values, at: usize, null: Option<i64>) -> bool {
+    match values {
+        Values::Integer(v) => v.get(at).is_none_or(|one| Some(*one) == null),
+        Values::Floating(v) => v.get(at).is_none_or(|one| !one.is_finite()),
+        Values::Boolean(_) | Values::Text(_) => false,
+    }
+}
+
+/// A stored value as text, `None` when it is the file's absence ([`is_absent`]).
+fn code_text(values: &Values, at: usize, null: Option<i64>) -> Option<String> {
+    if is_absent(values, at, null) {
+        return None;
+    }
+    cell_text(values, at)
 }
 
 /// The cell of this table column, at the row the code designates.

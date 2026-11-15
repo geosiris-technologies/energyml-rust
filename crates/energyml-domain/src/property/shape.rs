@@ -835,10 +835,7 @@ pub fn element_axes(representation: &dyn Reflect, element: IndexableElement) -> 
         "WellboreFrameRepresentation"
         | "SeismicWellboreFrameRepresentation"
         | "WellboreMarkerFrameRepresentation"
-            if matches!(
-                element,
-                Nodes | Intervals | Interval | IntervalEdges | IntervalsFromDatum
-            ) =>
+            if matches!(element, Nodes | Intervals | Interval | IntervalsFromDatum) =>
         {
             Ok(ElementAxes::Ordered(vec![super::element_count(
                 representation,

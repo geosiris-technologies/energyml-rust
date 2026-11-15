@@ -327,12 +327,35 @@ pub struct Finding {
     pub rule: String,
     /// The uuid of the object judged.
     pub uuid: String,
+    /// The identity the object was filed under: its **full uri** when the caller
+    /// gave one (two versions of one uuid are then two findings, not one), the
+    /// identity as given otherwise (a bare uuid, for a finding filed under a
+    /// uuid only). [`Finding::uuid`] is the uuid read from it.
+    pub uri: String,
     /// What the rule means, copied for the report.
     pub says: String,
     /// The outcome - violation or uncheckable; the inapplicable is silent.
     pub outcome: Outcome,
     /// How much a violation weighs - the rule's.
     pub gravity: Gravity,
+}
+
+/// What a finding is filed under, split: `(uuid, identity)`.
+///
+/// `id` is the identity the caller gave an object to [`run`] (or to
+/// [`crate::integrity::run`]): a full uri, which is the identity, or a bare
+/// uuid, which only an entry point of the library should hold. A uri gives its
+/// uuid; a bare uuid is its own identity, kept as written.
+pub(crate) fn split_identity(id: &str) -> (String, String) {
+    let trimmed = id.trim();
+    let is_uri = trimmed
+        .get(..4)
+        .is_some_and(|scheme| scheme.eq_ignore_ascii_case("eml:"));
+    if is_uri {
+        (identity::parse_address(trimmed).0, trimmed.to_owned())
+    } else {
+        (id.to_owned(), id.to_owned())
+    }
 }
 
 /// The associations the TRG states and the XSD leaves untyped,
@@ -1121,9 +1144,11 @@ fn judge(
             // Unreadable -> uncheckable: a `when` on a wrong path must not
             // disable the rule over every package.
             Applicability::Cant(why) => {
+                let (bare, uri) = split_identity(uuid);
                 findings.push(Finding {
                     rule: rule.id.clone(),
-                    uuid: uuid.to_owned(),
+                    uuid: bare,
+                    uri,
                     says: rule.says.clone(),
                     outcome: Outcome::Unverifiable {
                         why: located(format!("`when`: {why}")),
@@ -1142,9 +1167,11 @@ fn judge(
             Outcome::Violation { read } => Outcome::Violation { read: located(read) },
             Outcome::Unverifiable { why } => Outcome::Unverifiable { why: located(why) },
         };
+        let (bare, uri) = split_identity(uuid);
         findings.push(Finding {
             rule: rule.id.clone(),
-            uuid: uuid.to_owned(),
+            uuid: bare,
+            uri,
             says: verdict.says.unwrap_or_else(|| rule.says.clone()),
             outcome,
             gravity: verdict.gravity.unwrap_or(rule.gravity),

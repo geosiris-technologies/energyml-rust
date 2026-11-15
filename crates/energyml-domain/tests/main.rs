@@ -57,6 +57,7 @@ mod provenance_verbatim;
 mod read_block;
 mod reference_follow;
 mod relations;
+mod review_b2;
 mod rules;
 mod schema_in_check;
 mod series;

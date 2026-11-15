@@ -76,6 +76,16 @@ assert_eq!(row_named_by(&index, &Cell::Number(20.0))?, RowMatch::One(1));
 The category check of a property (`house/discrete-value-in-lookup`) reads its
 values the same way.
 
+A wellbore table (`wellbore_table::of_frame`) writes the **label** of a discrete
+property, never its code. A code no row of the table names, and a code equal to
+the array's `NullValue`, are empty cells; the first are counted in the table's
+notes. A property whose lookup is missing or unreadable is left out with a note
+that names the reason, rather than written as codes under a label's heading.
+
+The findings of `energyml check` are filed under the object's **uri**: the report
+items (`SchemaIssue`, `PropertyIssue`, `CountIssue`, `RuleFinding`) carry the `uri`
+beside the `uuid`, so two versions of one object are told apart.
+
 ## Links between tables
 
 The specification has no column that names another table. The library reads one

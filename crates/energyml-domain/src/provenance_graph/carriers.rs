@@ -6,8 +6,6 @@
 
 use std::collections::HashSet;
 
-use energyml_core::{identity, naming};
-
 use super::{EdgeBasis, MAX_DEPTH, NodeKey, ProvEdge, ProvEdgeKind};
 use crate::package_index::PackageIndex;
 
@@ -145,13 +143,6 @@ fn last_segment(path: &str) -> &str {
     }
 }
 
-/// The concept of a qualified type: without package or `obj_`.
-fn concept_of(qualified_type: &str) -> String {
-    identity::parse_qualified_type(qualified_type)
-        .map(|parts| naming::strip_obj_prefix(parts.object_type).to_string())
-        .unwrap_or_else(|_| qualified_type.to_string())
-}
-
 /// The carrier edges around `seeds` (full uris): a breadth-first walk over the
 /// references the rules follow, `depth` levels at most (capped at
 /// [`MAX_DEPTH`]). Edges are deduplicated, in the order they were found.
@@ -173,27 +164,27 @@ pub fn carriers(index: &PackageIndex, seeds: &[String], rules: &CarrierRules, de
                 .node(node)
                 .map(|held| held.type_key.to_string())
                 .unwrap_or_default();
-            let uuid = identity::parse_address(node).0;
-            for pointer in index.references_of(&uuid) {
-                let field = last_segment(&pointer.path);
-                let target = concept_of(&pointer.qualified_type);
-                if !rules.follows(&holder, field, &target) {
+            // By the **uri**: the node is the version the uri names, and the
+            // rules filter the borrowed edges before anything is allocated.
+            for edge in index.references_at(node) {
+                let field = last_segment(edge.path);
+                if !rules.follows(&holder, field, edge.type_key) {
                     continue;
                 }
-                let key = (node.clone(), pointer.uri.clone(), pointer.path.clone());
+                let key = (node.clone(), edge.uri.to_string(), edge.path.to_string());
                 if !found.insert(key) {
                     continue;
                 }
                 edges.push(ProvEdge {
                     from: NodeKey::Object(node.clone()),
-                    to: NodeKey::Object(pointer.uri.clone()),
+                    to: NodeKey::Object(edge.uri.to_string()),
                     kind: ProvEdgeKind::Carrier {
-                        path: pointer.path.clone(),
+                        path: edge.path.to_string(),
                     },
                     basis: EdgeBasis::Reference,
                 });
-                if seen.insert(pointer.uri.clone()) {
-                    next.push(pointer.uri);
+                if seen.insert(edge.uri.to_string()) {
+                    next.push(edge.uri.to_string());
                 }
             }
         }

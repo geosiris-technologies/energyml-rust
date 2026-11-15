@@ -100,8 +100,6 @@ use crate::error::{Error, Result};
 use crate::property::{Facet, PropertyKindRef, read_facets};
 use crate::source::ArraySource;
 use crate::values::{self, Values};
-// The one arithmetic of "the values of a row", written in `cells`.
-use cells::span;
 
 /// One column of a table.
 pub struct Column<'a> {
@@ -345,20 +343,31 @@ impl Rows {
     /// One cell of a **scalar** column, by row and column index; `None` for a
     /// column of several values per row (read it with [`Rows::values_of`]),
     /// for an unreadable column, and past its end.
+    ///
+    /// **An absent cell is `None`**, the one model of absence of
+    /// [`ColumnCells`]: an integer equal to the array's `NullValue` and a `NaN`
+    /// are no value, never the number `-999` or `NaN`. An empty text is a value.
     pub fn cell(&self, row: usize, column: usize) -> Option<Cell> {
         if self.per_row_of(column) != 1 {
             return None;
         }
-        Cell::at(self.columns.get(column)?.as_ref()?, row)
+        match self.cells(column)?.cell(row)? {
+            CellState::Value(cell) => Some(cell),
+            CellState::Empty => Some(Cell::Text(String::new())),
+            CellState::Absent | CellState::Vector(_) | CellState::Unreadable => None,
+        }
     }
 
     /// The `n` values of one row of a column, in storage order. `None` when
-    /// unreadable or past the end.
+    /// unreadable, past the end, or when any of them is absent (`NullValue`,
+    /// `NaN`): a row with a hole is not handed back as a full one.
     pub fn values_of(&self, row: usize, column: usize) -> Option<Vec<Cell>> {
-        let values = self.columns.get(column)?.as_ref()?;
-        span(self.per_row_of(column), row)
-            .map(|at| Cell::at(values, at))
-            .collect::<Option<Vec<_>>>()
+        match self.cells(column)?.cell(row)? {
+            CellState::Value(cell) => Some(vec![cell]),
+            CellState::Empty => Some(vec![Cell::Text(String::new())]),
+            CellState::Vector(components) => components.into_iter().collect(),
+            CellState::Absent | CellState::Unreadable => None,
+        }
     }
 
     /// The whole of one row, in column order, scalar cells (`cell` per column).
@@ -388,15 +397,6 @@ pub enum Cell {
 }
 
 impl Cell {
-    fn at(values: &Values, row: usize) -> Option<Cell> {
-        Some(match values {
-            Values::Floating(v) => Cell::Number(*v.get(row)?),
-            Values::Integer(v) => Cell::Number(*v.get(row)? as f64),
-            Values::Boolean(v) => Cell::Boolean(*v.get(row)?),
-            Values::Text(v) => Cell::Text(v.get(row)?.clone()),
-        })
-    }
-
     /// Whether two cells are the same key.
     ///
     /// Numbers are compared as numbers whatever they were stored as - a key

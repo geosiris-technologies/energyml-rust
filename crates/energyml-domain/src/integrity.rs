@@ -57,7 +57,7 @@ use crate::activity::{
 };
 use crate::property;
 use crate::property_kind::Resolver;
-use crate::rules::{Finding, Gravity, Outcome, concepts_of};
+use crate::rules::{Finding, Gravity, Outcome, concepts_of, split_identity};
 use crate::source::{ArraySource, NoObjects, ObjectSource, Presence, object_chip};
 use crate::table::{
     Cell, CellState, ColumnCells, Convention, LinkDeclaration, LinkReaders, LinkRefusal, LinkReport,
@@ -882,7 +882,9 @@ pub(crate) fn well_named_by(uri: &str) -> Result<Option<String>, String> {
 }
 
 /// RFC 3986 percent-decoding, the one the identifier grammar allows
-/// (`pct-encoded`, §6.3). A malformed escape is kept as written.
+/// (`pct-encoded`, §6.3). A malformed escape is kept as written: `%` must be
+/// followed by two hexadecimal digits, and **nothing else** - `u8::from_str_radix`
+/// alone would take `%+f` for `0x0F`, so the digits are checked first.
 fn percent_decoded(text: &str) -> String {
     let bytes = text.as_bytes();
     let mut out = Vec::with_capacity(bytes.len());
@@ -890,6 +892,7 @@ fn percent_decoded(text: &str) -> String {
     while at < bytes.len() {
         if bytes[at] == b'%'
             && let Some(hex) = text.get(at + 1..at + 3)
+            && hex.bytes().all(|digit| digit.is_ascii_hexdigit())
             && let Ok(byte) = u8::from_str_radix(hex, 16)
         {
             out.push(byte);
@@ -1073,7 +1076,11 @@ fn homogeneous_collection(context: &Context<'_>, check: &Integrity, out: &mut Ve
         {
             continue;
         }
-        let members = members_of(&held, uuid, identity::object_version_of_reflect(*object));
+        let members = members_of(
+            &held,
+            &identity::parse_address(uuid).0,
+            identity::object_version_of_reflect(*object),
+        );
         if members.is_empty() {
             continue;
         }
@@ -1705,9 +1712,11 @@ fn activity_follows_its_template(context: &Context<'_>, check: &Integrity, out: 
 // ---------------------------------------------------------------------------
 
 fn violation(check: &Integrity, uuid: &str, read: String) -> Finding {
+    let (bare, uri) = split_identity(uuid);
     Finding {
         rule: check.id.to_owned(),
-        uuid: uuid.to_owned(),
+        uuid: bare,
+        uri,
         says: check.says.to_owned(),
         outcome: Outcome::Violation { read },
         gravity: check.gravity,
@@ -1715,9 +1724,11 @@ fn violation(check: &Integrity, uuid: &str, read: String) -> Finding {
 }
 
 fn unverifiable(check: &Integrity, uuid: &str, why: String) -> Finding {
+    let (bare, uri) = split_identity(uuid);
     Finding {
         rule: check.id.to_owned(),
-        uuid: uuid.to_owned(),
+        uuid: bare,
+        uri,
         says: check.says.to_owned(),
         outcome: Outcome::Unverifiable { why },
         gravity: check.gravity,
@@ -1793,6 +1804,21 @@ mod tests {
         // Not an Energistics URI: an error, which the check turns into an
         // uncheckable - never a pass.
         assert!(well_named_by("GTH-1 wellhead").is_err());
+    }
+
+    /// Identifier Specification v4.0 §6.3 (`pct-encoded` is `%` and two
+    /// hexadecimal digits, RFC 3986 §2.1): a sign is not a digit, so `%+f` is
+    /// not an escape and is kept as written.
+    ///
+    /// Break it: drop the `is_ascii_hexdigit` guard in `percent_decoded`.
+    #[test]
+    fn a_sign_inside_a_percent_escape_is_not_an_escape() {
+        assert_eq!(percent_decoded("a%+fb"), "a%+fb");
+        assert_eq!(percent_decoded("a%-1b"), "a%-1b");
+        // The two forms that are escapes still decode, in either case.
+        assert_eq!(percent_decoded("GTH%2D9%2d%41"), "GTH-9-A");
+        // A truncated escape at the end is kept too.
+        assert_eq!(percent_decoded("a%4"), "a%4");
     }
 
     #[test]

@@ -1090,7 +1090,17 @@ fn category(
     // front end's `categories` parse it, so a text key that reads as a number
     // matches the same rows in both.
     let key_column = lookup.key_columns.first().copied();
-    let key_of = |row: usize| key_number(&lookup, key_column, row);
+    // Which row each code names, **built once**: first row wins, as the
+    // duplicate-key note below says. A scan per interval parsed every key of the
+    // table again and again (a `String` per probe).
+    let mut row_of_code: HashMap<u64, usize> = HashMap::new();
+    if key_column.is_some() {
+        for row in 0..lookup.rows.rows {
+            if let Some(code) = key_number(&lookup, key_column, row).filter(|code| !code.is_nan()) {
+                row_of_code.entry(code_bits(code)).or_insert(row);
+            }
+        }
+    }
     if !lookup.duplicate_keys().is_empty() {
         notes.push(format!(
             "table {table_uuid} repeats a key; the first row holding it is the one a code names"
@@ -1127,7 +1137,7 @@ fn category(
             continue;
         };
         let row = match key_column {
-            Some(_) => (0..lookup.rows.rows).find(|row| key_of(*row) == Some(*value)),
+            Some(_) => row_of_code.get(&code_bits(*value)).copied(),
             // No key column: the position is all the document offers.
             None => (value.fract() == 0.0 && *value >= 0.0 && (*value as usize) < lookup.rows.rows)
                 .then_some(*value as usize),
@@ -1181,6 +1191,16 @@ fn category(
         units,
         named,
     })
+}
+
+/// A code as a hash key: its bits, `-0.0` being `0.0` (they are equal as
+/// numbers, so they name the same row).
+fn code_bits(code: f64) -> u64 {
+    if code == 0.0 {
+        0.0f64.to_bits()
+    } else {
+        code.to_bits()
+    }
 }
 
 /// The number a row's key reads as: the key cell's text, trimmed, parsed - the

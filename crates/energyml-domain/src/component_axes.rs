@@ -357,6 +357,14 @@ impl AxisSources {
         let rank = subject.shape.rank();
         let mut found: Vec<Option<ComponentAxis>> = vec![None; rank];
         for source in &self.0 {
+            // Every dimension is answered: the first answer wins, so a lower
+            // priority source can add nothing - and must not be asked, since one
+            // that fails (a qualifier table that cannot be read) would turn a
+            // complete answer of a source above it into a refusal, and every
+            // one of them would read its table and arrays for nothing.
+            if rank > 0 && found.iter().all(Option::is_some) {
+                break;
+            }
             match source.axes(subject, objects, arrays) {
                 None => continue,
                 Some(Err(refusal)) => return Err(refusal),

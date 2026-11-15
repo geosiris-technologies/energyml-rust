@@ -303,6 +303,18 @@ values.boolean();
 `read` widens to one type per family; `read_native` keeps the file's own type;
 `read_into` allocates nothing.
 
+**What `read` refuses, by name.** A computed array that lacks what it computes
+from: a constant with no `Value` or no `Count` (a boolean constant is never
+`false` by default, a string constant never `""`), a lattice step or a range with
+no `Count`. A `Count` above 2^30 values, or a range that would pass `i64::MAX`:
+the file asked for an allocation the host cannot honour, so it is refused before
+anything is allocated. An inline `XmlArray` whose elements are not all of the
+array's type: no element is dropped, because dropping one shifts every value after
+it. An integer array reads **exactly**: 64-bit values are never widened through
+`f64`, and a `u64` above `i64::MAX` is refused. `values::count` agrees with
+`stored_dims` and `read` on an external part that designates a window
+(`StartIndex` and `Count`) of its dataset.
+
 **Strings.** A string dataset in HDF5 (fixed or variable length, ASCII or UTF-8)
 is read as `ArrayValues::Text`, and `values::read` widens it to `Values::Text`.
 An empty string is a value, not a gap. A backend that does not decode strings
@@ -315,7 +327,10 @@ refuses longer ones by name; it does not write strings.
 its values per row: `Rows::per_row` says how many, `Rows::values_of(row, column)`
 gives the values of one row and `Rows::row_values(row)` those of a whole row.
 `Rows::cell` answers only for a scalar column, and says `None` for the others
-instead of a value that belongs to another row. The keys of a `DoubleTableLookup`
+instead of a value that belongs to another row. It reads a cell as `ColumnCells`
+does: an integer equal to the array's `NullValue` and a `NaN` are `None`, never the
+number `-999` or `NaN` (`values_of` is `None` when any value of the row is absent).
+The keys of a `DoubleTableLookup`
 keep their fractional part (`Values::Floating`); those of a `StringTableLookup`
 stay integers.
 
