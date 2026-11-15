@@ -439,8 +439,26 @@ pub(crate) fn lattice_for(
     let fold = |pick: fn(f64, f64) -> f64, axis: usize| finite.iter().map(|p| p[axis]).fold(f64::NAN, pick);
     let (x0, x1) = (fold(f64::min, 0) - margin, fold(f64::max, 0) + margin);
     let (y0, y1) = (fold(f64::min, 1) - margin, fold(f64::max, 1) + margin);
-    let count = |low: f64, high: f64| ((high - low) / spacing).floor() as i64 + 1;
-    let (ni, nj) = (count(x0, x1), count(y0, y1));
+    // Counted in floats and bounded **before** any integer is made: a tiny
+    // spacing gives an infinite or enormous quotient, whose saturating cast
+    // to `i64` plus one would overflow (a panic in debug, a negative count in
+    // release that read as a misleading message). Each axis is refused by
+    // name as soon as it alone is past the ceiling.
+    let along = |low: f64, high: f64| ((high - low) / spacing).floor() + 1.0;
+    let (fi, fj) = (along(x0, x1), along(y0, y1));
+    if !(fi.is_finite() && fj.is_finite()) || fi > MOST_NODES as f64 || fj > MOST_NODES as f64 {
+        return Err(Refusal::about(
+            "value",
+            "spacing",
+            format!(
+                "a spacing of {spacing} over an extent of {:.6} by {:.6} makes more than {MOST_NODES} nodes on one axis: widen the spacing",
+                x1 - x0,
+                y1 - y0
+            ),
+        )
+        .into());
+    }
+    let (ni, nj) = (fi as i64, fj as i64);
     if ni < 2 || nj < 2 {
         return Err(Refusal::about(
             "value",
@@ -727,6 +745,24 @@ impl Operation for Interpolate {
         params: InterpolateParams,
         cx: &Context<'_>,
     ) -> Result<Plan, Refusal> {
+        // **An input a method cannot honour is refused by name, never dropped**:
+        // a map that looks faulted, or clipped, and is not, is a drawing of
+        // something nobody stated. MBA reads rings but no barrier; the other
+        // methods read barriers but no ring.
+        if matches!(&params.method, Method::Mba(_)) {
+            if !inputs.faults.is_empty() {
+                return Err(Refusal::on(
+                    "faults",
+                    "`mba` is a global approximation and cannot honour a fault as a barrier: choose `idw` or `kriging`, or leave `faults` out",
+                ));
+            }
+        } else if inputs.outer.is_some() || !inputs.inner.is_empty() {
+            let slot = if inputs.outer.is_some() { "outer" } else { "inner" };
+            return Err(Refusal::on(
+                slot,
+                "rings (`outer`, `inner`) are read by `method = mba` only: this method would leave them unread - choose `mba`, or leave the rings out",
+            ));
+        }
         if let Method::Mba(settings) = &params.method {
             return super::interpolate_mba::plan(&inputs, &params, settings, cx);
         }
@@ -923,5 +959,25 @@ impl Operation for Interpolate {
             count("originY", "the y of the node (0, 0)"),
             count("sampleCount", "samples read"),
         ])
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `[build-ops-2 S15]`: a tiny spacing is refused by name, before any
+    /// integer is made from an infinite quotient.
+    #[test]
+    fn a_spacing_that_saturates_the_node_count_is_refused_by_name() {
+        let at = [[0.0, 0.0], [1.0, 1.0]];
+        let why = lattice_for(&at, 1e-300, 0.0).expect_err("refused").to_string();
+        assert!(why.contains("spacing") && why.contains("widen"), "{why}");
+        // And an ordinary one still lays its lattice.
+        let (origin, counts) = lattice_for(&at, 0.5, 0.0).expect("a lattice");
+        assert_eq!((origin, counts), ([0.0, 0.0], [3, 3]));
+        // Break it: put back `((high - low) / spacing).floor() as i64 + 1`;
+        // the first call then panics on the overflow (debug) or reports a
+        // negative grid size (release).
     }
 }

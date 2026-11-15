@@ -659,3 +659,151 @@ fn the_rings_cut_the_grids_nodes_too() {
         said.detail
     );
 }
+
+/// `[build-ops-2 S1]`: an input the method cannot honour is refused by name.
+/// `mba` reads rings and no fault barrier; the other methods the reverse.
+/// To break: remove the two refusals at the top of `Interpolate::plan`; both
+/// runs are then accepted and the unread input is dropped without a word.
+#[test]
+fn an_input_the_method_cannot_honour_is_refused_not_dropped() {
+    let line = |name: &'static str| Source::Shape {
+        geometry: Geometry {
+            kind: name,
+            patches: vec![Patch {
+                index: 0,
+                node_offset: 0,
+                points: vec![[1.0, 0.0, 0.0], [1.0, 3.0, 0.0], [1.0, 6.0, 0.0], [2.0, 6.0, 0.0]],
+                topology: Topology::Polylines(vec![4]),
+                closed: Vec::new(),
+            }],
+        },
+        closed: None,
+    };
+    let bag = |extra: &'static str| {
+        Pieces::empty()
+            .with(
+                "shape",
+                Source::Shape {
+                    geometry: plane_cloud(5, 3.0, |x, y| x + y),
+                    closed: None,
+                },
+            )
+            .with(
+                "shape (object)",
+                known(
+                    "b0b0b0b0-0000-4000-8000-0000000000f1",
+                    "resqml22.PointSetRepresentation",
+                    "cloud",
+                ),
+            )
+            .with(extra, line(extra))
+    };
+    let faulted = plan_of(
+        "interpolate",
+        &bag("faults"),
+        Choices::new()
+            .set("method", "mba")
+            .set("title", "f")
+            .set("spacing", 1.5),
+    )
+    .expect_err("mba cannot honour a barrier");
+    assert!(
+        faulted.contains("faults") && faulted.contains("barrier"),
+        "{faulted}"
+    );
+    let ringed = plan_of(
+        "interpolate",
+        &bag("outer"),
+        Choices::new()
+            .set("method", "idw")
+            .set("title", "r")
+            .set("spacing", 1.5),
+    )
+    .expect_err("idw cannot honour a ring");
+    assert!(ringed.contains("mba"), "{ringed}");
+}
+
+/// A grid of `ni` by `nj` nodes at steps `dx`, `dy`, the height from `z`, and
+/// `edit` free to move any node, for the two resurface refusals below.
+fn grid_pieces(
+    ni: usize,
+    nj: usize,
+    z: impl Fn(usize, usize) -> f64,
+    edit: impl Fn(usize, &mut [f64; 3]),
+) -> Pieces {
+    let mut points: Vec<[f64; 3]> = (0..nj)
+        .flat_map(|j| (0..ni).map(move |i| (i, j)))
+        .map(|(i, j)| [i as f64 * 4.0, j as f64 * 3.0, z(i, j)])
+        .collect();
+    for (at, point) in points.iter_mut().enumerate() {
+        edit(at, point);
+    }
+    Pieces::empty()
+        .with(
+            "shape",
+            Source::Shape {
+                geometry: Geometry {
+                    kind: "grid",
+                    patches: vec![Patch {
+                        index: 0,
+                        node_offset: 0,
+                        points,
+                        topology: Topology::Grid {
+                            fastest: ni,
+                            slowest: nj,
+                        },
+                        closed: Vec::new(),
+                    }],
+                },
+                closed: None,
+            },
+        )
+        .with(
+            "shape (object)",
+            known(
+                "c0c0c0c0-0000-4000-8000-0000000000a3",
+                "resqml22.Grid2dRepresentation",
+                "surface",
+            ),
+        )
+}
+
+/// `[build-ops-2 S3]`: a node off the lattice the first row and column give
+/// is refused by name, and a hole (no height) is kept as a hole.
+/// To break: drop the `on_the_lattice` call in `resurface::plan` (the moved
+/// node is then rewritten on the lattice, silently), or drop the `holes`
+/// (the hole then comes back with an invented height).
+#[test]
+fn resurface_refuses_an_irregular_grid_and_keeps_a_hole_a_hole() {
+    let choices = || Choices::new().set("title", "r").set("spacing", 1.0);
+    let bent = grid_pieces(
+        6,
+        5,
+        |i, j| 10.0 + 0.1 * (i + j) as f64,
+        |at, point| {
+            if at == 8 {
+                point[0] += 1.5;
+            }
+        },
+    );
+    let why = plan_of("resurface", &bent, choices()).expect_err("off the lattice");
+    assert!(why.contains("lattice"), "{why}");
+
+    let holed = grid_pieces(
+        6,
+        5,
+        |i, j| 10.0 + 0.1 * (i + j) as f64,
+        |at, point| {
+            if at == 8 {
+                point[2] = f64::NAN;
+            }
+        },
+    );
+    let made = plan_of("resurface", &holed, choices()).expect("a hole is not a refusal");
+    let Numbers::F64(z) = &made.datasets[0].values else {
+        panic!("heights are doubles")
+    };
+    assert!(z[8].is_nan(), "the hole stays a hole: {}", z[8]);
+    assert!(z.iter().enumerate().all(|(at, v)| at == 8 || v.is_finite()));
+    assert!(made.says.iter().any(|note| note.key == "holes-kept"));
+}

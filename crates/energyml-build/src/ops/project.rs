@@ -178,7 +178,17 @@ impl Operation for Project {
                 }
                 Some(support::Faces::of(&surface.geometry))
             }
-            (OntoParams::Level(_), None) => None,
+            (OntoParams::Level(level), None) => {
+                // Stamped on every chosen node: a NaN or an infinity would
+                // draw nothing and poison every box that meets it.
+                if !level.z.is_finite() {
+                    return Err(Refusal::on(
+                        "z",
+                        format!("the level is {}, which is no height", level.z),
+                    ));
+                }
+                None
+            }
         };
         let heights = match &faces {
             Some(faces) => Some(

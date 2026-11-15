@@ -191,6 +191,44 @@ fn kind_of(shape: &Shape) -> Result<(Kind, Vec<[f64; 3]>), Refusal> {
     }
 }
 
+/// Whether every node of a grid lies on the lattice its first row and first
+/// column give (`points[0]`, `points[1]` along the fastest axis,
+/// `points[fastest]` along the slowest), to a tolerance of a millionth of a
+/// step - or the refusal that names the first node that does not.
+fn on_the_lattice(name: &str, points: &[[f64; 3]], fastest: usize, slowest: usize) -> Result<(), Refusal> {
+    let origin = points[0];
+    let along_i = [points[1][0] - origin[0], points[1][1] - origin[1]];
+    let along_j = [points[fastest][0] - origin[0], points[fastest][1] - origin[1]];
+    let steps = [
+        (along_i[0] * along_i[0] + along_i[1] * along_i[1]).sqrt(),
+        (along_j[0] * along_j[0] + along_j[1] * along_j[1]).sqrt(),
+    ];
+    // A step that cannot be read is refused by the caller's own message.
+    if !(steps[0].is_finite() && steps[1].is_finite()) {
+        return Ok(());
+    }
+    let tolerance = 1e-6 * steps[0].max(steps[1]);
+    for j in 0..slowest {
+        for i in 0..fastest {
+            let point = points[j * fastest + i];
+            let expected = [
+                origin[0] + i as f64 * along_i[0] + j as f64 * along_j[0],
+                origin[1] + i as f64 * along_i[1] + j as f64 * along_j[1],
+            ];
+            let off = ((point[0] - expected[0]).powi(2) + (point[1] - expected[1]).powi(2)).sqrt();
+            if !(off <= tolerance) {
+                return Err(Refusal::on(
+                    "shape",
+                    format!(
+                        "`{name}`'s node ({i}, {j}) is {off} from the lattice its first row and column give: resurface rewrites a grid on that lattice and cannot keep an irregular or curvilinear one - triangulate it first"
+                    ),
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
 /// The ranks of `points` kept for the fit: inside `outer` (if given),
 /// outside every `inner` - the same rule `interpolate_mba`/`estimate` apply,
 /// restated on ranks so every point can still be evaluated afterwards
@@ -270,15 +308,31 @@ impl Operation for Resurface {
             ));
         }
 
+        // **A grid is rewritten on the lattice its first row and column give**,
+        // so every node must lie on it: an irregular or curvilinear grid would
+        // otherwise come back with other x and y, against the promise that
+        // the topology is kept bit for bit. And a node with **no height** (a
+        // hole of the input) stays a hole: it is not fitted, and not given a
+        // height the file never stated.
+        let mut holes = vec![false; points.len()];
+        if let Kind::Grid { fastest, slowest } = &kind {
+            on_the_lattice(&inputs.shape.name, &points, *fastest, *slowest)?;
+            for (hole, point) in holes.iter_mut().zip(&points) {
+                *hole = !point[2].is_finite();
+            }
+        }
+
         cx.stop_if_cancelled()?;
-        let fit_ranks = fit_ranks(&points, inputs.outer.as_ref(), &inputs.inner)?;
+        let mut fit_ranks = fit_ranks(&points, inputs.outer.as_ref(), &inputs.inner)?;
+        fit_ranks.retain(|&at| !holes[at]);
         if fit_ranks.is_empty() {
             return Err(Refusal::on(
                 "outer",
                 "no node remains inside `outer`/outside every `inner`: nothing left to fit",
             ));
         }
-        let ring_excluded = points.len() - fit_ranks.len();
+        let hole_count = holes.iter().filter(|hole| **hole).count();
+        let ring_excluded = points.len() - hole_count - fit_ranks.len();
 
         let frame = match &params.frame {
             MbaFrame::World => None,
@@ -347,7 +401,16 @@ impl Operation for Resurface {
         let new_points: Vec<[f64; 3]> = local
             .iter()
             .zip(&answer.values)
-            .map(|(p, &w)| to_world([p[0], p[1], w]))
+            .zip(&holes)
+            .map(|((p, &w), &hole)| {
+                // A hole of the input stays one: its height is not a number
+                // anybody stated.
+                if hole {
+                    [p[0], p[1], f64::NAN]
+                } else {
+                    to_world([p[0], p[1], w])
+                }
+            })
             .collect();
 
         let seed = cx.seed(&params.written.naming.title());
@@ -447,6 +510,12 @@ impl Operation for Resurface {
             value: fit_ranks.len() as f64,
             uom: None,
         });
+        if hole_count > 0 {
+            plan.says.push(Note {
+                key: "holes-kept",
+                detail: format!("{hole_count} node(s) have no height in the input: they were not fitted and are written without one, as in the input"),
+            });
+        }
         if ring_excluded > 0 {
             plan.says.push(Note {
                 key: "ring-filtered",

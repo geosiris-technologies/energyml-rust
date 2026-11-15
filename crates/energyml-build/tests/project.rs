@@ -204,3 +204,28 @@ fn on_a_lattice_the_cell_is_read_bilinearly() {
         made.shapes[0].geometry.patches[0].points
     );
 }
+
+/// `[build-ops-2 S10]`: an identifier is compared without case, so the same
+/// frame cited in upper and lower case is one frame, not "two frames".
+#[test]
+fn the_same_frame_in_two_cases_is_one_frame() {
+    let known = |uuid: &str| {
+        Source::Object(Known {
+            crs: Some(energyml_build::pieces::Ref::new(
+                uuid,
+                "eml23.LocalEngineeringCompoundCrs",
+                "The frame",
+            )),
+            ..Default::default()
+        })
+    };
+    let bag = Pieces::empty()
+        .with("shape", line())
+        .with("shape (object)", known("AAAAAAAA-0000-4000-8000-000000000001"))
+        .with("surface", tilted())
+        .with("surface (object)", known("aaaaaaaa-0000-4000-8000-000000000001"));
+    let made = plan(&bag, Choices::new());
+    assert_eq!(made.activity.recipe, "project");
+    // Break it: compare `a.uuid != b.uuid` in `project.rs` again; the plan is
+    // refused as "in two frames".
+}

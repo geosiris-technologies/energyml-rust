@@ -157,7 +157,14 @@ fn ring_keep(
                 .collect();
         keep = Some(match keep {
             Some(previous) => previous.into_iter().filter(|at| kept.contains(at)).collect(),
-            None => kept.into_iter().collect(),
+            // In rank order: a `HashSet`'s order changes from one run to the
+            // next, and the fit sums in sample order, so the result (and the
+            // identity derived from it) would not repeat.
+            None => {
+                let mut ranks: Vec<usize> = kept.into_iter().collect();
+                ranks.sort_unstable();
+                ranks
+            }
         });
     }
     Ok(keep)

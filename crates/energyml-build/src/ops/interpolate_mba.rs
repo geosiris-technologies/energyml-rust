@@ -70,9 +70,9 @@
 //! separate piece of work (rings are one of the
 //! things the first design leaves as future increments) and is
 //! scoped out here on purpose - `outer`/`inner` are read only by this file,
-//! for `Method::Mba`; a run of `Idw`/`Kriging`/`Rbf` that names them leaves
-//! them unread rather than refusing, which is honest about what is missing
-//! but not yet the refusal a tidier version would give.
+//! for `Method::Mba`; a run of `Idw`/`Kriging`/`Rbf` that names them is
+//! **refused by name** in `Interpolate::plan`, and so is an `mba` run that
+//! names `faults` (it reads no barrier).
 //!
 //! TODO(reference): verify - the MBA method is a published algorithm (multilevel
 //! B-spline approximation); name its paper here (the core in `energyml-analysis` cites it).

@@ -88,6 +88,10 @@ use crate::pieces::{Pieces, Ref};
 use super::support;
 use super::written::{NamingParams, RepresentedParams};
 
+/// The most child nodes a window may be refined into: a refinement typo
+/// (`ri = 1000`) is refused by name before the memory is asked for.
+const MOST_CHILD_NODES: usize = 20_000_000;
+
 /// The operation.
 pub struct LocalGrid;
 
@@ -540,6 +544,34 @@ impl Operation for LocalGrid {
             return Err(Refusal::on(
                 "ri",
                 "a refinement of zero would cut a parent cell into no child cell",
+            ));
+        }
+        // **The child's size is bounded before anything is allocated**: `ri`,
+        // `rj` and `rk` have no maximum of their own, and a typo (`ri = 1000`)
+        // would otherwise exhaust the memory, or wrap the `u32` corner indices
+        // below. Counted with checked products, as `usize` is 32 bits in wasm.
+        let child_nodes = span_i
+            .checked_mul(ri)
+            .zip(span_j.checked_mul(rj))
+            .zip(span_k.checked_mul(rk))
+            .and_then(|((ni, nj), nk)| {
+                ni.saturating_add(1)
+                    .checked_mul(nj.saturating_add(1))
+                    .and_then(|plane| plane.checked_mul(nk.saturating_add(1)))
+            });
+        if child_nodes.is_none_or(|nodes| nodes > MOST_CHILD_NODES) {
+            let slot = if ri >= rj && ri >= rk {
+                "ri"
+            } else if rj >= rk {
+                "rj"
+            } else {
+                "rk"
+            };
+            return Err(Refusal::on(
+                slot,
+                format!(
+                    "a window of {span_i} × {span_j} × {span_k} parent cell(s) refined {ri} × {rj} × {rk} would make more than {MOST_CHILD_NODES} child nodes: refine less, or take a smaller window"
+                ),
             ));
         }
         cx.stop_if_cancelled()?;

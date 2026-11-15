@@ -340,6 +340,39 @@ impl Operation for Attach {
             ));
         }
 
+        // -- a setting the chosen form does not use is refused, not dropped:
+        // the part form is `media`'s plan, which has neither a file name
+        // nor an attachment title; `path` names a part, so only the forms
+        // that write one read it.
+        if form == Form::Part {
+            for (slot, given) in [
+                ("fileName", stated_name.is_some()),
+                (
+                    "title",
+                    params
+                        .title
+                        .as_ref()
+                        .is_some_and(|title| !title.0.trim().is_empty()),
+                ),
+            ] {
+                if given {
+                    return Err(Refusal::on(
+                        slot,
+                        "the part form writes the file as a part of the package, named by `path`: it carries no file name and no attachment title - the inline, part-address and external forms do",
+                    ));
+                }
+            }
+        }
+        if matches!(form, Form::Inline | Form::External) && params.path.is_some() {
+            return Err(Refusal::on(
+                "path",
+                format!(
+                    "the {} form writes no part of the package, so a part name is read by nothing: `path` is for the part and part-address forms",
+                    form.word()
+                ),
+            ));
+        }
+
         // -- the content type: stated, never guessed
         let stated_type = params
             .content_type

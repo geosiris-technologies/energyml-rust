@@ -184,22 +184,38 @@ pub fn from_activity(slots: &[Slot], activity: &Value) -> Vec<Copied> {
         if slot.name == "output" {
             continue;
         }
-        let Some(found) = parameters.iter().find(|p| p["Title"].as_str() == Some(slot.name)) else {
-            continue;
-        };
-        // The forms `provenance::Parameter` writes, and nothing else:
-        // a fourth that would be read by guesswork would be a guess.
-        let raw = if !found["DataObject"].is_null() {
-            found["DataObject"].clone()
-        } else if !found["Value"].is_null() {
-            found["Value"].clone()
+        // A list of settings is written one parameter per item, under the
+        // slot's title (see `Registry::plan`): every one is read back, in
+        // order, into the list the slot's check asks for. Taking only the
+        // first lost the others without a word.
+        let list = slot.takes_many()
+            && !matches!(
+                slot.need,
+                Need::Object { .. } | Need::Crs | Need::Interpretation | Need::PropertyKind | Need::Input(_)
+            );
+        let mut found = parameters
+            .iter()
+            .filter(|p| p["Title"].as_str() == Some(slot.name));
+        let value = if list {
+            let mut items = Vec::new();
+            for one in found {
+                // The forms `provenance::Parameter` writes, and nothing else.
+                let Some(raw) = raw_of(one) else { continue };
+                items.push(coerce(&slot.need, &raw));
+            }
+            if items.is_empty() || items.iter().any(|item| slot.need.accepts(item).is_err()) {
+                continue;
+            }
+            Value::Array(items)
         } else {
-            continue;
+            let Some(one) = found.next() else { continue };
+            let Some(raw) = raw_of(one) else { continue };
+            let value = coerce(&slot.need, &raw);
+            if slot.need.accepts(&value).is_err() {
+                continue;
+            }
+            value
         };
-        let value = coerce(&slot.need, &raw);
-        if slot.need.accepts(&value).is_err() {
-            continue;
-        }
         out.push(Copied {
             slot: slot.name.to_string(),
             value,
@@ -207,6 +223,18 @@ pub fn from_activity(slots: &[Slot], activity: &Value) -> Vec<Copied> {
         });
     }
     out
+}
+
+/// The forms `provenance::Parameter` writes, and nothing else: a fourth that
+/// would be read by guesswork would be a guess.
+fn raw_of(parameter: &Value) -> Option<Value> {
+    if !parameter["DataObject"].is_null() {
+        Some(parameter["DataObject"].clone())
+    } else if !parameter["Value"].is_null() {
+        Some(parameter["Value"].clone())
+    } else {
+        None
+    }
 }
 
 /// The values taken, as a form reads them: the slot, the value, the
@@ -371,6 +399,33 @@ mod tests {
         // `unknown` **is** taken: it matches a slot. What is ignored
         // is what no slot names - the check is here, the other way round.
         assert!(copied.iter().any(|one| one.slot == "unknown"));
+    }
+
+    /// `[build-core S8]`: a list setting is written one parameter per item;
+    /// every one comes back, in order, as the list the slot asks for.
+    #[test]
+    fn a_list_setting_comes_back_whole() {
+        let slots = vec![Slot::many(
+            "times",
+            Need::Number {
+                uom: None,
+                least: None,
+                most: None,
+            },
+            "",
+            1,
+        )];
+        let activity = serde_json::json!({ "Parameter": [
+            { "Title": "times", "Value": 10.0 },
+            { "Title": "other", "Value": "x" },
+            { "Title": "times", "Value": 20.0 },
+            { "Title": "times", "Value": 30.0 },
+        ]});
+        let copied = from_activity(&slots, &activity);
+        assert_eq!(copied.len(), 1);
+        assert_eq!(copied[0].value, serde_json::json!([10.0, 20.0, 30.0]));
+        // Break it: go back to `parameters.iter().find(..)` for a slot that
+        // takes many; only `10.0` (a scalar) comes back.
     }
 
     #[test]

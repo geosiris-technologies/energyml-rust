@@ -132,6 +132,11 @@ pub struct Borehole {
     pub elevation: Option<f64>,
     /// The `logElement`s, every one of them, in the producer's order.
     pub intervals: Vec<Interval>,
+    /// The ids of the `BoreholeInterval`s that lack a readable bound. Not in
+    /// [`Borehole::intervals`], and [`Borehole::mds`] refuses while any is
+    /// here: the depths and gaps rebuilt without them would describe a
+    /// smaller hole.
+    pub unreadable: Vec<String>,
 }
 
 impl Borehole {
@@ -177,6 +182,14 @@ impl Borehole {
     /// one that ends up with a single depth. None of those can be written as a
     /// frame, and each of them reads differently.
     pub fn mds(&self) -> Result<Mds, String> {
+        if !self.unreadable.is_empty() {
+            return Err(format!(
+                "{} interval(s) lack a readable mappedIntervalBegin or mappedIntervalEnd ({}): the depths \
+rebuilt without them would describe a smaller hole",
+                self.unreadable.len(),
+                self.unreadable.join(", ")
+            ));
+        }
         if self.intervals.is_empty() {
             return Err("no `logElement`: nothing states a depth".to_string());
         }
@@ -352,11 +365,30 @@ pub fn borehole_of(id: Option<&str>, head: Option<(f64, f64)>, properties: &Valu
     let reference = properties
         .get("referenceLocation")
         .and_then(|one| one.get("properties"));
-    let intervals = properties
+    let mut intervals = Vec::new();
+    let mut unreadable = Vec::new();
+    for entry in properties
         .get("logElement")
         .and_then(Value::as_array)
-        .map(|list| list.iter().filter_map(interval_of).collect())
-        .unwrap_or_default();
+        .map(Vec::as_slice)
+        .unwrap_or(&[])
+    {
+        match interval_of(entry) {
+            Some(interval) => intervals.push(interval),
+            // Another `@featureType` is legitimately skipped; a
+            // `BoreholeInterval` that lacks a readable bound is not, and is
+            // kept by name so `mds` can refuse instead of rebuilding a
+            // smaller hole.
+            None if is_interval(entry) => unreadable.push(
+                entry
+                    .get("id")
+                    .and_then(Value::as_str)
+                    .unwrap_or("(no id)")
+                    .to_string(),
+            ),
+            None => {}
+        }
+    }
 
     Some(Borehole {
         id: id.map(str::to_string),
@@ -379,13 +411,23 @@ pub fn borehole_of(id: Option<&str>, head: Option<(f64, f64)>, properties: &Valu
             .and_then(|one| one.get("elevation"))
             .and_then(Value::as_f64),
         intervals,
+        unreadable,
     })
+}
+
+/// Whether a `logElement` says it is a `BoreholeInterval`.
+fn is_interval(entry: &Value) -> bool {
+    entry
+        .get("properties")
+        .and_then(|properties| properties.get("@featureType"))
+        .and_then(Value::as_str)
+        == Some("BoreholeInterval")
 }
 
 /// One `logElement`, when it is a `BoreholeInterval` with two bounds.
 fn interval_of(entry: &Value) -> Option<Interval> {
     let properties = entry.get("properties")?;
-    if properties.get("@featureType").and_then(Value::as_str) != Some("BoreholeInterval") {
+    if !is_interval(entry) {
         return None;
     }
     let begin = quantity(properties.get("mappedIntervalBegin"))?;
@@ -518,6 +560,29 @@ mod tests {
             Some("3ca79312-f3fa-4959-bae0-311c7a5c7359")
         );
         assert_eq!(hole.title().as_deref(), Some("BSS000LKCG"));
+    }
+
+    /// `[build-core S15]`: an interval without a readable bound is named by
+    /// `mds`, not dropped to leave a smaller hole.
+    #[test]
+    fn an_interval_without_a_bound_is_refused_by_name() {
+        let mut props = properties();
+        props["logElement"] = json!([
+            interval("a", 0.0, 2.0, "k"),
+            {
+                "type": "Feature", "id": "broken", "properties": {
+                    "@featureType": "BoreholeInterval",
+                    "mappedIntervalBegin": { "Quantity": { "value": 2, "@uom": "m" } }
+                }
+            },
+        ]);
+        let hole = borehole_of(Some("x"), None, &props).unwrap();
+        assert_eq!(hole.unreadable, vec!["broken".to_string()]);
+        let why = hole.mds().expect_err("refused");
+        assert!(why.contains("broken"), "{why}");
+        // Break it: filter the interval out again (drop the `unreadable`
+        // push or the check in `mds`); the hole then rebuilds with one
+        // interval and no complaint.
     }
 
     #[test]

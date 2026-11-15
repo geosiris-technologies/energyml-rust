@@ -728,3 +728,16 @@ F1,1.5,2,0.7
     // Nodes 0, 1, 1.5, 2: the first pass covers [0, 1] and [1, 1.5].
     assert_eq!(values, vec![0.5, 0.5, 0.7]);
 }
+
+/// `[build-ops-2 S4]`: two depths half a micrometre apart are one node for the
+/// match, so they are one depth for the duplicate check - refused, not one
+/// of the two measurements silently overwritten.
+///
+/// Break it: put `f64::EPSILON` back as the duplicate tolerance in
+/// `rows_by_depth`; the plan is then accepted and the first value is lost.
+#[test]
+fn two_rows_one_node_apart_by_less_than_the_match_tolerance_are_refused() {
+    let text = "SONDAGE,PROF,PHI,STRA\nF1,1000,1,a\nF1,1000.0000005,2,b\n";
+    let why = plan(&bag(text, &[("F1 - frame", &[1000.0])]), json!({})).expect_err("refused");
+    assert!(why.contains("F1") && why.contains("two rows"), "{why}");
+}

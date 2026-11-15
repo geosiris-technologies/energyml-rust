@@ -250,16 +250,43 @@ fn extend_one(
         ));
     }
 
-    let last_md = *mds.last().expect("checked non-empty above");
-    if last_md >= params.max_depth {
+    // **`maxDepth` and `step` are metres** (their declared unit), the frame's
+    // depths are in `uom`: both are brought into `uom` through the door of
+    // the units before being compared with, or added to, a depth. A unit that
+    // is no length is refused by name; so is a frame whose horizontal axes
+    // are counted in another length than its depths, since a step along the
+    // hole would then move the nodes by a different distance on each axis.
+    let to_frame = |metres: f64| {
+        energyml_domain::units::convert(metres, "m", &uom)
+            .map_err(|why| format!("`{title}` counts its depths in `{uom}`, which is no length unit: {why}"))
+    };
+    if let Some(horizontal) = known
+        .placement
+        .as_ref()
+        .and_then(|crs| crs.horizontal_uom.as_deref())
+        && horizontal != uom
+        && !matches!(
+            energyml_domain::units::convert(1.0, horizontal, &uom),
+            Ok(factor) if (factor - 1.0).abs() <= 1e-12
+        )
+    {
         return Err(format!(
-            "`{title}` already reaches {last_md} {uom}, at or beyond the {} {uom} limit",
+            "`{title}` counts its horizontal axes in `{horizontal}` and its depths in `{uom}`: a node laid along the hole would not move by the same distance on each axis"
+        ));
+    }
+    let max_depth = to_frame(params.max_depth)?;
+    let step = to_frame(params.step)?;
+
+    let last_md = *mds.last().expect("checked non-empty above");
+    if last_md >= max_depth {
+        return Err(format!(
+            "`{title}` already reaches {last_md} {uom}, at or beyond the {max_depth} {uom} limit ({} m)",
             params.max_depth
         ));
     }
 
     let direction = last_direction(&nodes, known.vertical_up).map_err(|why| format!("`{title}` {why}"))?;
-    let new_mds = added_mds(last_md, params.step, params.max_depth);
+    let new_mds = added_mds(last_md, step, max_depth);
     let last_point = nodes[nodes.len() - 1];
 
     let mut line = nodes;
@@ -331,8 +358,13 @@ fn extend_one(
 
     let marks = synthetic_marks(last_md, &uom, &params.source);
     let description = format!(
-        "Continues `{title}` below {last_md} {uom} of measured depth, laid at {} {uom} steps to {} {uom} - not measured. Source: {}",
-        params.step, params.max_depth, params.source
+        "Continues `{title}` below {last_md} {uom} of measured depth, laid at {step} {uom} steps to {max_depth} {uom}{} - not measured. Source: {}",
+        if uom == "m" {
+            String::new()
+        } else {
+            format!(" (stated as {} m steps to {} m)", params.step, params.max_depth)
+        },
+        params.source
     );
     let mut objects = written.objects;
     for object in &mut objects {

@@ -751,3 +751,14 @@ fn below_a_k_gap_the_child_reads_back_through_the_geometry_reader() {
         );
     }
 }
+
+/// `[build-ops-2 S6]`: a refinement that would make hundreds of millions of
+/// child nodes is refused by name before anything is allocated.
+///
+/// Break it: remove the `child_nodes` check in `local_grid.rs`; the call then
+/// tries to allocate the child instead of refusing.
+#[test]
+fn a_refinement_that_would_exhaust_the_memory_is_refused_by_name() {
+    let why = planned(&bag(), &answers().set("ri", 1000).set("rj", 1000).set("rk", 1000)).unwrap_err();
+    assert!(why.contains("`ri`") && why.contains("child nodes"), "{why}");
+}

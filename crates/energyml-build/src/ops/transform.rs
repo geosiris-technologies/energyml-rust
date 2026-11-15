@@ -377,11 +377,22 @@ fn moved(
 /// never a second copy of a writer. `transform` and `project` both end here.
 pub(crate) fn write_as(
     kind: Kind,
-    result: Shape,
+    mut result: Shape,
     written: Written,
     seed: &str,
     cx: &Context<'_>,
 ) -> Result<Plan, Refusal> {
+    // **Every kind is placed the way a point set is** (`Pointset::plan` does it
+    // for `Kind::Points`): `polylines::write` and `triangles::write` do not,
+    // because they are also called with shapes an operation computed, already
+    // in the frame. Without it, a `sourceEpsg` and a `project` that differ would
+    // refuse or reproject a point set and write a surface or a line under
+    // the new CRS's label with its original numbers.
+    if !matches!(kind, Kind::Points) {
+        let frame = support::frame_in(&cx.known(), &written.frame, cx.identity, cx.when, &mut 0)?;
+        result.geometry =
+            support::geometry_placed(&result.name, &result.geometry, result.known.as_ref(), &frame)?;
+    }
     match kind {
         Kind::Points => Pointset.plan(
             PointsetInputs {

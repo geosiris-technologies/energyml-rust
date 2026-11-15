@@ -60,6 +60,9 @@ use energyml_storage::epc::core_props::w3cdtf;
 use energyml_witsml_2_1 as witsml;
 
 use super::prodml_doublet::{Standard, class_of, titled};
+
+/// The most samples a test is written with, as a doublet's head series.
+const MOST_SAMPLES: usize = 100_000;
 use super::prodml_writer::{Writer, instant};
 use super::witsml_logs::{json_number, reference_from};
 use crate::declare::{Inputs, ObjectIn, ObjectRef, Params};
@@ -271,6 +274,20 @@ impl Operation for InjectionTest {
                 "sampleMinutes",
                 format!(
                     "{} min does not divide a step of {step_minutes} min: a sample would straddle two rates",
+                    params.sample_minutes
+                ),
+            ));
+        }
+        // Bounded **before** any allocation, in floats (an absurd `stepHours`
+        // would saturate an integer cast): the same ceiling a doublet's head
+        // series keeps, for the same reason.
+        let samples = params.steps.len() as f64 * per_step;
+        if samples > MOST_SAMPLES as f64 {
+            return Err(Refusal::on(
+                "sampleMinutes",
+                format!(
+                    "{} step(s) of {step_hours} h at {} min make {samples} samples, past the {MOST_SAMPLES} this writes: sample less often, or shorten the steps",
+                    params.steps.len(),
                     params.sample_minutes
                 ),
             ));

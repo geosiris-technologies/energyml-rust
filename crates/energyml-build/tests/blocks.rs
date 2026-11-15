@@ -145,3 +145,34 @@ fn an_unknown_kind_is_refused_by_the_slot() {
     assert_eq!(why.slot.as_deref(), Some("propertyKind"));
     assert!(why.message.contains("no such kind, anywhere"), "{}", why.message);
 }
+
+/// `[build-ops-1 S7]`: a ring holding several polyline runs is refused by
+/// name, not flattened into one polygon joining the end of one line to the
+/// start of the next.
+///
+/// Break it: remove the run count in `blocks::ring_corners`; the two squares
+/// are then read as one six-corner polygon.
+#[test]
+fn a_ring_of_several_runs_is_refused_not_flattened() {
+    let mut two_runs = shape(
+        "ring",
+        None,
+        vec![
+            [0.0, 0.0, 0.0],
+            [4.0, 0.0, 0.0],
+            [4.0, 4.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [2.0, 1.0, 0.0],
+            [2.0, 2.0, 0.0],
+        ],
+    );
+    two_runs.geometry.patches[0].topology = Topology::Polylines(vec![3, 3]);
+    let why = blocks::ring_corners("outer", &two_runs).expect_err("two runs");
+    assert_eq!(why.slot.as_deref(), Some("outer"));
+    assert!(why.message.contains("2 polyline runs"), "{}", why.message);
+
+    // One run in one polyline stays a ring.
+    let mut one_run = two_runs.clone();
+    one_run.geometry.patches[0].topology = Topology::Polylines(vec![6]);
+    assert!(blocks::ring_corners("outer", &one_run).is_ok());
+}

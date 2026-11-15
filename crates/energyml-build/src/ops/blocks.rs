@@ -162,6 +162,28 @@ pub fn refuse_degrees_target(code: impl std::fmt::Display) -> Refusal {
 /// A ring's corners in plan, flat `[x, y, ...]` - refused by `slot`'s name when
 /// it cannot enclose anything (fewer than 3 points).
 pub fn ring_corners(slot: &str, ring: &Shape) -> Result<Vec<f64>, Refusal> {
+    // **One ring is one run.** Joining the end of a first line to the start of
+    // the next would draw a polygon nobody stated, and the cut would follow it.
+    let runs: usize = ring
+        .geometry
+        .patches
+        .iter()
+        .map(|patch| match &patch.topology {
+            energyml_geometry::geometry::Topology::Polylines(lengths) => {
+                lengths.iter().filter(|n| **n > 0).count()
+            }
+            _ => 1,
+        })
+        .sum();
+    if runs > 1 {
+        return Err(Refusal::on(
+            slot,
+            format!(
+                "`{}` holds {runs} polyline runs: a ring is one closed outline - give each outline (an outer and a hole, two patches) as its own ring",
+                ring.title()
+            ),
+        ));
+    }
     let points: Vec<[f64; 3]> = ring
         .geometry
         .patches

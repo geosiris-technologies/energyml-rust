@@ -440,12 +440,16 @@ fn xml_array(text: &str, section: Option<&str>, named: Option<&str>) -> Option<V
 pub fn read_csv(text: &str, height: Option<f64>) -> Result<Geometry, Refused> {
     let mut points = Vec::new();
     let mut columns: Option<(usize, usize, Option<usize>)> = None;
+    // The separator is decided once, for the whole file, from its first row:
+    // deciding it per row split `1,5;2,5;3,5` on the comma (four fields beat
+    // three) and read a French file as not numbers.
+    let separator = separator_of(text);
     for (at, row) in text.lines().enumerate() {
         let row = row.trim_start_matches('\u{feff}').trim();
         if row.is_empty() || row.starts_with('#') {
             continue;
         }
-        let cells: Vec<&str> = split_row(row);
+        let cells: Vec<&str> = row.split(separator).collect();
         if columns.is_none() {
             columns = Some(match header(&cells) {
                 Some(found) => found.map_err(Refused::flat)?,
@@ -512,13 +516,22 @@ pub fn read_csv(text: &str, height: Option<f64>) -> Result<Geometry, Refused> {
     Ok(one_patch("csv", points, Vec::new(), Vec::new()))
 }
 
-/// The separator is the one that splits the most - measured, never assumed.
-fn split_row(row: &str) -> Vec<&str> {
+/// The separator of the whole file, decided on its first row that carries
+/// something (not blank, not a comment).
+///
+/// A semicolon wins whenever it is there: it is never a decimal mark, and a
+/// file that uses it writes its numbers with a comma (`1,5;2,5;3,5`), so
+/// counting fields would let the commas win. Then a tab, then the comma.
+fn separator_of(text: &str) -> char {
+    let first = text
+        .lines()
+        .map(|row| row.trim_start_matches('\u{feff}').trim())
+        .find(|row| !row.is_empty() && !row.starts_with('#'))
+        .unwrap_or("");
     [';', '\t', ',']
-        .iter()
-        .map(|sep| row.split(*sep).collect::<Vec<_>>())
-        .max_by_key(Vec::len)
-        .unwrap_or_default()
+        .into_iter()
+        .find(|sep| first.contains(*sep))
+        .unwrap_or(',')
 }
 
 /// The columns a header row names, or `None` if it is not one.
@@ -573,6 +586,17 @@ pub fn read_geojson_placed(
     height: Option<f64>,
 ) -> Result<Read, Refused> {
     let read = crate::geojson::read(text).map_err(|why| Refused::flat(why.0))?;
+    // A feature the reader refused is not a feature to forget: importing the
+    // rest would hand back a cloud silently short of some places. The refusal
+    // names each one.
+    if !read.refused.is_empty() {
+        return Err(Refused::flat(format!(
+            "{} feature(s) of this collection cannot be read, and importing the rest would leave \
+a cloud silently short of them: {}",
+            read.refused.len(),
+            read.refused.join("; ")
+        )));
+    }
     let first = read
         .features
         .iter()

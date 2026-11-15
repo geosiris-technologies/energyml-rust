@@ -734,3 +734,39 @@ fn the_six_formats_are_offered_and_each_says_what_it_asks_for() {
         assert_eq!(format.asks, wanted, "`{}`", format.name);
     }
 }
+
+/// `[build-core S7]`: the separator of a CSV cloud is decided once for the
+/// file. `1,5;2,5;3,5` split on the comma gives four fields, which beat the
+/// three of the semicolon in a per-row count.
+#[test]
+fn a_french_csv_cloud_is_read_with_its_semicolons_and_decimal_commas() {
+    let headed = "x;y;z\n1,5;2,5;3,5\n4,25;5,5;6,75\n";
+    let made = mesh::read_csv(headed, None).expect("a French CSV is readable");
+    assert_eq!(made.patches[0].points, vec![[1.5, 2.5, 3.5], [4.25, 5.5, 6.75]]);
+    // Without a header the first row is a point, and the comma still must
+    // not win over the semicolon on that row.
+    let bare = "1,5;2,5;3,5\n4,25;5,5;6,75\n";
+    let made = mesh::read_csv(bare, None).expect("a headerless French CSV is readable");
+    assert_eq!(made.patches[0].points.len(), 2);
+    assert_eq!(made.patches[0].points[0], [1.5, 2.5, 3.5]);
+    // And a dot-decimal comma file keeps working.
+    let plain = mesh::read_csv("1.5,2.5,3.5\n", None).expect("comma file");
+    assert_eq!(plain.patches[0].points[0], [1.5, 2.5, 3.5]);
+    // Break it: put back a per-row `max_by_key(Vec::len)` over the three
+    // separators in `separator_of`'s place; the headerless case then fails
+    // with "`1 | 5` is not a number".
+}
+
+/// `[build-core S6]`: a feature the GeoJSON reader refused is named, not
+/// dropped while the rest of the file imports.
+#[test]
+fn a_geojson_with_a_refused_feature_is_refused_by_name() {
+    let text = r#"{"type":"FeatureCollection","features":[
+        {"type":"Feature","geometry":{"type":"Point","coordinates":[2.2953,48.875,58]},"properties":{}},
+        {"type":"Feature","geometry":null,"properties":{"name":"empty"}}]}"#;
+    let why = mesh::read_or_ask("mixed.geojson", text, &mesh::Given::default())
+        .expect_err("one feature is unreadable");
+    assert!(why.to_string().contains("1 feature(s)"), "{why}");
+    // Break it: drop the `read.refused` check in `read_geojson_placed`; the
+    // file then imports its single point and says nothing of the other.
+}

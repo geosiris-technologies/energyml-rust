@@ -493,3 +493,32 @@ fn a_flipped_triangle_is_counted() {
     let still = plan(&bag, Choices::new().set("dz", 3.0));
     assert_eq!(double(&still, "flippedTriangles"), Some(0.0));
 }
+
+/// `[build-ops-3 S1]`: a line or a surface moved with `sourceEpsg` and a
+/// different `project` is reprojected the way a point set is - never written
+/// with its original degrees under the new system's label.
+///
+/// Break it: remove the `geometry_placed` call in `transform::write_as`; the
+/// longitude then stays `2.3` under EPSG:2154.
+#[test]
+fn a_line_is_reprojected_when_the_source_and_the_target_differ() {
+    let bag = Pieces::empty().with(
+        "shape",
+        shape(
+            vec![[2.30, 48.80, 0.0], [2.31, 48.81, 0.0], [2.32, 48.82, 0.0]],
+            Topology::Polylines(vec![3]),
+        ),
+    );
+    let made = plan(
+        &bag,
+        Choices::new()
+            .set("dx", 1.0)
+            .set("sourceEpsg", 4326)
+            .set("project", 2154),
+    );
+    let points = points_of(&made);
+    assert!(
+        points.iter().all(|p| p[0] > 100_000.0 && p[1] > 1_000_000.0),
+        "metres of Lambert-93, not degrees: {points:?}"
+    );
+}

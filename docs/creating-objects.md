@@ -39,6 +39,35 @@ package arrives already resolved. This gives you, for free:
 operations that do **not** fit **with their reason** ("a set of polylines is not
 written as a triangulated surface"), because *absent* reads as *not written yet*.
 
+### What is refused rather than dropped
+
+An input or a setting a run cannot honour is refused by name, never ignored:
+
+- a GeoJSON that holds a feature the reader cannot read (null geometry, a
+  `GeometryCollection`, a short ring) is refused and names each one, instead of
+  importing the rest;
+- a CSV cloud decides its separator once for the whole file, from its first row
+  (a semicolon means decimal commas);
+- `interpolate` refuses `faults` with `method = mba`, and `outer` / `inner` with
+  any other method; a ring holding several polyline runs is refused (one ring,
+  one run);
+- `resurface` refuses a grid whose nodes are not on the lattice of its first row
+  and column, and keeps a node with no height as a hole (a `holes-kept` note);
+- `extend-boreholes` converts `maxDepth` and `step` (metres) into the frame's
+  depth unit, and refuses a unit that is no length;
+- `attach` refuses `fileName` and `title` with the part form, and `path` with the
+  inline and external forms;
+- sizes are bounded before anything is allocated: `local-grid` (child nodes),
+  `injection-test` (samples), `interpolate` (nodes per axis);
+- `transform`, `project`, `clip` and `delete-nodes` place a line or a surface in
+  the target system the way they place a point set when `sourceEpsg` differs
+  from `project`;
+- `sigeol-units` refuses a plan in which no group could be placed, and lists
+  the groups it could not place in `dropped`, with no row in the table;
+- a borehole with a `BoreholeInterval` whose bound cannot be read is refused by
+  `Borehole::mds`, naming the interval;
+- `stratigraphy` refuses a parent with only one age bound.
+
 ## What an operation declares
 
 | Declaration | Meaning |
