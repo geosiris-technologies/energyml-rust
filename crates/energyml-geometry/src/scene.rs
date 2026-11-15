@@ -26,12 +26,17 @@ use energyml_core::value::{FieldValue, Reflect};
 use energyml_domain::crs::{self, Crs};
 use energyml_domain::metadata::{Metadata, Spec};
 
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::geometry::{self, Geometry, field_text};
 use crate::points::Point;
 use crate::readers::Readers;
 use crate::shape::Shape;
 use crate::source::ValueSource;
+
+/// The metadata key under which an object records that the coordinate reference
+/// system it names could not be read (the value is the reason). Absent for an
+/// object that names no CRS: that case is legal and is not recorded.
+pub const CRS_UNREADABLE: &str = "crs_unreadable";
 
 /// Which coordinates an exporter wants.
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
@@ -234,7 +239,19 @@ impl SceneObject {
     fn place(&self, points: Vec<Point>, placement: Placement) -> Result<Vec<Point>> {
         let Some(crs) = &self.crs else {
             // No CRS is not an error: plenty of representations name none, and
-            // their local coordinates are the only answer there is.
+            // their local coordinates are the only answer there is. A CRS that
+            // was named and could not be read is another matter: metres cannot
+            // be promised, so it is refused by name (`[geometry G4]`).
+            if matches!(placement, Placement::Metres)
+                && let Some(why) = self.metadata.get(CRS_UNREADABLE)
+            {
+                return Err(Error::malformed(
+                    &self.uri,
+                    format!(
+                        "its coordinate reference system cannot be read ({why}), so its points cannot be placed in metres"
+                    ),
+                ));
+            }
             return Ok(points);
         };
         match placement {
@@ -392,9 +409,16 @@ pub fn object_of_with(
     let info = representation.type_info();
     let geometry = geometry::of_with(readers, representation, source)?;
     // The CRS is read even when it is absent or unreadable: a shape with no
-    // stated place is still a shape, and refusing to export it would be worse
-    // than exporting it unplaced.
-    let crs = crs::of(representation, source).unwrap_or(None);
+    // stated place is still a shape, and exporting it unplaced beats losing it.
+    // But **unreadable is not absent** (`[geometry G4]`): a CRS the object names
+    // and that cannot be read is recorded in the metadata under
+    // [`CRS_UNREADABLE`], where every export carries it, and a placement in
+    // metres refuses it (see `place`) instead of returning local coordinates
+    // as if they were placed.
+    let (crs, crs_unreadable) = match crs::of(representation, source) {
+        Ok(found) => (found, None),
+        Err(why) => (None, Some(why.to_string())),
+    };
 
     let interpretation = related(representation, INTERPRETS);
     // The feature hangs off the interpretation, not the representation, so it
@@ -410,10 +434,13 @@ pub fn object_of_with(
     // Evaluated here rather than in the exporter, because this is where the
     // store is: a path that crosses a reference needs to resolve it, and an
     // exporter is given an object rather than a package.
-    let metadata = match spec {
+    let mut metadata = match spec {
         Some(spec) => spec.read(representation, source),
         None => Metadata::default(),
     };
+    if let Some(why) = crs_unreadable {
+        metadata.insert(CRS_UNREADABLE, why);
+    }
 
     Ok(SceneObject {
         uuid: energyml_core::identity::uuid_of_reflect(representation)

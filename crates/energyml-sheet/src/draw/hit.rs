@@ -90,7 +90,11 @@ fn item_hit(item: &Item, p: [f64; 2]) -> Option<Option<[u32; 2]>> {
             rect, fill, stroke, ..
         } => {
             let ring = rect_ring(rect);
-            if fill.is_some() {
+            // A rectangle with neither fill nor stroke draws nothing: it can
+            // only be a hit area (a row, a column), so its whole interior
+            // hits, not its outline (`[views-sheet C1]`). One with a stroke
+            // and no fill is an outline and stays one.
+            if fill.is_some() || stroke.is_none() {
                 rect.contains(p[0], p[1])
                     || (stroke.is_some() && near(distance_to_ring(p, &ring), stroke, 0.0))
             } else {

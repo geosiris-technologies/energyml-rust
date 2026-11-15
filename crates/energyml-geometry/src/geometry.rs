@@ -1299,6 +1299,34 @@ fn polyline(representation: &dyn Reflect, source: &dyn ValueSource) -> Result<Ve
     Ok(out)
 }
 
+/// The node count of each polyline of a patch, checked against the points the
+/// patch holds (`[geometry G9]`): a negative count, or counts that do not sum
+/// to the number of points, describe no polyline set. Refused by name, because
+/// every consumer indexes the points with these counts.
+pub(crate) fn run_lengths(counts: Vec<i64>, points: usize, at: &str) -> Result<Vec<u32>> {
+    let mut runs = Vec::with_capacity(counts.len());
+    let mut total = 0u64;
+    for (rank, count) in counts.into_iter().enumerate() {
+        let Ok(count) = u32::try_from(count) else {
+            return Err(Error::malformed(
+                at,
+                format!(
+                    "`NodeCountPerPolyline` holds {count} for polyline {rank}: a node count is not negative"
+                ),
+            ));
+        };
+        total += u64::from(count);
+        runs.push(count);
+    }
+    if total != points as u64 {
+        return Err(Error::malformed(
+            at,
+            format!("`NodeCountPerPolyline` sums to {total} node(s) but the patch holds {points} point(s)"),
+        ));
+    }
+    Ok(runs)
+}
+
 fn polyline_set(representation: &dyn Reflect, source: &dyn ValueSource) -> Result<Vec<Patch>> {
     let mut out = Vec::new();
     let mut node_offset = 0usize;
@@ -1308,10 +1336,7 @@ fn polyline_set(representation: &dyn Reflect, source: &dyn ValueSource) -> Resul
         // `NodeCountPerPolyline` says where one line ends and the next begins;
         // without it the patch is one run.
         let runs = match field_object(patch.owner, "NodeCountPerPolyline") {
-            Some(array) => values::read_integers(array, source, &at)?
-                .into_iter()
-                .map(|n| n.max(0) as u32)
-                .collect(),
+            Some(array) => run_lengths(values::read_integers(array, source, &at)?, points.len(), &at)?,
             None => vec![points.len() as u32],
         };
         // **And which ones close.** A separate array that this reader used
@@ -1466,6 +1491,19 @@ pub(crate) use energyml_core::reflect::fields::{
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// `[geometry G9]`: counts that sum to the points are kept; a negative
+    /// count or a total that differs is refused by name.
+    /// Break it: map the counts with `n.max(0) as u32` again and skip the total
+    /// check: the two refusals come back as `Ok`.
+    #[test]
+    fn polyline_counts_must_describe_the_points() {
+        assert_eq!(run_lengths(vec![2, 3], 5, "t").unwrap(), vec![2, 3]);
+        let negative = run_lengths(vec![2, -1], 1, "t").unwrap_err().to_string();
+        assert!(negative.contains("-1"), "{negative}");
+        let sum = run_lengths(vec![4, 3], 5, "t").unwrap_err().to_string();
+        assert!(sum.contains('7') && sum.contains('5'), "{sum}");
+    }
 
     #[test]
     fn the_first_patch_reads_the_same_either_way() {

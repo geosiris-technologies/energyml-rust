@@ -188,7 +188,11 @@ fn head_of_one(
     };
 
     let [x, y, _] = well::head_of(trajectory, source).map_err(|why| format!("{why}"))?;
-    let crs = crs::of(trajectory, source).unwrap_or(None);
+    // A CRS the well names and that cannot be read is a refusal of this head,
+    // not "no CRS": the head would be placed as if it were in no system at all
+    // (`[geometry G4]`).
+    let crs = crs::of(trajectory, source)
+        .map_err(|why| format!("`{id}` names a coordinate reference system that cannot be read: {why}"))?;
     let has_geometry = crate::geometry::field_object(trajectory, "Geometry").is_some();
     let (xy, system) = place(x, y, crs.as_ref(), has_geometry, placement)?;
     Ok((

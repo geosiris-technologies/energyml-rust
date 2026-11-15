@@ -137,18 +137,26 @@ fn transport(v: Point, from: Point, to: Point) -> Point {
 /// A repeated position has no direction, and a zero-length segment makes every
 /// frame after it undefined. Dropping them is not tidying - it is the
 /// difference between a tube and a `NaN`.
-fn distinct(points: &[Point]) -> Vec<Point> {
+///
+/// Each kept station comes with its index **in the run that was given**, so a
+/// per-node attribute still lines up after a station was dropped
+/// (`[geometry G3]`).
+fn distinct(points: &[Point]) -> (Vec<Point>, Vec<u32>) {
     let mut out: Vec<Point> = Vec::with_capacity(points.len());
-    for point in points {
+    let mut origin: Vec<u32> = Vec::with_capacity(points.len());
+    for (at, point) in points.iter().enumerate() {
         if !point.iter().all(|v| v.is_finite()) {
             continue;
         }
         match out.last() {
             Some(last) if norm(sub(*point, *last)) <= f64::EPSILON => {}
-            _ => out.push(*point),
+            _ => {
+                out.push(*point);
+                origin.push(at as u32);
+            }
         }
     }
-    out
+    (out, origin)
 }
 
 /// One run swept into a tube: its vertices, its triangles, and which station
@@ -160,7 +168,8 @@ pub struct Swept {
     /// Triples into `points`.
     pub triangles: Vec<[u32; 3]>,
     /// For each vertex, the index of the station it rings - **in the run that
-    /// was given**.
+    /// was given**: a duplicate or non-finite station that was dropped leaves a
+    /// gap in these numbers, it does not shift the ones after it.
     ///
     /// What makes a coloured tube possible: a property has one value per
     /// station, and every vertex of a ring takes its station's value. Without
@@ -175,7 +184,7 @@ pub struct Swept {
 /// returned empty, because an empty mesh and a mesh nobody could build look
 /// identical to whatever draws them next.
 pub fn sweep(points: &[Point], tube: &Tube) -> Result<Swept> {
-    let stations = distinct(points);
+    let (stations, origin) = distinct(points);
     if stations.len() < 2 {
         return Err(Error::malformed(
             "tube",
@@ -229,7 +238,7 @@ pub fn sweep(points: &[Point], tube: &Tube) -> Result<Swept> {
                 scale(binormal, sin * tube.radius),
             );
             points_out.push(add(*centre, offset));
-            station_of.push(index as u32);
+            station_of.push(origin[index]);
         }
     }
 
@@ -303,6 +312,20 @@ pub fn sweep_object(object: &crate::scene::SceneObject, tube: &Tube) -> Result<c
             }
         };
 
+        // The runs name nodes of this patch; a total past the points is a
+        // malformed patch, refused by name rather than an out-of-range index
+        // (`[geometry G9]`; the reader refuses it first, this is the guard for
+        // a patch built by hand).
+        if let Some(bad) = runs.iter().flatten().find(|n| **n as usize >= patch.points.len()) {
+            return Err(Error::malformed(
+                "tube",
+                format!(
+                    "a polyline run names node {bad} but the patch has {} points",
+                    patch.points.len()
+                ),
+            ));
+        }
+
         let mut points = Vec::new();
         let mut triangles = Vec::new();
         for (run_index, run) in runs.iter().enumerate() {
@@ -315,14 +338,11 @@ pub fn sweep_object(object: &crate::scene::SceneObject, tube: &Tube) -> Result<c
             let base = points.len() as u32;
             for (vertex, station) in swept.points.iter().zip(&swept.station_of) {
                 points.push(*vertex);
-                // `station_of` counts the *distinct* stations of the run, and a
-                // run whose duplicates were dropped is shorter than the run the
-                // property is indexed by. Clamped rather than trusted: an index
-                // past the end would silently take somebody else's value.
-                let node = run
-                    .get(*station as usize)
-                    .copied()
-                    .unwrap_or(*run.last().unwrap_or(&0));
+                // `station_of` is the index in the run that was given, even
+                // when duplicate or non-finite stations were dropped, so it
+                // indexes the run the property is indexed by. An index past the
+                // end cannot happen (`sweep` numbers the run it was handed).
+                let node = run[*station as usize];
                 from_node.push(nodes_before + node as usize);
                 from_cell.push(cells_before + run_index);
             }

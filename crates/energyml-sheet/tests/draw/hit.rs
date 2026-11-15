@@ -134,6 +134,48 @@ fn a_point_on_an_image_gives_its_pixel() {
     assert_eq!(edge.pixel, Some([3, 3]), "clamped to the last pixel");
 }
 
+/// A rectangle with neither fill nor stroke is a hit area: its middle hits, far
+/// from any border; one with a stroke and no fill stays an outline
+/// (`[views-sheet C1]`).
+/// Breaks if: the unfilled-and-unstroked rectangle is tested on its outline again.
+#[test]
+fn an_invisible_rectangle_is_hit_inside_and_an_outline_only_on_its_border() {
+    let rect = Rect {
+        x: 0.0,
+        y: 0.0,
+        w: 100.0,
+        h: 100.0,
+    };
+    let area = Item::Rect {
+        rect,
+        corner: 0.0,
+        fill: None,
+        stroke: None,
+    };
+    let outline = Item::Rect {
+        rect,
+        corner: 0.0,
+        fill: None,
+        stroke: Some(Stroke::solid(RED, 2.0)),
+    };
+    let list = list_of(vec![layer_of(
+        "l",
+        vec![Element::keyed("area", "row", vec![area])],
+    )]);
+    assert_eq!(hit(&list, 50.0, 50.0).map(|h| h.key), Some("area"));
+    assert_eq!(hit(&list, 150.0, 50.0), None, "outside is outside");
+    let list = list_of(vec![layer_of(
+        "l",
+        vec![Element::keyed("frame", "frame", vec![outline])],
+    )]);
+    assert_eq!(
+        hit(&list, 50.0, 50.0),
+        None,
+        "the middle of an outline is not on it"
+    );
+    assert!(hit(&list, 1.0, 50.0).is_some(), "its border is");
+}
+
 /// Breaks if: the clip of the layer is ignored.
 #[test]
 fn a_point_outside_the_layer_clip_hits_nothing() {

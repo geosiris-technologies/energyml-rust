@@ -223,6 +223,63 @@ fn zooming_one_axis_changes_the_exaggeration_and_the_text() {
     assert_ne!(before.exaggeration_text, after.exaggeration_text);
 }
 
+/// A window that cannot be scaled to (zero width, reversed, not finite) is set
+/// aside by name and the whole drawing is laid out in its place, in the section
+/// and in the plan (`[section S10]`): the scales stay finite, so no shape piles
+/// at the origin.
+/// Break it: use `view.window` as is in `layout.rs` (`section` and `plan`): the
+/// scale is infinite or NaN and the warning is missing.
+#[test]
+fn an_unusable_window_is_set_aside_and_said() {
+    let bad = [
+        Window {
+            x: [10.0, 10.0],
+            y: [-500.0, 0.0],
+        },
+        Window {
+            x: [1000.0, 0.0],
+            y: [-500.0, 0.0],
+        },
+        Window {
+            x: [0.0, f64::NAN],
+            y: [-500.0, 0.0],
+        },
+        Window {
+            x: [0.0, 1000.0],
+            y: [f64::NEG_INFINITY, 0.0],
+        },
+    ];
+    for window in bad {
+        for plan in [false, true] {
+            let mut cat = two_wells();
+            cat.plan.sections = vec![(SectionKey::Long, vec![[0.0, 0.0], [1000.0, 100.0]])];
+            let mut v = view();
+            if plan {
+                v.target = Target::Plan;
+            }
+            v.window = Some(window);
+            let l = layout(&cat, &v);
+            assert!(
+                l.scale.iter().all(|s| s.is_finite() && *s > 0.0),
+                "window {window:?} (plan {plan}) gave the scales {:?}",
+                l.scale
+            );
+            assert!(
+                l.warnings.iter().any(|w| w.contains("cannot be drawn")),
+                "window {window:?} (plan {plan}) is not said: {:?}",
+                l.warnings
+            );
+        }
+    }
+    // A usable window says nothing of the kind.
+    assert!(
+        !layout(&two_wells(), &view())
+            .warnings
+            .iter()
+            .any(|w| w.contains("cannot be drawn"))
+    );
+}
+
 #[test]
 fn the_plan_is_at_equal_scale_on_both_axes() {
     let mut cat = two_wells();

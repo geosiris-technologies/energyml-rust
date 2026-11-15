@@ -1087,6 +1087,18 @@ pub struct Window {
     pub y: [f64; 2],
 }
 
+impl Window {
+    /// Whether a drawing can be scaled to this window: every bound finite and
+    /// both ranges of positive width. A zero-width or reversed window (a zoom
+    /// state with `x[0] == x[1]`) would give an infinite scale and every shape
+    /// would pile at the origin (`[section S10]`).
+    pub fn is_usable(&self) -> bool {
+        self.x.iter().chain(self.y.iter()).all(|v| v.is_finite())
+            && self.x[1] > self.x[0]
+            && self.y[1] > self.y[0]
+    }
+}
+
 /// How wells are coloured.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

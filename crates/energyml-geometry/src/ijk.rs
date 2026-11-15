@@ -146,8 +146,8 @@ pub fn read(representation: &dyn Reflect, source: &dyn ValueSource) -> Result<Ve
     // NaN. A writer may mark a cell undefined and still leave finite numbers on
     // its pillars, and until these were read such a grid came out whole. The
     // NaN check below stays - it catches the writers that mark nothing.
-    let pillar_defined = flags(geometry, source, "PillarGeometryIsDefined");
-    let cell_defined = flags(geometry, source, "CellGeometryIsDefined");
+    let pillar_defined = flags(geometry, source, "PillarGeometryIsDefined", at)?;
+    let cell_defined = flags(geometry, source, "CellGeometryIsDefined", at)?;
 
     let mut cells: Vec<[u32; 8]> = Vec::with_capacity(ni * nj * nk);
 
@@ -426,9 +426,19 @@ pub(crate) fn split_lines(
     // lines are appended after the regular pillars, so line `n` of the splits
     // is line `pillars + n` of the points array. Storing the relative index and
     // adding later is the same mistake in a place that is harder to see.
+    // A negative index is a corrupt file, refused by name: clamped to 0 it would
+    // silently split the first pillar instead (`[geometry G15]`).
+    let index = |value: i64, what: &str| {
+        usize::try_from(value)
+            .map_err(|_| Error::malformed(at, format!("{what} is {value}: an index cannot be negative")))
+    };
+    let mut of_pillar = Vec::with_capacity(split_of.len());
+    for (split, value) in split_of.iter().enumerate() {
+        of_pillar.push(index(*value, &format!("the pillar of split line {split}"))?);
+    }
     let mut lookup = HashMap::new();
     for (split, row) in rows.iter().enumerate() {
-        let pillar = split_of[split].max(0) as usize;
+        let pillar = of_pillar[split];
         let Some(columns) = row.integer() else {
             return Err(Error::malformed(
                 at,
@@ -436,13 +446,14 @@ pub(crate) fn split_lines(
             ));
         };
         for column in columns {
-            lookup.insert((pillar, (*column).max(0) as usize), pillars + split);
+            let column = index(*column, &format!("a column of split line {split}"))?;
+            lookup.insert((pillar, column), pillars + split);
         }
     }
     Ok(Splits {
         count,
         lookup,
-        of_pillar: split_of.iter().map(|pillar| (*pillar).max(0) as usize).collect(),
+        of_pillar,
     })
 }
 
@@ -527,12 +538,33 @@ fn dimension(object: &dyn Reflect, field: &str, at: &str) -> Result<usize> {
 /// dataset is missing, say). In every one of them **nothing is known**, and the
 /// caller falls back to the coordinates. Treating an unreadable flag as `false`
 /// would delete a grid because a `.h5` was not at hand.
-fn flags(geometry: &dyn Reflect, source: &dyn ValueSource, field: &str) -> Option<Vec<bool>> {
-    let FieldValue::Object(array) = geometry.field(field)? else {
-        return None;
+///
+/// An array that **was read** and holds text is another matter
+/// (`[geometry G5]`): the file states flags in a form that is no flag, and
+/// "all defined" would be a guess, so it is refused by name. A numeric mask is
+/// taken as flags (non-zero is defined), as `values::read_flags` does.
+fn flags(
+    geometry: &dyn Reflect,
+    source: &dyn ValueSource,
+    field: &str,
+    at: &str,
+) -> Result<Option<Vec<bool>>> {
+    let Some(FieldValue::Object(array)) = geometry.field(field) else {
+        return Ok(None);
     };
-    let values = values::read(array, source, field).ok()?;
-    values.boolean().map(|flags| flags.to_vec())
+    let Ok(values) = values::read(array, source, field) else {
+        return Ok(None);
+    };
+    if let Some(flags) = values.boolean() {
+        return Ok(Some(flags.to_vec()));
+    }
+    match values.to_f64() {
+        Some(mask) => Ok(Some(mask.into_iter().map(|x| x != 0.0).collect())),
+        None => Err(Error::malformed(
+            at,
+            format!("`{field}` holds text, not a set of flags"),
+        )),
+    }
 }
 
 /// Whether a flag array says this element is **not** defined.

@@ -538,11 +538,18 @@ fn read_ring(
     let title = read.title.clone().unwrap_or_else(|| read.uuid.clone());
 
     // The same frame for every ring.
-    let frame_uuid = energyml_core::identity::parse_address(frame_uri).0;
-    let support_uuid = read.supporting_representation.clone().unwrap_or_default();
-    if !support_uuid.eq_ignore_ascii_case(&frame_uuid) {
+    // Compared as addresses through the one door (`identity::same_address`),
+    // the full uri first: two versions of one frame uuid are two frames
+    // (`[views-sheet R1]`). A reference that carries no complete uri falls back
+    // to its uuid, which matches any version.
+    let support = read
+        .supporting_representation_uri
+        .clone()
+        .or_else(|| read.supporting_representation.clone())
+        .unwrap_or_default();
+    if !energyml_core::identity::same_address(&support, frame_uri) {
         return Err(refuse(format!(
-            "`{title}` hangs on another frame ({support_uuid}) than the first property ({frame_uuid}): the rings of one target share a frame"
+            "`{title}` hangs on another frame ({support}) than the first property ({frame_uri}): the rings of one target share a frame"
         )));
     }
 

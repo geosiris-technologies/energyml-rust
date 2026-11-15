@@ -36,31 +36,43 @@ pub fn read_integers(array: &dyn Reflect, source: &dyn ValueSource, at: &str) ->
         values::Values::Integer(v) => Ok(v),
         // A count written as a double, or a mask read as booleans: both are
         // indices once they get here, and refusing them would help nobody.
-        other => other
-            .to_f64()
-            .map(|v| v.into_iter().map(|x| x as i64).collect())
-            .ok_or_else(|| {
+        other => {
+            let numbers = other.to_f64().ok_or_else(|| {
                 Error::malformed(
                     at,
                     format!("`{}` holds text, not numbers", array.type_info().name),
                 )
-            }),
+            })?;
+            // `NaN as i64` is 0: an index that is no number would silently
+            // become the first one (`[geometry G15]`).
+            if let Some(bad) = numbers.iter().find(|x| !x.is_finite()) {
+                return Err(Error::malformed(
+                    at,
+                    format!("`{}` holds {bad}: not an integer", array.type_info().name),
+                ));
+            }
+            Ok(numbers.into_iter().map(|x| x as i64).collect())
+        }
     }
 }
 
 /// The flags of a boolean array, as the file states them.
 ///
-/// Empty where the array holds something that is not a set of flags: the
-/// caller then knows the file said nothing it could use, which is **not** the
-/// same as *all false*. Anything numeric is read as zero-or-not, because a
-/// producer writing a mask as integers has still said which is which.
+/// An array that holds text is refused by name: it is no set of flags, and an
+/// empty answer would read as *the file said nothing*, which it did not.
+/// Anything numeric is read as zero-or-not, because a producer writing a mask
+/// as integers has still said which is which.
 pub fn read_flags(array: &dyn Reflect, source: &dyn ValueSource, at: &str) -> Result<Vec<bool>> {
     match values::read(array, source, at)? {
         values::Values::Boolean(flags) => Ok(flags),
-        other => Ok(other
+        // A text array is no set of flags: refused by name rather than read as
+        // an empty list that states nothing (`[geometry G15]`).
+        other => other
             .to_f64()
             .map(|v| v.into_iter().map(|x| x != 0.0).collect())
-            .unwrap_or_default()),
+            .ok_or_else(|| {
+                Error::malformed(at, format!("`{}` holds text, not flags", array.type_info().name))
+            }),
     }
 }
 

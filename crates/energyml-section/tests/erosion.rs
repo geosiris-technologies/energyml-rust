@@ -282,6 +282,43 @@ fn the_portion_is_marked_behind_the_lines_with_its_own_colour() {
     }
 }
 
+/// An eroded horizon cut in two spans that meet at s = 500 (a fault): the
+/// portion [200, 600] runs across both, and the lens covers all of it, not only
+/// the part over the first span (`[section S15]`).
+/// Break it: take the first span only again (`find_map` over the spans in
+/// `erosion_marks`): the lens stops at s = 500.
+#[test]
+fn the_lens_covers_the_portion_across_two_spans_of_the_older_horizon() {
+    let old = TraceItem {
+        spans: vec![
+            vec![[0.0, -200.0], [500.0, -200.0]],
+            vec![[500.0, -200.0], [1000.0, -200.0]],
+        ],
+        ..dated("Old", Some([30.0, 30.0]), Vec::new())
+    };
+    let (_, young) = dipping();
+    let cat = with_notes(vec![old, young]);
+    let l = layout(&cat, &view());
+    let group = &layer(&l, "erosions").expect("the erosions have a layer").objects;
+    assert_eq!(group.len(), 1);
+    let px = |s: f64| l.frame.x + (s - l.window.x[0]) * l.scale[0];
+    let (mut lo, mut hi) = (f64::MAX, f64::MIN);
+    for shape in &group[0].shapes {
+        if let Shape::Polygon { points, .. } = shape {
+            for p in points {
+                lo = lo.min(p[0]);
+                hi = hi.max(p[0]);
+            }
+        }
+    }
+    assert!(
+        (lo - px(200.0)).abs() < 0.5 && (hi - px(600.0)).abs() < 0.5,
+        "[{lo}, {hi}] vs [{}, {}]",
+        px(200.0),
+        px(600.0)
+    );
+}
+
 #[test]
 fn the_warning_counts_what_the_catalogue_noticed_about_the_section() {
     let (old, young) = dipping();

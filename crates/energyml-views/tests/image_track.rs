@@ -501,6 +501,29 @@ fn rows_and_columns_are_keyed_by_their_full_uri_and_their_index() {
     // Break it: key the rows by their pixel number rather than by the sample's index.
 }
 
+/// Pointing at the middle of a row or of a column finds that row or column, not
+/// the image under it (`[views-sheet C1]`): the hit elements are areas, and the
+/// positions asked are inside them, far from any border.
+#[test]
+fn pointing_inside_a_row_or_a_column_finds_it() {
+    let drawn = render(&standard(), ask_sized(PROP, 300.0, 400.0)).expect("drawn");
+    let uri = prop_uri(PROP);
+    let (area, _) = image(&drawn.list);
+    // Columns are 100 wide and rows 100 high: the middle of row 2 / column 1.
+    let (x, y) = (area.x + 150.0, area.y + 250.0);
+    let on_top = energyml_sheet::draw::hit(&drawn.list, x, y).expect("something is there");
+    assert_eq!(on_top.key, format!("{uri}#col=1"), "the topmost hit element");
+    // Without the columns, the row under the same point.
+    let mut rows_only = drawn.list.clone();
+    for layer in &mut rows_only.layers {
+        layer.elements.retain(|element| element.kind != "column");
+    }
+    let found = energyml_sheet::draw::hit(&rows_only, x, y).expect("the row");
+    assert_eq!(found.key, format!("{uri}#row=2"));
+    // Break it: give `invisible` in `image_track.rs` neither fill nor stroke
+    // and take the area test out of `draw::hit`: the point finds the image.
+}
+
 #[test]
 fn the_colour_bar_and_its_source_come_from_the_one_door() {
     let opened = standard();

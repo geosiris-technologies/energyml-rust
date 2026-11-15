@@ -421,7 +421,17 @@ pub fn read_on_lines(
     let mut points = Vec::with_capacity(parameters.len());
     for (index, parameter) in parameters.iter().enumerate() {
         let line = match (&explicit, on) {
-            (Some(indices), _) => indices[index].max(0) as usize,
+            // A negative index is a corrupt file: clamped to 0 it would read
+            // line 0 silently (`[geometry G15]`).
+            (Some(indices), _) => usize::try_from(indices[index]).map_err(|_| {
+                Error::malformed(
+                    at,
+                    format!(
+                        "`ParametricLineIndices` holds {} at {index}: a line index is not negative",
+                        indices[index]
+                    ),
+                )
+            })?,
             (None, Some(on)) => on[index % on.len()],
             (None, None) => index % count,
         };
@@ -612,7 +622,18 @@ impl Lines {
         };
 
         let kinds = match field_object(object, "LineKindIndices") {
-            Some(array) => values::read_integers(array, source, &format!("{at}.LineKindIndices"))?,
+            Some(array) => {
+                let kinds = values::read_integers(array, source, &format!("{at}.LineKindIndices"))?;
+                // One kind per line. A shorter array would give the last lines
+                // kind 0 (vertical) in place of the curve they declare.
+                if kinds.len() < count {
+                    return Err(Error::malformed(
+                        at,
+                        format!("{} line kind(s) for {count} line(s)", kinds.len()),
+                    ));
+                }
+                kinds
+            }
             // No kinds stated. One knot can only be a vertical line; more than
             // one is read as the linear spline, kind 1.
             None => vec![if knots == 1 { 0 } else { 1 }; count],
@@ -620,7 +641,7 @@ impl Lines {
 
         let mut lines = Vec::with_capacity(count);
         for index in 0..count {
-            let declared = kinds.get(index).copied().unwrap_or(0);
+            let declared = kinds[index];
             let Some(kind) = Kind::of(declared) else {
                 // Refused rather than guessed: an index the standard does not
                 // define could be anything, and every remaining kind curves

@@ -509,7 +509,7 @@ pub(crate) fn reshape(topology: &Topology, points: &[Point], shape: Shape) -> Re
                 )))
             }
             Topology::Hexahedra { cells, .. } => {
-                let boundary = boundary_of(cells, points);
+                let boundary = boundary_of(cells);
                 Ok(Topology::Segments(unique_edges(
                     boundary.iter().map(|cell| cell.as_slice()),
                 )))
@@ -528,7 +528,7 @@ pub(crate) fn reshape(topology: &Topology, points: &[Point], shape: Shape) -> Re
             Topology::Grid { fastest, slowest } => {
                 Ok(Topology::Quads(grid_cells(*fastest, *slowest, points)))
             }
-            Topology::Hexahedra { cells, .. } => Ok(Topology::Quads(boundary_of(cells, points))),
+            Topology::Hexahedra { cells, .. } => Ok(Topology::Quads(boundary_of(cells))),
             // The same rule one level of generality up. A hexahedron's faces
             // are quadrilaterals and its sharing has to be rediscovered by
             // hashing corner sets; an unstructured cell's faces are rings of
@@ -618,9 +618,14 @@ fn wound(ring: [u32; 4], points: &[Point]) -> [u32; 4] {
 /// count rather than a guess.
 ///
 /// The six faces come from the corner order [`Topology::Hexahedra`] already
-/// guarantees (VTK's), so their winding is inherited rather than chosen.
-fn boundary_of(cells: &[[u32; 8]], points: &[Point]) -> Vec<[u32; 4]> {
-    let mut seen: HashMap<[u32; 4], (usize, [u32; 4])> = HashMap::new();
+/// guarantees (VTK's, cells oriented by `ijk::oriented`), so their winding is
+/// inherited rather than chosen and every ring keeps its outward normal. The
+/// faces come back in first-seen order (cell by cell, face by face), so the
+/// result is the same on every run (`[geometry G2]`).
+fn boundary_of(cells: &[[u32; 8]]) -> Vec<[u32; 4]> {
+    // Each distinct face: how many cells claim it, and the ring of the first.
+    let mut faces: Vec<(usize, [u32; 4])> = Vec::new();
+    let mut at: HashMap<[u32; 4], usize> = HashMap::new();
     for cell in cells {
         for face in HEXAHEDRON_FACES {
             let ring = [cell[face[0]], cell[face[1]], cell[face[2]], cell[face[3]]];
@@ -628,12 +633,16 @@ fn boundary_of(cells: &[[u32; 8]], points: &[Point]) -> Vec<[u32; 4]> {
             // seen from either of its two cells hashes the same.
             let mut key = ring;
             key.sort_unstable();
-            let entry = seen.entry(key).or_insert((0, ring));
-            entry.0 += 1;
+            let slot = *at.entry(key).or_insert_with(|| {
+                faces.push((0, ring));
+                faces.len() - 1
+            });
+            faces[slot].0 += 1;
         }
     }
-    seen.into_values()
+    faces
+        .into_iter()
         .filter(|(count, _)| *count == 1)
-        .map(|(_, ring)| wound(ring, points))
+        .map(|(_, ring)| ring)
         .collect()
 }
