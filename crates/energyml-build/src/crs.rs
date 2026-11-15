@@ -1426,19 +1426,27 @@ pub fn place(
     }
     use energyml_domain::reproject::Reprojector;
     let backend = energyml_proj::Proj4::new();
-    let mut out = Vec::with_capacity(points.len());
-    for point in points {
-        let placed = backend
-            .reproject(flat(point), from as u64, *to as u64)
-            .map_err(|e| {
-                format!(
-                    "[{}, {}] could not go from EPSG:{from} to EPSG:{to}: {e}",
-                    point.lon, point.lat
-                )
-            })?;
-        out.push(placed);
+    // **Both projections are built once per call, not once per point**:
+    // `reproject_all` parses the two definitions a single time for the whole
+    // array, where `reproject` would parse them for every point.
+    let flat_points: Vec<[f64; 3]> = points.iter().map(flat).collect();
+    match backend.reproject_all(&flat_points, from as u64, *to as u64) {
+        Ok(out) => Ok(out),
+        Err(batch) => {
+            // The batch error does not say which point is to blame. Find it
+            // on this (rare) refusal path only, so the message still names
+            // the offending point as it always did.
+            for (point, flat_point) in points.iter().zip(&flat_points) {
+                if let Err(e) = backend.reproject(*flat_point, from as u64, *to as u64) {
+                    return Err(format!(
+                        "[{}, {}] could not go from EPSG:{from} to EPSG:{to}: {e}",
+                        point.lon, point.lat
+                    ));
+                }
+            }
+            Err(format!("could not go from EPSG:{from} to EPSG:{to}: {batch}"))
+        }
     }
-    Ok(out)
 }
 
 #[cfg(test)]
@@ -1505,6 +1513,83 @@ mod projection {
         // elevation by some forty metres without any check seeing
         // it.
         assert_eq!(placed[0][2], 58.0);
+    }
+
+    #[test]
+    fn a_batch_reprojects_bit_for_bit_like_point_by_point() {
+        // The optimisation (one build of the two projections per call) must not
+        // change a coordinate: each batch is compared, bit for bit, with the
+        // old way, one `reproject` call per point.
+        use energyml_domain::reproject::Reprojector;
+        let backend = energyml_proj::Proj4::new();
+        let lonlat: Vec<Position> = (0..50)
+            .map(|i| Position {
+                lon: 2.0 + f64::from(i) * 0.013,
+                lat: 48.0 + f64::from(i) * 0.007,
+                z: if i % 2 == 0 {
+                    Some(10.0 * f64::from(i))
+                } else {
+                    None
+                },
+            })
+            .collect();
+        let old = |points: &[Position], from: i64, to: i64| -> Vec<[f64; 3]> {
+            points
+                .iter()
+                .map(|p| {
+                    backend
+                        .reproject([p.lon, p.lat, p.z.unwrap_or(f64::NAN)], from as u64, to as u64)
+                        .unwrap()
+                })
+                .collect()
+        };
+        let same = |a: &[[f64; 3]], b: &[[f64; 3]]| {
+            assert_eq!(a.len(), b.len());
+            for (x, y) in a.iter().zip(b) {
+                for k in 0..3 {
+                    assert_eq!(x[k].to_bits(), y[k].to_bits(), "{x:?} vs {y:?}");
+                }
+            }
+        };
+        // 4326 -> 2154.
+        let lambert = place(&lonlat, &Target::Projected(2154), 4326).unwrap();
+        same(&lambert, &old(&lonlat, 4326, 2154));
+        // 2154 -> 4326, from the metres just obtained.
+        let metres: Vec<Position> = lambert
+            .iter()
+            .map(|p| Position {
+                lon: p[0],
+                lat: p[1],
+                z: Some(p[2]),
+            })
+            .collect();
+        let back = place(&metres, &Target::Projected(4326), 2154).unwrap();
+        same(&back, &old(&metres, 2154, 4326));
+        // A system with no transformation (onto itself): untouched.
+        let identity = place(&lonlat, &Target::Projected(4326), 4326).unwrap();
+        for (p, q) in lonlat.iter().zip(&identity) {
+            assert_eq!(p.lon.to_bits(), q[0].to_bits());
+            assert_eq!(p.lat.to_bits(), q[1].to_bits());
+        }
+        // Break it: make `place` compute a different formula (e.g. skip the
+        // `scale_in` of the batch path) and the bits differ.
+    }
+
+    #[test]
+    fn a_refusal_in_a_batch_still_names_the_offending_point() {
+        let mut points = paris();
+        points.push(Position {
+            lon: f64::NAN,
+            lat: f64::NAN,
+            z: None,
+        });
+        // Either the backend refuses the NaN (the point is named) or it passes
+        // it through; what must never happen is a silent short result.
+        match place(&points, &Target::Projected(2154), 4326) {
+            Ok(out) => assert_eq!(out.len(), points.len()),
+            Err(why) => assert!(why.contains("4326") && why.contains("2154"), "{why}"),
+        }
+        // Break it: return `Ok(Vec::new())` when the batch fails.
     }
 
     #[test]
