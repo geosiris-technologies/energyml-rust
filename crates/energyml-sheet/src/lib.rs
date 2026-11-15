@@ -22,7 +22,7 @@
 //!    through the two registries (track renderers and proportion modes).
 //! 2. [`text`] - measuring and wrapping against a real font's widths,
 //!    which [`layout`] uses to size a column and cut its text.
-//! 3. [`svg`] writes a [`layout::Layout`] out as an SVG string - a
+//! 3. [`picture`] translates a [`layout::Layout`] into a display list, and [`svg`] writes it out as an SVG string - a
 //!    layout untested against a real serialiser is a layout no one has
 //!    looked at.
 //! 4. [`read`] - [`read::board_of_frame`] turns a package's
@@ -50,6 +50,7 @@
 
 pub mod draw;
 pub mod layout;
+pub mod picture;
 pub mod read;
 pub mod svg;
 pub mod text;

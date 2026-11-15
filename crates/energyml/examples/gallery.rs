@@ -404,7 +404,7 @@ fn well_sheet(store: &EpcStore) -> Result<String, Failure> {
         text_size_pt: 8.0,
     };
     let laid = layout::compute(&read.board, &params)?;
-    Ok(svg::write(&laid))
+    Ok(svg::write(&laid)?)
 }
 
 // ---------------------------------------------------------------------------
