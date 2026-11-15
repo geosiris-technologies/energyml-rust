@@ -12,6 +12,7 @@
 - [Creating objects](creating-objects.md)
 - [Editing a scene](scene-editing.md)
 - [Section view](section-view.md)
+- [Around the well](around-the-well.md)
 - [The MCP server](mcp.md)
 - [Well sheet](well-sheet.md)
 - [Drawing](drawing.md)
@@ -69,3 +70,8 @@
 - [0029 A link to a table is one qualifier facet](adr/0029-convention-b-links-by-qualifier-facet.md)
 
 - [0042 What a property says of itself](adr/0042-what-a-property-says-of-itself.md)
+
+- [0031 The direction at a knot](adr/0031-tangent-at-a-knot.md)
+- [0032 The frame of a hole](adr/0032-hole-frame-in-a-direct-placed-frame.md)
+- [0033 TVD below the MD datum](adr/0033-tvd-below-the-md-datum.md)
+- [0041 Declared conventions, and the vertical without a CRS](adr/0041-declared-conventions-and-the-vertical-without-crs.md)

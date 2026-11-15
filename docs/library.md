@@ -314,6 +314,14 @@ error, not an assumption. Resistivity, conductivity and angle per length (dogleg
 severity) convert too; see
 [Statistics, scales and measured depth](statistics-and-depth.md).
 
+`crs.axes` says what the file states about the order of the two horizontal axes
+of the placed frame (`Stated`, `NotStated`, `Unusable` or `Contradictory`; it never
+guesses, and a missing statement never stops a point from being placed). Whether
+that frame is direct or indirect decides which side is right around a well.
+`direction_to_projected` is the door for vectors as `to_projected` is for points:
+the same rotation and vertical flip, without the offset. See
+[Around the well](around-the-well.md).
+
 Reprojection goes through the `reproject::Reprojector` trait; `energyml-proj`
 is the shipped implementation, pure Rust over `proj4rs` (so it builds for
 WebAssembly). It refuses a definition that carries no datum rather than applying

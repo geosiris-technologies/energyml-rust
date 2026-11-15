@@ -76,7 +76,8 @@ fn english_is_present_everywhere() {
 /// are all in, with the statuses the design gives: the inheritance rules
 /// (ADR-0009) were `designed` and are `active` since the walk is coded; the
 /// earlier FIRP rule and the colour cascade are `superseded` by `rank-order`,
-/// in the same commit.
+/// in the same commit. The `stats` theme (4 rules) and the `well` theme (4
+/// rules) bring the registry to 43.
 ///
 /// To break it: put `house/inherit/firp-parents` back to `active` (the test goes
 /// red), or leave it `superseded` without `rank-order` naming it (the build
@@ -91,7 +92,8 @@ fn the_rules_are_complete_and_statuses_follow_the_design() {
     );
     assert_eq!(count("table") + count("series"), 2, "the two published ids");
     assert_eq!(count("stats"), 4, "S7 and S8: gaps, seams, scales and bounds");
-    assert_eq!(all().len(), 39);
+    assert_eq!(count("well"), 4, "the four readings around the well");
+    assert_eq!(all().len(), 43);
 
     let coded_by_the_new_walk = [
         id::INHERIT_RANK_ORDER,

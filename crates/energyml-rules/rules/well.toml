@@ -1,0 +1,110 @@
+# Around the well: what the library reads where a trajectory, a hole frame or a
+# projection is not fully stated. Sources: ADR-0031, ADR-0032, ADR-0033,
+# ADR-0041. Code: crates/energyml-geometry/src/parametric.rs and around_well/.
+# Declared rules: the code applies them, a breach is a named refusal - no entry
+# in `integrity::CHECKS`.
+
+[[rule]]
+id = "house/well/tangent-at-a-knot"
+theme = "well"
+status = "active"
+stance = "silent"
+level = 2
+since = "2026-11-14"
+title = "At a knot of a linear trajectory, the direction is that of the interval ending there"
+text = """
+On a trajectory whose line is straight between its knots, the direction at a knot is the one of the interval that ends there, the interval in which the line evaluates that parameter. At the first knot, where no interval ends, it is the direction of the first interval."""
+why = """
+A polyline has no tangent at its corners and the specification states none. Taking the interval the evaluator already uses keeps a point and its direction on the same segment, so a frame drawn at a knot never mixes two segments (ADR-0031)."""
+rulings = [
+  { by = "maintainer", on = "2026-11-14" },
+]
+refs = [
+  { kind = "spec", doc = "RESQML TRG 2.2", at = "§3.8", note = "parametric lines: a linear line states its knots, no direction at a knot" },
+  { kind = "code", path = "crates/energyml-geometry/src/parametric.rs", at = "Path::direction_at" },
+  { kind = "code", path = "crates/energyml-geometry/tests/direction_at.rs", at = "a_linear_line_at_a_knot_takes_the_interval_that_ends_there" },
+  { kind = "design", path = "docs/adr/0031-tangent-at-a-knot.md" },
+]
+at = [
+  { type = "type", key = "WellboreTrajectoryRepresentation" },
+  { type = "view", key = "scene.well-tube" },
+]
+
+[[rule]]
+id = "house/well/high-side-min-inclination"
+theme = "well"
+status = "active"
+stance = "silent"
+level = 1
+since = "2026-11-14"
+title = "Under 1 degree of inclination a hole has no high side, and its frame is refused there"
+text = """
+Where the hole's inclination is under 1 degree (or over 179 degrees), its high side is not defined: the frame of the hole is refused at that node only, by name (`HighSideUndefined`), never turned to north in silence. A layer drawn around the hole is still drawn at the other nodes."""
+why = """
+The high side is the upward vertical projected across the hole; on a vertical hole that projection vanishes and any direction would do. WITSML states a tool face against the high side without saying what it is on a vertical hole, and under 1 degree the direction is noise (ADR-0032)."""
+rulings = [
+  { by = "maintainer", on = "2026-11-14" },
+]
+refs = [
+  { kind = "spec", doc = "WITSML TRG 2.1", at = "§16.10 p. 358", note = "Gtf, the gravity tool face, is measured from the high side; nothing is said of a vertical hole" },
+  { kind = "code", path = "crates/energyml-geometry/src/around_well/hole_frame.rs", at = "MIN_INCLINATION_DEGREES" },
+  { kind = "code", path = "crates/energyml-geometry/tests/around_well.rs", at = "the_threshold_is_one_degree_and_named" },
+  { kind = "design", path = "docs/adr/0032-hole-frame-in-a-direct-placed-frame.md" },
+]
+at = [
+  { type = "view", key = "scene.well-tube" },
+  { type = "view", key = "scene.refusals" },
+]
+
+[[rule]]
+id = "house/well/tvd-below-md-datum"
+theme = "well"
+status = "active"
+stance = "interpreted"
+level = 1
+since = "2026-11-14"
+title = "A true vertical depth drawn along a well is counted below its MD datum"
+text = """
+In a projection or a curtain along a well, the true vertical depth is counted downward from the MD datum, the point where the measured depth is 0, not from the zero of the vertical system. A line that does not reach its datum has no TVD there: the projection is refused by name (`NoDatum`), never counted from its first node."""
+why = """
+A view along a well compares the depths of one well; counting from the MD datum makes the measured and the vertical depths start at the same point, as a driller reads them, whatever vertical system the package uses (ADR-0033)."""
+rulings = [
+  { by = "maintainer", on = "2026-11-14" },
+]
+refs = [
+  { kind = "spec", doc = "WITSML TRG 2.1", at = "§16.7 p. 352", note = "depths of a trajectory are counted from the datum it names" },
+  { kind = "code", path = "crates/energyml-geometry/src/around_well/projection.rs", at = "WellProjections" },
+  { kind = "code", path = "crates/energyml-geometry/tests/well_projection.rs", at = "a_tvd_without_datum_is_refused" },
+  { kind = "design", path = "docs/adr/0033-tvd-below-the-md-datum.md" },
+]
+at = [
+  { type = "type", key = "WellboreTrajectoryRepresentation" },
+  { type = "view", key = "scene.profile" },
+]
+
+[[rule]]
+id = "house/well/conventions-are-declared"
+theme = "well"
+status = "active"
+stance = "silent"
+level = 1
+since = "2026-11-14"
+title = "A convention the file does not state is declared by the caller, never guessed"
+text = """
+The origin and sense of polar angles, the slow axis of a per-node matrix and the sign of its lateral axis are not stated by the files: a layer that needs them is refused by name (`ConventionUndeclared`) until the caller declares them. The declaration is a parameter of the reading; it is never written into the package."""
+why = """
+Two readings of the same array give two different pictures, and both look plausible; only the producer knows which is right, so the library asks rather than picks (ADR-0041)."""
+rulings = [
+  { by = "maintainer", on = "2026-11-14" },
+]
+refs = [
+  { kind = "spec", doc = "RESQML TRG 2.2", at = "§7.1 p. 222", note = "the first given dimension is the slowest; nothing on the origin or the sense of an angle around a hole" },
+  { kind = "code", path = "crates/energyml-geometry/src/around_well/polar.rs", at = "AngleConvention" },
+  { kind = "code", path = "crates/energyml-geometry/src/around_well/transverse.rs", at = "TransverseGrid" },
+  { kind = "code", path = "crates/energyml-geometry/tests/around_well.rs", at = "a_missing_convention_is_refused_by_name" },
+  { kind = "design", path = "docs/adr/0041-declared-conventions-and-the-vertical-without-crs.md" },
+]
+at = [
+  { type = "view", key = "scene.well-tube" },
+  { type = "view", key = "scene.refusals" },
+]

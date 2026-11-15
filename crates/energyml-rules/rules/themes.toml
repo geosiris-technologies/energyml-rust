@@ -24,3 +24,7 @@ title = "Time series"
 [[theme]]
 id = "stats"
 title = "Statistics, scales and gaps"
+
+[[theme]]
+id = "well"
+title = "Around the well"

@@ -50,11 +50,15 @@ energyml rules --house --json
 ```
 
 Themes today include attachments, colour, inheritance of properties, series,
-statistics and tables (`energyml rules --house` lists the six themes of this release).
+statistics, tables and the well (`energyml rules --house` lists the seven themes of this release).
 
 ### Statistics, scales and gaps
 
 Along the measured depth, a gap wider than 3 median steps is never bridged, and a jump of the value wider than 10 median steps of its variation is signalled as a seam. A logarithmic scale is proposed when the values span 3 decades, and automatic bounds are the 1st and 99th percentiles. Read them with `energyml rules --house --theme stats`; the decisions are in [ADR 0027](adr/0027-gaps-seams-scales-and-quantiles.md).
+
+### Around the well
+
+Where a trajectory is evaluated, the direction at a knot of a linear line is that of the interval that ends there, and a hole under 1 degree of inclination has no high side, so its frame is refused at that node by name. A true vertical depth along a well is counted below the MD datum, and a convention the file does not state (the sense of angles, the axes of a per-node matrix) is declared by the caller, never guessed. Read them with `energyml rules --house --theme well`; the decisions are in [ADR 0031](adr/0031-tangent-at-a-knot.md), [ADR 0032](adr/0032-hole-frame-in-a-direct-placed-frame.md), [ADR 0033](adr/0033-tvd-below-the-md-datum.md) and [ADR 0041](adr/0041-declared-conventions-and-the-vertical-without-crs.md).
 
 ## The full list
 
