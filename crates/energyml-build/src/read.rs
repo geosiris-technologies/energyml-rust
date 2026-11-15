@@ -635,7 +635,7 @@ fn property_of(
     reflect: &dyn energyml_core::value::Reflect,
     reach: Reach,
 ) -> crate::pieces::KnownProperty {
-    use energyml_core::value::{FieldValue, Scalar};
+    use energyml_core::value::FieldValue;
 
     let read = match energyml_domain::property::read(reflect) {
         Ok(read) => read,
@@ -668,14 +668,10 @@ fn property_of(
     // The null an integer array declares. Read off the array itself: RESQML
     // 2.2 puts it there (`eml23.IntegerExternalArray.NullValue`), and a
     // `DiscreteProperty` has no field of its own for it.
-    let null_value =
-        read.patches
-            .first()
-            .and_then(|patch| match patch.array.field("NullValue")?.as_scalar()? {
-                Scalar::Int(value) => Some(value),
-                Scalar::UInt(value) => i64::try_from(value).ok(),
-                _ => None,
-            });
+    let null_value = read
+        .patches
+        .first()
+        .and_then(|patch| energyml_domain::values::null_value(patch.array));
     // The qualifiers, word for word, in the encoding a copy is written in.
     let facets = match reflect.field("Facet") {
         Some(FieldValue::List(items)) => items

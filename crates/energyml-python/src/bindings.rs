@@ -8,7 +8,7 @@
 use numpy::{IntoPyArray, PyArray1, PyArrayMethods};
 use pyo3::exceptions::{PyIOError, PyValueError};
 use pyo3::prelude::*;
-use pyo3::types::{PyBytes, PyDict};
+use pyo3::types::{PyBytes, PyDict, PyList};
 
 use crate::session::{
     ArrayRef, Block, CheckReport, Copied, Format, Geometry, Header, Link, Package, PropertyValues, Shape,
@@ -98,8 +98,8 @@ impl From<&PyArrayRef> for ArrayRef {
 /// flat, and reshaping is the caller's decision. `reshape` is one line in
 /// numpy; imposing it here would turn an array of 3N into a matrix nobody
 /// asked for - and one day into a matrix of the wrong orientation.
-fn block_into_py(py: Python<'_>, block: Block) -> Py<PyAny> {
-    match block {
+fn block_into_py(py: Python<'_>, block: Block) -> PyResult<Py<PyAny>> {
+    Ok(match block {
         Block::F64(v) => v.into_pyarray(py).into_any().unbind(),
         Block::F32(v) => v.into_pyarray(py).into_any().unbind(),
         Block::I64(v) => v.into_pyarray(py).into_any().unbind(),
@@ -110,7 +110,9 @@ fn block_into_py(py: Python<'_>, block: Block) -> Py<PyAny> {
         Block::U32(v) => v.into_pyarray(py).into_any().unbind(),
         Block::U16(v) => v.into_pyarray(py).into_any().unbind(),
         Block::U8(v) => v.into_pyarray(py).into_any().unbind(),
-    }
+        // Strings are not numbers: a Python list of `str`.
+        Block::Text(v) => PyList::new(py, v)?.into_any().unbind(),
+    })
 }
 
 /// The other way: a numpy array becomes a typed block.
@@ -471,7 +473,7 @@ impl PyEpc {
     /// Read an array: the flat numpy array, and its dimensions.
     fn read_array(&self, py: Python<'_>, array: &PyArrayRef) -> PyResult<(Py<PyAny>, Vec<i64>)> {
         let (shape, block) = self.inner.read_array(&ArrayRef::from(array)).map_err(failed)?;
-        Ok((block_into_py(py, block), shape.dimensions))
+        Ok((block_into_py(py, block)?, shape.dimensions))
     }
 
     /// Write an array. With `dimensions` omitted: a vector of its length.
@@ -516,7 +518,7 @@ impl PyEpc {
             .inner
             .read_array_part(&ArrayRef::from(array), &start, &count)
             .map_err(failed)?;
-        Ok((block_into_py(py, block), shape.dimensions))
+        Ok((block_into_py(py, block)?, shape.dimensions))
     }
 
     /// What this object points at: one read, and each entry says where the

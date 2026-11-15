@@ -1906,9 +1906,21 @@ fn tables(args: TablesArgs, modes: Modes) -> Result<()> {
                 for row in 0..lookup.rows.rows.min(args.rows) {
                     let cells: Vec<String> = lookup
                         .rows
-                        .row(row)
+                        .row_values(row)
                         .into_iter()
-                        .map(|cell| cell.map(|c| c.to_string()).unwrap_or_else(|| "-".to_string()))
+                        .map(|cell| match cell {
+                            None => "-".to_string(),
+                            // A column of several values per row: `[a, b]`.
+                            Some(values) if values.len() != 1 => format!(
+                                "[{}]",
+                                values
+                                    .iter()
+                                    .map(|c| c.to_string())
+                                    .collect::<Vec<_>>()
+                                    .join(", ")
+                            ),
+                            Some(values) => values[0].to_string(),
+                        })
                         .collect();
                     println!("      {}", cells.join("  "));
                 }

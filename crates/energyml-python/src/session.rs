@@ -107,6 +107,8 @@ pub enum Block {
     U32(Vec<u32>),
     U16(Vec<u16>),
     U8(Vec<u8>),
+    /// Strings read from a string dataset: they cross as a Python `list[str]`.
+    Text(Vec<String>),
 }
 
 impl Block {
@@ -123,6 +125,7 @@ impl Block {
             Block::U32(v) => v.len(),
             Block::U16(v) => v.len(),
             Block::U8(v) => v.len(),
+            Block::Text(v) => v.len(),
         }
     }
 
@@ -143,6 +146,7 @@ impl Block {
             ArrayValues::U32(v) => Block::U32(v),
             ArrayValues::U16(v) => Block::U16(v),
             ArrayValues::U8(v) => Block::U8(v),
+            ArrayValues::Text(v) => Block::Text(v),
             // `ArrayValues` is `non_exhaustive`: a variant added there must
             // not break the build here, but it must not pass for an empty
             // array either. It gets named.
@@ -162,6 +166,8 @@ impl Block {
             Block::U32(v) => ArrayValues::U32(v),
             Block::U16(v) => ArrayValues::U16(v),
             Block::U8(v) => ArrayValues::U8(v),
+            // A write of strings is refused by the backend, by name.
+            Block::Text(v) => ArrayValues::Text(v),
         }
     }
 
@@ -178,6 +184,7 @@ impl Block {
             Block::U32(_) => "uint32",
             Block::U16(_) => "uint16",
             Block::U8(_) => "uint8",
+            Block::Text(_) => "string",
         }
     }
 }

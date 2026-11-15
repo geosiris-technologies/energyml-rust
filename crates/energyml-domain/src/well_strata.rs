@@ -933,18 +933,10 @@ fn unit_runs(indices: &dyn Reflect, source: &dyn ArraySource, what: &str) -> Res
         .collect())
 }
 
-/// The declared `NullValue` of an integer array, when it has one.
-fn null_value(array: &dyn Reflect) -> Option<i64> {
-    match array.field("NullValue") {
-        Some(FieldValue::Scalar(scalar)) => scalar.as_f64().map(|value| value as i64),
-        _ => None,
-    }
-}
-
 /// An integer array as the file states it: `None` where it holds its declared
 /// `NullValue` - or a `NaN`, for a producer that stored indices as floats.
 fn integers(array: &dyn Reflect, source: &dyn ArraySource, at: &str) -> Result<Vec<Option<i64>>, Refusal> {
-    let null = null_value(array);
+    let null = values::null_value(array);
     match values::read(array, source, at)? {
         Values::Integer(values) => Ok(values
             .into_iter()
@@ -972,7 +964,7 @@ fn integers(array: &dyn Reflect, source: &dyn ArraySource, at: &str) -> Result<V
 /// A numeric array as the file states it: `None` for its declared
 /// `NullValue` and for a `NaN` - how the corpus writes *no value here*.
 fn numbers(array: &dyn Reflect, source: &dyn ArraySource, at: &str) -> Result<Vec<Option<f64>>, Refusal> {
-    let null = null_value(array);
+    let null = values::null_value(array);
     match values::read(array, source, at)? {
         Values::Integer(values) => Ok(values
             .into_iter()

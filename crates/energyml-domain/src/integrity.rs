@@ -50,7 +50,7 @@
 use std::collections::BTreeMap;
 
 use energyml_core::identity;
-use energyml_core::value::{FieldValue, Reflect, Scalar};
+use energyml_core::value::{FieldValue, Reflect};
 
 use crate::property;
 use crate::rules::{Finding, Gravity, Outcome, concepts_of};
@@ -240,7 +240,7 @@ fn discrete_value_in_lookup(context: &Context<'_>, check: &Integrity, out: &mut 
                 out.push(cant(format!("patch {} does not hold numbers", patch.position)));
                 continue 'objects;
             };
-            let null = number(patch.array, "NullValue");
+            let null = crate::values::null_value(patch.array).map(|n| n as f64);
             for value in numbers {
                 if value.is_nan() || Some(value) == null {
                     continue;
@@ -721,17 +721,6 @@ fn unverifiable(check: &Integrity, uuid: &str, why: String) -> Finding {
 fn text(object: &dyn Reflect, name: &str) -> Option<String> {
     match object.field(name)? {
         FieldValue::Scalar(scalar) => Some(scalar.to_string()),
-        _ => None,
-    }
-}
-
-/// A numeric scalar field.
-fn number(object: &dyn Reflect, name: &str) -> Option<f64> {
-    match object.field(name)? {
-        FieldValue::Scalar(Scalar::Int(value)) => Some(value as f64),
-        FieldValue::Scalar(Scalar::UInt(value)) => Some(value as f64),
-        FieldValue::Scalar(Scalar::Double(value)) => Some(value),
-        FieldValue::Scalar(Scalar::Str(value)) => value.trim().parse().ok(),
         _ => None,
     }
 }
