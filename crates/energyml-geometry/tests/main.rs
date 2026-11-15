@@ -16,6 +16,7 @@ mod connection;
 mod corpus;
 mod cut_many;
 mod cut_sources;
+mod cut_weld;
 mod declared;
 mod defined;
 mod derived;

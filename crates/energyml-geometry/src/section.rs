@@ -14,8 +14,9 @@
 //! into polylines, and the welding rule is precise ("never re-chain" was
 //! too strong a rule): two segments join only on an
 //! **exactly** shared end. Two neighbouring triangles compute their
-//! intersection point on the **same edge** with the same interpolation - the
-//! point is identical to the bit - whereas two sheets of a faulted surface
+//! intersection point on the **same edge** with the same interpolation, from
+//! the edge's lower node index to its higher whatever the triangle's winding -
+//! the point is identical to the bit - whereas two sheets of a faulted surface
 //! share no edge at all: they never weld, with no threshold deciding it. And a
 //! chain whose two ends meet is **closed** - which is what a `PolylineSetPatch`
 //! `ClosedPolylines` exists to say, and a ring (outer or inner) is only usable
@@ -116,6 +117,15 @@ pub fn cut_sourced(points: &[[f64; 3]], triangles: &[[u32; 3]], trace: &[[f64; 2
             // The edge (node a, node b, t) each hit was computed on, in step.
             let mut edges: Vec<(u32, u32, f64)> = Vec::with_capacity(2);
             for (a, b) in [(0, 1), (1, 2), (2, 0)] {
+                // The edge from its lower node index to its higher: the two
+                // triangles that share it walk it in opposite directions, and
+                // only one direction gives both of them the same point, to the
+                // bit, which the exact weld of `chain` needs.
+                let (a, b) = if triangle[a] <= triangle[b] {
+                    (a, b)
+                } else {
+                    (b, a)
+                };
                 let (da, db) = (sides[a], sides[b]);
                 if (da > 0.0 && db > 0.0) || (da < 0.0 && db < 0.0) {
                     continue;
@@ -164,8 +174,18 @@ pub fn cut_sourced(points: &[[f64; 3]], triangles: &[[u32; 3]], trace: &[[f64; 2
                 ]
             };
             let (c0, c1) = (s0.max(0.0), s1.min(length));
-            let start = clip(&first, &second, c0);
-            let end = clip(&first, &second, c1);
+            // An end that is not clipped is the crossing itself: `from + (to -
+            // from) * 1` need not give `to` back to the bit, and the weld needs it.
+            let start = if c0 == s0 {
+                first
+            } else {
+                clip(&first, &second, c0)
+            };
+            let end = if c1 == s1 {
+                second
+            } else {
+                clip(&first, &second, c1)
+            };
             // An end that was not clipped is its crossing; a clipped one lies
             // between the two, and takes the nearer's edge (see `CutEnd`).
             let source = |at: f64, clipped: bool| -> CutEnd {
