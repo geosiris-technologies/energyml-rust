@@ -484,10 +484,11 @@ mod tests {
         assert!(!EtpUri::is_canonical(alternate));
     }
 
-    /// ETP v1.2 section 25.3.10: a quote inside a quoted value is written twice
-    /// - the dataspace `it's` travels as `dataspace('it''s')`. Built, read back
-    /// and displayed, the name makes the round trip and is the plain name on
-    /// the way in.
+    /// ETP v1.2 section 25.3.10 (p. 492, the regular expressions of a canonical
+    /// uri, `[^']*?(?:''[^']*?)*`): a quote inside a quoted value is written
+    /// twice, so the dataspace `it's` travels as `dataspace('it''s')`. Built,
+    /// read back and displayed, the name makes the round trip and is the plain
+    /// name on the way in.
     #[test]
     fn a_dataspace_with_an_apostrophe_makes_the_round_trip() {
         let uuid = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
