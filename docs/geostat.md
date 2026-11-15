@@ -68,13 +68,14 @@ flagged for verification.
 | `nodes` | What erasing nodes or moving them does to a shape | - |
 | `cells`, `ijk`, `ijk_faults` | Cells in an IJK box or crossed by a wellbore path; an IJK grid between horizons (pillars, K gaps); an IJK grid cut by faults (split coordinate lines, stated throw) | - |
 | `measure`, `thickness`, `groups` | Areas, lengths and volumes of shapes; thickness between two horizons at every node; values split by a key (zone, stratigraphic unit) | - |
+| `samples` (private) | What the point interpolators (`idw`, `kriging`, `rbf`, `variogram`, `mba`) share before computing: the set-aside of samples with a non-finite value or position, the Euclidean distance, and the refusal of coincident samples | - |
 | `vector`, `vector::plan` | The one place the 3D and plan-view vector arithmetic is written: add, subtract, scale, dot, cross, norm, distance, the unit vector with the caller's floor, the distance of a point to a chord or a segment, and the exact intersection test of two segments. `energyml_geometry::vector` re-exports it, so every crate reaches the same functions. See [ADR 0044](adr/0044-vectors-in-geostat.md) | - |
 
 ## Structural computations
 
 | Module | What it does | Reference |
 |---|---|---|
-| `fault_throw` | A horizon triangulated with fault traces as constraints, torn along each trace, hanging wall offset by a throw that dies out at both ends | - |
+| `fault_throw` | A horizon triangulated with fault traces as constraints, torn along each trace, hanging wall offset by a throw that dies out at both ends. It also holds the one reading of a fault trace (`orient`, `read_trace`) and the one hanging-wall rule (`hanging_wall_side`), which `ijk_faults` (a grid cut by its faults) calls too, so a torn horizon and a cut grid cannot disagree on which side goes down | - |
 | `fault_sticks` | Fault sticks drawn from a plane and the orientation of the surface they make | - |
 | `horizon_law` | A horizon laid by a law over a reference surface | - |
 | `t2d` | Analytic time-to-depth with a linear velocity-depth law `V(z) = V0 + k z`; `k = 0` is a legitimate constant-velocity law | TODO(reference) |

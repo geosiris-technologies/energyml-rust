@@ -150,3 +150,118 @@ fn what_cannot_cut_is_refused_by_name() {
     ));
     assert!(matches!(cut(&built, &xy, &[], &settings), Err(CutError::NoFault)));
 }
+
+/// A plane like [`plane`], but only from `y_from` to `y_to` (relative to `Y0`):
+/// a fault that dies out inside the horizon, which `fault_throw` tears.
+fn short_plane(x: f64, dip: f64, y_from: f64, y_to: f64) -> (Vec<Point>, Vec<[u32; 3]>) {
+    let at = |z: f64| X0 + x + (-10.0 - z) / dip.to_radians().tan();
+    (
+        vec![
+            [at(50.0), Y0 + y_from, 50.0],
+            [at(50.0), Y0 + y_to, 50.0],
+            [at(-70.0), Y0 + y_from, -70.0],
+            [at(-70.0), Y0 + y_to, -70.0],
+        ],
+        vec![[0, 1, 2], [1, 3, 2]],
+    )
+}
+
+/// The cut grid and the torn horizon read one fault the same way
+/// (`[analysis D2]`): the same trace reading and the same hanging-wall rule
+/// live in `fault_throw`, and the grid says the same side goes down as the
+/// horizon does. One fault, dipping east, on a 4 × 4 grid and on a 5 × 5
+/// horizon of the same nodes: the columns east of the trace are the grid's
+/// hanging wall, the nodes east of it are the ones the horizon lets down.
+#[test]
+fn the_grid_and_the_torn_horizon_agree_on_the_hanging_wall() {
+    use energyml_analysis::fault_throw::{Fault as ThrowFault, Settings as ThrowSettings, TearError, throw};
+
+    let surface = short_plane(17.0, 60.0, 4.0, 36.0);
+
+    // The grid: the fault is read at -10, where it is at x = 17.
+    let (built, xy) = grid(4);
+    let faulted = cut(
+        &built,
+        &xy,
+        &[Fault {
+            name: "F",
+            points: &surface.0,
+            triangles: &surface.1,
+            maximum_throw: 8.0,
+            sense: Sense::Down,
+            dead_columns: 0,
+        }],
+        &Settings {
+            profile: Profile::Parabolic,
+            reach: 1000.0,
+            dead_layers: &[],
+        },
+    )
+    .expect("cut");
+    let grid_east: Vec<bool> = faulted.faults[0].hanging_wall.clone();
+
+    // The horizon: the same fault meets it at z = 0, at x = 17 - 10 / tan 60.
+    let mut cloud = Vec::new();
+    for j in 0..5 {
+        for i in 0..5 {
+            cloud.push([X0 + 10.0 * i as f64, Y0 + 10.0 * j as f64, 0.0]);
+        }
+    }
+    let torn = throw(
+        &cloud,
+        &[ThrowFault {
+            name: "F",
+            points: &surface.0,
+            triangles: &surface.1,
+            maximum_throw: 8.0,
+            sense: Sense::Down,
+        }],
+        &ThrowSettings {
+            profile: Profile::Parabolic,
+            reach: 1000.0,
+            heave: false,
+            up: true,
+        },
+    )
+    .expect("thrown");
+
+    // Both put the east of the trace in the hanging wall, and it goes down.
+    for j in 0..4 {
+        for i in 0..4 {
+            assert_eq!(grid_east[j * 4 + i], i >= 2, "grid column ({i}, {j})");
+        }
+    }
+    for j in 1..4 {
+        for i in 0..5 {
+            let z = torn.points[j * 5 + i][2];
+            assert_eq!(z < -1e-9, i >= 2, "horizon node ({i}, {j}) at z = {z}");
+            if i < 2 {
+                assert_eq!(z, 0.0, "the footwall of ({i}, {j}) does not move");
+            }
+        }
+    }
+
+    // And the refusals are the same ones: a vertical fault is refused by both.
+    let steep = short_plane(17.0, 90.0, 4.0, 36.0);
+    let thrown_steep = throw(
+        &cloud,
+        &[ThrowFault {
+            name: "V",
+            points: &steep.0,
+            triangles: &steep.1,
+            maximum_throw: 8.0,
+            sense: Sense::Down,
+        }],
+        &ThrowSettings {
+            profile: Profile::Parabolic,
+            reach: 1000.0,
+            heave: false,
+            up: true,
+        },
+    );
+    assert!(matches!(thrown_steep, Err(TearError::Vertical { .. })));
+    // Break it: in `fault_throw::hanging_wall_side` return `-mean.signum()`: the
+    // grid and the horizon then both flip, and this test, which states the east
+    // side, fails for both. Give `ijk_faults::cut` its own copy with the opposite
+    // sign and only the grid half fails.
+}

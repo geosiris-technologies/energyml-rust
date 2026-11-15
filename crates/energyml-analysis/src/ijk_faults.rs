@@ -79,12 +79,10 @@
 
 use std::collections::{HashMap, VecDeque};
 
-use crate::fault_sticks::{self, Orientation};
-use crate::fault_throw::{self, Profile, Sense, VERTICAL};
+use crate::fault_sticks::Orientation;
+use crate::fault_throw::{self, Profile, Sense};
 use crate::ijk::Stacked;
-use crate::intersect::intersect;
 use crate::surface::Up;
-use energyml_geostat::vector::plan as vplan;
 
 type Point = [f64; 3];
 
@@ -214,38 +212,15 @@ impl Faulted {
     /// empty when every cell is defined. [`Stacked::hexahedra`] with each
     /// corner looked up.
     pub fn hexahedra(&self) -> (Vec<[u32; 8]>, Vec<u32>) {
-        let [ni, nj, nk] = self.cells;
-        let pi = self.pillars[0];
-        let mut cells = Vec::new();
-        let mut index = Vec::new();
-        for (k, &top) in self.layer_tops.iter().enumerate() {
-            for j in 0..nj {
-                for i in 0..ni {
-                    let cell = (k * nj + j) * ni + i;
-                    if !self.cell_defined[cell] {
-                        continue;
-                    }
-                    let column = j * ni + i;
-                    let around = [(i, j), (i + 1, j), (i + 1, j + 1), (i, j + 1)];
-                    let (first, second) = match self.up {
-                        Up::MinusZ => (top, top + 1),
-                        Up::PlusZ => (top + 1, top),
-                    };
-                    let mut node = [0u32; 8];
-                    for (corner, (a, b)) in around.iter().enumerate() {
-                        let line = self.line_for(b * pi + a, column);
-                        node[corner] = (first * self.lines + line) as u32;
-                        node[corner + 4] = (second * self.lines + line) as u32;
-                    }
-                    cells.push(node);
-                    index.push(cell as u32);
-                }
-            }
-        }
-        if cells.len() == ni * nj * nk {
-            index.clear();
-        }
-        (cells, index)
+        crate::ijk::hexahedra_of(
+            self.cells,
+            self.pillars,
+            &self.layer_tops,
+            &self.cell_defined,
+            self.up,
+            self.lines,
+            |pillar, column| self.line_for(pillar, column),
+        )
     }
 }
 
@@ -393,24 +368,20 @@ pub enum CutError {
     },
 }
 
-/// The hanging-wall side of a trace walked forward: the sign of the side its
-/// dip direction points to, on average - the rule of `fault_throw`.
-fn hanging_wall_side(trace: &[Point], dip_azimuth: f64, fault: &str) -> Result<f64, CutError> {
-    let direction = [dip_azimuth.to_radians().sin(), dip_azimuth.to_radians().cos()];
-    let (mut sum, mut total) = (0.0f64, 0.0f64);
-    for pair in trace.windows(2) {
-        let v = fault_throw::plan(&pair[0], &pair[1]);
-        sum += vplan::cross(v, direction);
-        total += vplan::norm(v);
+/// The refusal of the shared trace reading ([`fault_throw::orient`],
+/// [`fault_throw::read_trace`], [`fault_throw::hanging_wall_side`]), with the
+/// fault and the level it was read at named.
+fn cut_error(why: fault_throw::TraceFault, fault: &str, level: f64) -> CutError {
+    use fault_throw::TraceFault;
+    let fault = fault.to_string();
+    match why {
+        TraceFault::NoSurface => CutError::NoSurface { fault },
+        TraceFault::Vertical { dip } => CutError::Vertical { fault, dip },
+        TraceFault::NoTrace => CutError::NoTrace { fault, level },
+        TraceFault::Pieces { count } => CutError::Pieces { fault, level, count },
+        TraceFault::Ring => CutError::Ring { fault, level },
+        TraceFault::AlongDip { angle } => CutError::AlongDip { fault, angle },
     }
-    let mean = if total > 0.0 { sum / total } else { 0.0 };
-    if mean.abs() < fault_throw::ACROSS {
-        return Err(CutError::AlongDip {
-            fault: fault.to_string(),
-            angle: mean.abs().clamp(0.0, 1.0).asin().to_degrees(),
-        });
-    }
-    Ok(mean.signum())
 }
 
 /// One fault, read against the grid: its trace, its sides, its throw at each
@@ -496,16 +467,8 @@ pub fn cut(
     let mut read: Vec<Read> = Vec::with_capacity(faults.len());
     for fault in faults {
         let surface: Vec<Point> = fault.points.iter().map(local).collect();
-        let orientation =
-            fault_sticks::orientation(&surface, fault.triangles, up).ok_or_else(|| CutError::NoSurface {
-                fault: fault.name.to_string(),
-            })?;
-        if orientation.dip > VERTICAL {
-            return Err(CutError::Vertical {
-                fault: fault.name.to_string(),
-                dip: orientation.dip,
-            });
-        }
+        let orientation = fault_throw::orient(&surface, fault.triangles, up)
+            .map_err(|why| cut_error(why, fault.name, f64::NAN))?;
         let (mut low, mut high) = (f64::INFINITY, f64::NEG_INFINITY);
         let (mut lo, mut hi) = ([f64::INFINITY; 2], [f64::NEG_INFINITY; 2]);
         for p in surface
@@ -549,38 +512,13 @@ pub fn cut(
             [hi[0] + 1.0, hi[1] + 1.0, level],
             [lo[0] - 1.0, hi[1] + 1.0, level],
         ];
-        let found = intersect(&surface, fault.triangles, &plate, &[[0, 1, 2], [0, 2, 3]]);
-        let mut pieces = fault_throw::weld(
-            found
-                .traces
-                .into_iter()
-                .map(|trace| trace.points)
-                .filter(|line| line.len() >= 2)
-                .collect(),
-        );
-        let (trace, closed) = match pieces.len() {
-            0 => {
-                return Err(CutError::NoTrace {
-                    fault: fault.name.to_string(),
-                    level,
-                });
-            }
-            1 => pieces.remove(0),
-            count => {
-                return Err(CutError::Pieces {
-                    fault: fault.name.to_string(),
-                    level,
-                    count,
-                });
-            }
-        };
-        if closed {
-            return Err(CutError::Ring {
-                fault: fault.name.to_string(),
-                level,
-            });
-        }
-        let sigma = hanging_wall_side(&trace, orientation.dip_azimuth, fault.name)?;
+        let trace = fault_throw::read_trace(&surface, fault.triangles, &plate, &[[0, 1, 2], [0, 2, 3]])
+            .map_err(|why| cut_error(why, fault.name, level))?;
+        let sigma = fault_throw::hanging_wall_side(
+            trace.windows(2).map(|pair| fault_throw::plan(&pair[0], &pair[1])),
+            orientation.dip_azimuth,
+        )
+        .map_err(|why| cut_error(why, fault.name, level))?;
         let length = fault_throw::plan_length(&trace);
         let amount: Vec<f64> = at_pillar
             .iter()
@@ -850,18 +788,7 @@ pub fn cut(
             cells: cell_defined.len(),
         });
     }
-    let mut pillar_defined = vec![false; per_level];
-    for k in 0..nk {
-        for j in 0..nj {
-            for i in 0..ni {
-                if cell_defined[(k * nj + j) * ni + i] {
-                    for p in [j * pi + i, j * pi + i + 1, (j + 1) * pi + i + 1, (j + 1) * pi + i] {
-                        pillar_defined[p] = true;
-                    }
-                }
-            }
-        }
-    }
+    let pillar_defined = crate::ijk::pillars_of(&cell_defined, stacked.cells, stacked.pillars);
 
     Ok(Faulted {
         cells: stacked.cells,

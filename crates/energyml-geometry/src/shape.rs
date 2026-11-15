@@ -78,6 +78,44 @@ use crate::error::{Error, Result};
 use crate::geometry::{Geometry, Patch, Topology};
 use crate::points::Point;
 
+/// The six faces of a hexahedron, from VTK's corner order (VTK file formats,
+/// "Cell types": `VTK_HEXAHEDRON` = 12, corners 0-3 the bottom face
+/// counter-clockwise seen from above, 4-7 the top face above them). Each face
+/// is wound so its right-hand normal points out of the cell.
+///
+/// The one table: the boundary of a grid, the signed volume of a cell, the OBJ
+/// and VTK exporters and the builders of `energyml-build` all read it
+/// (`[export-providers-cache-rules S10]`).
+pub const HEXAHEDRON_FACES: [[usize; 4]; 6] = [
+    [0, 3, 2, 1],
+    [4, 5, 6, 7],
+    [0, 1, 5, 4],
+    [1, 2, 6, 5],
+    [2, 3, 7, 6],
+    [3, 0, 4, 7],
+];
+
+/// The index runs of a [`Topology::Polylines`] patch, as lists of patch-local
+/// node indices: runs of fewer than two nodes are dropped, and a run the file
+/// states closed (`closed[rank]` true - an absent entry states nothing) ends on
+/// its first node, since a line cell has no closing flag. The one expansion,
+/// for every exporter; each adds its own base offset.
+pub fn polyline_runs(runs: &[u32], closed: &[bool]) -> Vec<Vec<u32>> {
+    let mut start = 0u32;
+    let mut out = Vec::new();
+    for (rank, run) in runs.iter().enumerate() {
+        if *run >= 2 {
+            let mut line: Vec<u32> = (start..start + run).collect();
+            if closed.get(rank) == Some(&true) {
+                line.push(start);
+            }
+            out.push(line);
+        }
+        start += run;
+    }
+    out
+}
+
 /// The form a caller wants a representation drawn in.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Shape {
@@ -582,19 +620,9 @@ fn wound(ring: [u32; 4], points: &[Point]) -> [u32; 4] {
 /// The six faces come from the corner order [`Topology::Hexahedra`] already
 /// guarantees (VTK's), so their winding is inherited rather than chosen.
 fn boundary_of(cells: &[[u32; 8]], points: &[Point]) -> Vec<[u32; 4]> {
-    // VTK's hexahedron: bottom 0-1-2-3, top 4-5-6-7.
-    const FACES: [[usize; 4]; 6] = [
-        [0, 3, 2, 1],
-        [4, 5, 6, 7],
-        [0, 1, 5, 4],
-        [1, 2, 6, 5],
-        [2, 3, 7, 6],
-        [3, 0, 4, 7],
-    ];
-
     let mut seen: HashMap<[u32; 4], (usize, [u32; 4])> = HashMap::new();
     for cell in cells {
-        for face in FACES {
+        for face in HEXAHEDRON_FACES {
             let ring = [cell[face[0]], cell[face[1]], cell[face[2]], cell[face[3]]];
             // The key ignores winding and starting corner, so the same face
             // seen from either of its two cells hashes the same.

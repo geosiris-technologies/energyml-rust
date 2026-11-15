@@ -42,6 +42,7 @@ pub mod outline;
 pub mod polyline;
 pub mod rbf;
 pub mod resample;
+mod samples;
 mod solve;
 pub mod triangulate;
 pub mod variogram;

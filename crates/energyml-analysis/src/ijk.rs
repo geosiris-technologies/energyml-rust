@@ -445,6 +445,78 @@ pub struct Stacked {
     pub up: Up,
 }
 
+/// The one builder of an IJK grid's hexahedra, for the stacked grid and the cut
+/// one (`[analysis D3]`): the defined cells in RESQML's order, as eight node
+/// indices in VTK's order, and the RESQML index of each (empty when every cell
+/// is defined). A node is `level * stride + line`; `line_of(pillar, column)` is
+/// the coordinate line a column takes its corner from on a pillar - the pillar
+/// itself for a grid with no split line.
+pub(crate) fn hexahedra_of(
+    cells: [usize; 3],
+    pillars: [usize; 2],
+    layer_tops: &[usize],
+    cell_defined: &[bool],
+    up: Up,
+    stride: usize,
+    line_of: impl Fn(usize, usize) -> usize,
+) -> (Vec<[u32; 8]>, Vec<u32>) {
+    let [ni, nj, nk] = cells;
+    let pi = pillars[0];
+    let mut out = Vec::new();
+    let mut index = Vec::new();
+    for (k, &top) in layer_tops.iter().enumerate() {
+        for j in 0..nj {
+            for i in 0..ni {
+                let cell = (k * nj + j) * ni + i;
+                if !cell_defined[cell] {
+                    continue;
+                }
+                let column = j * ni + i;
+                // Anticlockwise seen from +z: its right-hand normal is +z.
+                let around = [(i, j), (i + 1, j), (i + 1, j + 1), (i, j + 1)];
+                // The face with the smaller z first: the top level in a
+                // depth frame, the bottom one in an elevation frame.
+                let (first, second) = match up {
+                    Up::MinusZ => (top, top + 1),
+                    Up::PlusZ => (top + 1, top),
+                };
+                let mut node = [0u32; 8];
+                for (corner, (a, b)) in around.iter().enumerate() {
+                    let line = line_of(b * pi + a, column);
+                    node[corner] = (first * stride + line) as u32;
+                    node[corner + 4] = (second * stride + line) as u32;
+                }
+                out.push(node);
+                index.push(cell as u32);
+            }
+        }
+    }
+    if out.len() == ni * nj * nk {
+        index.clear();
+    }
+    (out, index)
+}
+
+/// The pillars that have a node of a defined cell, `(Nj + 1) × (Ni + 1)` flags,
+/// `i` fastest - the one derivation, for the stacked grid and the cut one.
+pub(crate) fn pillars_of(cell_defined: &[bool], cells: [usize; 3], pillars: [usize; 2]) -> Vec<bool> {
+    let [ni, nj, nk] = cells;
+    let pi = pillars[0];
+    let mut out = vec![false; pillars[0] * pillars[1]];
+    for k in 0..nk {
+        for j in 0..nj {
+            for i in 0..ni {
+                if cell_defined[(k * nj + j) * ni + i] {
+                    for p in [j * pi + i, j * pi + i + 1, (j + 1) * pi + i + 1, (j + 1) * pi + i] {
+                        out[p] = true;
+                    }
+                }
+            }
+        }
+    }
+    out
+}
+
 impl Stacked {
     /// K gaps.
     pub fn gaps(&self) -> usize {
@@ -484,41 +556,16 @@ impl Stacked {
     /// `(4, 5, 6, 7)` - and the RESQML index of each, empty when every cell is
     /// defined (the reader's convention, `energyml_geometry::ijk`).
     pub fn hexahedra(&self) -> (Vec<[u32; 8]>, Vec<u32>) {
-        let [ni, nj, nk] = self.cells;
-        let pi = self.pillars[0];
-        let per_level = pi * self.pillars[1];
-        let mut cells = Vec::new();
-        let mut index = Vec::new();
-        for (k, &top) in self.layer_tops.iter().enumerate() {
-            for j in 0..nj {
-                for i in 0..ni {
-                    let cell = (k * nj + j) * ni + i;
-                    if !self.cell_defined[cell] {
-                        continue;
-                    }
-                    // Anticlockwise seen from +z: its right-hand normal is +z.
-                    let around = [(i, j), (i + 1, j), (i + 1, j + 1), (i, j + 1)];
-                    // The face with the smaller z first: the top level in a
-                    // depth frame, the bottom one in an elevation frame.
-                    let (first, second) = match self.up {
-                        Up::MinusZ => (top, top + 1),
-                        Up::PlusZ => (top + 1, top),
-                    };
-                    let mut node = [0u32; 8];
-                    for (corner, (a, b)) in around.iter().enumerate() {
-                        let pillar = b * pi + a;
-                        node[corner] = (first * per_level + pillar) as u32;
-                        node[corner + 4] = (second * per_level + pillar) as u32;
-                    }
-                    cells.push(node);
-                    index.push(cell as u32);
-                }
-            }
-        }
-        if cells.len() == ni * nj * nk {
-            index.clear();
-        }
-        (cells, index)
+        let per_level = self.pillars[0] * self.pillars[1];
+        hexahedra_of(
+            self.cells,
+            self.pillars,
+            &self.layer_tops,
+            &self.cell_defined,
+            self.up,
+            per_level,
+            |pillar, _column| pillar,
+        )
     }
 
     /// `GridIsRighthanded`: the sign of the triple product of the I, J and K
@@ -683,7 +730,6 @@ pub fn stack(request: &Request<'_>) -> Result<Stacked, IjkError> {
 
     // A cell is defined when its eight corners are.
     let mut cell_defined = vec![false; nk * nj * ni];
-    let mut pillar_defined = vec![false; per_level];
     for (k, &top) in layer_tops.iter().enumerate() {
         for j in 0..nj {
             for i in 0..ni {
@@ -693,9 +739,6 @@ pub fn stack(request: &Request<'_>) -> Result<Stacked, IjkError> {
                     .all(|&p| z[top * per_level + p].is_finite() && z[(top + 1) * per_level + p].is_finite());
                 if known {
                     cell_defined[(k * nj + j) * ni + i] = true;
-                    for p in around {
-                        pillar_defined[p] = true;
-                    }
                 }
             }
         }
@@ -705,6 +748,8 @@ pub fn stack(request: &Request<'_>) -> Result<Stacked, IjkError> {
             cells: cell_defined.len(),
         });
     }
+
+    let pillar_defined = pillars_of(&cell_defined, [ni, nj, nk], [pi, pj]);
 
     Ok(Stacked {
         cells: [ni, nj, nk],

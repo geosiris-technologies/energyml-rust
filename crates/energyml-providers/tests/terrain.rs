@@ -859,3 +859,25 @@ fn a_wmts_in_pm_is_a_zxy_template_and_nothing_else_is() {
             .contains("not a WMTS")
     );
 }
+
+/// A source named by the caller is judged by `unread`, the verdict that also
+/// chooses on the caller's behalf and greys a source in a face
+/// (`[export-providers-cache-rules S14]`): the refusal carries its words, and
+/// an area that is no window is refused whichever door tests it.
+/// Break it: give `ask` its own inline checks again with other words and the
+/// first assertion fails.
+#[test]
+fn a_named_source_is_refused_with_the_verdict_of_unread() {
+    let catalogue = builtin();
+    for id in ["copernicus-dem-30", "aws-terrain-tiles", "ign-ortho"] {
+        let source = catalogue.get(id).unwrap();
+        let verdict = terrain::unread(source).expect("a source this crate does not read");
+        let why = message(terrain::ask(&catalogue, Some(id), PARIS, 2154, PARIS_WGS84, 50.0).unwrap_err());
+        assert!(why.contains(&verdict), "{id}: {why}");
+    }
+    let flipped = [652_000.0, 6_861_000.0, 651_000.0, 6_860_000.0];
+    let why = message(
+        terrain::ask(&catalogue, Some("ign-rge-alti"), flipped, 2154, PARIS_WGS84, 50.0).unwrap_err(),
+    );
+    assert!(why.contains("min < max"), "{why}");
+}

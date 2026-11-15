@@ -68,13 +68,7 @@ pub fn empirical<const N: usize>(
     {
         return Err(Error::BadRadius { given: reach });
     }
-    let usable: Vec<([f64; N], f64)> = samples
-        .iter()
-        .zip(values)
-        .filter(|(point, value)| value.is_finite() && point.iter().all(|c| c.is_finite()))
-        .map(|(point, value)| (*point, *value))
-        .collect();
-    let set_aside = samples.len() - usable.len();
+    let (usable, set_aside) = crate::samples::usable(samples, values);
     if usable.len() < 2 {
         return Err(Error::TooFewSamples {
             usable: usable.len(),
@@ -82,13 +76,7 @@ pub fn empirical<const N: usize>(
         });
     }
 
-    let distance = |a: &[f64; N], b: &[f64; N]| -> f64 {
-        a.iter()
-            .zip(b)
-            .map(|(x, y)| (x - y) * (x - y))
-            .sum::<f64>()
-            .sqrt()
-    };
+    let distance = crate::samples::distance::<N>;
     let farthest = {
         let mut top = 0.0f64;
         for (at, (a, _)) in usable.iter().enumerate() {

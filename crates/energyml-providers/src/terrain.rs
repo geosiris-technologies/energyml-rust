@@ -316,6 +316,24 @@ pub fn lat_lon_first(epsg: u32) -> bool {
     matches!(epsg, 4326 | 4258)
 }
 
+/// Whether `window` is `[x_min, y_min, x_max, y_max]`: finite, with min < max
+/// on both axes. The one test of a window, for [`wms_raster_request`], [`ask`]
+/// and [`area_wgs84`].
+fn is_window(window: &[f64; 4]) -> bool {
+    window.iter().all(|v| v.is_finite()) && window[0] < window[2] && window[1] < window[3]
+}
+
+/// The refusal of an area that is not a window, or `Ok`.
+fn check_area(area: &[f64; 4]) -> Result<()> {
+    if is_window(area) {
+        Ok(())
+    } else {
+        Err(Error::Refused(format!(
+            "the area {area:?} is not [x_min, y_min, x_max, y_max] with min < max"
+        )))
+    }
+}
+
 /// The `GetMap` for a WMS raster source.
 ///
 /// `bbox` is `[x_min, y_min, x_max, y_max]` **in the CRS `epsg`, longitude or
@@ -357,7 +375,7 @@ pub fn wms_raster_request(
              (the service's MaxWidth/MaxHeight)"
         )));
     }
-    if !bbox.iter().all(|v| v.is_finite()) || bbox[0] >= bbox[2] || bbox[1] >= bbox[3] {
+    if !is_window(&bbox) {
         return Err(Error::Refused(format!(
             "the window {bbox:?} is not [x_min, y_min, x_max, y_max] with min < max"
         )));
@@ -760,6 +778,13 @@ pub fn voids_of(raster: &Raster) -> (Vec<bool>, Voids) {
 /// [`voids_of`] finds without a height becomes NaN, which is how a lattice
 /// writes a hole (RESQML's null for a double is NaN).
 pub fn lattice_of(raster: &Raster) -> Result<energyml_build::pieces::Lattice> {
+    lattice_with_voids(raster).map(|(lattice, _)| lattice)
+}
+
+/// [`lattice_of`] and the [`Voids`] it found, from one scan of the raster: a
+/// face that reports the holes calls this rather than [`lattice_of`] and
+/// [`voids_of`], which would scan twice (`[export-providers-cache-rules S14]`).
+pub fn lattice_with_voids(raster: &Raster) -> Result<(energyml_build::pieces::Lattice, Voids)> {
     let (w, h) = (raster.width, raster.height);
     if w == 0 || h == 0 {
         return Err(bad("the raster has no pixels"));
@@ -773,7 +798,7 @@ pub fn lattice_of(raster: &Raster) -> Result<energyml_build::pieces::Lattice> {
     if !(raster.pixel[0] > 0.0 && raster.pixel[1] > 0.0) {
         return Err(bad("the pixel size is not positive"));
     }
-    let (hole, _) = voids_of(raster);
+    let (hole, voids) = voids_of(raster);
     let mut z = Vec::with_capacity(w * h);
     for j in 0..h {
         let row = h - 1 - j; // j counts from the south; the file counts from the north
@@ -785,7 +810,7 @@ pub fn lattice_of(raster: &Raster) -> Result<energyml_build::pieces::Lattice> {
             });
         }
     }
-    Ok(energyml_build::pieces::Lattice {
+    let lattice = energyml_build::pieces::Lattice {
         origin: [
             raster.origin_top_left[0] + raster.pixel[0] / 2.0,
             raster.origin_top_left[1] - (h as f64 - 0.5) * raster.pixel[1],
@@ -793,7 +818,8 @@ pub fn lattice_of(raster: &Raster) -> Result<energyml_build::pieces::Lattice> {
         spacing: raster.pixel,
         counts: [w, h],
         z,
-    })
+    };
+    Ok((lattice, voids))
 }
 
 // ---------------------------------------------------------------------------
@@ -895,11 +921,7 @@ pub fn ask<'a>(
             "the step must be a positive length, not {step}"
         )));
     }
-    if !area.iter().all(|v| v.is_finite()) || area[0] >= area[2] || area[1] >= area[3] {
-        return Err(Error::Refused(format!(
-            "the area {area:?} is not [x_min, y_min, x_max, y_max] with min < max"
-        )));
-    }
+    check_area(&area)?;
     let chosen = match source {
         Some(id) => {
             let Some(found) = catalogue.get(id) else {
@@ -909,16 +931,10 @@ pub fn ask<'a>(
                     known.join(", ")
                 )));
             };
-            if found.needs_key {
-                return Err(Error::Refused(format!(
-                    "`{id}` needs a key, and nothing here sends one"
-                )));
-            }
-            if found.kind != SourceKind::Relief {
-                return Err(Error::Refused(format!(
-                    "`{id}` is a source of {}, and a terrain is relief",
-                    found.kind.label()
-                )));
+            // The one verdict on what this crate can read, the same one a face
+            // uses to grey a source: a key, another kind, a protocol not read.
+            if let Some(why) = unread(found) {
+                return Err(Error::Refused(format!("`{id}` cannot be asked: {why}")));
             }
             if !found.coverage.contains(area_wgs84) {
                 return Err(Error::Refused(format!(
@@ -1026,11 +1042,7 @@ pub fn area_wgs84(
     epsg: u32,
     reproject: impl Fn([f64; 3]) -> std::result::Result<[f64; 3], String>,
 ) -> Result<[f64; 4]> {
-    if !area.iter().all(|v| v.is_finite()) || area[0] >= area[2] || area[1] >= area[3] {
-        return Err(Error::Refused(format!(
-            "the area {area:?} is not [x_min, y_min, x_max, y_max] with min < max"
-        )));
-    }
+    check_area(&area)?;
     if epsg == 4326 {
         return Ok(area);
     }

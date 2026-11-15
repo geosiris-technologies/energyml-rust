@@ -11,6 +11,7 @@
 
 use std::io::Write;
 
+use energyml_geometry::shape::{HEXAHEDRON_FACES, polyline_runs};
 use energyml_geometry::{Placement, SceneObject, Topology};
 
 use crate::error::{Error, Result};
@@ -99,19 +100,11 @@ impl Exporter for ObjExporter {
                         }
                     }
                     Topology::Polylines(runs) => {
-                        let mut start = base;
-                        for (rank, run) in runs.iter().enumerate() {
-                            if *run >= 2 {
-                                let mut indices: Vec<String> =
-                                    (0..*run).map(|i| (start + i).to_string()).collect();
-                                // A ring the file calls closed ends on its first
-                                // vertex: an OBJ `l` has no closing flag.
-                                if patch.closed.get(rank) == Some(&true) {
-                                    indices.push(start.to_string());
-                                }
-                                writeln!(out, "l {}", indices.join(" "))?;
-                            }
-                            start += run;
+                        // A ring the file calls closed ends on its first
+                        // vertex: an OBJ `l` has no closing flag.
+                        for line in polyline_runs(runs, &patch.closed) {
+                            let indices: Vec<String> = line.iter().map(|i| (base + i).to_string()).collect();
+                            writeln!(out, "l {}", indices.join(" "))?;
                         }
                     }
                     // A cell becomes its six faces. Interior faces are written
@@ -247,17 +240,6 @@ fn header(
     }
     Ok(())
 }
-
-/// The six faces of a hexahedron in VTK corner order, each wound so its normal
-/// points out of the cell.
-const HEXAHEDRON_FACES: [[usize; 4]; 6] = [
-    [0, 3, 2, 1], // the 0-1-2-3 face, reversed so the normal points outward
-    [4, 5, 6, 7],
-    [0, 1, 5, 4],
-    [1, 2, 6, 5],
-    [2, 3, 7, 6],
-    [3, 0, 4, 7],
-];
 
 /// An OBJ object name: no spaces, and never empty.
 fn sanitise(title: &str, uuid: &str) -> String {

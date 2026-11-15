@@ -41,6 +41,7 @@
 
 use std::io::Write;
 
+use energyml_geometry::shape::{HEXAHEDRON_FACES, polyline_runs};
 use energyml_geometry::{Attribute, AttributeScope, Placement, SceneObject, Topology};
 
 use crate::error::{Error, Result};
@@ -234,19 +235,11 @@ impl Cells {
     }
 }
 
-/// The six faces of a hexahedron in VTK corner order, wound outward.
-///
-/// Needed only by `PolyData`, which has no volume cells: a grid written as
-/// `.vtp` becomes its faces, interior ones included. `.vtu` holds the cells
-/// themselves and is the right container for a grid.
-const HEXAHEDRON_FACES: [[usize; 4]; 6] = [
-    [0, 3, 2, 1],
-    [4, 5, 6, 7],
-    [0, 1, 5, 4],
-    [1, 2, 6, 5],
-    [2, 3, 7, 6],
-    [3, 0, 4, 7],
-];
+// The faces of a hexahedron, wound outward, are
+// `energyml_geometry::shape::HEXAHEDRON_FACES`. Needed only by `PolyData`,
+// which has no volume cells: a grid written as `.vtp` becomes its faces,
+// interior ones included. `.vtu` holds the cells themselves and is the right
+// container for a grid.
 
 fn cells_of(object: &SceneObject) -> Cells {
     let (_, triangles) = object.geometry.merged();
@@ -265,19 +258,13 @@ fn cells_of(object: &SceneObject) -> Cells {
                 lines.extend(pairs.iter().map(|pair| vec![pair[0] + base, pair[1] + base]));
             }
             Topology::Polylines(runs) => {
-                let mut start = base;
-                for (rank, run) in runs.iter().enumerate() {
-                    if *run >= 2 {
-                        let mut line: Vec<_> = (0..*run).map(|i| start + i).collect();
-                        // A VTK polyline cell has no closing flag either: a
-                        // ring the file calls closed ends on its first point.
-                        if patch.closed.get(rank) == Some(&true) {
-                            line.push(start);
-                        }
-                        lines.push(line);
-                    }
-                    start += run;
-                }
+                // A VTK polyline cell has no closing flag either: a ring the
+                // file calls closed ends on its first point.
+                lines.extend(
+                    polyline_runs(runs, &patch.closed)
+                        .into_iter()
+                        .map(|line| line.into_iter().map(|i| base + i).collect::<Vec<u32>>()),
+                );
             }
             // Already wound by `energyml_geometry::shape`, which measures the
             // signed area rather than assuming a convention the file does not

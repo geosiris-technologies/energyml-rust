@@ -288,14 +288,6 @@ pub(crate) fn oriented(node: [u32; 8], points: &[Point]) -> [u32; 8] {
 fn signed_volume(node: [u32; 8], points: &[Point]) -> f64 {
     // Each face wound so its right-hand normal points *out* of the cell when
     // the corners are in VTK's order.
-    const FACES: [[usize; 4]; 6] = [
-        [0, 3, 2, 1],
-        [4, 5, 6, 7],
-        [0, 1, 5, 4],
-        [1, 2, 6, 5],
-        [2, 3, 7, 6],
-        [3, 0, 4, 7],
-    ];
     let mut origin = [0.0f64; 3];
     for index in node {
         let point = points[index as usize];
@@ -309,7 +301,7 @@ fn signed_volume(node: [u32; 8], points: &[Point]) -> f64 {
     };
 
     let mut volume = 0.0;
-    for face in FACES {
+    for face in crate::shape::HEXAHEDRON_FACES {
         let mut middle = [0.0f64; 3];
         for corner in face {
             let point = at(corner);

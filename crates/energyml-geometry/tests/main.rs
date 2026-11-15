@@ -23,6 +23,7 @@ mod derived;
 mod deviation_survey;
 mod direction_at;
 mod drawable;
+mod faces;
 mod fixtures;
 mod head_portion;
 mod heads;

@@ -120,14 +120,7 @@ impl Idw {
 
         // The NaN set-aside: a sample with an undefined value or an
         // undefined coordinate takes no part, and is counted.
-        let usable: Vec<(usize, [f64; N], f64)> = samples
-            .iter()
-            .zip(values)
-            .enumerate()
-            .filter(|(_, (point, value))| value.is_finite() && point.iter().all(|c| c.is_finite()))
-            .map(|(at, (point, value))| (at, *point, *value))
-            .collect();
-        let set_aside = samples.len() - usable.len();
+        let (usable, set_aside) = crate::samples::usable(samples, values);
         if usable.is_empty() {
             return Err(Error::NoSample {
                 given: samples.len(),
@@ -150,7 +143,7 @@ impl Idw {
         for query in queries {
             near.clear();
             let mut exact: Option<f64> = None;
-            for (at, (_, point, value)) in usable.iter().enumerate() {
+            for (at, (point, value)) in usable.iter().enumerate() {
                 let d2: f64 = point.iter().zip(query).map(|(a, b)| (a - b) * (a - b)).sum();
                 if d2 <= exact2 {
                     exact = Some(*value);
@@ -171,7 +164,7 @@ impl Idw {
                 // - a fault is a trace in plan view - so a 3D call is cut by
                 // its map-view shadow.
                 Some(faults) => keep_visible(&mut near, self.neighbours, |at| {
-                    faults.blocks(plan(&usable[at].1), plan(query))
+                    faults.blocks(plan(&usable[at].0), plan(query))
                 }),
                 None => {
                     if let Some(k) = self.neighbours
@@ -192,7 +185,7 @@ impl Idw {
             let mut total = 0.0;
             for &(d2, at) in &near {
                 let w = weight(d2);
-                weighted += w * usable[at].2;
+                weighted += w * usable[at].1;
                 total += w;
             }
             out.push(weighted / total);

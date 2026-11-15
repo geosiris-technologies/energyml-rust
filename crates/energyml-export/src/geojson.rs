@@ -37,6 +37,7 @@
 use std::io::Write;
 
 use energyml_domain::reproject::Wgs84;
+use energyml_geometry::shape::polyline_runs;
 use energyml_geometry::{Placement, SceneObject, Topology};
 
 use crate::error::{Error, Result};
@@ -415,21 +416,20 @@ fn polylines(object: &SceneObject, points: &[[f64; 3]]) -> String {
             }
         }
         if let Topology::Polylines(runs) = &patch.topology {
-            let mut at = start;
-            for (rank, run) in runs.iter().enumerate() {
-                let end = (at + *run as usize).min(points.len());
-                if end > at + 1 {
-                    let mut line: Vec<String> = points[at..end].iter().map(|p| position(*p)).collect();
-                    // A ring the file calls closed repeats its first position,
-                    // the only way a LineString says so (RFC 7946 §3.1.4 has
-                    // no flag). Only when stated: an absent `ClosedPolylines`
-                    // is not a ring.
-                    if patch.closed.get(rank) == Some(&true) {
-                        line.push(position(points[at]));
-                    }
+            // A ring the file calls closed repeats its first position, the
+            // only way a LineString says so (RFC 7946 §3.1.4 has no flag). Only
+            // when stated: an absent `ClosedPolylines` is not a ring. A run
+            // that reaches past the points is cut at the last one.
+            for run in polyline_runs(runs, &patch.closed) {
+                let line: Vec<String> = run
+                    .iter()
+                    .map(|i| start + *i as usize)
+                    .filter(|at| *at < points.len())
+                    .map(|at| position(points[at]))
+                    .collect();
+                if line.len() > 1 {
                     lines.push(format!("[{}]", line.join(",")));
                 }
-                at = end;
             }
         }
         start += patch.points.len();

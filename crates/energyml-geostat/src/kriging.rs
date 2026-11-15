@@ -158,13 +158,7 @@ impl Ordinary {
         if self.neighbours == Some(0) {
             return Err(Error::NoNeighbours);
         }
-        let usable: Vec<([f64; N], f64)> = samples
-            .iter()
-            .zip(values)
-            .filter(|(point, value)| value.is_finite() && point.iter().all(|c| c.is_finite()))
-            .map(|(point, value)| (*point, *value))
-            .collect();
-        let set_aside = samples.len() - usable.len();
+        let (usable, set_aside) = crate::samples::usable(samples, values);
         if usable.is_empty() {
             return Err(Error::NoSample {
                 given: samples.len(),
@@ -172,26 +166,11 @@ impl Ordinary {
             });
         }
 
-        let distance = |a: &[f64; N], b: &[f64; N]| -> f64 {
-            a.iter()
-                .zip(b)
-                .map(|(x, y)| (x - y) * (x - y))
-                .sum::<f64>()
-                .sqrt()
-        };
+        let distance = crate::samples::distance::<N>;
         // Coincident samples make two identical rows - singular by
         // construction, and better refused with both names than found as
         // a mysterious zero pivot below.
-        for (at, (a, _)) in usable.iter().enumerate() {
-            for (offset, (b, _)) in usable[at + 1..].iter().enumerate() {
-                if distance(a, b) <= self.exact_within {
-                    return Err(Error::DuplicateSamplePositions {
-                        first: at,
-                        second: at + 1 + offset,
-                    });
-                }
-            }
-        }
+        crate::samples::refuse_coincident(&usable, self.exact_within)?;
 
         if self.is_local() {
             return self.local(&usable, queries, set_aside, distance);

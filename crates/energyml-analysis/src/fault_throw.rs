@@ -524,25 +524,105 @@ fn chain_along(
     Ok(on.into_iter().map(|(_, node)| node).collect())
 }
 
-/// The sign of the hanging-wall side of a chain walked forward: the side the
-/// dip direction points to, on average over its edges.
-fn hanging_wall_side(
-    points: &[Point],
-    chain: &[u32],
+/// Why the trace of a fault on a surface could not be read - the refusals
+/// [`orient`], [`read_trace`] and [`hanging_wall_side`] share, before a caller
+/// names the fault (and, for a grid, the level) in its own error.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum TraceFault {
+    /// The fault has no area to measure a dip on.
+    NoSurface,
+    /// The fault is vertical.
+    Vertical {
+        /// Its measured dip.
+        dip: f64,
+    },
+    /// The surfaces do not meet.
+    NoTrace,
+    /// The surfaces meet in several separate pieces.
+    Pieces {
+        /// How many.
+        count: usize,
+    },
+    /// The trace closes on itself.
+    Ring,
+    /// The trace runs along the dip direction.
+    AlongDip {
+        /// The mean angle, in degrees.
+        angle: f64,
+    },
+}
+
+impl TraceFault {
+    fn tear(self, fault: &str) -> TearError {
+        let fault = fault.to_string();
+        match self {
+            TraceFault::NoSurface => TearError::NoSurface { fault },
+            TraceFault::Vertical { dip } => TearError::Vertical { fault, dip },
+            TraceFault::NoTrace => TearError::NoTrace { fault },
+            TraceFault::Pieces { count } => TearError::Pieces { fault, count },
+            TraceFault::Ring => TearError::Ring { fault },
+            TraceFault::AlongDip { angle } => TearError::AlongDip { fault, angle },
+        }
+    }
+}
+
+/// The orientation of a fault surface, refusing one with no area and one that is
+/// vertical (above [`VERTICAL`]). The one reading of a fault's dip, for the
+/// torn horizon and the cut grid alike.
+pub(crate) fn orient(surface: &[Point], triangles: &[[u32; 3]], up: bool) -> Result<Orientation, TraceFault> {
+    let orientation = fault_sticks::orientation(surface, triangles, up).ok_or(TraceFault::NoSurface)?;
+    if orientation.dip > VERTICAL {
+        return Err(TraceFault::Vertical { dip: orientation.dip });
+    }
+    Ok(orientation)
+}
+
+/// The one trace of a fault surface on another (a horizon, or a horizontal
+/// plate): intersected, welded, and refused when it is nothing, several pieces
+/// or a ring. The one reading of a trace, shared by the torn horizon and the
+/// cut grid, so they cannot disagree on what a trace is.
+pub(crate) fn read_trace(
+    surface: &[Point],
+    triangles: &[[u32; 3]],
+    other_points: &[Point],
+    other_triangles: &[[u32; 3]],
+) -> Result<Vec<Point>, TraceFault> {
+    let cut = intersect(surface, triangles, other_points, other_triangles);
+    let mut pieces = weld(
+        cut.traces
+            .into_iter()
+            .map(|trace| trace.points)
+            .filter(|line| line.len() >= 2)
+            .collect(),
+    );
+    let (line, closed) = match pieces.len() {
+        0 => return Err(TraceFault::NoTrace),
+        1 => pieces.remove(0),
+        count => return Err(TraceFault::Pieces { count }),
+    };
+    if closed {
+        return Err(TraceFault::Ring);
+    }
+    Ok(line)
+}
+
+/// The sign of the hanging-wall side of a trace walked forward: the side the
+/// dip direction points to, on average over its edges, given as plan vectors.
+/// The one rule, for the torn horizon (a chain of nodes) and the cut grid (a
+/// polyline).
+pub(crate) fn hanging_wall_side(
+    vectors: impl IntoIterator<Item = [f64; 2]>,
     dip_azimuth: f64,
-    fault: &str,
-) -> Result<f64, TearError> {
+) -> Result<f64, TraceFault> {
     let direction = [dip_azimuth.to_radians().sin(), dip_azimuth.to_radians().cos()];
     let (mut sum, mut total) = (0.0f64, 0.0f64);
-    for pair in chain.windows(2) {
-        let v = plan(&points[pair[0] as usize], &points[pair[1] as usize]);
+    for v in vectors {
         sum += cross2(v, direction);
         total += length2(v);
     }
     let mean = if total > 0.0 { sum / total } else { 0.0 };
     if mean.abs() < ACROSS {
-        return Err(TearError::AlongDip {
-            fault: fault.to_string(),
+        return Err(TraceFault::AlongDip {
             angle: mean.abs().clamp(0.0, 1.0).asin().to_degrees(),
         });
     }
@@ -751,44 +831,9 @@ pub fn throw(cloud: &[Point], faults: &[Fault<'_>], settings: &Settings) -> Resu
     for fault in faults {
         let surface: Vec<Point> = fault.points.iter().map(local).collect();
         let orientation =
-            fault_sticks::orientation(&surface, fault.triangles, settings.up).ok_or_else(|| {
-                TearError::NoSurface {
-                    fault: fault.name.to_string(),
-                }
-            })?;
-        if orientation.dip > VERTICAL {
-            return Err(TearError::Vertical {
-                fault: fault.name.to_string(),
-                dip: orientation.dip,
-            });
-        }
-        let cut = intersect(&surface, fault.triangles, &nodes, &first);
-        let mut pieces = weld(
-            cut.traces
-                .into_iter()
-                .map(|trace| trace.points)
-                .filter(|line| line.len() >= 2)
-                .collect(),
-        );
-        let (line, closed) = match pieces.len() {
-            0 => {
-                return Err(TearError::NoTrace {
-                    fault: fault.name.to_string(),
-                });
-            }
-            1 => pieces.remove(0),
-            count => {
-                return Err(TearError::Pieces {
-                    fault: fault.name.to_string(),
-                    count,
-                });
-            }
-        };
-        if closed {
-            return Err(TearError::Ring {
-                fault: fault.name.to_string(),
-            });
-        }
+            orient(&surface, fault.triangles, settings.up).map_err(|why| why.tear(fault.name))?;
+        let line =
+            read_trace(&surface, fault.triangles, &nodes, &first).map_err(|why| why.tear(fault.name))?;
         traces.push(snap(line, &nodes));
         orientations.push(orientation);
     }
@@ -824,7 +869,13 @@ pub fn throw(cloud: &[Point], faults: &[Fault<'_>], settings: &Settings) -> Resu
     let mut sigmas: Vec<f64> = Vec::with_capacity(faults.len());
     let mut copies: Vec<Vec<u32>> = Vec::with_capacity(faults.len());
     for ((chain, fault), orientation) in chains.iter().zip(faults).zip(&orientations) {
-        let sigma = hanging_wall_side(&points, chain, orientation.dip_azimuth, fault.name)?;
+        let sigma = hanging_wall_side(
+            chain
+                .windows(2)
+                .map(|pair| plan(&points[pair[0] as usize], &points[pair[1] as usize])),
+            orientation.dip_azimuth,
+        )
+        .map_err(|why| why.tear(fault.name))?;
         copies.push(tear(&mut points, &mut triangles, chain, sigma, fault.name)?);
         sigmas.push(sigma);
     }
