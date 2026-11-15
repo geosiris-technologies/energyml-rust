@@ -496,3 +496,108 @@ fn not_prefetched(location: &ArrayLocation) -> crate::Error {
         ),
     )
 }
+
+/// An object named by a uri written as a value (a cell of a table, a field of a
+/// document): what the uri names, and whether the package holds it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ObjectChip {
+    /// The uri, trimmed, as written.
+    pub uri: String,
+    /// The object's qualified type: the object's own when it is held, else the one the uri names.
+    pub qualified_type: Option<String>,
+    /// `Citation.Title`, when the object is held.
+    pub title: Option<String>,
+    /// Where the named object is.
+    pub presence: Presence,
+}
+
+/// Where the named object is.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Presence {
+    /// The source holds it.
+    InPackage,
+    /// The uri names an object of this dataspace that the source does not hold.
+    NotInPackage,
+    /// The uri names another dataspace than the one `objects` stands for: not looked up.
+    OtherDataspace {
+        /// The dataspace the uri names.
+        dataspace: String,
+    },
+}
+
+/// Why a value is no object uri.
+#[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
+pub enum UriRefusal {
+    /// The value does not match the ETP uri grammar.
+    #[error("`{value}` is not an ETP uri")]
+    NotAnEtpUri {
+        /// The value as written.
+        value: String,
+    },
+    /// An ETP uri of a dataspace, which names no object.
+    #[error("`{value}` names a dataspace, not an object")]
+    NotAnObject {
+        /// The value as written.
+        value: String,
+    },
+}
+
+/// What a uri written as a value names: the object chip.
+///
+/// `here` is the dataspace `objects` stands for (`None`: the default dataspace, which an
+/// EPC is). A uri of another dataspace is **not looked up** (`OtherDataspace`): looking it up
+/// here would answer "absent" for an object that lives elsewhere. A held object is found by
+/// [`ObjectSource::object_at`], the one door of an object by uri; the cost is one read of the
+/// object, so the caller keeps the chip.
+///
+/// # Errors
+///
+/// [`UriRefusal::NotAnEtpUri`] for a value that is not an ETP uri, [`UriRefusal::NotAnObject`] for
+/// a dataspace uri (ETP v1.2 section 25.3.6).
+pub fn object_chip(
+    value: &str,
+    here: Option<&str>,
+    objects: &dyn ObjectSource,
+) -> std::result::Result<ObjectChip, UriRefusal> {
+    let value = value.trim();
+    let uri = energyml_core::identifiers::EtpUri::parse(value).map_err(|_| UriRefusal::NotAnEtpUri {
+        value: value.to_string(),
+    })?;
+    if uri.uuid.is_none() {
+        return Err(UriRefusal::NotAnObject {
+            value: value.to_string(),
+        });
+    }
+    let named_type = uri.qualified_type().map(|qualified| qualified.to_string());
+    if uri.dataspace.as_deref() != here {
+        return Ok(ObjectChip {
+            uri: value.to_string(),
+            qualified_type: named_type,
+            title: None,
+            presence: Presence::OtherDataspace {
+                dataspace: uri.dataspace.clone().unwrap_or_default(),
+            },
+        });
+    }
+    match objects.object_at(value) {
+        Some(object) => {
+            let reflect = object.as_reflect();
+            Ok(ObjectChip {
+                uri: value.to_string(),
+                qualified_type: reflect
+                    .type_info()
+                    .qualified_type
+                    .map(str::to_string)
+                    .or(named_type),
+                title: energyml_core::identity::title_of_reflect(reflect).map(str::to_string),
+                presence: Presence::InPackage,
+            })
+        }
+        None => Ok(ObjectChip {
+            uri: value.to_string(),
+            qualified_type: named_type,
+            title: None,
+            presence: Presence::NotInPackage,
+        }),
+    }
+}

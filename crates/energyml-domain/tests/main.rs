@@ -35,6 +35,7 @@ mod integrity;
 mod matrix;
 mod metadata_nulls;
 mod null_value;
+mod object_chip;
 mod package_index;
 mod package_index_versions;
 mod prefetch;
@@ -59,6 +60,10 @@ mod stratigraphic_column;
 mod stratigraphy_versions;
 mod subtree;
 mod table;
+mod table_check;
+mod table_class;
+mod table_links;
+mod table_resolve;
 mod text_arrays;
 
 mod table_cells;
