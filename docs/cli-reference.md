@@ -99,7 +99,7 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
@@ -163,7 +163,7 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
@@ -237,7 +237,7 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
@@ -306,7 +306,7 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
@@ -369,7 +369,7 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
@@ -437,7 +437,7 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
@@ -507,7 +507,7 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
@@ -569,7 +569,7 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
@@ -643,7 +643,7 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
@@ -712,7 +712,7 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
@@ -783,7 +783,7 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
@@ -940,7 +940,7 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
@@ -999,7 +999,7 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
@@ -1061,7 +1061,7 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
@@ -1130,7 +1130,7 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
@@ -1196,7 +1196,7 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
@@ -1261,7 +1261,7 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
@@ -1334,7 +1334,7 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
@@ -1405,7 +1405,7 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
@@ -1476,7 +1476,7 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
@@ -1531,7 +1531,7 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
@@ -1621,7 +1621,7 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
@@ -1695,7 +1695,7 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
@@ -1853,7 +1853,7 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
@@ -1939,7 +1939,7 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
@@ -2040,7 +2040,7 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
@@ -2140,7 +2140,7 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
@@ -2230,7 +2230,7 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
@@ -2288,7 +2288,7 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
@@ -2349,7 +2349,7 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
@@ -2404,7 +2404,7 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
@@ -2482,7 +2482,7 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
@@ -2551,7 +2551,7 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
