@@ -21,6 +21,7 @@
 //! `earth_model_from_stratigraphy`), and `no_module_here_installs_a_default`
 //! below refuses one that would come back.
 
+mod along_well_view;
 mod attach;
 mod blocked_wellbore;
 mod boreholes;
@@ -30,6 +31,7 @@ mod change_frame;
 mod clip;
 mod collection;
 mod colormap_levels;
+mod combine;
 mod computed_tops;
 mod conditions;
 mod contacts;
@@ -64,6 +66,7 @@ mod injectivity;
 mod interpolate_onto;
 mod intersect;
 mod isocontour_bands;
+mod isosurface_promotion;
 mod kinds;
 mod local_grid;
 mod loft;
@@ -98,6 +101,7 @@ mod roundtrip_mesh;
 mod section_view;
 mod selection;
 mod series_readback;
+mod shaped_property;
 mod shape_placement;
 mod shapes;
 mod sigeol_chain;
@@ -106,6 +110,7 @@ mod streaming;
 mod structural_organisation;
 mod subrepresentation;
 mod surface_framework;
+mod table_link;
 mod tabular;
 mod terrain;
 mod thickness;

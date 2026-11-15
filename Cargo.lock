@@ -366,6 +366,7 @@ dependencies = [
  "energyml-resqml-2-2",
  "energyml-schemas",
  "energyml-section",
+ "energyml-sheet",
  "energyml-storage",
  "energyml-witsml-2-1",
  "serde",

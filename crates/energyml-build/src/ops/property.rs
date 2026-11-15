@@ -14,6 +14,7 @@
 use serde_json::json;
 
 use energyml_domain::property::IndexableElement;
+use energyml_domain::property::shape::ElementShape;
 use energyml_domain::provenance::Parameter;
 
 use crate::declare::{Field, Inputs, ObjectRef, Params, PropertyKindRef, Suggestions, Title, known_named};
@@ -169,8 +170,8 @@ pub enum Timing {
     },
 }
 
-/// [`write()`], with the time the values hold at - the one writer of a
-/// `ContinuousProperty`, timed or not (`property-time-series` calls it).
+/// [`write()`], with the time the values hold at (`property-time-series`
+/// calls it): one value per element, [`write_shaped`] with a scalar shape.
 pub fn write_timed(
     field: &Field,
     known: Option<&Known>,
@@ -178,6 +179,27 @@ pub fn write_timed(
     seed: &str,
     cx: &Context<'_>,
     timing: &Timing,
+) -> Result<Plan, Refusal> {
+    let scalar = ElementShape::of(&[], &[]).expect("empty counts are a scalar");
+    write_shaped(field, known, params, seed, cx, timing, &scalar)
+}
+
+/// [`write_timed`], with several values per element: `shape` is written as
+/// `ValueCountPerIndexableElement` (its dimensions, slowest first) and, when it
+/// has labels, `LabelPerComponent` - RESQML TRG 2.2 section 7.1 p. 222; the
+/// dataset is `[elements, d1, d2, ...]` (`[steps, elements, d1, ...]` for a
+/// series), the order the note of the figure p. 221 gives. A scalar shape
+/// writes what this function always wrote: `[1]` and a flat array.
+///
+/// The one writer of a `ContinuousProperty`, timed or not, scalar or not.
+pub fn write_shaped(
+    field: &Field,
+    known: Option<&Known>,
+    params: &PropertyParams,
+    seed: &str,
+    cx: &Context<'_>,
+    timing: &Timing,
+    shape: &ElementShape,
 ) -> Result<Plan, Refusal> {
     let Field { over, on, values, .. } = field;
     // How many steps the values hold, and how many values each step has.
@@ -188,7 +210,18 @@ pub fn write_timed(
         Timing::Series { steps, .. } => *steps,
         _ => 1,
     };
-    if values.len() % steps != 0 {
+    let per = shape.len();
+    if per > 1 {
+        if values.len() % (steps * per) != 0 {
+            return Err(Refusal::on(
+                "field",
+                format!(
+                    "{} value(s) do not make {steps} step(s) of whole elements of {per} value(s) each",
+                    values.len()
+                ),
+            ));
+        }
+    } else if values.len() % steps != 0 {
         return Err(Refusal::on(
             "field",
             format!(
@@ -197,7 +230,8 @@ pub fn write_timed(
             ),
         ));
     }
-    let per_step = values.len() / steps;
+    // How many elements each step holds.
+    let per_step = values.len() / steps / per;
     let element = IndexableElement::parse(on)
         .ok_or_else(|| Refusal::on("field", format!("`{on}` is not an indexable element")))?;
     let representation = match &params.representation.0 {
@@ -226,10 +260,15 @@ pub fn write_timed(
     // field lies on, when the reader counted them.
     match (element, known.and_then(|k| k.node_count)) {
         (IndexableElement::Nodes, Some(nodes)) if nodes != per_step => {
+            let held = if per > 1 {
+                format!("{per_step} element(s) of {per} value(s)")
+            } else {
+                format!("{per_step} value(s)")
+            };
             return Err(Refusal::on(
                 "field",
                 format!(
-                    "`{over}` holds {nodes} node(s) and the field {per_step} value(s){} - values would land on the wrong elements",
+                    "`{over}` holds {nodes} node(s) and the field {held}{} - values would land on the wrong elements",
                     if steps > 1 { format!(" per step, over {steps} steps") } else { String::new() }
                 ),
             ));
@@ -248,18 +287,27 @@ pub fn write_timed(
     let uuid = support::next_uuid(cx.identity, &format!("property:{seed}"), &mut rank)?;
     let file = params.data_file.clone();
     let path = format!("/resqml22/{uuid}/values");
-    // Time slowest: a series is `[steps, elements]`, anything else `[values]`.
-    let dimensions: Vec<i64> = match timing {
+    // Time slowest, then the elements, then the shape of each element: a
+    // series of scalars is `[steps, elements]`, anything else of scalars
+    // `[values]` - the bytes this function always wrote.
+    let mut dimensions: Vec<i64> = match timing {
         Timing::Series { .. } => vec![steps as i64, per_step as i64],
-        _ => vec![values.len() as i64],
+        _ => vec![if shape.is_scalar() { values.len() as i64 } else { per_step as i64 }],
     };
+    if !shape.is_scalar() {
+        dimensions.extend(shape.dims.iter().map(|&d| d as i64));
+        says.push(Note {
+            key: "components",
+            detail: format!("{per} value(s) per element, shape {:?}", shape.dims),
+        });
+    }
     let mut object = json!({
         "$type": "resqml22.ContinuousProperty",
         "uuid": uuid,
         "schemaVersion": "2.2",
         "Citation": support::citation(cx.when, &title),
         "IndexableElement": on,
-        "ValueCountPerIndexableElement": [1],
+        "ValueCountPerIndexableElement": shape.dims.iter().map(|&d| d as i64).collect::<Vec<i64>>(),
         "PropertyKind": kind,
         "SupportingRepresentation": representation,
         "Uom": uom,
@@ -270,6 +318,9 @@ pub fn write_timed(
             "Values": support::external(&file, &path, &dimensions),
         }],
     });
+    if let Some(labels) = &shape.labels {
+        object["LabelPerComponent"] = json!(labels);
+    }
     match timing {
         Timing::Timeless => {}
         Timing::At(instant) => {

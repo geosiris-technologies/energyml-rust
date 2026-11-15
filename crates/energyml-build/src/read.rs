@@ -1115,21 +1115,137 @@ pub struct StoredSection {
 /// only when it is reopened. On a package of sixty thousand objects this reads
 /// its few activities, not its graph.
 pub fn stored_sections(store: &EpcStore) -> Vec<StoredSection> {
-    let Ok(template) = energyml_domain::provenance::template_uuid("section-view") else {
+    let mut out = Vec::new();
+    for (uri, json) in activities_of(store, "section-view") {
+        let parameters = parameters_of(&json);
+        let wrote = parameters.iter().find_map(|p| {
+            let reference = field_of(p, "DataObject")?;
+            let kind = text_of(field_of(&reference, "QualifiedType"))
+                .or_else(|| text_of(field_of(&reference, "ContentType")))?;
+            let named_output = text_of(field_of(p, "Title")).is_some_and(|t| t == "output");
+            (named_output && kind.contains("PolylineSetRepresentation")).then_some(reference)
+        });
+        let name = wrote.as_ref().and_then(|r| text_of(field_of(r, "Title")));
+        // By the identity the activity's reference states - uuid, type and
+        // `ObjectVersion` - so that a section drawn over a versioned copy names
+        // the copy and not its original.
+        let polyline = wrote.as_ref().and_then(|r| {
+            let uuid = text_of(field_of(r, "Uuid"))?;
+            let declared = text_of(field_of(r, "QualifiedType")).or_else(|| {
+                let content = text_of(field_of(r, "ContentType"))?;
+                energyml_core::identity::ObjectId::from_content_type(&content, &uuid)
+                    .ok()
+                    .map(|id| id.qualified_type())
+            });
+            let version = text_of(field_of(r, "ObjectVersion")).or_else(|| text_of(field_of(r, "VersionString")));
+            let version = version
+                .map(|one| one.trim().to_string())
+                .filter(|one| !one.is_empty());
+            store
+                .resolve_reference(&uuid, declared.as_deref(), version.as_deref())
+                .ok()
+                .map(|one| one.uri.clone())
+        });
+        let mut drawings = parts_named(&parameters, "svgPart");
+        drawings.extend(parts_named(&parameters, "drawingPart"));
+        out.push(StoredSection {
+            activity: uri,
+            title: title_of_activity(&json),
+            name,
+            polyline,
+            drawings,
+        });
+    }
+    out.sort_by_key(|one| one.name.as_deref().unwrap_or(&one.title).to_lowercase());
+    out
+}
+
+/// A view result a package holds, as **its activity** says it.
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StoredView {
+    /// The activity's uri.
+    pub activity: String,
+    /// Its title.
+    pub title: String,
+    /// The recipe of its template (`along-well-view`, `section-view`).
+    pub recipe: String,
+    /// The uris of its `input` parameters, as the activity names them.
+    pub inputs: Vec<String>,
+    /// The parts of its drawings (`svgPart`, `pngPart`, `drawingPart`), in that order.
+    pub drawings: Vec<String>,
+}
+
+/// The view results of one recipe a package holds - only the `Activity`
+/// objects are read, kept when their `ActivityDescriptor` names that recipe's
+/// template by uuid (never by title). A recipe with no canonical template
+/// holds none.
+pub fn stored_views(store: &EpcStore, recipe: &str) -> Vec<StoredView> {
+    let mut out = Vec::new();
+    for (uri, json) in activities_of(store, recipe) {
+        let parameters = parameters_of(&json);
+        let inputs = parameters
+            .iter()
+            .filter(|p| text_of(field_of(p, "Title")).is_some_and(|t| t == "input"))
+            .filter_map(|p| {
+                let reference = field_of(p, "DataObject")?;
+                let uuid = text_of(field_of(&reference, "Uuid"))?;
+                let declared = text_of(field_of(&reference, "QualifiedType")).or_else(|| {
+                    let content = text_of(field_of(&reference, "ContentType"))?;
+                    energyml_core::identity::ObjectId::from_content_type(&content, &uuid)
+                        .ok()
+                        .map(|id| id.qualified_type())
+                });
+                let version = text_of(field_of(&reference, "ObjectVersion"))
+                    .or_else(|| text_of(field_of(&reference, "VersionString")))
+                    .map(|one| one.trim().to_string())
+                    .filter(|one| !one.is_empty());
+                // The package's own address when it holds the object, the
+                // reference's own otherwise: an input is named, never dropped.
+                store
+                    .resolve_reference(&uuid, declared.as_deref(), version.as_deref())
+                    .ok()
+                    .map(|one| one.uri.clone())
+                    .or_else(|| {
+                        declared.map(|qualified| {
+                            energyml_core::identifiers::EtpUri::object_versioned(
+                                None,
+                                &qualified,
+                                &uuid.to_ascii_lowercase(),
+                                version.as_deref(),
+                            )
+                        })
+                    })
+            })
+            .collect();
+        let mut drawings = parts_named(&parameters, "svgPart");
+        drawings.extend(parts_named(&parameters, "pngPart"));
+        drawings.extend(parts_named(&parameters, "drawingPart"));
+        out.push(StoredView {
+            activity: uri,
+            title: title_of_activity(&json),
+            recipe: recipe.to_string(),
+            inputs,
+            drawings,
+        });
+    }
+    out.sort_by_key(|one| one.title.to_lowercase());
+    out
+}
+
+/// The activities of a package whose `ActivityDescriptor` names the canonical
+/// template of `recipe` - by its uuid, never its title, which anybody may edit
+/// - as their uri and their JSON. **Only the `Activity` objects are read**,
+/// picked from the listing by type. The one loop of `stored_sections` and
+/// `stored_views`.
+fn activities_of(store: &EpcStore, recipe: &str) -> Vec<(String, serde_json::Value)> {
+    let Ok(template) = energyml_domain::provenance::template_uuid(recipe) else {
         return Vec::new();
     };
     let is_activity = |qualified: &str| {
         let local = qualified.rsplit('.').next().unwrap_or(qualified);
         local.strip_prefix("obj_").unwrap_or(local) == "Activity"
     };
-    let field = |value: &serde_json::Value, name: &str| -> Option<serde_json::Value> {
-        value
-            .as_object()?
-            .iter()
-            .find(|(key, _)| key.eq_ignore_ascii_case(name))
-            .map(|(_, v)| v.clone())
-    };
-    let text = |value: Option<serde_json::Value>| value.and_then(|v| v.as_str().map(str::to_string));
     let mut out = Vec::new();
     for summary in store
         .resources()
@@ -1140,61 +1256,44 @@ pub fn stored_sections(store: &EpcStore) -> Vec<StoredSection> {
             continue;
         };
         let json = energyml_core::json::write_value(object.as_reflect());
-        let descriptor = field(&json, "ActivityDescriptor").and_then(|d| text(field(&d, "Uuid")));
-        if !descriptor.is_some_and(|uuid| uuid.eq_ignore_ascii_case(template)) {
-            continue;
+        let descriptor = field_of(&json, "ActivityDescriptor").and_then(|d| text_of(field_of(&d, "Uuid")));
+        if descriptor.is_some_and(|uuid| uuid.eq_ignore_ascii_case(template)) {
+            out.push((summary.uri, json));
         }
-        let title = field(&json, "Citation")
-            .and_then(|c| text(field(&c, "Title")))
-            .unwrap_or_default();
-        let parameters = field(&json, "Parameter")
-            .and_then(|p| p.as_array().cloned())
-            .unwrap_or_default();
-        let wrote = parameters.iter().find_map(|p| {
-            let reference = field(p, "DataObject")?;
-            let kind = text(field(&reference, "QualifiedType"))
-                .or_else(|| text(field(&reference, "ContentType")))?;
-            let named_output = text(field(p, "Title")).is_some_and(|t| t == "output");
-            (named_output && kind.contains("PolylineSetRepresentation")).then_some(reference)
-        });
-        let name = wrote.as_ref().and_then(|r| text(field(r, "Title")));
-        // By the identity the activity's reference states - uuid, type and
-        // `ObjectVersion` - so that a section drawn over a versioned copy names
-        // the copy and not its original.
-        let polyline = wrote.as_ref().and_then(|r| {
-            let uuid = text(field(r, "Uuid"))?;
-            let declared = text(field(r, "QualifiedType")).or_else(|| {
-                let content = text(field(r, "ContentType"))?;
-                energyml_core::identity::ObjectId::from_content_type(&content, &uuid)
-                    .ok()
-                    .map(|id| id.qualified_type())
-            });
-            let version = text(field(r, "ObjectVersion")).or_else(|| text(field(r, "VersionString")));
-            let version = version
-                .map(|one| one.trim().to_string())
-                .filter(|one| !one.is_empty());
-            store
-                .resolve_reference(&uuid, declared.as_deref(), version.as_deref())
-                .ok()
-                .map(|one| one.uri.clone())
-        });
-        let parts = |named: &str| {
-            parameters
-                .iter()
-                .filter(|p| text(field(p, "Title")).is_some_and(|t| t == named))
-                .filter_map(|p| text(field(p, "Value")))
-                .collect::<Vec<_>>()
-        };
-        let mut drawings = parts("svgPart");
-        drawings.extend(parts("drawingPart"));
-        out.push(StoredSection {
-            activity: summary.uri,
-            title,
-            name,
-            polyline,
-            drawings,
-        });
     }
-    out.sort_by_key(|one| one.name.as_deref().unwrap_or(&one.title).to_lowercase());
     out
+}
+
+/// A field of a JSON object, by name without case.
+fn field_of(value: &serde_json::Value, name: &str) -> Option<serde_json::Value> {
+    value
+        .as_object()?
+        .iter()
+        .find(|(key, _)| key.eq_ignore_ascii_case(name))
+        .map(|(_, v)| v.clone())
+}
+
+fn text_of(value: Option<serde_json::Value>) -> Option<String> {
+    value.and_then(|v| v.as_str().map(str::to_string))
+}
+
+fn parameters_of(activity: &serde_json::Value) -> Vec<serde_json::Value> {
+    field_of(activity, "Parameter")
+        .and_then(|p| p.as_array().cloned())
+        .unwrap_or_default()
+}
+
+fn title_of_activity(activity: &serde_json::Value) -> String {
+    field_of(activity, "Citation")
+        .and_then(|c| text_of(field_of(&c, "Title")))
+        .unwrap_or_default()
+}
+
+/// The values of the parameters of that title, in order.
+fn parts_named(parameters: &[serde_json::Value], named: &str) -> Vec<String> {
+    parameters
+        .iter()
+        .filter(|p| text_of(field_of(p, "Title")).is_some_and(|t| t == named))
+        .filter_map(|p| text_of(field_of(p, "Value")))
+        .collect()
 }

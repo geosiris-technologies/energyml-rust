@@ -3,6 +3,7 @@
 //! Adding an operation is a file and a line here, plus its canonical template
 //! in `rc/activityTemplates.json`; `tests/operations.rs` checks the two agree.
 
+pub mod along_well_view;
 pub mod attach;
 pub mod blocked_wellbore;
 pub mod boundary;
@@ -11,6 +12,7 @@ pub mod change_frame;
 pub mod clip;
 pub mod collection;
 pub mod colormap;
+pub mod combine;
 pub mod computed_tops;
 pub mod contacts;
 pub mod contacts_rank;
@@ -40,6 +42,7 @@ pub mod interpolate;
 mod interpolate_mba;
 pub mod intersect;
 pub mod isocontours;
+pub mod isosurface;
 pub mod local_grid;
 pub mod loft;
 pub mod measure;
@@ -71,6 +74,7 @@ pub mod subrepresentation;
 pub mod support;
 pub mod surface_framework;
 pub mod surface_map;
+pub mod table_link;
 pub mod terrain;
 pub mod thickness;
 pub mod time_series;
@@ -102,6 +106,7 @@ pub fn builtin() -> Vec<Box<dyn AnyOperation>> {
         crate::operation::typed(triangles::Triangles),
         crate::operation::typed(triangulate::Triangulate),
         crate::operation::typed(isocontours::Isocontours),
+        crate::operation::typed(isosurface::Isosurface),
         crate::operation::typed(cross_section::CrossSection),
         crate::operation::typed(intersect::Intersect),
         crate::operation::typed(remesh::Remesh),
@@ -137,6 +142,7 @@ pub fn builtin() -> Vec<Box<dyn AnyOperation>> {
         crate::operation::typed(zone_statistics::ZoneStatistics),
         crate::operation::typed(property::Property),
         crate::operation::typed(property_time_series::PropertyTimeSeries),
+        crate::operation::typed(combine::CombineProperties),
         crate::operation::typed(colormap::Colormap),
         crate::operation::typed(graphical_information::GraphicalInformation),
         crate::operation::typed(well::WellFromPolyline),
@@ -159,6 +165,7 @@ pub fn builtin() -> Vec<Box<dyn AnyOperation>> {
         crate::operation::typed(surface_framework::SurfaceFramework),
         crate::operation::typed(collection::Collection),
         crate::operation::typed(edit_object::EditObject),
+        crate::operation::typed(table_link::TableLink),
         crate::operation::typed(business_associate::BusinessAssociate),
         crate::operation::typed(wells_from_table::WellsFromTable),
         crate::operation::typed(wellheads::Wellheads),
@@ -171,6 +178,7 @@ pub fn builtin() -> Vec<Box<dyn AnyOperation>> {
         crate::operation::typed(media::Media),
         crate::operation::typed(attach::Attach),
         crate::operation::typed(section_view::SectionView),
+        crate::operation::typed(along_well_view::AlongWellView),
         crate::operation::typed(export_media::ExportMedia),
         crate::operation::typed(new_version::NewVersion),
     ]
