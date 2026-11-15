@@ -499,9 +499,9 @@ fn hole_at(cx: &ViewContext<'_>, frame: &dyn energyml_core::value::Reflect, md: 
     };
     hole.md_uom = path.md_uom().to_string();
     hole.frame = match frames_along(&path, &[md], &FrameOptions::default()) {
-        Ok(frames) => frames.frames.into_iter().next().unwrap_or_else(|| {
-            Err(energyml_geometry::around_well::hole_frame::FrameRefusal::NoDirection { md })
-        }),
+        Ok(frames) => frames.frames.into_iter().next().unwrap_or(Err(
+            energyml_geometry::around_well::hole_frame::FrameRefusal::NoDirection { md },
+        )),
         Err(why) => Err(why),
     }
     .map_err(|why| why.to_string());

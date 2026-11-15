@@ -327,7 +327,7 @@ fn a_logarithmic_scale_colours_by_decades_and_graduates_by_decades() {
 #[test]
 fn a_value_with_no_logarithm_is_counted_and_left_transparent() {
     let mut values = ramp(4);
-    values[3 * 1 + 2] = 0.0; // node 1, component 2
+    values[3 + 2] = 0.0; // node 1 (3 values a node), component 2
     let opened = opened(
         &[100.0, 110.0, 120.0, 130.0],
         property(PROP, eml23::IndexableElement::Nodes, vec![3], values),

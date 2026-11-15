@@ -688,11 +688,12 @@ fn hit_layer(uri: &str, area: Rect, rows: &RowMap, columns: &ColumnMap, covers: 
 
 /// Pixel `at` shows `id`: the run of `id` that ends there grows by one, else a run starts.
 fn extend(runs: &mut Vec<(usize, usize, usize)>, id: usize, at: usize) {
-    if let Some(last) = runs.last_mut() {
-        if last.0 == id && last.2 == at {
-            last.2 = at + 1;
-            return;
-        }
+    if let Some(last) = runs.last_mut()
+        && last.0 == id
+        && last.2 == at
+    {
+        last.2 = at + 1;
+        return;
     }
     runs.push((id, at, at + 1));
 }

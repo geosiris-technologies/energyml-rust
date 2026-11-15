@@ -243,7 +243,10 @@ pub fn layered_options(settings: &Settled, layering: Option<&str>) -> LayeredOpt
             Some("top_down") => Flow::TopToBottom,
             _ => Flow::LeftToRight,
         },
-        ordering: settings.text("ordering").unwrap_or(&defaults.ordering).to_string(),
+        ordering: settings
+            .text("ordering")
+            .unwrap_or(&defaults.ordering)
+            .to_string(),
         layering: layering.unwrap_or(&defaults.layering).to_string(),
         spacing: Spacing {
             layer_gap: 88.0,

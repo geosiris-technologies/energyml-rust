@@ -21,7 +21,9 @@ use energyml_resqml_2_2 as resqml22;
 use energyml_sheet::draw::{Colour, DisplayList, Element, Item, Paint, Rect, Segment};
 use energyml_storage::EpcStore;
 use energyml_views::provenance_graph::ProvenanceView;
-use energyml_views::{ColourDoor, Drawn, ViewAsk, ViewKinds, ViewRefusal, draw_list, draw_svg, redraw, style};
+use energyml_views::{
+    ColourDoor, Drawn, ViewAsk, ViewKinds, ViewRefusal, draw_list, draw_svg, redraw, style,
+};
 use serde_json::json;
 
 use crate::fixtures::{NO_MAPS, Opened};
@@ -178,7 +180,11 @@ fn recipe_store() -> EpcStore {
     template(
         &mut store,
         20,
-        &[("output", false, true), ("kind", false, true), ("curve", false, true)],
+        &[
+            ("output", false, true),
+            ("kind", false, true),
+            ("curve", false, true),
+        ],
     );
     template(&mut store, 21, &[("input", true, false)]);
     activity(
@@ -203,7 +209,12 @@ fn recipe() -> Opened {
 /// that says it wrote an object the package does not hold.
 fn recipe_with_trouble() -> Opened {
     let mut store = recipe_store();
-    activity(&mut store, 32, 21, &[("input", FEATURE, 1), ("stray", FEATURE, 1)]);
+    activity(
+        &mut store,
+        32,
+        21,
+        &[("input", FEATURE, 1), ("stray", FEATURE, 1)],
+    );
     activity(&mut store, 33, 20, &[("output", FEATURE, 98)]);
     Opened::of(store)
 }
@@ -339,7 +350,10 @@ fn the_columns_run_from_the_activities_to_the_objects_then_to_what_carries_them(
     let x = |n: u32| rect_of(element(&list, "nodes", &uri_in(&opened.index, n))).x;
     // The activity, the property it wrote, then the chain of carriers: trajectory, interpretation, feature.
     assert!(x(30) < x(5), "an activity before what it wrote");
-    assert!(x(5) < x(4) && x(4) < x(3) && x(3) < x(1), "each carrier one column after what it carries");
+    assert!(
+        x(5) < x(4) && x(4) < x(3) && x(3) < x(1),
+        "each carrier one column after what it carries"
+    );
     assert!((x(30) - x(31)).abs() < 1.0e-6, "the activities share a column");
 
     // Top down, the columns are rows.
@@ -354,7 +368,11 @@ fn an_edge_against_the_columns_is_dashed_and_one_with_them_is_not() {
     let opened = recipe();
     let list = drawn(&opened, ViewAsk::new(ID)).list;
     let key = |from: u32, to: u32, kind: &str| {
-        format!("{}>{}#{kind}", uri_in(&opened.index, from), uri_in(&opened.index, to))
+        format!(
+            "{}>{}#{kind}",
+            uri_in(&opened.index, from),
+            uri_in(&opened.index, to)
+        )
     };
     // Activity 31 reads the feature, which sits in a later column than the activities: drawn against the flow.
     let read = element(&list, "edges", &key(1, 31, "consumed"));
@@ -376,7 +394,10 @@ fn an_edge_against_the_columns_is_dashed_and_one_with_them_is_not() {
             _ => None,
         })
         .collect();
-    assert!(said.iter().any(|text| text.contains("against the flow")), "{said:?}");
+    assert!(
+        said.iter().any(|text| text.contains("against the flow")),
+        "{said:?}"
+    );
     // Break it: dash the edges by their kind alone, and the read edge is solid.
 }
 
@@ -398,7 +419,10 @@ fn an_arrowhead_stands_on_the_box_it_points_at() {
         .expect("an arrowhead");
     // With the flow, the edge arrives at the middle of the left side of its target.
     assert!((tip[0] - target.x).abs() < 1.0e-9, "{tip:?} {target:?}");
-    assert!((tip[1] - (target.y + target.h / 2.0)).abs() < 1.0e-9, "{tip:?} {target:?}");
+    assert!(
+        (tip[1] - (target.y + target.h / 2.0)).abs() < 1.0e-9,
+        "{tip:?} {target:?}"
+    );
     // The curve starts at the middle of the right side of its source.
     let source = rect_of(element(&list, "nodes", &from));
     let start = edge
@@ -425,7 +449,11 @@ fn the_objects_set_aside_by_type_are_counted_in_a_note_and_not_drawn() {
     let found = drawn(&opened, ViewAsk::new(ID));
     let notes = notes_with(&found, "set-aside");
     assert_eq!(notes.len(), 1);
-    assert!(notes[0].contains("1 objects") && notes[0].contains("PropertyKind"), "{}", notes[0]);
+    assert!(
+        notes[0].contains("1 objects") && notes[0].contains("PropertyKind"),
+        "{}",
+        notes[0]
+    );
     assert!(!found.list.keys().contains(&uri_in(&opened.index, 2).as_str()));
 
     // Set aside nothing: the kind is no longer a note, and the graph is the domain's own, bigger.
@@ -444,7 +472,12 @@ fn every_issue_the_graph_signals_is_a_note() {
     let issues = found
         .notes
         .iter()
-        .filter(|note| !matches!(note.key, "set-aside" | "colour-not-read" | "edge-without-node" | "more-notes"))
+        .filter(|note| {
+            !matches!(
+                note.key,
+                "set-aside" | "colour-not-read" | "edge-without-node" | "more-notes"
+            )
+        })
         .count();
     assert_eq!(issues, graph.issues.len(), "{:?}", found.notes);
     assert!(!notes_with(&found, "conformance").is_empty());
@@ -575,26 +608,36 @@ fn the_colour_a_file_gives_an_object_is_a_stripe_and_never_invented() {
     let opened = recipe();
     let feature_uri = uri_in(&opened.index, 1);
     let stripe = |list: &DisplayList, uri: &str| -> Option<Colour> {
-        element(list, "nodes", uri).items.iter().find_map(|item| match item {
-            Item::Rect {
-                fill: Some(Paint::Solid(colour)),
-                stroke: None,
-                ..
-            } => Some(*colour),
-            _ => None,
-        })
+        element(list, "nodes", uri)
+            .items
+            .iter()
+            .find_map(|item| match item {
+                Item::Rect {
+                    fill: Some(Paint::Solid(colour)),
+                    stroke: None,
+                    ..
+                } => Some(*colour),
+                _ => None,
+            })
     };
     let door = Red(feature_uri.clone());
     let ask = ViewAsk::new(ID);
-    let coloured = draw_list(&kinds(), &ask, &opened.context(&door)).expect("drawn").0.list;
+    let coloured = draw_list(&kinds(), &ask, &opened.context(&door))
+        .expect("drawn")
+        .0
+        .list;
     assert_eq!(stripe(&coloured, &feature_uri), Some(Colour::rgb(255, 0, 0)));
     // An object the file gives no colour has no stripe: nothing is invented.
     assert_eq!(stripe(&coloured, &uri_in(&opened.index, 5)), None);
     // Asked off, or with no map in the file at all, there is none.
-    let off = draw_list(&kinds(), &ask.clone().set("accent", json!(false)), &opened.context(&door))
-        .expect("drawn")
-        .0
-        .list;
+    let off = draw_list(
+        &kinds(),
+        &ask.clone().set("accent", json!(false)),
+        &opened.context(&door),
+    )
+    .expect("drawn")
+    .0
+    .list;
     assert_eq!(stripe(&off, &feature_uri), None);
     let none = drawn(&opened, ask).list;
     assert_eq!(stripe(&none, &feature_uri), None);

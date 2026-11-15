@@ -132,7 +132,10 @@ fn store() -> EpcStore {
         vec![column("index_uid", None, &["a", "b", "c"])],
         vec![column("label", None, &["x", "y", "z"])],
     );
-    let to_indexes = format!("key of the table `indexes`: {}, KeyColumn `index_uid`", table_uri(1));
+    let to_indexes = format!(
+        "key of the table `indexes`: {}, KeyColumn `index_uid`",
+        table_uri(1)
+    );
     let to_gone = format!("key of the table `gone`: {GONE}, KeyColumn `id`");
     let wellbore = "eml:///witsml21.Wellbore(00000000-0000-4000-8000-0000000000b1)";
     let other_wellbore = "eml:///witsml21.Wellbore(00000000-0000-4000-8000-0000000000b2)";
@@ -156,8 +159,17 @@ fn store() -> EpcStore {
         vec![column("code", None, &["1", "2"])],
         vec![column("name", None, &["sand", "shale"])],
     );
-    table(&mut store, 4, "alone", Vec::new(), vec![column("v", None, &["1"])]);
-    let to_self = format!("key of this table (self reference): {}, KeyColumn `uid`", table_uri(5));
+    table(
+        &mut store,
+        4,
+        "alone",
+        Vec::new(),
+        vec![column("v", None, &["1"])],
+    );
+    let to_self = format!(
+        "key of this table (self reference): {}, KeyColumn `uid`",
+        table_uri(5)
+    );
     table(
         &mut store,
         5,
@@ -298,13 +310,22 @@ fn a_box_per_table_lists_its_columns_with_the_key_marked() {
             .iter()
             .filter(|text| text.starts_with("[key] "))
             .count();
-        assert_eq!(marked, sheet.columns.iter().filter(|column| column.key).count(), "{uri}");
+        assert_eq!(
+            marked,
+            sheet.columns.iter().filter(|column| column.key).count(),
+            "{uri}"
+        );
     }
     // Without the columns, the box is its title.
     let bare = drawn(&opened, ViewAsk::new(ID).set("columns", json!(false))).list;
     let words = texts_of(element(&bare, "nodes", &indexes));
     assert!(words.contains(&"indexes".to_string()));
-    assert!(!words.iter().any(|text| text.starts_with("[key]") || text == "label"), "{words:?}");
+    assert!(
+        !words
+            .iter()
+            .any(|text| text.starts_with("[key]") || text == "label"),
+        "{words:?}"
+    );
     // Break it: mark every first column, or every column.
 }
 
@@ -321,7 +342,10 @@ fn a_table_with_many_columns_lists_ten_and_counts_the_rest() {
     let opened = Opened::of(store);
     let list = drawn(&opened, ViewAsk::new(ID)).list;
     let words = texts_of(element(&list, "nodes", &uri_in(&opened.index, 41)));
-    assert!(words.contains(&"c9".to_string()) && !words.contains(&"c10".to_string()), "{words:?}");
+    assert!(
+        words.contains(&"c9".to_string()) && !words.contains(&"c10".to_string()),
+        "{words:?}"
+    );
     assert!(words.contains(&"... and 3 more columns".to_string()), "{words:?}");
     // Break it: list every column, and the box is as tall as the table is wide.
 }
@@ -337,19 +361,35 @@ fn every_link_is_an_arrow_of_its_kind_between_the_boxes_of_its_ends() {
     assert_eq!(links(&list, "key").len(), 2);
     let key = element(&list, "edges", &edge_key(values.clone(), &indexes, "key"));
     assert_eq!(data_of(key, "columns"), Some("0"));
-    assert!(texts_of(key).contains(&"key: index".to_string()), "{:?}", texts_of(key));
+    assert!(
+        texts_of(key).contains(&"key: index".to_string()),
+        "{:?}",
+        texts_of(key)
+    );
     assert!(has(&list, "edges", &edge_key(values.clone(), GONE, "key")));
     // By title: `indexes` is a table of the set, `external file` is not one.
     assert_eq!(links(&list, "title").len(), 2);
     assert!(has(&list, "edges", &edge_key(values.clone(), &indexes, "title")));
-    assert!(has(&list, "edges", &edge_key(values.clone(), "unmatched:external file", "title")));
+    assert!(has(
+        &list,
+        "edges",
+        &edge_key(values.clone(), "unmatched:external file", "title")
+    ));
     // By uris: the objects of one type a column names.
     assert_eq!(links(&list, "uris").len(), 1);
-    assert!(has(&list, "edges", &edge_key(values.clone(), "objects:witsml21.Wellbore", "uris")));
+    assert!(has(
+        &list,
+        "edges",
+        &edge_key(values.clone(), "objects:witsml21.Wellbore", "uris")
+    ));
     // A table that names its own rows: one loop.
     let children = uri_in(&opened.index, 5);
     assert_eq!(links(&list, "self").len(), 1);
-    assert!(has(&list, "edges", &edge_key(children.clone(), &children, "self")));
+    assert!(has(
+        &list,
+        "edges",
+        &edge_key(children.clone(), &children, "self")
+    ));
     // A property that names the table by `CategoryLookup`: one arrow, from the property (alone of its type).
     assert_eq!(links(&list, "index").len(), 1);
     let property = uri_in(&opened.index, 10);
@@ -367,7 +407,9 @@ fn every_link_is_an_arrow_of_its_kind_between_the_boxes_of_its_ends() {
     let to = rect_of(element(&list, "nodes", &indexes));
     assert!(from.x + from.w < to.x, "the source is a layer before the target");
     let (first, last) = path_ends(key);
-    assert!((first[0] - (from.x + from.w)).abs() < 1.0e-9 && (first[1] - (from.y + from.h / 2.0)).abs() < 1.0e-9);
+    assert!(
+        (first[0] - (from.x + from.w)).abs() < 1.0e-9 && (first[1] - (from.y + from.h / 2.0)).abs() < 1.0e-9
+    );
     assert!((last[0] - to.x).abs() < 1.0e-9 && (last[1] - (to.y + to.h / 2.0)).abs() < 1.0e-9);
     // Its head stands at the end of the curve.
     let tip = key.items.iter().find_map(|item| match item {
@@ -429,7 +471,13 @@ fn the_links_drawn_are_the_graph_the_domain_makes_of_the_links_written_by_hand()
         &[],
     );
     let mut store = empty_store();
-    table(&mut store, 1, "indexes", vec![column("index_uid", None, &["a"])], Vec::new());
+    table(
+        &mut store,
+        1,
+        "indexes",
+        vec![column("index_uid", None, &["a"])],
+        Vec::new(),
+    );
     let to_indexes = format!("key of the table `indexes`: {a}, KeyColumn `index_uid`");
     table(
         &mut store,
@@ -443,7 +491,10 @@ fn the_links_drawn_are_the_graph_the_domain_makes_of_the_links_written_by_hand()
     assert_eq!(elements(&list, "nodes").len(), expected.nodes.len());
     assert_eq!(elements(&list, "edges").len(), expected.edges.len());
     // And what the description says is what the domain's own reader reads of the sheet the index holds.
-    let sheet = opened.index.table_sheet(&uri_in(&opened.index, 2)).expect("a sheet");
+    let sheet = opened
+        .index
+        .table_sheet(&uri_in(&opened.index, 2))
+        .expect("a sheet");
     let read = LinkReaders::builtin()
         .read_column(sheet, 0, None)
         .expect("the column declares a link")
@@ -465,7 +516,10 @@ fn a_table_named_and_not_held_and_a_title_no_table_has_are_dashed_boxes() {
     let alone = element(&list, "nodes", &uri_in(&opened.index, 4));
     assert!(dash_of_box(alone).is_empty());
     assert_eq!(data_of(alone, "isolated"), Some("true"));
-    assert_eq!(data_of(element(&list, "nodes", &uri_in(&opened.index, 1)), "isolated"), None);
+    assert_eq!(
+        data_of(element(&list, "nodes", &uri_in(&opened.index, 1)), "isolated"),
+        None
+    );
     // Break it: draw every box solid, or mark every table isolated.
 }
 
@@ -490,16 +544,35 @@ fn the_objects_that_name_a_table_are_one_box_that_counts_them() {
     assert!(texts_of(element(&list, "nodes", &group)).contains(&"3 x DiscreteProperty".to_string()));
     let arrows = links(&list, "index");
     assert_eq!(arrows.len(), 1, "one arrow for the three of them");
-    assert!(texts_of(arrows[0]).contains(&"CategoryLookup (3)".to_string()), "{:?}", texts_of(arrows[0]));
-    assert_eq!(arrows[0].key.as_deref(), Some(format!("{group}>{lookup}#index:CategoryLookup").as_str()));
+    assert!(
+        texts_of(arrows[0]).contains(&"CategoryLookup (3)".to_string()),
+        "{:?}",
+        texts_of(arrows[0])
+    );
+    assert_eq!(
+        arrows[0].key.as_deref(),
+        Some(format!("{group}>{lookup}#index:CategoryLookup").as_str())
+    );
     // Break it: draw one box and one arrow per object.
 }
 
 #[test]
 fn a_title_two_tables_share_names_nothing_and_is_a_note() {
     let mut store = empty_store();
-    table(&mut store, 21, "same", Vec::new(), vec![column("v", None, &["1"])]);
-    table(&mut store, 22, "same", Vec::new(), vec![column("v", None, &["1"])]);
+    table(
+        &mut store,
+        21,
+        "same",
+        Vec::new(),
+        vec![column("v", None, &["1"])],
+    );
+    table(
+        &mut store,
+        22,
+        "same",
+        Vec::new(),
+        vec![column("v", None, &["1"])],
+    );
     table(
         &mut store,
         23,
@@ -512,10 +585,17 @@ fn a_title_two_tables_share_names_nothing_and_is_a_note() {
     );
     let opened = Opened::of(store);
     let found = drawn(&opened, ViewAsk::new(ID));
-    assert!(links(&found.list, "title").is_empty(), "a title is not an identity");
+    assert!(
+        links(&found.list, "title").is_empty(),
+        "a title is not an identity"
+    );
     let notes = notes_with(&found, "ambiguous-title");
     assert_eq!(notes.len(), 1, "{:?}", found.notes);
-    assert!(notes[0].contains("`same`") && notes[0].contains("2 tables"), "{}", notes[0]);
+    assert!(
+        notes[0].contains("`same`") && notes[0].contains("2 tables"),
+        "{}",
+        notes[0]
+    );
     // Break it: link the first table that carries the title.
 }
 
@@ -523,10 +603,22 @@ fn a_title_two_tables_share_names_nothing_and_is_a_note() {
 fn a_link_the_reader_refuses_is_a_note_and_no_arrow() {
     let mut store = empty_store();
     // No backticks around the title: it starts like a declaration and is not one.
-    let wrong = format!("key of the table indexes: {}, KeyColumn `index_uid`", table_uri(1));
-    table(&mut store, 31, "bad", Vec::new(), vec![column("ref", Some(&wrong), &["a"])]);
+    let wrong = format!(
+        "key of the table indexes: {}, KeyColumn `index_uid`",
+        table_uri(1)
+    );
+    table(
+        &mut store,
+        31,
+        "bad",
+        Vec::new(),
+        vec![column("ref", Some(&wrong), &["a"])],
+    );
     let opened = Opened::of(store);
-    let sheet = opened.index.table_sheet(&uri_in(&opened.index, 31)).expect("a sheet");
+    let sheet = opened
+        .index
+        .table_sheet(&uri_in(&opened.index, 31))
+        .expect("a sheet");
     assert!(
         matches!(LinkReaders::builtin().read_column(sheet, 0, None), Some(Err(_))),
         "the domain's reader refuses it"
@@ -535,7 +627,11 @@ fn a_link_the_reader_refuses_is_a_note_and_no_arrow() {
     assert!(elements(&found.list, "edges").is_empty());
     let notes = notes_with(&found, "link-refused");
     assert_eq!(notes.len(), 1, "{:?}", found.notes);
-    assert!(notes[0].contains("bad") && notes[0].contains("ref"), "{}", notes[0]);
+    assert!(
+        notes[0].contains("bad") && notes[0].contains("ref"),
+        "{}",
+        notes[0]
+    );
     // Break it: skip the refused declarations, and the link vanishes without a word.
 }
 
@@ -565,7 +661,10 @@ fn only_the_tables_asked_are_drawn_and_an_object_that_is_no_table_is_refused() {
     for n in [3, 4, 5] {
         assert!(!has(&list, "nodes", &uri_in(&opened.index, n)), "table {n}");
     }
-    assert!(links(&list, "index").is_empty(), "the lookup is not in the set, nor the property that names it");
+    assert!(
+        links(&list, "index").is_empty(),
+        "the lookup is not in the set, nor the property that names it"
+    );
     // The links of the two tables are still drawn.
     assert_eq!(links(&list, "key").len(), 2);
 

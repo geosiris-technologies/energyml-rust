@@ -140,6 +140,8 @@ impl ViewKinds {
             kinds: vec![
                 Box::new(crate::along_well::AlongWell),
                 Box::new(crate::image_track::ImageTrack),
+                Box::new(crate::provenance_graph::ProvenanceView),
+                Box::new(crate::table_schema::TableSchemaView),
                 Box::new(crate::target::Target),
                 Box::new(crate::well_locator::WellLocator),
                 Box::new(crate::well_sheet::WellSheet),

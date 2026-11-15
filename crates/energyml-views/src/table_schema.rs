@@ -67,8 +67,11 @@ impl ViewKind for TableSchemaView {
     fn settings(&self) -> Vec<ViewSetting> {
         let mut settings = graph::layout_settings();
         settings.push(
-            ViewSetting::flag("columns", "list the columns of a table in its box, the key columns marked")
-                .default(Value::Bool(true)),
+            ViewSetting::flag(
+                "columns",
+                "list the columns of a table in its box, the key columns marked",
+            )
+            .default(Value::Bool(true)),
         );
         settings.push(
             ViewSetting::flag(
@@ -274,7 +277,10 @@ fn read_columns(
         unread: cells.iter().filter(|read| read.is_err()).count(),
         ..Values::default()
     };
-    let declared: BTreeSet<usize> = declarations.iter().map(|declaration| declaration.column).collect();
+    let declared: BTreeSet<usize> = declarations
+        .iter()
+        .map(|declaration| declaration.column)
+        .collect();
     for (column, read) in cells.iter().enumerate() {
         let Ok(read) = read else { continue };
         if declared.contains(&column) {
@@ -298,7 +304,9 @@ fn read_columns(
                 titles.insert(text);
             }
         }
-        found.titles_named.push((declaration.column, titles.into_iter().collect()));
+        found
+            .titles_named
+            .push((declaration.column, titles.into_iter().collect()));
     }
     Ok(found)
 }
@@ -339,7 +347,11 @@ fn columns_said(sheet: Option<&TableSheet>, columns: &[usize]) -> String {
             .map(|column| column_name(sheet, *column))
             .collect::<Vec<_>>()
             .join(", "),
-        None => columns.iter().map(usize::to_string).collect::<Vec<_>>().join(", "),
+        None => columns
+            .iter()
+            .map(usize::to_string)
+            .collect::<Vec<_>>()
+            .join(", "),
     }
 }
 
@@ -365,7 +377,10 @@ fn boxes_of(
                         let mut look = BoxLook::new(
                             uri.clone(),
                             "table",
-                            vec![Line::new("table not in the set", Tone::Caption), Line::new(uuid, Tone::Body)],
+                            vec![
+                                Line::new("table not in the set", Tone::Caption),
+                                Line::new(uuid, Tone::Body),
+                            ],
                         );
                         look.frame = Frame::Ghost;
                         look.tip = uri.clone();
@@ -431,10 +446,15 @@ fn boxes_of(
             None => format!("{count} x {}", local_type(&qualified_type)),
         };
         let mut look = BoxLook::new(
-            single.clone().unwrap_or_else(|| format!("index:{qualified_type}")),
+            single
+                .clone()
+                .unwrap_or_else(|| format!("index:{qualified_type}")),
             "objects",
             vec![
-                Line::new(format!("{} that names a table", local_type(&qualified_type)), Tone::Caption),
+                Line::new(
+                    format!("{} that names a table", local_type(&qualified_type)),
+                    Tone::Caption,
+                ),
                 Line::new(name, Tone::Body),
             ],
         );
@@ -509,7 +529,8 @@ fn edges_of(
         let word = link_word(&edge.link);
         let (colour, dash, width) = link_stroke(&edge.link);
         let source_sheet = sheets.get(edge.from).copied();
-        if let (SchemaLink::Index { path }, SchemaNode::Object { .. }) = (&edge.link, &found.nodes[edge.from]) {
+        if let (SchemaLink::Index { path }, SchemaNode::Object { .. }) = (&edge.link, &found.nodes[edge.from])
+        {
             if let Some((place, count)) = grouped.get_mut(&(from, to, path.clone())) {
                 *count += 1;
                 specs[*place].look.label = Some(format!("{path} ({count})"));
@@ -533,7 +554,11 @@ fn edges_of(
         if !edge.columns.is_empty() {
             data.push((
                 "columns".to_string(),
-                edge.columns.iter().map(usize::to_string).collect::<Vec<_>>().join(","),
+                edge.columns
+                    .iter()
+                    .map(usize::to_string)
+                    .collect::<Vec<_>>()
+                    .join(","),
             ));
         }
         ends.push((from, to));
@@ -541,7 +566,13 @@ fn edges_of(
             word,
             look: EdgeLook {
                 key: format!("{}>{}#{link_key}", boxes[from].key, boxes[to].key),
-                tip: format!("{}: {label}", LINKS.iter().find(|(w, _)| *w == word).map_or(word, |(_, says)| *says)),
+                tip: format!(
+                    "{}: {label}",
+                    LINKS
+                        .iter()
+                        .find(|(w, _)| *w == word)
+                        .map_or(word, |(_, says)| *says)
+                ),
                 colour,
                 width,
                 dash,

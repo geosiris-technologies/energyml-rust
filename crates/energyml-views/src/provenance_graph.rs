@@ -144,23 +144,26 @@ impl ViewKind for ProvenanceView {
         let mut graph = of_package(cx.index, cx.source, &options).graph;
         let mut subject: Option<NodeKey> = None;
         let mut title = "provenance of the package".to_string();
-        if let Some(address) = settings.text("focus").map(str::trim).filter(|text| !text.is_empty()) {
+        if let Some(address) = settings
+            .text("focus")
+            .map(str::trim)
+            .filter(|text| !text.is_empty())
+        {
             let node = cx.index.node(address).ok_or_else(|| ViewRefusal::NotInPackage {
                 object: address.to_string(),
             })?;
             let key = NodeKey::Object(node.uri.to_string());
-            let up = u8::try_from(settings.integer("up").unwrap_or(i64::from(MAX_DEPTH))).unwrap_or(MAX_DEPTH);
+            let up =
+                u8::try_from(settings.integer("up").unwrap_or(i64::from(MAX_DEPTH))).unwrap_or(MAX_DEPTH);
             let down = u8::try_from(settings.integer("down").unwrap_or(1)).unwrap_or(MAX_DEPTH);
             graph = focus(&graph, &key, up, down).map_err(|why| refuse(why.to_string()))?;
-            title = format!(
-                "provenance around {}",
-                node.title.as_deref().unwrap_or(&node.uri)
-            );
+            title = format!("provenance around {}", node.title.as_deref().unwrap_or(&node.uri));
             subject = Some(key);
         }
         if graph.nodes.is_empty() {
             return Err(refuse(
-                "the package states no provenance: no activity, and no table a verbatim source reads".to_string(),
+                "the package states no provenance: no activity, and no table a verbatim source reads"
+                    .to_string(),
             ));
         }
 
@@ -290,7 +293,9 @@ fn columns_of(nodes: &[ProvNode], edges: &[ProvEdge], at: &HashMap<NodeKey, usiz
         .map(|node| match node {
             ProvNode::File { .. } => COLUMN_FILES,
             ProvNode::Activity { .. } | ProvNode::HeldStep { .. } => COLUMN_ACTIVITIES,
-            ProvNode::Object { .. } | ProvNode::Collection { .. } | ProvNode::Unresolved { .. } => COLUMN_OBJECTS,
+            ProvNode::Object { .. } | ProvNode::Collection { .. } | ProvNode::Unresolved { .. } => {
+                COLUMN_OBJECTS
+            }
         })
         .collect();
     let carries: Vec<(usize, usize)> = edges
@@ -351,7 +356,10 @@ fn look_of(node: &ProvNode) -> BoxLook {
             let mut look = BoxLook::new(
                 key,
                 "node",
-                vec![Line::new("file", Tone::Caption), Line::new(last_name(path), Tone::Body)],
+                vec![
+                    Line::new("file", Tone::Caption),
+                    Line::new(last_name(path), Tone::Body),
+                ],
             );
             look.tip = path.clone();
             look.data.push(("family".to_string(), "file".to_string()));
@@ -377,7 +385,10 @@ fn look_of(node: &ProvNode) -> BoxLook {
             let mut look = BoxLook::new(
                 key,
                 "node",
-                vec![Line::new("held step", Tone::Caption), Line::new(step.clone(), Tone::Body)],
+                vec![
+                    Line::new("held step", Tone::Caption),
+                    Line::new(step.clone(), Tone::Body),
+                ],
             );
             look.frame = Frame::Ghost;
             look.tip = format!("held: {reason}");
@@ -402,7 +413,11 @@ fn look_of(node: &ProvNode) -> BoxLook {
             } else {
                 format!("{kind} (not in the package)")
             };
-            let mut look = BoxLook::new(key, "node", vec![Line::new(caption, Tone::Caption), Line::new(name, Tone::Body)]);
+            let mut look = BoxLook::new(
+                key,
+                "node",
+                vec![Line::new(caption, Tone::Caption), Line::new(name, Tone::Body)],
+            );
             if !present {
                 look.frame = Frame::Ghost;
             }
@@ -420,7 +435,11 @@ fn look_of(node: &ProvNode) -> BoxLook {
                 Some(count) => format!("collection ({count} objects)"),
                 None => "collection".to_string(),
             };
-            let mut look = BoxLook::new(key, "node", vec![Line::new(caption, Tone::Caption), Line::new(name, Tone::Body)]);
+            let mut look = BoxLook::new(
+                key,
+                "node",
+                vec![Line::new(caption, Tone::Caption), Line::new(name, Tone::Body)],
+            );
             look.tip = uri.clone();
             look.data.push(("family".to_string(), "collection".to_string()));
             look
@@ -435,7 +454,10 @@ fn look_of(node: &ProvNode) -> BoxLook {
                 ],
             );
             look.frame = Frame::Ghost;
-            look.tip = format!("{label}: written by {}, and nothing in the package is it", source.0);
+            look.tip = format!(
+                "{label}: written by {}, and nothing in the package is it",
+                source.0
+            );
             look.data.push(("family".to_string(), "unresolved".to_string()));
             look
         }
@@ -460,7 +482,10 @@ const KINDS: &[(&str, &str)] = &[
     ("produced", "written by an activity"),
     ("participant", "takes part in an activity, no direction stated"),
     ("parent", "an activity under its parent"),
-    ("carrier", "carried by a representation, an interpretation, a feature"),
+    (
+        "carrier",
+        "carried by a representation, an interpretation, a feature",
+    ),
     ("member", "a member of a collection"),
 ];
 
@@ -475,8 +500,12 @@ fn basis_word(basis: &EdgeBasis) -> &'static str {
 
 fn basis_says(basis: &EdgeBasis) -> String {
     match basis {
-        EdgeBasis::Activity(RoleBasis::Template) => "stated by an activity, its role by the template".to_string(),
-        EdgeBasis::Activity(RoleBasis::Rule(rule)) => format!("stated by an activity, its role by the rule {rule}"),
+        EdgeBasis::Activity(RoleBasis::Template) => {
+            "stated by an activity, its role by the template".to_string()
+        }
+        EdgeBasis::Activity(RoleBasis::Rule(rule)) => {
+            format!("stated by an activity, its role by the rule {rule}")
+        }
         EdgeBasis::Activity(RoleBasis::None) => "stated by an activity, its role not declared".to_string(),
         EdgeBasis::Verbatim(source) => format!("stated by the verbatim source {}", source.0),
         EdgeBasis::Reference => "a reference written in the object".to_string(),
@@ -541,7 +570,10 @@ fn legend_of(edges: &[&ProvEdge], back: &[usize]) -> Vec<LegendEntry> {
             dash: graph::BACK_DASH.to_vec(),
         });
     }
-    if edges.iter().any(|edge| matches!(edge.basis, EdgeBasis::Verbatim(_))) {
+    if edges
+        .iter()
+        .any(|edge| matches!(edge.basis, EdgeBasis::Verbatim(_)))
+    {
         legend.push(LegendEntry {
             label: "stated by a verbatim source only".to_string(),
             colour: style::HIGHLIGHT,
@@ -562,7 +594,9 @@ fn legend_of(edges: &[&ProvEdge], back: &[usize]) -> Vec<LegendEntry> {
 
 fn issue_says(issue: &ParameterIssue) -> String {
     match issue {
-        ParameterIssue::NotInTemplate { title, .. } => format!("parameter `{title}` has no equivalent in the template"),
+        ParameterIssue::NotInTemplate { title, .. } => {
+            format!("parameter `{title}` has no equivalent in the template")
+        }
         ParameterIssue::KindDiffers { title, written, .. } => {
             format!("parameter `{title}` is written as {written:?}, which the template does not allow")
         }
@@ -581,7 +615,10 @@ fn note_of(issue: &GraphIssue) -> ViewNote {
     let (key, says) = match issue {
         GraphIssue::Tree(TreeRefusal::ParentCycle { uris }) => (
             "tree-refused",
-            format!("the Parent links of {} activities loop; they are drawn flat", uris.len()),
+            format!(
+                "the Parent links of {} activities loop; they are drawn flat",
+                uris.len()
+            ),
         ),
         GraphIssue::Tree(refusal @ TreeRefusal::ParentAbsent { .. }) => ("tree-refused", refusal.to_string()),
         GraphIssue::TreeDisagreement { parent, child, .. } => (
@@ -596,10 +633,9 @@ fn note_of(issue: &GraphIssue) -> ViewNote {
             "output-absent",
             format!("{activity} says it wrote {object}, which the package does not hold"),
         ),
-        GraphIssue::Conformance { activity, issue } => (
-            "conformance",
-            format!("{activity}: {}", issue_says(issue)),
-        ),
+        GraphIssue::Conformance { activity, issue } => {
+            ("conformance", format!("{activity}: {}", issue_says(issue)))
+        }
         GraphIssue::ActivityLinkDiffers {
             source,
             process,
@@ -616,11 +652,20 @@ fn note_of(issue: &GraphIssue) -> ViewNote {
         ),
         GraphIssue::ProcessWithoutActivity { source, process } => (
             "process-without-activity",
-            format!("{}: the process `{process}` names no activity, its edges are left out", source.0),
+            format!(
+                "{}: the process `{process}` names no activity, its edges are left out",
+                source.0
+            ),
         ),
-        GraphIssue::Verbatim(refusal) => ("verbatim-refused", format!("a verbatim source refused: {refusal}")),
+        GraphIssue::Verbatim(refusal) => (
+            "verbatim-refused",
+            format!("a verbatim source refused: {refusal}"),
+        ),
         GraphIssue::Unreadable { uri, why } => ("unreadable", format!("{uri} could not be read: {why}")),
-        GraphIssue::Expand(refusal) => ("expand-refused", format!("a collection was not expanded: {refusal}")),
+        GraphIssue::Expand(refusal) => (
+            "expand-refused",
+            format!("a collection was not expanded: {refusal}"),
+        ),
     };
     ViewNote { key, says }
 }
