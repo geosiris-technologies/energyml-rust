@@ -1263,6 +1263,12 @@ impl Package {
     /// direction a package has no index for: every object has to be read. On a
     /// large package that is the cost of building the graph, and it is a call
     /// rather than a field so a caller can see when they pay it.
+    ///
+    /// **An object that cannot be read refuses the question.** The answer is
+    /// built from what every object points at; one that does not parse might be
+    /// the one that points here, and "nothing depends on it" would then be false
+    /// exactly when a caller is about to delete or cut. The refusal names the
+    /// unreadable objects.
     pub fn referenced_by(&self, uri: &str) -> Result<Vec<Link>, String> {
         let uuid = self
             .store
@@ -1270,7 +1276,7 @@ impl Package {
             .map_err(|why| format!("{why}"))?
             .uuid
             .clone();
-        let (held, _) = self.store.read_objects(None);
+        let held = refuse_unreadable(self.store.read_objects(None), "referenced_by")?;
         Ok(energyml_storage::graph::dependents(
             held.iter()
                 .map(|(summary, object)| (summary, object.as_reflect())),
@@ -1298,8 +1304,12 @@ impl Package {
     /// held, minus what the standard publishes in a catalogue: a closure that
     /// dropped those in silence would call a set closed when the package it
     /// came from was already broken.
+    ///
+    /// **An object that cannot be read refuses the question**, for the reason
+    /// given on [`Package::referenced_by`]: a closure computed without it could
+    /// leave out something the set needs.
     pub fn needs(&self, uris: &[String]) -> Result<(Vec<String>, Vec<String>), String> {
-        let (held, _) = self.store.read_objects(None);
+        let held = refuse_unreadable(self.store.read_objects(None), "needs")?;
         let graph = energyml_storage::graph::build(
             held.iter()
                 .map(|(summary, object)| (summary, object.as_reflect())),
@@ -1738,4 +1748,124 @@ fn version_of(version: Option<String>) -> Option<String> {
     version
         .map(|version| version.trim().to_string())
         .filter(|version| !version.is_empty())
+}
+
+/// What a question asked about **every** object may be answered from: the
+/// objects read, or a refusal naming the ones that were not.
+///
+/// `EpcStore::read_objects` returns the unreadable as a list so that nobody has
+/// to lose the answer over one bad part; but `referenced_by` and `needs` are
+/// asked before a deletion or a cut, and an answer computed without an object
+/// that might point at the target is a wrong "safe". At most five are named.
+fn refuse_unreadable<T>((read, unreadable): (T, Vec<String>), question: &str) -> Result<T, String> {
+    if unreadable.is_empty() {
+        return Ok(read);
+    }
+    let shown = unreadable.iter().take(5).cloned().collect::<Vec<_>>().join("; ");
+    let more = unreadable.len().saturating_sub(5);
+    let rest = if more > 0 {
+        format!(" (and {more} more)")
+    } else {
+        String::new()
+    };
+    Err(format!(
+        "cannot answer `{question}`: {} object(s) of the package could not be read, and one of them may be the one that points here: {shown}{rest}",
+        unreadable.len()
+    ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn citation(title: &str) -> serde_json::Value {
+        serde_json::json!({
+            "$type": "eml23.Citation",
+            "Title": title,
+            "Originator": "test",
+            "Creation": "2026-09-19T12:00:00Z",
+            "Format": "energyml-rust",
+        })
+    }
+
+    /// A feature, and an interpretation that points at it, whose part is then
+    /// damaged: the one object that depends on the feature cannot be read.
+    fn package_with_a_damaged_dependent() -> (Package, String) {
+        let feature_uuid = "ed3aa217-17ba-40b2-afa4-4f7d2cd586da";
+        let mut package = Package::create("damaged.epc").expect("an empty package");
+        let feature = package
+            .put(
+                &serde_json::json!({
+                    "$type": "resqml22.BoundaryFeature",
+                    "uuid": feature_uuid,
+                    "schemaVersion": "2.2",
+                    "Citation": citation("Top Chalk"),
+                })
+                .to_string(),
+            )
+            .expect("the feature is put");
+        let interpretation = package
+            .put(
+                &serde_json::json!({
+                    "$type": "resqml22.HorizonInterpretation",
+                    "uuid": "8cd38954-3e92-4b50-91c5-6b262a5f8b3e",
+                    "schemaVersion": "2.2",
+                    "Citation": citation("Top Chalk, picked"),
+                    "Domain": "depth",
+                    "InterpretedFeature": {
+                        "$type": "eml23.DataObjectReference",
+                        "QualifiedType": "resqml22.BoundaryFeature",
+                        "Title": "Top Chalk",
+                        "Uuid": feature_uuid,
+                    },
+                })
+                .to_string(),
+            )
+            .expect("the interpretation is put");
+        // Healthy first: the question is answered and names the dependent.
+        let healthy = package
+            .referenced_by(&feature)
+            .expect("a healthy package answers");
+        assert_eq!(healthy.len(), 1, "the interpretation depends on the feature");
+
+        let part = package
+            .store
+            .resource(&interpretation)
+            .expect("it is listed")
+            .locator
+            .clone();
+        package.store.set_raw_part(&part, b"<not xml".to_vec());
+        (package, feature)
+    }
+
+    #[test]
+    fn referenced_by_refuses_when_a_part_cannot_be_read() {
+        let (package, feature) = package_with_a_damaged_dependent();
+        // Before the fix this was `Ok(vec![])`: the only dependent was the
+        // unreadable object, and "nothing depends on it" was false.
+        let why = package
+            .referenced_by(&feature)
+            .expect_err("it must refuse, not answer []");
+        assert!(why.contains("could not be read"), "{why}");
+        assert!(why.contains("referenced_by"), "{why}");
+    }
+
+    #[test]
+    fn needs_refuses_when_a_part_cannot_be_read() {
+        let (package, feature) = package_with_a_damaged_dependent();
+        let why = package.needs(&[feature]).expect_err("it must refuse");
+        assert!(why.contains("could not be read"), "{why}");
+    }
+
+    #[test]
+    fn the_refusal_names_at_most_five() {
+        let list: Vec<String> = (0..7).map(|n| format!("u{n}")).collect();
+        let why = refuse_unreadable(((), list), "needs").expect_err("seven unreadable");
+        assert!(why.contains("u4") && !why.contains("u5"), "{why}");
+        assert!(why.contains("and 2 more"), "{why}");
+    }
+
+    // Break it: put `let held = self.store.read_objects(None).0;` back in
+    // `referenced_by` or `needs` and the first two tests fail (they get Ok);
+    // make `refuse_unreadable` return `Ok(read)` always and all three fail.
 }

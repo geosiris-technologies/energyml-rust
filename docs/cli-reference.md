@@ -1593,12 +1593,12 @@ Options:
           Keep no property - what a preview asks for
 
       --page <N>
-          How many entities per page
+          How many entities per page (at least 1)
           
           [default: 1000]
 
       --most <N>
-          A ceiling in entities. The harvest stops there, and says so
+          A ceiling in entities (at least 1). The harvest stops there, and says so
 
       --lenient
           Read parts that break the schema instead of refusing them.

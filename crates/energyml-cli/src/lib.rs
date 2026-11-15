@@ -1638,8 +1638,9 @@ fn colors(args: ColorsArgs, modes: Modes) -> Result<()> {
     )?;
     if report.sets == 0 {
         println!(
-            "no `GraphicalInformationSet` in this package, so nothing states a colour.
-             (RESQML 2.0.1 has no notion of colour at all - for a 2.0.1 model this is the              standard, not a gap.)"
+            "no `GraphicalInformationSet` in this package, so nothing states a colour.\n\
+             (RESQML 2.0.1 has no notion of colour at all - for a 2.0.1 model this is the \
+             standard, not a gap.)"
         );
         return Ok(());
     }
@@ -2187,19 +2188,16 @@ fn export(args: ExportArgs, modes: Modes) -> Result<()> {
     if let Some(radius) = args.tube {
         let tube = energyml_geometry::tube::Tube::checked(radius, args.tube_sides)
             .map_err(|e| anyhow::anyhow!("{e}"))?;
-        let mut swept = 0usize;
-        for object in &mut objects {
-            // An object with no polylines is left as it is: `--tube` on a scene
-            // of wells and horizons must sweep the wells, not refuse the export.
-            if let Ok(solid) = energyml_geometry::tube::sweep_object(object, &tube) {
-                *object = solid;
-                swept += 1;
-            }
-        }
+        let (swept, failed) = sweep_into_tubes(&mut objects, &tube);
         eprintln!(
             "{swept} object(s) swept into a tube of radius {radius} with {} sides",
             args.tube_sides
         );
+        // Named, never counted as untouched: these have polylines, were asked
+        // for as tubes, and are exported as lines.
+        for why in &failed {
+            eprintln!("  not swept, exported as lines: {why}");
+        }
     }
 
     let mut options = Options::new().with_reprojector(&backend);
@@ -3259,6 +3257,98 @@ fn relabel(args: RelabelArgs, modes: Modes) -> Result<ExitCode> {
     })
 }
 
+/// `--tube`: sweep every object that has polylines into a tube, in place.
+///
+/// Returns how many were swept and, for the others that **do** hold polylines
+/// but could not be swept (every run degenerate), their uuid and the reason. An
+/// object with no polylines at all is left as it is and is not a failure:
+/// `--tube` on a scene of wells and horizons must sweep the wells, not refuse
+/// the export. Counting a real failure as "nothing to sweep" would export the
+/// object as lines while the person asked for tubes, and say nothing.
+fn sweep_into_tubes(
+    objects: &mut [energyml_geometry::scene::SceneObject],
+    tube: &energyml_geometry::tube::Tube,
+) -> (usize, Vec<String>) {
+    use energyml_geometry::geometry::Topology;
+    let mut swept = 0usize;
+    let mut failed = Vec::new();
+    for object in objects {
+        match energyml_geometry::tube::sweep_object(object, tube) {
+            Ok(solid) => {
+                *object = solid;
+                swept += 1;
+            }
+            Err(why) => {
+                let has_polylines = object
+                    .geometry
+                    .patches
+                    .iter()
+                    .any(|patch| matches!(patch.topology, Topology::Polylines(_)));
+                if has_polylines {
+                    failed.push(format!("{}: {why}", object.uuid));
+                }
+            }
+        }
+    }
+    (swept, failed)
+}
+
+#[cfg(test)]
+mod tube_tests {
+    use super::sweep_into_tubes;
+    use energyml_geometry::geometry::{Geometry, Patch, Topology};
+    use energyml_geometry::scene::SceneObject;
+    use energyml_geometry::tube::Tube;
+
+    fn lines(uuid: &str, points: Vec<[f64; 3]>) -> SceneObject {
+        let count = points.len() as u32;
+        SceneObject {
+            uuid: uuid.to_string(),
+            uri: String::new(),
+            title: uuid.to_string(),
+            qualified_type: "resqml22.PolylineSetRepresentation".to_string(),
+            geometry: Geometry {
+                kind: "PolylineSet",
+                patches: vec![Patch {
+                    index: 0,
+                    node_offset: 0,
+                    points,
+                    topology: Topology::Polylines(vec![count]),
+                    closed: Vec::new(),
+                }],
+            },
+            crs: None,
+            interpretation: None,
+            feature: None,
+            metadata: Default::default(),
+            attributes: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn a_degenerate_polyline_is_named_and_a_scene_without_lines_is_not() {
+        let tube = Tube::default();
+        let mut surface = lines("surface", Vec::new());
+        surface.geometry.patches[0].topology = Topology::Triangles(Vec::new());
+        let mut objects = vec![
+            lines("good", vec![[0.0, 0.0, 0.0], [0.0, 0.0, -10.0]]),
+            // Three identical points: a run with no direction, never sweepable.
+            lines("degenerate", vec![[1.0, 1.0, 1.0]; 3]),
+            surface,
+        ];
+        let (swept, failed) = sweep_into_tubes(&mut objects, &tube);
+        assert_eq!(swept, 1);
+        // Before the fix `failed` did not exist: the degenerate object was
+        // exported as lines and counted as if it had no polylines.
+        assert_eq!(failed.len(), 1, "{failed:?}");
+        assert!(failed[0].starts_with("degenerate:"), "{failed:?}");
+    }
+
+    // Break it: make the `Err` arm `{}` (the old `if let Ok`): `failed` is
+    // empty and the test fails. Drop the `has_polylines` test: the surface is
+    // named as a failure too (two entries) and the test fails.
+}
+
 /// Cut a package down to a chosen set of objects.
 ///
 /// The command is argument parsing over `energyml_storage::extract`, as every
@@ -3273,13 +3363,30 @@ fn extract_command(args: ExtractArgs, modes: Modes) -> Result<ExitCode> {
 
     let resources = store.resources();
     let mut objects = Vec::new();
+    let mut unreadable = Vec::new();
     for summary in &resources {
-        if let Ok(object) = store.get_object(&summary.uri) {
-            objects.push((summary, object));
+        match store.get_object(&summary.uri) {
+            Ok(object) => objects.push((summary, object)),
+            Err(why) => unreadable.push(format!("{}: {why}", summary.uri)),
         }
     }
     let graph = energyml_storage::graph::build(objects.iter().map(|(s, o)| (*s, o.as_reflect())));
     let plan = energyml_storage::extract::plan(&resources, &graph, &wanted);
+
+    // Said before the plan: what these objects point at is not in the graph, so
+    // the plan below cannot see a reference they hold into the cut.
+    if !unreadable.is_empty() {
+        println!(
+            "{} object(s) could not be read; the references they hold are not in this plan:",
+            unreadable.len()
+        );
+        for one in unreadable.iter().take(20) {
+            println!("  {one}");
+        }
+        if unreadable.len() > 20 {
+            println!("  … and {} more", unreadable.len() - 20);
+        }
+    }
 
     // The report before the file, always - and before the *decision* to write,
     // when it is a dry run. A curated package that lost something in silence is

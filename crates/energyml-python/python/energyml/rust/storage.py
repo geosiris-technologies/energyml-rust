@@ -106,7 +106,9 @@ class Storage(abc.ABC):
 
     @abc.abstractmethod
     def referenced_by(self, uri: str) -> list:
-        """Who points at this object."""
+        """Who points at this object.
+
+        Refuses, naming them, when an object of the package cannot be read."""
 
     @abc.abstractmethod
     def check(self, schema: bool = True, rules: bool = True) -> dict:

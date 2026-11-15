@@ -84,6 +84,12 @@ pkg.referenced_by(uri)        # the other direction (reads every object: no pack
 needed, missing = pkg.needs([uri])   # the closure: what an extraction or a copy must carry
 ```
 
+`referenced_by` and `needs` read every object, and **refuse** (an exception that
+names the unreadable objects) when one cannot be read: the unreadable part might
+be the one that points at the target, and "nothing depends on it" would be a
+wrong answer to give before a deletion or a cut. Repair or remove the named part
+first.
+
 `present` says whether the package holds the target; a dangling reference keeps
 its entry. A well-known `PropertyKind` from the Energistics dictionary is never
 reported as dangling.
