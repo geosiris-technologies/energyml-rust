@@ -804,7 +804,7 @@ fn table_uri_value_resolves(context: &Context<'_>, check: &Integrity, out: &mut 
                 }
             };
             // A column that declares a link is the link rules' business.
-            if links.declarations.iter().any(|(at, _)| *at == column) || uri_column(&cells).is_none() {
+            if links.declarations.iter().any(|(at, _)| *at == column) || uri_column(cells).is_none() {
                 continue;
             }
             let mut rows: Vec<usize> = Vec::new();
