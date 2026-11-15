@@ -582,17 +582,11 @@ async fn listing<S: EnergymlStorage + Sync>(store: &S, rule: &Rule) -> Vec<Objec
 }
 
 fn dataspace_of(uri: &str) -> String {
-    match EtpUri::parse(uri).ok().and_then(|parsed| parsed.dataspace) {
-        Some(name) => format!("eml:///dataspace('{}')", name.replace('\'', "''")),
-        None => "eml:///".to_string(),
-    }
+    EtpUri::dataspace_uri_of(uri)
 }
 
 fn uuid_of(uri: &str) -> String {
-    EtpUri::parse(uri)
-        .ok()
-        .and_then(|parsed| parsed.uuid)
-        .unwrap_or_else(|| uri.to_string())
+    EtpUri::uuid_of(uri).unwrap_or_else(|| uri.to_string())
 }
 
 fn label(uuid: &str) -> String {

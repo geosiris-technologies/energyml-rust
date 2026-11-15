@@ -1292,20 +1292,11 @@ pub(crate) fn reference_of(object: &dyn Reflect, field: &str) -> Option<String> 
 
 /// Whether two uris name the same object: the same uuid, and object versions
 /// that do not contradict each other - an absent version means "the latest",
-/// so it matches any (`ObjectKey::same_object`). Text that is no uri is
-/// compared as it stands.
+/// so it matches any. The core's one comparison of two addresses
+/// ([`energyml_core::identity::same_address`]); a uri that names no object (a
+/// dataspace) is the same as nothing.
 pub(crate) fn same_uri(a: &str, b: &str) -> bool {
-    use energyml_core::identifiers::EtpUri;
-    match (EtpUri::parse(a), EtpUri::parse(b)) {
-        (Ok(a), Ok(b)) => {
-            a.uuid == b.uuid
-                && match (&a.object_version, &b.object_version) {
-                    (Some(x), Some(y)) => x == y,
-                    _ => true,
-                }
-        }
-        _ => a.eq_ignore_ascii_case(b),
-    }
+    energyml_core::identity::same_address(a, b)
 }
 
 /// A scalar string field.

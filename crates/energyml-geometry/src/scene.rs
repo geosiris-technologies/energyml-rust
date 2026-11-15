@@ -874,11 +874,12 @@ fn related(object: &dyn Reflect, fields: &[&str]) -> Option<Related> {
     None
 }
 
+/// The title of an object: its own `Title` or its citation's, by the identity
+/// layer's one reading ([`energyml_core::identity::title_of_reflect`]).
 fn title_of(object: &dyn Reflect) -> String {
-    match object.field("Citation") {
-        Some(FieldValue::Object(citation)) => string_field(citation, "Title").unwrap_or_default(),
-        _ => String::new(),
-    }
+    energyml_core::identity::title_of_reflect(object)
+        .unwrap_or_default()
+        .to_string()
 }
 
 fn string_field(object: &dyn Reflect, field: &str) -> Option<String> {

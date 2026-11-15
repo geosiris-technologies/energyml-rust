@@ -286,3 +286,38 @@ fn every_reference_this_build_makes_names_its_target() {
     assert!(checked >= 4, "only {checked} reference type(s) were reached");
     eprintln!("{checked} reference type(s) name their target");
 }
+
+/// Identifier Specification v5.0 section 3.4.2 (p. 14), decision D2: a
+/// reference whose `ContentType` says `version=2.0.1` (fesapi writes it) and the
+/// RESQML 2.0.1 object it points at have one uri, whatever the spelling.
+#[test]
+fn a_reference_201_and_the_object_it_points_at_have_the_same_uri() {
+    let mut reg = registry::Registry::new();
+    resqml201::register(&mut reg);
+    eml20::register(&mut reg);
+
+    let object = activity_201();
+    let reference = eml20::DataObjectReference {
+        content_type: "application/x-resqml+xml;version=2.0.1;type=obj_Activity".into(),
+        title: "History match".into(),
+        uuid: UUID.into(),
+        ..Default::default()
+    };
+    let own = reg.key_of_reflect(&object).unwrap().expect("an object has a key");
+    let pointed = reg
+        .key_of_reflect(&reference)
+        .unwrap()
+        .expect("a reference has a key");
+    assert_eq!(pointed.etp_uri(None), own.etp_uri(None));
+    assert_eq!(pointed.qualified_type(), "resqml20.obj_Activity");
+
+    // A version the registry does not carry is refused, by name.
+    let odd = eml20::DataObjectReference {
+        content_type: "application/x-resqml+xml;version=9.9;type=obj_Activity".into(),
+        uuid: UUID.into(),
+        ..Default::default()
+    };
+    let refused = reg.key_of_reflect(&odd).unwrap_err().to_string();
+    assert!(refused.contains("9.9"), "{refused}");
+    // Break it: return the key from `identity::key_of_reflect` unchanged in `Registry::key_of_reflect`.
+}

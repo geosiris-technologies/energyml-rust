@@ -1617,9 +1617,7 @@ struct Written {
 /// Whether two addresses name one object: same uuid, versions that agree
 /// (the library's one reading of an address).
 fn same_object(a: &str, b: &str) -> bool {
-    let (uuid_a, version_a) = energyml_core::identity::parse_address(a);
-    let (uuid_b, version_b) = energyml_core::identity::parse_address(b);
-    uuid_a == uuid_b && energyml_core::identity::versions_agree(version_a.as_deref(), version_b.as_deref())
+    energyml_core::identity::same_address(a, b)
 }
 
 /// A reference as the JSON `exemplar` reads (`DataObject`).

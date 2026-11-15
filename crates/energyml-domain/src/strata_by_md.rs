@@ -925,12 +925,7 @@ fn title_of(object: &dyn Reflect) -> String {
 }
 
 fn reference_of(object: &dyn Reflect, field: &str) -> Option<String> {
-    let FieldValue::Object(reference) = object.field(field)? else {
-        return None;
-    };
-    identity::uuid_of_reflect(reference)
-        .filter(|uuid| !uuid.is_empty())
-        .map(str::to_string)
+    identity::reference_uuid(object, field)
 }
 
 fn string_of(object: &dyn Reflect, field: &str) -> Option<String> {

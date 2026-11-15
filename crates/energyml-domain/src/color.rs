@@ -1117,7 +1117,10 @@ impl GraphicalSet {
                 .into_iter()
                 .filter_map(|target| {
                     let target = target.as_object()?;
-                    Some((uuid_of_reference(target)?, identity::address_of_reflect(target)?))
+                    Some((
+                        energyml_core::identity::non_empty_uuid_of_reflect(target)?,
+                        identity::address_of_reflect(target)?,
+                    ))
                 })
                 .unzip();
             if targets.is_empty() {
@@ -1193,7 +1196,7 @@ impl GraphicalSet {
                     map: entry
                         .field("ColorMap")
                         .and_then(|f| f.as_object())
-                        .and_then(uuid_of_reference),
+                        .and_then(energyml_core::identity::non_empty_uuid_of_reflect),
                     value_vector_index: scalar_u64(entry, "ValueVectorIndex"),
                 }
             } else {
@@ -2130,14 +2133,6 @@ fn scalar_u64(object: &dyn Reflect, field: &str) -> Option<u64> {
         Scalar::Int(v) if v >= 0 => Some(v as u64),
         _ => None,
     }
-}
-
-/// The uuid a reference names - the identity layer's reading, so every
-/// spelling of the field is one answer.
-fn uuid_of_reference(object: &dyn Reflect) -> Option<String> {
-    energyml_core::identity::uuid_of_reflect(object)
-        .filter(|uuid| !uuid.is_empty())
-        .map(str::to_string)
 }
 
 #[cfg(test)]

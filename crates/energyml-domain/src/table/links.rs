@@ -316,9 +316,7 @@ fn target_uri(target: &LinkTarget, table: &TableSheet) -> Option<String> {
 
 /// Whether two addresses name the same object: the same uuid, and versions that do not contradict.
 pub(super) fn same_object(a: &str, b: &str) -> bool {
-    let (uuid_a, version_a) = identity::parse_address(a);
-    let (uuid_b, version_b) = identity::parse_address(b);
-    uuid_a == uuid_b && identity::versions_agree(version_a.as_deref(), version_b.as_deref())
+    identity::same_address(a, b)
 }
 
 /// The uri of a table the facet or the description names, checked to be a table, and what kind of

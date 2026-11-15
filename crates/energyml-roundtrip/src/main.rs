@@ -385,14 +385,9 @@ fn check_part(
     result
 }
 
-/// A dotted version as numbers, so `2.0.1` sorts after `2.0` and before `2.2`.
-/// A segment that is not a number counts as zero rather than making the whole
-/// version incomparable.
+/// A dotted version as numbers - the core's one ordering of versions.
 fn version_parts(version: &str) -> Vec<u32> {
-    version
-        .split('.')
-        .map(|part| part.parse::<u32>().unwrap_or(0))
-        .collect()
+    energyml_core::naming::version_rank(version)
 }
 
 /// How good a candidate this release is for a document declaring `declared`,

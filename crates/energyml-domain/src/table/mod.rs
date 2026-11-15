@@ -524,7 +524,7 @@ fn read_columns(object: &dyn Reflect) -> Vec<Column<'_>> {
                     .and_then(|f| f.as_object())
                     .and_then(|reference| {
                         Some(PropertyKindRef::Object {
-                            uuid: uuid_of_reference(reference)?,
+                            uuid: energyml_core::identity::non_empty_uuid_of_reflect(reference)?,
                             title: text(reference, "Title"),
                         })
                     }),
@@ -671,14 +671,6 @@ fn scalar_u64(object: &dyn Reflect, field: &str) -> Option<u64> {
         Scalar::Int(v) if v >= 0 => Some(v as u64),
         _ => None,
     }
-}
-
-/// The uuid a reference names - the identity layer's reading, so every
-/// spelling of the field is one answer.
-fn uuid_of_reference(object: &dyn Reflect) -> Option<String> {
-    energyml_core::identity::uuid_of_reflect(object)
-        .filter(|uuid| !uuid.is_empty())
-        .map(str::to_string)
 }
 
 #[cfg(test)]

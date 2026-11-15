@@ -174,9 +174,7 @@ pub enum VerbatimRefusal {
 /// Whether two addresses name the same object: same uuid, and versions that
 /// agree - the library's one reading of an address, never a comparison of text.
 fn same_object(a: &str, b: &str) -> bool {
-    let (uuid_a, version_a) = identity::parse_address(a);
-    let (uuid_b, version_b) = identity::parse_address(b);
-    uuid_a == uuid_b && identity::versions_agree(version_a.as_deref(), version_b.as_deref())
+    identity::same_address(a, b)
 }
 
 /// The edges a verbatim process states, and what it signals.

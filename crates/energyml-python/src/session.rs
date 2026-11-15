@@ -1158,11 +1158,14 @@ impl Package {
         // Named before anything is read, because *this package holds no such
         // object* is a different answer from *this shape carries nothing*, and
         // a walk that simply found nothing would give the second for the first.
+        // Through the one lookup (`EpcStore::resolve`), which reads a uri the way
+        // the store does - an equivalent spelling finds the object too - and not
+        // by comparing the text of the uri with the listing.
+        let wanted = self
+            .store
+            .resolve(uri)
+            .map_err(|why| format!("this package holds no object at {uri}: {why}"))?;
         let resources = self.store.resources();
-        let wanted = resources
-            .iter()
-            .find(|summary| summary.uri == uri)
-            .ok_or_else(|| format!("this package holds no object at {uri}"))?;
 
         // **The one door** (`scene::of_package`), which is what brings the
         // colour ramps with the values: they need the whole package.
@@ -1366,11 +1369,10 @@ impl Package {
         let only: Vec<String> = uris
             .iter()
             .map(|uri| {
-                resources
-                    .iter()
-                    .find(|summary| &summary.uri == uri)
+                self.store
+                    .resolve(uri)
                     .map(|summary| summary.uuid.clone())
-                    .ok_or_else(|| format!("this package holds no object at {uri}"))
+                    .map_err(|why| format!("this package holds no object at {uri}: {why}"))
             })
             .collect::<Result<_, _>>()?;
         let read = scene::of_package(

@@ -204,9 +204,7 @@ fn string_of(object: &dyn Reflect, name: &str) -> Option<String> {
 }
 
 fn uuid_of(object: &dyn Reflect) -> Option<String> {
-    identity::uuid_of_reflect(object)
-        .filter(|uuid| !uuid.is_empty())
-        .map(str::to_ascii_lowercase)
+    identity::non_empty_uuid_of_reflect(object).map(|uuid| uuid.to_ascii_lowercase())
 }
 
 /// The uuid of the object a field of `object` references, lowercased.

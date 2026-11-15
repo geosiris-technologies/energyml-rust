@@ -801,6 +801,8 @@ impl EpcStore {
         reference: bool,
     ) -> Result<Live<'_>> {
         let version = normal_version(object_version);
+        let canonical = self.canonical_type(qualified_type);
+        let qualified_type = canonical.as_deref();
         let given = match qualified_type {
             Some(qualified_type) => identifiers::EtpUri::object_versioned(
                 self.dataspace_path(),
@@ -907,13 +909,29 @@ impl EpcStore {
     fn locate(&self, uri: &str) -> Result<Live<'_>> {
         self.in_this_dataspace(uri)?;
         let address = address_of(uri)?;
+        let canonical = self.canonical_type(address.qualified_type.as_deref());
         Self::choose(
-            self.live_for(&address.uuid, address.qualified_type.as_deref())?,
-            address.qualified_type.as_deref(),
+            self.live_for(&address.uuid, canonical.as_deref())?,
+            canonical.as_deref(),
             address.version.as_deref(),
             uri,
             false,
         )
+    }
+
+    /// A qualified type as the entries of this store spell it: its version
+    /// normalized to the schema version by the registry
+    /// ([`Registry::canonical_qualified_type`]), so that a reference whose
+    /// `ContentType` says `version=2.0.1` (`resqml201.obj_X`) names the object
+    /// that says `resqml20.obj_X`. A spelling the registry does not know stays as
+    /// written: a type a release apart still resolves while there is a single
+    /// candidate, and the checker reports it.
+    fn canonical_type(&self, qualified_type: Option<&str>) -> Option<String> {
+        qualified_type.map(|written| {
+            self.registry
+                .canonical_qualified_type(written)
+                .unwrap_or_else(|_| written.to_string())
+        })
     }
 
     /// The one entry of `live` that an address (or a reference) names - or a
@@ -4941,19 +4959,8 @@ fn address_of(uri: &str) -> Result<Address> {
 /// The uuid an address names - an ETP URI, or a bare uuid for the caller who
 /// has one in hand.
 fn uuid_in_uri(uri: &str) -> Result<String> {
-    if let Ok(parsed) = identifiers::EtpUri::parse(uri)
-        && let Some(uuid) = parsed.uuid
-    {
-        return Ok(uuid);
-    }
-    let trimmed = uri.trim();
-    if identifiers::is_uuid(trimmed) {
-        return Ok(trimmed.to_string());
-    }
-    Err(Error::BadUri {
-        uri: uri.to_string(),
-        reason: "expected an ETP data-object URI or a bare uuid".to_string(),
-    })
+    // The one reading of an address (`address_of`), lowercase.
+    address_of(uri).map(|address| address.uuid)
 }
 
 fn local_name(raw: &[u8]) -> String {

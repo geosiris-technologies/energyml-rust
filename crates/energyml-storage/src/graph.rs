@@ -648,9 +648,7 @@ pub fn check_declared_types<'a>(
 /// the dataspace of its **source**, read here from the source's own uri through
 /// the one door, [`identifiers::EtpUri::parse`].
 fn dataspace_of(uri: &str) -> Option<String> {
-    identifiers::EtpUri::parse(uri)
-        .ok()
-        .and_then(|parsed| parsed.dataspace)
+    identifiers::EtpUri::dataspace_of(uri)
 }
 
 /// The data objects nested inside the objects given, by uuid - each with a

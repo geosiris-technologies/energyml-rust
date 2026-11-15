@@ -612,7 +612,7 @@ fn read_kind(object: &dyn Reflect) -> Option<PropertyKindRef> {
 
     // 2.2, and any version that references the kind directly: the field *is*
     // the reference.
-    if let Some(uuid) = uuid_of_reference(inner) {
+    if let Some(uuid) = energyml_core::identity::non_empty_uuid_of_reflect(inner) {
         return Some(PropertyKindRef::Object {
             uuid,
             title: text(inner, "Title"),
@@ -626,7 +626,7 @@ fn read_kind(object: &dyn Reflect) -> Option<PropertyKindRef> {
     }
     for field in ["LocalPropertyKind", "PropertyKind"] {
         if let Some(target) = inner.field(field).and_then(|f| f.as_object())
-            && let Some(uuid) = uuid_of_reference(target)
+            && let Some(uuid) = energyml_core::identity::non_empty_uuid_of_reflect(target)
         {
             return Some(PropertyKindRef::Object {
                 uuid,
@@ -641,13 +641,13 @@ fn read_kind(object: &dyn Reflect) -> Option<PropertyKindRef> {
 /// [`read_kind`] reads.
 fn read_kind_uri(object: &dyn Reflect) -> Option<String> {
     let inner = object.field("PropertyKind")?.as_object()?;
-    if uuid_of_reference(inner).is_some() {
+    if energyml_core::identity::non_empty_uuid_of_reflect(inner).is_some() {
         return identity::uri_of_reflect(inner);
     }
     ["LocalPropertyKind", "PropertyKind"]
         .into_iter()
         .filter_map(|field| inner.field(field).and_then(|f| f.as_object()))
-        .find(|target| uuid_of_reference(*target).is_some())
+        .find(|target| energyml_core::identity::non_empty_uuid_of_reflect(*target).is_some())
         .and_then(identity::uri_of_reflect)
 }
 
@@ -1396,22 +1396,13 @@ fn required(object: &dyn Reflect, field: &str) -> Result<u64> {
     })
 }
 
-/// The uuid a `DataObjectReference` carries, under either spelling.
-/// The uuid a reference names - the identity layer's reading, so every
-/// spelling of the field is one answer.
-fn uuid_of_reference(object: &dyn Reflect) -> Option<String> {
-    energyml_core::identity::uuid_of_reflect(object)
-        .filter(|uuid| !uuid.is_empty())
-        .map(str::to_string)
-}
-
 /// The uri of the object a field names, version included.
 fn reference_uri(object: &dyn Reflect, field: &str) -> Option<String> {
     identity::uri_of_reflect(object.field(field)?.as_object()?)
 }
 
 fn reference_uuid(object: &dyn Reflect, field: &str) -> Option<String> {
-    uuid_of_reference(object.field(field)?.as_object()?)
+    identity::reference_uuid(object, field)
 }
 
 #[cfg(test)]

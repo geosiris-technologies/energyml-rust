@@ -657,21 +657,23 @@ fn from_object(object: &dyn Reflect, uuid: &str) -> Kind {
     let mut parent_ref: Option<&dyn Reflect> = object
         .field("Parent")
         .and_then(|f| f.as_object())
-        .filter(|reference| uuid_of_reference(*reference).is_some());
+        .filter(|reference| energyml_core::identity::non_empty_uuid_of_reflect(*reference).is_some());
 
     if parent_ref.is_none()
         && let Some(inner) = object.field("ParentPropertyKind").and_then(|f| f.as_object())
     {
         parent_ref = Some(inner)
-            .filter(|reference| uuid_of_reference(*reference).is_some())
+            .filter(|reference| energyml_core::identity::non_empty_uuid_of_reflect(*reference).is_some())
             .or_else(|| {
                 inner
                     .field("LocalPropertyKind")
                     .and_then(|f| f.as_object())
-                    .filter(|reference| uuid_of_reference(*reference).is_some())
+                    .filter(|reference| {
+                        energyml_core::identity::non_empty_uuid_of_reflect(*reference).is_some()
+                    })
             });
     }
-    let parent = parent_ref.and_then(uuid_of_reference);
+    let parent = parent_ref.and_then(energyml_core::identity::non_empty_uuid_of_reflect);
     let parent_uri = parent_ref.and_then(energyml_core::identity::uri_of_reflect);
 
     Kind {
@@ -695,14 +697,6 @@ fn text(object: &dyn Reflect, field: &str) -> Option<String> {
         Scalar::Str(_) => None,
         other => Some(other.to_string()),
     }
-}
-
-/// The uuid a reference names - the identity layer's reading, so every
-/// spelling of the field is one answer.
-fn uuid_of_reference(object: &dyn Reflect) -> Option<String> {
-    energyml_core::identity::uuid_of_reflect(object)
-        .filter(|uuid| !uuid.is_empty())
-        .map(str::to_string)
 }
 
 #[cfg(test)]

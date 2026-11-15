@@ -24,6 +24,8 @@
 //! [`Error::BadUri`]: "nothing matches" is only ever said by a store that
 //! looked.
 
+use energyml_core::identifiers::EtpUri;
+
 use crate::context::{self, Context};
 use crate::error::{Error, Result};
 use crate::resource::{self, ObjectSummary};
@@ -129,7 +131,7 @@ pub async fn find<S: EnergymlStorage + Sync + ?Sized>(
 /// [`find`] with its bookkeeping, and with unreadable headers reported in
 /// [`Search::unreadable`] rather than refusing the search.
 pub async fn find_report<S: EnergymlStorage + Sync + ?Sized>(store: &S, query: &Query) -> Result<Search> {
-    check_wildcards(&query.types)?;
+    context::check_wildcards(&query.types)?;
 
     let listed = match &query.dataspace {
         // The store does the type filter: a server does it without sending
@@ -220,7 +222,9 @@ pub async fn find_report<S: EnergymlStorage + Sync + ?Sized>(store: &S, query: &
 /// The uuid is compared ignoring ASCII case and nothing else is stripped: the
 /// same rule as `EpcStore::lookup_uuid`, which lowercases and looks the text up
 /// as it stands, so a uuid in braces is not found. The type is compared as
-/// written (qualified types are case sensitive).
+/// written (qualified types are case sensitive). Of several entries of one type
+/// under one uuid, the one that declares no version stands for it when exactly
+/// one does - again the rule of `EpcStore::lookup_uuid`.
 ///
 /// Reads the whole listing ([`EnergymlStorage::resources`]): identity only, no
 /// object is opened.
@@ -239,37 +243,42 @@ pub async fn resolve_uuid<S: EnergymlStorage + Sync + ?Sized>(
         Some(qualified_type) => format!("{qualified_type}({uuid})"),
         None => uuid.to_string(),
     };
-    let mut matching: Vec<String> = store
+    let mut matching: Vec<ObjectSummary> = store
         .resources()
         .await?
         .into_iter()
         .filter(|summary| summary.uuid.eq_ignore_ascii_case(uuid))
         .filter(|summary| qualified_type.is_none_or(|wanted| summary.qualified_type == wanted))
-        .map(|summary| summary.uri)
         .collect();
+    if matching.len() > 1 {
+        // The rule of `EpcStore::lookup_uuid` (its `choose`): of several
+        // entries of one type, the one that declares no version stands for the
+        // uuid, if exactly one does - the uri of an entry that declares a
+        // version spells it. Two types under one uuid stay ambiguous.
+        let one_type = matching
+            .iter()
+            .all(|summary| summary.qualified_type == matching[0].qualified_type);
+        if qualified_type.is_some() || one_type {
+            let bare: Vec<usize> = matching
+                .iter()
+                .enumerate()
+                .filter(|(_, summary)| {
+                    EtpUri::parse(&summary.uri)
+                        .is_ok_and(|uri| uri.object_version.as_deref().is_none_or(|v| v.trim().is_empty()))
+                })
+                .map(|(at, _)| at)
+                .collect();
+            if let [only] = bare[..] {
+                return Ok(matching.swap_remove(only).uri);
+            }
+        }
+    }
     match matching.len() {
         0 => Err(Error::NotFound(given)),
-        1 => Ok(matching.swap_remove(0)),
+        1 => Ok(matching.swap_remove(0).uri),
         _ => Err(Error::Ambiguous {
             uri: given,
-            candidates: matching,
+            candidates: matching.into_iter().map(|summary| summary.uri).collect(),
         }),
-    }
-}
-
-/// The wildcard rule of [`context::discover`], applied to a search that does
-/// not go through it (no dataspace named): a wildcard is a schema version
-/// followed by `.*`. Left alone, `resqml22.*x` would match nothing and the
-/// search would answer "none" to a question that was never well formed.
-fn check_wildcards(types: &[String]) -> Result<()> {
-    match types
-        .iter()
-        .find(|t| t.contains('*') && (!t.ends_with(".*") || t[..t.len() - 1].contains('*')))
-    {
-        Some(odd) => Err(Error::BadUri {
-            uri: odd.clone(),
-            reason: "a type wildcard is a schema version followed by `.*` (ETP 1.2 §23.34.15)".into(),
-        }),
-        None => Ok(()),
     }
 }

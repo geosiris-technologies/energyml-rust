@@ -374,7 +374,7 @@ impl AnyXml {
         candidates.sort_by_key(|info| {
             (
                 crate::naming::is_prerelease(info.version),
-                std::cmp::Reverse(version_rank(info.version)),
+                std::cmp::Reverse(crate::naming::version_rank(info.version)),
             )
         });
         candidates.into_iter().next()
@@ -487,14 +487,4 @@ fn inner_of(xml: &str) -> String {
         return String::new();
     }
     xml[open + 1..close].to_string()
-}
-
-/// A dotted version as numbers, so `2.2` sorts after `2.0` and `2.10` after
-/// `2.9`. A segment that is not a number ends the comparison there, which is
-/// what keeps a development drop from sorting as a release.
-fn version_rank(version: &str) -> Vec<u32> {
-    version
-        .split('.')
-        .map(|part| part.parse::<u32>().unwrap_or(0))
-        .collect()
 }

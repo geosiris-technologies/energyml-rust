@@ -209,12 +209,26 @@ pub fn is_dataspace_uri(uri: &str) -> Result<bool> {
     Ok(parsed.uuid.is_none() && parsed.object_type.is_none())
 }
 
+/// The one wildcard rule of a type filter: a wildcard is a schema version
+/// followed by `.*` (ETP 1.2 §23.34.15). Left alone, `resqml22.*x` would match
+/// nothing and the answer would be "none" to a question that was never well
+/// formed. [`discover`] and a search that names no dataspace both apply it.
+pub(crate) fn check_wildcards(types: &[String]) -> Result<()> {
+    match types
+        .iter()
+        .find(|t| t.contains('*') && (!t.ends_with(".*") || t[..t.len() - 1].contains('*')))
+    {
+        Some(odd) => Err(Error::BadUri {
+            uri: odd.clone(),
+            reason: "a type wildcard is a schema version followed by `.*` (ETP 1.2 §23.34.15)".into(),
+        }),
+        None => Ok(()),
+    }
+}
+
 /// The refusal of an edge whose kind nobody states: the type of its source and why.
 fn unstated(edge: &Edge) -> Error {
-    let source_type = EtpUri::parse(&edge.from)
-        .ok()
-        .and_then(|uri| Some(format!("{}{}.{}", uri.domain?, uri.version?, uri.object_type?)))
-        .unwrap_or_else(|| edge.from.clone());
+    let source_type = crate::kinds::qualified_type_of(&edge.from).unwrap_or_else(|| edge.from.clone());
     let why = match edge.basis {
         Some(crate::kinds::KindBasis::Unknown { why }) => why,
         _ => "no rule or server states the kind of this edge",
@@ -241,16 +255,7 @@ pub fn discover(
     edges: Vec<Edge>,
     context: &Context,
 ) -> Result<Found> {
-    if let Some(odd) = context
-        .types
-        .iter()
-        .find(|t| t.contains('*') && (!t.ends_with(".*") || t[..t.len() - 1].contains('*')))
-    {
-        return Err(Error::BadUri {
-            uri: odd.clone(),
-            reason: "a type wildcard is a schema version followed by `.*` (ETP 1.2 §23.34.15)".into(),
-        });
-    }
+    check_wildcards(&context.types)?;
     let typed = |summary: &ObjectSummary| {
         context.types.is_empty()
             || context

@@ -85,6 +85,25 @@ pub fn dotted_version(compact: &str) -> String {
     out
 }
 
+/// A dotted version as numbers, so `2.2` sorts after `2.0`, `2.0.1` between
+/// them, and `2.10` after `2.9`. A segment that is not a number counts as zero
+/// rather than making the whole version incomparable - which also keeps a
+/// development drop (`2.2_dev3`) from sorting as a release. The one ordering of
+/// versions: whoever ranks the releases of a package calls it.
+///
+/// ```
+/// # use energyml_core::naming::version_rank;
+/// assert!(version_rank("2.2") > version_rank("2.0.1"));
+/// assert!(version_rank("2.0.1") > version_rank("2.0"));
+/// assert!(version_rank("2.10") > version_rank("2.9"));
+/// ```
+pub fn version_rank(version: &str) -> Vec<u32> {
+    version
+        .split('.')
+        .map(|part| part.parse::<u32>().unwrap_or(0))
+        .collect()
+}
+
 /// Whether two versions denote the same schema version, whichever form each is
 /// written in (`2.0` and `20`, `2.0.1` and `201`).
 pub fn version_eq(a: &str, b: &str) -> bool {
