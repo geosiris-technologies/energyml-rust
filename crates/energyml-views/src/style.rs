@@ -2,7 +2,7 @@
 //! notes. One place, so that two views never draw an axis two ways.
 
 use energyml_sheet::draw::ticks::{label, nice_ticks};
-use energyml_sheet::draw::{Anchor, Colour, Element, Item, Layer, Rect, Stroke, TextStyle};
+use energyml_sheet::draw::{Anchor, Colour, Element, Item, Layer, PageUnit, Rect, Stroke, TextStyle};
 
 use crate::kind::ViewNote;
 
@@ -209,26 +209,31 @@ pub fn axes_layer(frame: &PlotFrame, x_title: &str, y_title: &str) -> Layer {
     layer
 }
 
-/// The notes, one line each, in a band added under the picture: the page grows by the band's height.
-pub fn notes_layer(size: &mut [f64; 2], notes: &[ViewNote]) -> Option<Layer> {
+/// The notes, one line each, in a band added under the picture: the page grows by the band's height. The band is
+/// measured in the page's own unit: 11 pixels of text on a page in pixels, 3 mm on a page in millimetres.
+pub fn notes_layer(size: &mut [f64; 2], unit: PageUnit, notes: &[ViewNote]) -> Option<Layer> {
     if notes.is_empty() {
         return None;
     }
+    let (text_size, margin) = match unit {
+        PageUnit::Pixel => (TEXT, 12.0),
+        PageUnit::Millimetre => (3.0, 4.0),
+    };
+    let line = text_size * 1.36;
     let mut layer = Layer::new("notes");
     let top = size[1];
-    let line = TEXT + 4.0;
     let items = notes
         .iter()
         .enumerate()
         .map(|(at, note)| {
             label_item(
-                [12.0, top + 4.0 + line * (at as f64 + 1.0)],
+                [margin, top + margin / 3.0 + line * (at as f64 + 1.0)],
                 note.says.clone(),
-                text(TEXT, NOTE, Anchor::Start),
+                text(text_size, NOTE, Anchor::Start),
             )
         })
         .collect();
     layer.elements.push(Element::new(items));
-    size[1] = top + 12.0 + line * notes.len() as f64;
+    size[1] = top + margin + line * notes.len() as f64;
     Some(layer)
 }

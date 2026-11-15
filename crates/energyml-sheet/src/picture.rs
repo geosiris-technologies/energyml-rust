@@ -115,7 +115,9 @@ fn column_widths_mm(layout: &Layout) -> Vec<f64> {
         .tracks
         .iter()
         .map(|track| match track {
-            LaidTrack::Md { .. } => MD_COLUMN_CHARS * text::average_char_width_pt(layout.text_size_pt) * PT_TO_MM,
+            LaidTrack::Md { .. } => {
+                MD_COLUMN_CHARS * text::average_char_width_pt(layout.text_size_pt) * PT_TO_MM
+            }
             LaidTrack::Intervals {
                 max_chars, renders, ..
             } => {
@@ -169,7 +171,10 @@ fn element(
         key,
         kind: kind.to_string(),
         title: title.to_string(),
-        data: data.into_iter().map(|(name, value)| (name.to_string(), value)).collect(),
+        data: data
+            .into_iter()
+            .map(|(name, value)| (name.to_string(), value))
+            .collect(),
         items,
     }
 }
@@ -205,7 +210,11 @@ pub fn of_layout(layout: &Layout, style: &PictureStyle) -> DisplayList {
     let header_mm = layout.header_height_mm;
 
     let natural_widths = column_widths_mm(layout);
-    let ruler_natural = if layout.ruler.is_some() { RULER_WIDTH_MM } else { 0.0 };
+    let ruler_natural = if layout.ruler.is_some() {
+        RULER_WIDTH_MM
+    } else {
+        0.0
+    };
     let natural_total: f64 = ruler_natural + natural_widths.iter().sum::<f64>();
     let page_width_mm = page_width_of(layout.page_width_mm, natural_total);
     let scale = if natural_total > 0.0 {
@@ -223,7 +232,10 @@ pub fn of_layout(layout: &Layout, style: &PictureStyle) -> DisplayList {
     }
     let row_right = x.last().copied().unwrap_or(layout.page_width_mm);
 
-    let mut list = DisplayList::new([page_width_mm, header_mm + layout.body_height_mm], PageUnit::Millimetre);
+    let mut list = DisplayList::new(
+        [page_width_mm, header_mm + layout.body_height_mm],
+        PageUnit::Millimetre,
+    );
     list.title = layout.title.clone().unwrap_or_else(|| UNTITLED.to_string());
     list.background = style.background;
 
@@ -251,7 +263,13 @@ pub fn of_layout(layout: &Layout, style: &PictureStyle) -> DisplayList {
         "mode-note",
         "",
         Vec::new(),
-        vec![text_item([0.0, row_y], &layout.mode_note, text_size, style.ink, Anchor::Start)],
+        vec![text_item(
+            [0.0, row_y],
+            &layout.mode_note,
+            text_size,
+            style.ink,
+            Anchor::Start,
+        )],
     ));
     row_y += line_height;
     for (index, track) in layout.tracks.iter().enumerate() {
@@ -405,7 +423,10 @@ pub fn of_layout(layout: &Layout, style: &PictureStyle) -> DisplayList {
                             ));
                         }
                     }
-                    let mut data = vec![("md-top", fixed(section.md_top)), ("md-base", fixed(section.md_base))];
+                    let mut data = vec![
+                        ("md-top", fixed(section.md_top)),
+                        ("md-base", fixed(section.md_base)),
+                    ];
                     if let Some(uri) = &cell.uri {
                         data.push(("uri", uri.clone()));
                     }

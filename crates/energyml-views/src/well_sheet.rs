@@ -123,15 +123,21 @@ impl ViewKind for WellSheet {
             .index
             .nodes()
             .filter(|node| node.state == NodeState::Present)
-            .map(|node| ObjectSummary::new(node.uri.to_string(), node.uuid.to_string(), node.qualified_type.to_string()))
+            .map(|node| {
+                ObjectSummary::new(
+                    node.uri.to_string(),
+                    node.uuid.to_string(),
+                    node.qualified_type.to_string(),
+                )
+            })
             .collect();
 
-        let mut options = Options::new(settings.text("md_header").unwrap_or("MD")).with_label(
-            match settings.text("label") {
-                Some("title") => PropertyLabel::Title,
-                _ => PropertyLabel::Kind,
-            },
-        );
+        let mut options = Options::new(settings.text("md_header").unwrap_or("MD")).with_label(match settings
+            .text("label")
+        {
+            Some("title") => PropertyLabel::Title,
+            _ => PropertyLabel::Kind,
+        });
         if let Some(wanted) = settings.text("tracks") {
             let uuids: Vec<String> = wanted
                 .split(',')

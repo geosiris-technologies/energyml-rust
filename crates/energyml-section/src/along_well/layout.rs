@@ -339,15 +339,16 @@ fn frame_items(plot: &PlotFrame) -> Vec<Item> {
     items
 }
 
-/// The legend: a ramp sampled by the caller's colour closure, graduated on the value scale.
-fn legend_items(
-    model: &Model,
-    ask: &LegendAsk,
-    colour: &dyn Fn(f64) -> Option<[u8; 4]>,
-    plot: &PlotFrame,
-) -> Result<Vec<Item>, AlongWellRefusal> {
+/// The scale the curtain's values are coloured and graduated on: the kind asked, or log10 proposed from the decades
+/// the finite values span (S8, `propose_log`); the bounds asked, or the robust ones (`auto_bounds`). `None` without
+/// a curtain. **The one decision**: the legend draws by it, and a face that colours the curtain asks it too.
+///
+/// # Errors
+///
+/// Bounds that do not make a scale (no finite value, a log scale over values that are not positive).
+pub fn curtain_scale(model: &Model, ask: &LegendAsk) -> Result<Option<Scale>, AlongWellRefusal> {
     let Some(curtain) = &model.curtain else {
-        return Ok(Vec::new());
+        return Ok(None);
     };
     let finite: Vec<f64> = curtain
         .columns
@@ -378,7 +379,22 @@ fn legend_items(
     };
     let min = ask.min.or(auto.map(|bounds| bounds.0)).unwrap_or(0.0);
     let max = ask.max.or(auto.map(|bounds| bounds.1)).unwrap_or(1.0);
-    let scale = Scale::new(kind, min, max, false).map_err(|why| refuse(why.to_string()))?;
+    Scale::new(kind, min, max, false)
+        .map(Some)
+        .map_err(|why| refuse(why.to_string()))
+}
+
+/// The legend: a ramp sampled by the caller's colour closure, graduated on the value scale.
+fn legend_items(
+    model: &Model,
+    ask: &LegendAsk,
+    colour: &dyn Fn(f64) -> Option<[u8; 4]>,
+    plot: &PlotFrame,
+) -> Result<Vec<Item>, AlongWellRefusal> {
+    let Some(scale) = curtain_scale(model, ask)? else {
+        return Ok(Vec::new());
+    };
+    let (kind, min, max) = (scale.kind(), scale.min(), scale.max());
 
     let [x, y, w, h] = plot.frame;
     let left = x + w + 14.0;

@@ -137,7 +137,7 @@ pub fn draw_list(
     let (kind, request, completed) = checked(kinds, ask, cx.index)?;
     let mut drawn = kind.draw(&request, cx)?;
     let mut size = drawn.list.size;
-    if let Some(layer) = style::notes_layer(&mut size, &drawn.notes) {
+    if let Some(layer) = style::notes_layer(&mut size, drawn.list.unit, &drawn.notes) {
         drawn.list.size = size;
         drawn.list.layers.push(layer);
     }

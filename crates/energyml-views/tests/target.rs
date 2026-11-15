@@ -30,7 +30,13 @@ fn kinds() -> ViewKinds {
 }
 
 /// A property of `per_node` values per node on the frame; `values` is node by node.
-fn property(uuid: &str, title: &str, uom: &str, per_node: i64, values: Vec<f64>) -> resqml22::ContinuousProperty {
+fn property(
+    uuid: &str,
+    title: &str,
+    uom: &str,
+    per_node: i64,
+    values: Vec<f64>,
+) -> resqml22::ContinuousProperty {
     resqml22::ContinuousProperty {
         uuid: uuid.to_string(),
         citation: eml23::Citation {
@@ -179,7 +185,10 @@ fn only_properties_with_a_value_per_sector_on_the_nodes_are_offered() {
     let expected = opened.index.uri_of(&uris[0]).expect("in the index");
     assert_eq!(objects, vec![expected], "{objects:?}");
     assert!(
-        offers[0].missing.iter().any(|need| need.contains("angle convention")),
+        offers[0]
+            .missing
+            .iter()
+            .any(|need| need.contains("angle convention")),
         "the convention is never in the file: {:?}",
         offers[0].missing
     );
@@ -214,15 +223,45 @@ fn the_sectors_turn_as_the_convention_says() {
     // On the page the high side is up (-pi/2), the right is +x (0), the low side is down (pi/2), the left is pi.
     let cases = [
         // Zero at the high side, clockwise as an observer looking down the hole sees it: up, right, down, left.
-        ("high_side", "clockwise", "looking_downhole", 0.0, [-FRAC_PI_2, 0.0, FRAC_PI_2, PI]),
+        (
+            "high_side",
+            "clockwise",
+            "looking_downhole",
+            0.0,
+            [-FRAC_PI_2, 0.0, FRAC_PI_2, PI],
+        ),
         // The other sense is the mirror.
-        ("high_side", "anticlockwise", "looking_downhole", 0.0, [-FRAC_PI_2, PI, FRAC_PI_2, 0.0]),
+        (
+            "high_side",
+            "anticlockwise",
+            "looking_downhole",
+            0.0,
+            [-FRAC_PI_2, PI, FRAC_PI_2, 0.0],
+        ),
         // Seen from downhole, the same clockwise is mirrored again.
-        ("high_side", "clockwise", "looking_uphole", 0.0, [-FRAC_PI_2, PI, FRAC_PI_2, 0.0]),
+        (
+            "high_side",
+            "clockwise",
+            "looking_uphole",
+            0.0,
+            [-FRAC_PI_2, PI, FRAC_PI_2, 0.0],
+        ),
         // Zero at the right: right, down, left, up.
-        ("right", "clockwise", "looking_downhole", 0.0, [0.0, FRAC_PI_2, PI, -FRAC_PI_2]),
+        (
+            "right",
+            "clockwise",
+            "looking_downhole",
+            0.0,
+            [0.0, FRAC_PI_2, PI, -FRAC_PI_2],
+        ),
         // An offset of a quarter turn moves where the file's zero sits.
-        ("high_side", "clockwise", "looking_downhole", 90.0, [0.0, FRAC_PI_2, PI, -FRAC_PI_2]),
+        (
+            "high_side",
+            "clockwise",
+            "looking_downhole",
+            90.0,
+            [0.0, FRAC_PI_2, PI, -FRAC_PI_2],
+        ),
     ];
     for (origin, sense, viewed, offset, expected) in cases {
         let list = drawn(
@@ -233,7 +272,11 @@ fn the_sectors_turn_as_the_convention_says() {
         let found = sectors(&list);
         assert_eq!(found.len(), 4, "{origin} {sense} {viewed}");
         for (k, sector) in found.iter().enumerate() {
-            same_angle(sector.middle(), expected[k], &format!("{origin} {sense} {viewed} +{offset}: sector {k}"));
+            same_angle(
+                sector.middle(),
+                expected[k],
+                &format!("{origin} {sense} {viewed} +{offset}: sector {k}"),
+            );
             assert!(
                 ((sector.end - sector.start) - FRAC_PI_2).abs() < 1.0e-9,
                 "four even sectors span a quarter turn each: {}",
@@ -247,7 +290,11 @@ fn the_sectors_turn_as_the_convention_says() {
 #[test]
 fn the_colour_of_a_sector_is_that_of_the_value_the_interpolation_gives_at_the_md() {
     let (opened, uris) = world(50.0, vec![sectors_property([30.0, 60.0, 70.0, 80.0])]);
-    let list = drawn(&opened, &ask(&uris[0], 50.0, "high_side", "clockwise", "looking_downhole")).list;
+    let list = drawn(
+        &opened,
+        &ask(&uris[0], 50.0, "high_side", "clockwise", "looking_downhole"),
+    )
+    .list;
     let found = sectors(&list);
     assert_eq!(found.len(), 4);
 
@@ -268,16 +315,33 @@ fn the_colour_of_a_sector_is_that_of_the_value_the_interpolation_gives_at_the_md
     .expect("interpolated");
     // The colours of the door of the views, over the same range.
     let cx = opened.context(&NO_MAPS);
-    let colours = value_colours(&cx, "test", None, Some("Viridis"), (0.0, 100.0), false, Reading::Continuous)
-        .expect("colours");
+    let colours = value_colours(
+        &cx,
+        "test",
+        None,
+        Some("Viridis"),
+        (0.0, 100.0),
+        false,
+        Reading::Continuous,
+    )
+    .expect("colours");
 
     for (k, sector) in found.iter().enumerate() {
-        assert!((door.values[k] - by_hand[k]).abs() < 1.0e-9, "the door and the hand agree");
+        assert!(
+            (door.values[k] - by_hand[k]).abs() < 1.0e-9,
+            "the door and the hand agree"
+        );
         let value = sector.value.expect("a value");
-        assert!((value - door.values[k]).abs() < 1.0e-9, "sector {k} shows {value}");
+        assert!(
+            (value - door.values[k]).abs() < 1.0e-9,
+            "sector {k} shows {value}"
+        );
         assert_eq!(sector.fill, colours.sample(door.values[k]), "sector {k}");
     }
-    let fills: Vec<[u8; 4]> = found.iter().map(|sector| sector.fill.expect("a colour")).collect();
+    let fills: Vec<[u8; 4]> = found
+        .iter()
+        .map(|sector| sector.fill.expect("a colour"))
+        .collect();
     for (a, fill) in fills.iter().enumerate() {
         assert!(!fills[a + 1..].contains(fill), "four values, four colours");
     }
@@ -303,7 +367,10 @@ fn a_log_scale_interpolates_by_the_geometric_mean_and_the_method_asked_wins() {
     let log = drawn(&opened, &base).list;
     for sector in sectors(&log) {
         let value = sector.value.expect("a value");
-        assert!((value - 100.0).abs() < 1.0e-6, "log-linear halfway between 10 and 1000: {value}");
+        assert!(
+            (value - 100.0).abs() < 1.0e-6,
+            "log-linear halfway between 10 and 1000: {value}"
+        );
     }
     // The default of a log scale is log-linear; a method named is the caller's choice.
     let linear = drawn(&opened, &base.set("interpolation", json!("linear"))).list;
@@ -317,17 +384,29 @@ fn a_log_scale_interpolates_by_the_geometric_mean_and_the_method_asked_wins() {
 #[test]
 fn an_md_on_a_node_shows_that_node_and_says_so() {
     let (opened, uris) = world(50.0, vec![sectors_property([30.0, 60.0, 70.0, 80.0])]);
-    let list = drawn(&opened, &ask(&uris[0], 20.0, "high_side", "clockwise", "looking_downhole")).list;
+    let list = drawn(
+        &opened,
+        &ask(&uris[0], 20.0, "high_side", "clockwise", "looking_downhole"),
+    )
+    .list;
     let values: Vec<f64> = sectors(&list).iter().map(|s| s.value.expect("a value")).collect();
     assert_eq!(values, vec![10.0, 20.0, 30.0, 40.0]);
     assert!(
-        texts(&list).iter().any(|text| text.contains("node 0") && text.contains("no interpolation")),
+        texts(&list)
+            .iter()
+            .any(|text| text.contains("node 0") && text.contains("no interpolation")),
         "{:?}",
         texts(&list)
     );
-    let between = drawn(&opened, &ask(&uris[0], 50.0, "high_side", "clockwise", "looking_downhole")).list;
+    let between = drawn(
+        &opened,
+        &ask(&uris[0], 50.0, "high_side", "clockwise", "looking_downhole"),
+    )
+    .list;
     assert!(
-        texts(&between).iter().any(|text| text.contains("interpolated") && text.contains("t = 0.5")),
+        texts(&between)
+            .iter()
+            .any(|text| text.contains("interpolated") && text.contains("t = 0.5")),
         "{:?}",
         texts(&between)
     );
@@ -338,7 +417,10 @@ fn an_md_on_a_node_shows_that_node_and_says_so() {
 fn an_md_outside_the_nodes_is_refused_by_name() {
     let (opened, uris) = world(50.0, vec![sectors_property([30.0, 60.0, 70.0, 80.0])]);
     for md in [5.0, 500.0] {
-        let refusal = refused(&opened, &ask(&uris[0], md, "high_side", "clockwise", "looking_downhole"));
+        let refusal = refused(
+            &opened,
+            &ask(&uris[0], md, "high_side", "clockwise", "looking_downhole"),
+        );
         assert!(
             matches!(&refusal, ViewRefusal::Computing { why, .. } if why.contains("outside the support")),
             "{md}: {refusal}"
@@ -362,11 +444,15 @@ fn the_angles_come_from_a_paired_property_and_none_is_invented() {
         .set("regular_sectors", json!(false))
         .set("angles", json!(uris[1]));
     let found = sectors(&drawn(&opened, &given).list);
-    for (k, expected) in [-FRAC_PI_4, FRAC_PI_4, 3.0 * FRAC_PI_4, 5.0 * FRAC_PI_4].into_iter().enumerate() {
+    for (k, expected) in [-FRAC_PI_4, FRAC_PI_4, 3.0 * FRAC_PI_4, 5.0 * FRAC_PI_4]
+        .into_iter()
+        .enumerate()
+    {
         same_angle(found[k].middle(), expected, &format!("sector {k}"));
     }
     // Without them, and without the declaration that the sectors are even: refused, the missing setting named.
-    let none = ask(&uris[0], 20.0, "high_side", "clockwise", "looking_downhole").set("regular_sectors", json!(false));
+    let none = ask(&uris[0], 20.0, "high_side", "clockwise", "looking_downhole")
+        .set("regular_sectors", json!(false));
     let refusal = refused(&opened, &none);
     assert!(
         matches!(&refusal, ViewRefusal::MissingSetting { name, .. } if name == "angles"),
@@ -379,7 +465,11 @@ fn the_angles_come_from_a_paired_property_and_none_is_invented() {
 fn grid_north_points_left_for_a_well_going_east_and_a_north_origin_follows_it() {
     // The well goes east and down; looking down it with the high side up, the right hand is south.
     let (opened, uris) = world(50.0, vec![sectors_property([10.0, 20.0, 30.0, 40.0])]);
-    let list = drawn(&opened, &ask(&uris[0], 20.0, "high_side", "clockwise", "looking_downhole")).list;
+    let list = drawn(
+        &opened,
+        &ask(&uris[0], 20.0, "high_side", "clockwise", "looking_downhole"),
+    )
+    .list;
     let centre = sectors(&list)[0].centre;
     let arrow = list
         .layers
@@ -392,21 +482,45 @@ fn grid_north_points_left_for_a_well_going_east_and_a_north_origin_follows_it() 
             _ => None,
         })
         .expect("a north arrow");
-    assert!(arrow[1][0] < arrow[0][0] && arrow[0][0] < centre[0], "north is to the left: {arrow:?}");
-    assert!((arrow[1][1] - arrow[0][1]).abs() < 1.0e-6, "and level with the centre: {arrow:?}");
+    assert!(
+        arrow[1][0] < arrow[0][0] && arrow[0][0] < centre[0],
+        "north is to the left: {arrow:?}"
+    );
+    assert!(
+        (arrow[1][1] - arrow[0][1]).abs() < 1.0e-6,
+        "and level with the centre: {arrow:?}"
+    );
     // Angles counted from north: sector 0 points where the arrow does, to the left.
-    let from_north = drawn(&opened, &ask(&uris[0], 20.0, "north", "clockwise", "looking_downhole")).list;
-    same_angle(sectors(&from_north)[0].middle(), PI, "the first sector, from north");
+    let from_north = drawn(
+        &opened,
+        &ask(&uris[0], 20.0, "north", "clockwise", "looking_downhole"),
+    )
+    .list;
+    same_angle(
+        sectors(&from_north)[0].middle(),
+        PI,
+        "the first sector, from north",
+    );
     // Break it: take the right of the frame as the east, and the arrow points right.
 }
 
 #[test]
 fn a_vertical_hole_has_no_high_side_and_says_so_but_no_north_means_no_north_origin() {
     let (opened, uris) = world(0.0, vec![sectors_property([10.0, 20.0, 30.0, 40.0])]);
-    let list_and_notes = drawn(&opened, &ask(&uris[0], 20.0, "high_side", "clockwise", "looking_downhole"));
-    assert_eq!(sectors(&list_and_notes.list).len(), 4, "the sectors are still drawn");
+    let list_and_notes = drawn(
+        &opened,
+        &ask(&uris[0], 20.0, "high_side", "clockwise", "looking_downhole"),
+    );
+    assert_eq!(
+        sectors(&list_and_notes.list).len(),
+        4,
+        "the sectors are still drawn"
+    );
     assert!(
-        list_and_notes.notes.iter().any(|note| note.key == "hole-frame-unavailable"),
+        list_and_notes
+            .notes
+            .iter()
+            .any(|note| note.key == "hole-frame-unavailable"),
         "{:?}",
         list_and_notes.notes
     );
@@ -419,7 +533,10 @@ fn a_vertical_hole_has_no_high_side_and_says_so_but_no_north_means_no_north_orig
             .all(|element| element.kind != "high-side" && element.kind != "north"),
         "no mark of a high side that does not exist"
     );
-    let refusal = refused(&opened, &ask(&uris[0], 20.0, "north", "clockwise", "looking_downhole"));
+    let refusal = refused(
+        &opened,
+        &ask(&uris[0], 20.0, "north", "clockwise", "looking_downhole"),
+    );
     assert!(
         matches!(&refusal, ViewRefusal::Computing { why, .. } if why.contains("north has no direction")),
         "{refusal}"
@@ -433,7 +550,13 @@ fn several_properties_make_concentric_rings_keyed_by_their_uri_and_their_md() {
         50.0,
         vec![
             sectors_property([30.0, 60.0, 70.0, 80.0]),
-            property(OTHER, "Rh", "ohm.m", 4, vec![5.0, 15.0, 25.0, 35.0, 45.0, 55.0, 65.0, 75.0]),
+            property(
+                OTHER,
+                "Rh",
+                "ohm.m",
+                4,
+                vec![5.0, 15.0, 25.0, 35.0, 45.0, 55.0, 65.0, 75.0],
+            ),
         ],
     );
     let request = ask(&uris[0], 50.0, "high_side", "clockwise", "looking_downhole").object(&uris[1]);
@@ -444,7 +567,10 @@ fn several_properties_make_concentric_rings_keyed_by_their_uri_and_their_md() {
         opened.index.uri_of(&uris[1]).expect("in the index"),
     );
     let (first, second) = found.split_at(4);
-    assert!(first.iter().all(|s| s.key.starts_with(first_uri)), "the first property is the first ring");
+    assert!(
+        first.iter().all(|s| s.key.starts_with(first_uri)),
+        "the first property is the first ring"
+    );
     assert!(second.iter().all(|s| s.key.starts_with(second_uri)));
     assert!(
         second[0].inner >= first[0].outer,
@@ -459,10 +585,16 @@ fn several_properties_make_concentric_rings_keyed_by_their_uri_and_their_md() {
 #[test]
 fn a_sector_without_a_value_is_left_empty_and_said() {
     let (opened, uris) = world(50.0, vec![sectors_property([30.0, 60.0, f64::NAN, 80.0])]);
-    let result = drawn(&opened, &ask(&uris[0], 50.0, "high_side", "clockwise", "looking_downhole"));
+    let result = drawn(
+        &opened,
+        &ask(&uris[0], 50.0, "high_side", "clockwise", "looking_downhole"),
+    );
     let found = sectors(&result.list);
     assert_eq!(found.len(), 4);
-    assert!(found[2].fill.is_none() && found[2].value.is_none(), "an empty sector");
+    assert!(
+        found[2].fill.is_none() && found[2].value.is_none(),
+        "an empty sector"
+    );
     assert!(found.iter().enumerate().all(|(k, s)| k == 2 || s.fill.is_some()));
     assert!(
         result.notes.iter().any(|note| note.key == "cells-without-value"),
@@ -482,7 +614,11 @@ fn a_drawing_is_made_again_from_its_own_metadata() {
         &cx,
     )
     .expect("drawn");
-    assert_eq!(first.ask.settings.get("origin"), Some(&json!("high_side")), "the convention is in the file");
+    assert_eq!(
+        first.ask.settings.get("origin"),
+        Some(&json!("high_side")),
+        "the convention is in the file"
+    );
     let again = redraw(&kinds(), &first.svg, &cx).expect("drawn again");
     assert_eq!(first.svg, again.svg);
     // Break it: leave the convention out of the metadata.

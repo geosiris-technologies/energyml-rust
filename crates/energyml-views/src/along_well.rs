@@ -12,8 +12,7 @@
 
 use energyml_domain::package_index::{NodeState, PackageIndex};
 use energyml_domain::palettes::Reading;
-use energyml_domain::stats::quantile::QuantileMethod;
-use energyml_domain::stats::scale::{ScaleKind, auto_bounds, propose_log};
+use energyml_domain::stats::scale::ScaleKind;
 use energyml_geometry::around_well::projection::WellProjections;
 use energyml_section::along_well as section;
 use serde_json::Value;
@@ -250,16 +249,20 @@ impl ViewKind for AlongWell {
 
         // The vertical section: its azimuth and its origin are the caller's, never guessed.
         let vertical = if projection == "vertical_section" {
-            let azimuth = settings.number("azimuth").ok_or_else(|| ViewRefusal::MissingSetting {
-                view: ID.to_string(),
-                name: "azimuth".to_string(),
-                about: "a vertical section needs the azimuth of its plane".to_string(),
-            })?;
-            let origin: [f64; 2] = parsed(settings, "origin")?.ok_or_else(|| ViewRefusal::MissingSetting {
-                view: ID.to_string(),
-                name: "origin".to_string(),
-                about: "a vertical section needs the point it starts from, [east, north] in metres".to_string(),
-            })?;
+            let azimuth = settings
+                .number("azimuth")
+                .ok_or_else(|| ViewRefusal::MissingSetting {
+                    view: ID.to_string(),
+                    name: "azimuth".to_string(),
+                    about: "a vertical section needs the azimuth of its plane".to_string(),
+                })?;
+            let origin: [f64; 2] =
+                parsed(settings, "origin")?.ok_or_else(|| ViewRefusal::MissingSetting {
+                    view: ID.to_string(),
+                    name: "origin".to_string(),
+                    about: "a vertical section needs the point it starts from, [east, north] in metres"
+                        .to_string(),
+                })?;
             Some(section::SectionAsk {
                 azimuth: azimuth.to_radians(),
                 origin,
@@ -279,21 +282,37 @@ impl ViewKind for AlongWell {
                         about: about.to_string(),
                     })
                 };
-                let slow_axis = role("slow_axis", "the axis the slow dimension of the curtain runs along")?;
+                let slow_axis = role(
+                    "slow_axis",
+                    "the axis the slow dimension of the curtain runs along",
+                )?;
                 let slow_sign = role("slow_sign", "the sign of the slow dimension of the curtain")?;
-                let fast_axis = role("fast_axis", "the axis the fast dimension of the curtain runs along")?;
+                let fast_axis = role(
+                    "fast_axis",
+                    "the axis the fast dimension of the curtain runs along",
+                )?;
                 let fast_sign = role("fast_sign", "the sign of the fast dimension of the curtain")?;
                 Some(section::CurtainAsk {
                     property: property.to_string(),
-                    source: settings.text("curtain_source").unwrap_or(DEFAULT_SOURCE).to_string(),
+                    source: settings
+                        .text("curtain_source")
+                        .unwrap_or(DEFAULT_SOURCE)
+                        .to_string(),
                     links: parsed(settings, "curtain_links")?.unwrap_or_default(),
-                    roles: [(axis_of(slow_axis), sign_of(slow_sign)), (axis_of(fast_axis), sign_of(fast_sign))],
+                    roles: [
+                        (axis_of(slow_axis), sign_of(slow_sign)),
+                        (axis_of(fast_axis), sign_of(fast_sign)),
+                    ],
                     lateral_index: settings.integer("lateral_index").unwrap_or(0).max(0) as usize,
                 })
             }
         };
 
-        let surface_uris: Vec<String> = request.objects_of("surface").into_iter().map(str::to_string).collect();
+        let surface_uris: Vec<String> = request
+            .objects_of("surface")
+            .into_iter()
+            .map(str::to_string)
+            .collect();
         let wanted = section::Request {
             frame: frame.to_string(),
             trajectory: request.object("trajectory").map(str::to_string),
@@ -320,38 +339,25 @@ impl ViewKind for AlongWell {
         let model = section::build(&wanted, cx.source, &meshes, &sources, &projections)
             .map_err(|why| refuse(why.to_string()))?;
 
-        // The colours of the curtain: the file's map, else a palette, said so.
+        // The colours of the curtain: the file's map, else a palette, said so, over the scale the section's legend
+        // decides (`curtain_scale`, the one decision).
+        let legend_ask = section::LegendAsk {
+            kind: match settings.text("scale") {
+                Some("linear") => Some(section::ScaleKindAsk::Linear),
+                Some("log10") => Some(section::ScaleKindAsk::Log10),
+                _ => None,
+            },
+            min: settings.number("min"),
+            max: settings.number("max"),
+        };
         let mut notes = Vec::new();
         let mut colours = None;
-        if let Some(curtain) = &model.curtain {
-            let finite: Vec<f64> = curtain
-                .columns
-                .values
-                .iter()
-                .copied()
-                .filter(|value| value.is_finite())
-                .collect();
-            let logarithmic = match settings.text("scale") {
-                Some("linear") => false,
-                Some("log10") => true,
-                _ => {
-                    let positive = finite.iter().copied().filter(|value| *value > 0.0);
-                    let low = positive.clone().fold(f64::INFINITY, f64::min);
-                    let high = positive.fold(f64::NEG_INFINITY, f64::max);
-                    propose_log((high > low).then(|| (high / low).log10()))
-                }
-            };
-            let kind = if logarithmic { ScaleKind::Log10 } else { ScaleKind::Linear };
-            let (min, max) = (settings.number("min"), settings.number("max"));
-            let auto = if min.is_none() || max.is_none() {
-                Some(auto_bounds(&finite, kind, QuantileMethod::Auto).map_err(|why| refuse(why.to_string()))?)
-            } else {
-                None
-            };
-            let bounds = (
-                min.or(auto.map(|found| found.0)).unwrap_or(0.0),
-                max.or(auto.map(|found| found.1)).unwrap_or(1.0),
-            );
+        if let (Some(curtain), Some(scale)) = (
+            &model.curtain,
+            section::curtain_scale(&model, &legend_ask).map_err(|why| refuse(why.to_string()))?,
+        ) {
+            let logarithmic = scale.kind() == ScaleKind::Log10;
+            let bounds = (scale.min(), scale.max());
             let painted = value_colours(
                 cx,
                 ID,
@@ -377,22 +383,17 @@ impl ViewKind for AlongWell {
             show_surfaces: settings.flag("show_surfaces"),
             show_tops: settings.flag("show_tops"),
             colours: Default::default(),
-            legend: settings.flag("legend").then(|| section::LegendAsk {
-                kind: match settings.text("scale") {
-                    Some("linear") => Some(section::ScaleKindAsk::Linear),
-                    Some("log10") => Some(section::ScaleKindAsk::Log10),
-                    _ => None,
-                },
-                min: settings.number("min"),
-                max: settings.number("max"),
-            }),
+            legend: settings.flag("legend").then_some(legend_ask),
             embed_curtain: true,
         };
 
         // The writer of an SVG refuses the curtain's image by name without the `png` feature of the sheet.
-        let sample = colours.as_ref().map(|painted| move |value: f64| painted.sample(value));
+        let sample = colours
+            .as_ref()
+            .map(|painted| move |value: f64| painted.sample(value));
         let colour = sample.as_ref().map(|f| f as &dyn Fn(f64) -> Option<[u8; 4]>);
-        let mut list = section::layout(&model, &view, &projections, colour).map_err(|why| refuse(why.to_string()))?;
+        let mut list =
+            section::layout(&model, &view, &projections, colour).map_err(|why| refuse(why.to_string()))?;
         list.title = format!("{ID} - {projection}");
         Ok(Drawn { list, notes })
     }
@@ -402,12 +403,14 @@ impl ViewKind for AlongWell {
 fn parsed<T: serde::de::DeserializeOwned>(settings: &Settled, name: &str) -> Result<Option<T>, ViewRefusal> {
     match settings.get(name) {
         None => Ok(None),
-        Some(value) => serde_json::from_value(value.clone())
-            .map(Some)
-            .map_err(|why| ViewRefusal::BadSetting {
-                name: name.to_string(),
-                why: why.to_string(),
-            }),
+        Some(value) => {
+            serde_json::from_value(value.clone())
+                .map(Some)
+                .map_err(|why| ViewRefusal::BadSetting {
+                    name: name.to_string(),
+                    why: why.to_string(),
+                })
+        }
     }
 }
 

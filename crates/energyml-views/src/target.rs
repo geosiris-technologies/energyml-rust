@@ -96,7 +96,11 @@ impl ViewKind for Target {
                 ORIGINS,
                 "where angle zero points: the file does not say, so it is declared (with `sense` and `viewed_from`)",
             ),
-            ViewSetting::choice("sense", SENSES, "which way the angles grow, as seen from `viewed_from`"),
+            ViewSetting::choice(
+                "sense",
+                SENSES,
+                "which way the angles grow, as seen from `viewed_from`",
+            ),
             ViewSetting::choice(
                 "viewed_from",
                 VIEWED_FROM,
@@ -115,11 +119,21 @@ impl ViewKind for Target {
                 "declare the sectors evenly spread, the first centred on angle zero, when the file gives no angles",
             ),
             ViewSetting::choice("scale", SCALES, "the scale of the colours").default(Value::from(SCALES[0])),
-            ViewSetting::number("min", "the value at the bottom of the colour scale; none: the least drawn"),
-            ViewSetting::number("max", "the value at the top of the colour scale; none: the greatest drawn"),
-            ViewSetting::text("palette", "a palette by name, over the file's colour map; none: the file's map"),
+            ViewSetting::number(
+                "min",
+                "the value at the bottom of the colour scale; none: the least drawn",
+            ),
+            ViewSetting::number(
+                "max",
+                "the value at the top of the colour scale; none: the greatest drawn",
+            ),
+            ViewSetting::text(
+                "palette",
+                "a palette by name, over the file's colour map; none: the file's map",
+            ),
             ViewSetting::flag("rings", "draw the circles that bound the rings").default(Value::Bool(true)),
-            ViewSetting::flag("north", "draw the arrow of grid north across the hole").default(Value::Bool(true)),
+            ViewSetting::flag("north", "draw the arrow of grid north across the hole")
+                .default(Value::Bool(true)),
         ]
     }
 
@@ -149,7 +163,8 @@ impl ViewKind for Target {
                 objects: vec![node.uri.to_string()],
                 title: node.title.as_deref().unwrap_or(&node.uuid).to_string(),
                 missing: vec![
-                    "the angle convention (`origin`, `sense`, `viewed_from`): the file does not state it".to_string(),
+                    "the angle convention (`origin`, `sense`, `viewed_from`): the file does not state it"
+                        .to_string(),
                     "the measured depth (`md`)".to_string(),
                 ],
             })
@@ -183,7 +198,8 @@ impl ViewKind for Target {
 
         // The frame the first property hangs on, its nodes, and where the MD falls among them.
         let (frame_uri, frame) = frame_of(cx, first)?;
-        let mds = strata_by_md::node_mds(frame.as_reflect(), cx.source).map_err(|why| refuse(why.to_string()))?;
+        let mds =
+            strata_by_md::node_mds(frame.as_reflect(), cx.source).map_err(|why| refuse(why.to_string()))?;
         let tolerance = median_step(&mds).map(|step| step * SNAP_FRACTION).unwrap_or(0.0);
         let placed = bracket(&mds, md, tolerance).map_err(|why| refuse(why.to_string()))?;
         let rule = GapRule::of_axis(&mds).map_err(|why| refuse(why.to_string()))?;
@@ -207,7 +223,10 @@ impl ViewKind for Target {
         } else if let Some(why) = &hole.north_why {
             notes.push(ViewNote {
                 key: "north-unavailable",
-                says: format!("grid north across the hole at MD {} is not known ({why})", short(md)),
+                says: format!(
+                    "grid north across the hole at MD {} is not known ({why})",
+                    short(md)
+                ),
             });
         }
 
@@ -217,7 +236,9 @@ impl ViewKind for Target {
         if let Some(uri) = angles_uri
             && cx.index.node(uri).is_none()
         {
-            return Err(ViewRefusal::NotInPackage { object: uri.to_string() });
+            return Err(ViewRefusal::NotInPackage {
+                object: uri.to_string(),
+            });
         }
         let mut read = Vec::new();
         for uri in &uris {
@@ -290,7 +311,10 @@ impl ViewKind for Target {
             });
         }
 
-        let blank = rings.iter().map(|ring| ring.data.values.iter().filter(|v| !v.is_finite()).count()).sum::<usize>();
+        let blank = rings
+            .iter()
+            .map(|ring| ring.data.values.iter().filter(|v| !v.is_finite()).count())
+            .sum::<usize>();
         if blank > 0 {
             let why = rings
                 .iter()
@@ -299,7 +323,10 @@ impl ViewKind for Target {
                 .unwrap_or_default();
             notes.push(ViewNote {
                 key: "cells-without-value",
-                says: format!("{blank} sector(s) have no value at MD {} and are left empty{why}", short(md)),
+                says: format!(
+                    "{blank} sector(s) have no value at MD {} and are left empty{why}",
+                    short(md)
+                ),
             });
         }
 
@@ -365,14 +392,19 @@ struct Hole {
 
 /// The convention the settings declare: all three words, or none.
 fn declared_convention(settings: &Settled) -> Result<Option<AngleConvention>, ViewRefusal> {
-    let words = (settings.text("origin"), settings.text("sense"), settings.text("viewed_from"));
+    let words = (
+        settings.text("origin"),
+        settings.text("sense"),
+        settings.text("viewed_from"),
+    );
     if words.0.is_none() && words.1.is_none() && words.2.is_none() {
         return Ok(None);
     }
     let need = |name: &str| ViewRefusal::MissingSetting {
         view: ID.to_string(),
         name: name.to_string(),
-        about: "an angle convention is declared whole: `origin`, `sense` and `viewed_from` together".to_string(),
+        about: "an angle convention is declared whole: `origin`, `sense` and `viewed_from` together"
+            .to_string(),
     };
     let origin = match words.0 {
         Some("high_side") => AngleOrigin::HighSide,
@@ -552,7 +584,10 @@ fn read_ring(
     let asked = settings.text("interpolation").unwrap_or(method_id);
     let method = registry.get(asked).ok_or_else(|| ViewRefusal::BadSetting {
         name: "interpolation".to_string(),
-        why: format!("no method `{asked}`: the methods are {}", registry.ids().join(", ")),
+        why: format!(
+            "no method `{asked}`: the methods are {}",
+            registry.ids().join(", ")
+        ),
     })?;
 
     // The values at the MD: the row of a node, or the two rows between which it falls, interpolated.
@@ -655,7 +690,9 @@ fn read_ring(
     let axis = &resolved.axes[0];
     let stated: Option<Vec<f64>> = match &axis.values {
         AxisValues::Listed(values) => Some(values.clone()),
-        AxisValues::Regular { start, step, count } => Some((0..*count).map(|k| start + k as f64 * step).collect()),
+        AxisValues::Regular { start, step, count } => {
+            Some((0..*count).map(|k| start + k as f64 * step).collect())
+        }
         AxisValues::Labels(_) | AxisValues::Ranks(_) => None,
     };
     let angles: Vec<f64> = match stated {
@@ -704,7 +741,11 @@ fn read_ring(
 
 /// The id of a method of the registry as a `'static` word.
 fn static_id(registry: &Interpolations, id: &str) -> &'static str {
-    registry.ids().into_iter().find(|known| *known == id).unwrap_or("custom")
+    registry
+        .ids()
+        .into_iter()
+        .find(|known| *known == id)
+        .unwrap_or("custom")
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -724,7 +765,9 @@ fn picture(
     let [width, height] = size;
     let count = rings.len();
     let legend_height = 44.0 + 34.0 * count as f64;
-    let radius = ((width - 160.0) / 2.0).min((height - 60.0 - legend_height - 40.0) / 2.0).max(40.0);
+    let radius = ((width - 160.0) / 2.0)
+        .min((height - 60.0 - legend_height - 40.0) / 2.0)
+        .max(40.0);
     let centre = [width / 2.0, 62.0 + radius];
     let hub = radius * 0.12;
     let band = (radius - hub) / count as f64;
@@ -752,8 +795,8 @@ fn picture(
         for (k, (value, bounds)) in ring.data.values.iter().zip(&ring.data.bounds).enumerate() {
             let middle = (bounds[0] + bounds[1]) / 2.0;
             let half = (bounds[1] - bounds[0]).abs() / 2.0;
-            let direction = plane_direction(middle, convention, hole.north)
-                .map_err(|why| refuse(why.to_string()))?;
+            let direction =
+                plane_direction(middle, convention, hole.north).map_err(|why| refuse(why.to_string()))?;
             // The page has y down: the plane's high side is up the page, and an angle grows clockwise on screen.
             let across = (-direction[1]).atan2(direction[0]);
             let colour = ring.colours.sample(*value);
@@ -780,11 +823,26 @@ fn picture(
             element.title = format!(
                 "{}: {}{}",
                 ring.data.title,
-                if value.is_finite() { format!("{value}") } else { "no value".to_string() },
-                ring.data.uom.as_deref().map(|uom| format!(" {uom}")).unwrap_or_default()
+                if value.is_finite() {
+                    format!("{value}")
+                } else {
+                    "no value".to_string()
+                },
+                ring.data
+                    .uom
+                    .as_deref()
+                    .map(|uom| format!(" {uom}"))
+                    .unwrap_or_default()
             );
             element.data = vec![
-                ("value".to_string(), if value.is_finite() { format!("{value}") } else { "none".to_string() }),
+                (
+                    "value".to_string(),
+                    if value.is_finite() {
+                        format!("{value}")
+                    } else {
+                        "none".to_string()
+                    },
+                ),
                 ("ring".to_string(), at.to_string()),
                 ("sector".to_string(), k.to_string()),
             ];
@@ -881,7 +939,9 @@ fn picture(
             short(support.placed.t),
             short(support.mds[support.placed.lower]),
             short(support.mds[support.placed.upper]),
-            nearest.map(|node| format!(" (nearest node {node})")).unwrap_or_default()
+            nearest
+                .map(|node| format!(" (nearest node {node})"))
+                .unwrap_or_default()
         ),
     };
     let convention_words = format!(
@@ -897,7 +957,11 @@ fn picture(
         }
     );
     legend.elements.push(Element::new(vec![
-        style::label_item([24.0, top - 22.0], position.trim_end().to_string(), style::text(style::TEXT, style::INK, Anchor::Start)),
+        style::label_item(
+            [24.0, top - 22.0],
+            position.trim_end().to_string(),
+            style::text(style::TEXT, style::INK, Anchor::Start),
+        ),
         style::label_item(
             [24.0, top - 8.0],
             format!(
@@ -908,7 +972,12 @@ fn picture(
         ),
     ]));
     for (at, ring) in rings.iter().enumerate() {
-        let uom = ring.data.uom.as_deref().map(|uom| format!(" {uom}")).unwrap_or_default();
+        let uom = ring
+            .data
+            .uom
+            .as_deref()
+            .map(|uom| format!(" {uom}"))
+            .unwrap_or_default();
         let mut items = vec![style::label_item(
             [24.0, top + 8.0],
             format!(
@@ -950,9 +1019,11 @@ fn picture(
             format!("{} to {}{uom}", short(low), short(high)),
             style::text(style::SMALL, style::MUTED, Anchor::Start),
         ));
-        legend
-            .elements
-            .push(Element::keyed(format!("{}#legend", ring.data.uri), "legend", items));
+        legend.elements.push(Element::keyed(
+            format!("{}#legend", ring.data.uri),
+            "legend",
+            items,
+        ));
         top += 34.0;
     }
     list.layers.push(legend);

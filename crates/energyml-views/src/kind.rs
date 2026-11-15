@@ -137,7 +137,13 @@ impl ViewKinds {
     /// The views of this crate.
     pub fn with_builtins() -> Self {
         ViewKinds {
-            kinds: vec![Box::new(crate::well_locator::WellLocator)],
+            kinds: vec![
+                Box::new(crate::along_well::AlongWell),
+                Box::new(crate::image_track::ImageTrack),
+                Box::new(crate::target::Target),
+                Box::new(crate::well_locator::WellLocator),
+                Box::new(crate::well_sheet::WellSheet),
+            ],
         }
     }
 

@@ -7,8 +7,8 @@ use std::sync::Arc;
 
 use energyml_core::xml::XmlText;
 use energyml_domain::palettes::Reading;
-use energyml_domain::property::shape::ComponentPick;
 use energyml_domain::property;
+use energyml_domain::property::shape::ComponentPick;
 use energyml_domain::series::matrix::read_plane;
 use energyml_eml_2_3 as eml23;
 use energyml_resqml_2_2 as resqml22;
@@ -137,7 +137,12 @@ fn note_keys(drawn: &Drawn) -> Vec<&'static str> {
 fn a_property_with_several_values_per_element_is_offered_and_a_curve_is_not() {
     let mut store = package(50.0, &[100.0, 110.0, 120.0, 130.0]);
     store
-        .put(Box::new(property(PROP, eml23::IndexableElement::Nodes, vec![3], ramp(4))))
+        .put(Box::new(property(
+            PROP,
+            eml23::IndexableElement::Nodes,
+            vec![3],
+            ramp(4),
+        )))
         .expect("in");
     store
         .put(Box::new(property(
@@ -190,7 +195,11 @@ fn the_colour_of_a_cell_is_the_colour_of_the_value_read_plane_gives_there() {
     }
     seen.sort();
     seen.dedup();
-    assert_eq!(seen.len(), 12, "twelve values, twelve colours: nothing is transposed or repeated");
+    assert_eq!(
+        seen.len(),
+        12,
+        "twelve values, twelve colours: nothing is transposed or repeated"
+    );
     // Break it: paint with `values[col * rows + row]` (the plane transposed), or colour the plane's neighbouring row.
 }
 
@@ -239,8 +248,16 @@ fn an_interval_covers_exactly_its_own_depths() {
     let values = ramp(3);
     for row in 0..3usize {
         let expected = colours.sample(values[row * 3 + 1]).expect("a colour");
-        assert_eq!(pixel(&raster, 150, row as u32 * 100), expected, "first pixel row of interval {row}");
-        assert_eq!(pixel(&raster, 150, row as u32 * 100 + 99), expected, "last pixel row of interval {row}");
+        assert_eq!(
+            pixel(&raster, 150, row as u32 * 100),
+            expected,
+            "first pixel row of interval {row}"
+        );
+        assert_eq!(
+            pixel(&raster, 150, row as u32 * 100 + 99),
+            expected,
+            "last pixel row of interval {row}"
+        );
     }
     // Break it: cover intervals like nodes (half the way to the neighbours), and the first pixel row changes.
 }
@@ -259,13 +276,22 @@ fn several_samples_in_one_pixel_row_are_reduced_by_the_id_asked() {
     let colours = colours_over(&opened, PROP, (0.0, 50.0), false);
 
     let mean = render(&opened, ask("mean")).expect("drawn");
-    assert_eq!(pixel(&image(&mean.list).1, 50, 0), colours.sample((1.0 + 11.0) / 2.0).unwrap());
-    assert_eq!(pixel(&image(&mean.list).1, 50, 1), colours.sample((21.0 + 31.0) / 2.0).unwrap());
+    assert_eq!(
+        pixel(&image(&mean.list).1, 50, 0),
+        colours.sample((1.0 + 11.0) / 2.0).unwrap()
+    );
+    assert_eq!(
+        pixel(&image(&mean.list).1, 50, 1),
+        colours.sample((21.0 + 31.0) / 2.0).unwrap()
+    );
     assert!(note_keys(&mean).contains(&"rows-reduced"));
 
     // The nodes 100 and 110 are both 5 m from the pixel row's centre: the first is kept.
     let nearest = render(&opened, ask("nearest")).expect("drawn");
-    assert_eq!(pixel(&image(&nearest.list).1, 50, 0), colours.sample(1.0).unwrap());
+    assert_eq!(
+        pixel(&image(&nearest.list).1, 50, 0),
+        colours.sample(1.0).unwrap()
+    );
     assert_ne!(
         pixel(&image(&mean.list).1, 50, 0),
         pixel(&image(&nearest.list).1, 50, 0),
@@ -291,7 +317,10 @@ fn a_logarithmic_scale_colours_by_decades_and_graduates_by_decades() {
     assert_eq!(pixel(&raster, 150, 150), colours.sample(12.0).unwrap());
     assert_eq!(pixel(&raster, 250, 350), colours.sample(33.0).unwrap());
     let words = texts(&drawn.list);
-    assert!(words.contains(&"100".to_string()) && words.contains(&"10".to_string()), "{words:?}");
+    assert!(
+        words.contains(&"100".to_string()) && words.contains(&"10".to_string()),
+        "{words:?}"
+    );
     // Break it: graduate the colour bar with the linear ticks.
 }
 
@@ -326,12 +355,20 @@ fn auto_picks_a_logarithmic_scale_when_the_values_span_decades_and_says_so() {
         property(PROP, eml23::IndexableElement::Nodes, vec![3], wide),
     );
     let drawn = render(&opened, ask_sized(PROP, 300.0, 400.0)).expect("drawn");
-    assert!(note_keys(&drawn).contains(&"scale-log-proposed"), "{:?}", note_keys(&drawn));
+    assert!(
+        note_keys(&drawn).contains(&"scale-log-proposed"),
+        "{:?}",
+        note_keys(&drawn)
+    );
     // A narrow property keeps the linear scale.
     let narrow = drawn_of_standard();
     assert!(!note_keys(&narrow).contains(&"scale-log-proposed"));
     // And `linear` overrides.
-    let forced = render(&opened, ask_sized(PROP, 300.0, 400.0).set("scale", json!("linear"))).expect("drawn");
+    let forced = render(
+        &opened,
+        ask_sized(PROP, 300.0, 400.0).set("scale", json!("linear")),
+    )
+    .expect("drawn");
     assert!(!note_keys(&forced).contains(&"scale-log-proposed"));
     // Break it: propose the log scale for every property.
 }
@@ -358,7 +395,15 @@ fn the_plane_shown_follows_pick_and_the_default_says_so() {
             .set("scale", json!("linear"))
             .set("min", json!(0.0))
             .set("max", json!(400.0));
-        render(&opened, if let Some(pick) = extra { ask.set("pick", pick) } else { ask }).expect("drawn")
+        render(
+            &opened,
+            if let Some(pick) = extra {
+                ask.set("pick", pick)
+            } else {
+                ask
+            },
+        )
+        .expect("drawn")
     };
 
     // Default: along the slowest dimension at index 0 of the others, and the note says it.
@@ -368,7 +413,10 @@ fn the_plane_shown_follows_pick_and_the_default_says_so() {
         &prop_uri(PROP),
         &read,
         4,
-        &ComponentPick::Along { axis: 0, at: vec![0, 0] },
+        &ComponentPick::Along {
+            axis: 0,
+            at: vec![0, 0],
+        },
         &opened.store,
     )
     .expect("a plane");
@@ -391,7 +439,10 @@ fn the_plane_shown_follows_pick_and_the_default_says_so() {
         &prop_uri(PROP),
         &read,
         4,
-        &ComponentPick::Along { axis: 1, at: vec![2, 0] },
+        &ComponentPick::Along {
+            axis: 1,
+            at: vec![2, 0],
+        },
         &opened.store,
     )
     .expect("a plane");
@@ -429,8 +480,15 @@ fn rows_and_columns_are_keyed_by_their_full_uri_and_their_index() {
         panic!("a rectangle")
     };
     let (area, _) = image(&drawn.list);
-    assert_eq!((rect.x, rect.y, rect.w, rect.h), (area.x, area.y + 200.0, 300.0, 100.0));
-    assert!(row.data.contains(&("md".to_string(), "120".to_string())), "{:?}", row.data);
+    assert_eq!(
+        (rect.x, rect.y, rect.w, rect.h),
+        (area.x, area.y + 200.0, 300.0, 100.0)
+    );
+    assert!(
+        row.data.contains(&("md".to_string(), "120".to_string())),
+        "{:?}",
+        row.data
+    );
     let column = element(format!("{uri}#col=1"));
     let Item::Rect { rect, .. } = &column.items[0] else {
         panic!("a rectangle")
@@ -455,7 +513,12 @@ fn the_colour_bar_and_its_source_come_from_the_one_door() {
     )
     .expect("drawn");
     let colours = colours_over(&opened, PROP, (0.0, 50.0), false);
-    let legend = drawn.list.layers.iter().find(|layer| layer.name == "legend").expect("a legend");
+    let legend = drawn
+        .list
+        .layers
+        .iter()
+        .find(|layer| layer.name == "legend")
+        .expect("a legend");
     let first = legend.elements[0]
         .items
         .iter()
@@ -469,7 +532,11 @@ fn the_colour_bar_and_its_source_come_from_the_one_door() {
         .expect("a band");
     // The top band is the highest hundredth: its centre is 49.75.
     assert_eq!(Some(first), colours.sample(49.75));
-    assert!(texts(&drawn.list).contains(&colours.source.says()), "{:?}", texts(&drawn.list));
+    assert!(
+        texts(&drawn.list).contains(&colours.source.says()),
+        "{:?}",
+        texts(&drawn.list)
+    );
     assert!(texts(&drawn.list).contains(&"ohm.m".to_string()));
     // Break it: paint the bar from a second ramp of the view's own.
 }
@@ -477,11 +544,18 @@ fn the_colour_bar_and_its_source_come_from_the_one_door() {
 #[test]
 fn a_palette_is_by_name_and_an_unknown_one_is_refused() {
     let opened = standard();
-    let name = opened.palettes.default_for(Reading::Continuous).expect("a default").name;
+    let name = opened
+        .palettes
+        .default_for(Reading::Continuous)
+        .expect("a default")
+        .name;
     let named = render(&opened, ask_sized(PROP, 300.0, 400.0).set("palette", json!(name))).expect("drawn");
     assert!(texts(&named.list).contains(&format!("colours: palette {name} (not from the file)")));
-    let refused = render(&opened, ask_sized(PROP, 300.0, 400.0).set("palette", json!("no-such-palette")))
-        .expect_err("refused");
+    let refused = render(
+        &opened,
+        ask_sized(PROP, 300.0, 400.0).set("palette", json!("no-such-palette")),
+    )
+    .expect_err("refused");
     assert!(matches!(refused, ViewRefusal::Palette { .. }), "{refused}");
     // Break it: fall back to the default palette when the name is unknown.
 }
@@ -489,12 +563,20 @@ fn a_palette_is_by_name_and_an_unknown_one_is_refused() {
 #[test]
 fn the_axis_of_the_components_says_when_it_is_only_ranks_or_names() {
     let standard = drawn_of_standard();
-    assert!(note_keys(&standard).contains(&"axis-ranks-only"), "{:?}", note_keys(&standard));
+    assert!(
+        note_keys(&standard).contains(&"axis-ranks-only"),
+        "{:?}",
+        note_keys(&standard)
+    );
     let mut labelled = property(PROP, eml23::IndexableElement::Nodes, vec![3], ramp(4));
     labelled.label_per_component = vec!["a".into(), "b".into(), "c".into()];
     let opened = opened(&[100.0, 110.0, 120.0, 130.0], labelled);
     let named = render(&opened, ask_sized(PROP, 300.0, 400.0)).expect("drawn");
-    assert!(note_keys(&named).contains(&"axis-labels-not-drawn"), "{:?}", note_keys(&named));
+    assert!(
+        note_keys(&named).contains(&"axis-labels-not-drawn"),
+        "{:?}",
+        note_keys(&named)
+    );
     assert!(!note_keys(&named).contains(&"axis-ranks-only"));
     // Break it: say nothing when the axis is only ranks.
 }
@@ -503,7 +585,12 @@ fn the_axis_of_the_components_says_when_it_is_only_ranks_or_names() {
 fn what_cannot_be_shown_is_refused_by_name_never_drawn_empty() {
     let mut store = package(50.0, &[100.0, 110.0, 120.0, 130.0]);
     store
-        .put(Box::new(property(PROP, eml23::IndexableElement::Nodes, vec![3], ramp(4))))
+        .put(Box::new(property(
+            PROP,
+            eml23::IndexableElement::Nodes,
+            vec![3],
+            ramp(4),
+        )))
         .expect("in");
     store
         .put(Box::new(property(
@@ -533,14 +620,28 @@ fn what_cannot_be_shown_is_refused_by_name_never_drawn_empty() {
     // A component the shape does not have.
     let out_of_range = why(ask_sized(PROP, 300.0, 400.0).set("pick", json!({"at": [5]})));
     assert!(!out_of_range.is_empty());
-    assert!(why(ask_sized(PROP, 300.0, 400.0).set("md_from", json!(130.0)).set("md_to", json!(100.0)))
-        .contains("empty"));
-    assert!(why(ask_sized(PROP, 300.0, 400.0).set("md_from", json!(500.0)).set("md_to", json!(600.0)))
-        .contains("no sample lies"));
+    assert!(
+        why(ask_sized(PROP, 300.0, 400.0)
+            .set("md_from", json!(130.0))
+            .set("md_to", json!(100.0)))
+        .contains("empty")
+    );
+    assert!(
+        why(ask_sized(PROP, 300.0, 400.0)
+            .set("md_from", json!(500.0))
+            .set("md_to", json!(600.0)))
+        .contains("no sample lies")
+    );
     // A pick that is not one.
-    let nonsense = render(&opened, ask_sized(PROP, 300.0, 400.0).set("pick", json!({"foo": 1})))
-        .expect_err("refused");
-    assert!(matches!(nonsense, ViewRefusal::BadSetting { ref name, .. } if name == "pick"), "{nonsense}");
+    let nonsense = render(
+        &opened,
+        ask_sized(PROP, 300.0, 400.0).set("pick", json!({"foo": 1})),
+    )
+    .expect_err("refused");
+    assert!(
+        matches!(nonsense, ViewRefusal::BadSetting { ref name, .. } if name == "pick"),
+        "{nonsense}"
+    );
     // The frame itself is not a property.
     let frame = draw_list(
         &kinds(),

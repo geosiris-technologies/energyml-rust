@@ -18,10 +18,12 @@ use energyml_domain::property::shape::{ComponentPick, ElementShape, Reduction};
 use energyml_domain::property::{self, IndexableElement};
 use energyml_domain::series::matrix::{MatrixNote, read_plane};
 use energyml_domain::stats::quantile::QuantileMethod;
-use energyml_domain::stats::scale::{self, Fraction, ScaleKind, ScaleSpec, auto_bounds, propose_log, resolve};
+use energyml_domain::stats::scale::{
+    self, Fraction, ScaleKind, ScaleSpec, auto_bounds, propose_log, resolve,
+};
 use energyml_domain::strata_by_md;
 use energyml_sheet::draw::raster::{
-    ColumnMap, Cover, RowMap, RowPick, RowReduces, GridView, columns_for, interval_covers, node_covers,
+    ColumnMap, Cover, GridView, RowMap, RowPick, RowReduces, columns_for, interval_covers, node_covers,
     paint_grid, rows_for,
 };
 use energyml_sheet::draw::ticks::{label, log_label, log_ticks, nice_ticks};
@@ -86,13 +88,32 @@ impl ViewKind for ImageTrack {
                 "pick",
                 "the plane shown: \"all\", {\"along\": axis, \"at\": [index per dimension]} (optionally \"reduced\": [dimensions], \"by\": \"mean\"|\"min\"|\"max\"|\"norm\"), {\"at\": [indices]} or {\"reduce\": id}; none: the first index of every other dimension",
             ),
-            ViewSetting::number("md_from", "the top of the depth window, in the frame's MD unit; none: the first sample"),
-            ViewSetting::number("md_to", "the bottom of the depth window, in the frame's MD unit; none: the last sample"),
-            ViewSetting::choice("scale", SCALES, "linear or logarithmic; auto: logarithmic when the values span several decades")
-                .default(Value::from(SCALES[0])),
-            ViewSetting::number("min", "the lower bound of the value scale; none: the 1st percentile of the plane"),
-            ViewSetting::number("max", "the upper bound of the value scale; none: the 99th percentile of the plane"),
-            ViewSetting::text("palette", "the palette to paint with, by name; none: the file's colour map, else a default"),
+            ViewSetting::number(
+                "md_from",
+                "the top of the depth window, in the frame's MD unit; none: the first sample",
+            ),
+            ViewSetting::number(
+                "md_to",
+                "the bottom of the depth window, in the frame's MD unit; none: the last sample",
+            ),
+            ViewSetting::choice(
+                "scale",
+                SCALES,
+                "linear or logarithmic; auto: logarithmic when the values span several decades",
+            )
+            .default(Value::from(SCALES[0])),
+            ViewSetting::number(
+                "min",
+                "the lower bound of the value scale; none: the 1st percentile of the plane",
+            ),
+            ViewSetting::number(
+                "max",
+                "the upper bound of the value scale; none: the 99th percentile of the plane",
+            ),
+            ViewSetting::text(
+                "palette",
+                "the palette to paint with, by name; none: the file's colour map, else a default",
+            ),
             ViewSetting::choice(
                 "reduce",
                 REDUCES,
@@ -109,7 +130,9 @@ impl ViewKind for ImageTrack {
     fn offers(&self, index: &PackageIndex) -> Vec<Offer> {
         index
             .nodes()
-            .filter(|node| node.state == NodeState::Present && TYPES.contains(&local_type(&node.qualified_type)))
+            .filter(|node| {
+                node.state == NodeState::Present && TYPES.contains(&local_type(&node.qualified_type))
+            })
             .filter(|node| {
                 let Some(sheet) = index.sheet(&node.uri) else {
                     return false;
@@ -121,7 +144,10 @@ impl ViewKind for ImageTrack {
                     .is_some_and(|support| &*support.type_key == FRAME);
                 sheet.values_per_element() > 1
                     && sheet.lookup.is_none()
-                    && matches!(sheet.indexable, IndexableElement::Nodes | IndexableElement::Intervals)
+                    && matches!(
+                        sheet.indexable,
+                        IndexableElement::Nodes | IndexableElement::Intervals
+                    )
                     && on_a_frame
             })
             .map(|node| Offer {
@@ -158,7 +184,8 @@ impl ViewKind for ImageTrack {
                 "the property sits on a `{support}`: this view shows the properties of a wellbore frame"
             )));
         }
-        let mds = strata_by_md::node_mds(frame.as_reflect(), cx.source).map_err(|why| refuse(why.to_string()))?;
+        let mds =
+            strata_by_md::node_mds(frame.as_reflect(), cx.source).map_err(|why| refuse(why.to_string()))?;
         let md_uom = strata_by_md::md_reference(frame.as_reflect(), cx.source)
             .ok()
             .and_then(|reference| reference.uom);
@@ -269,10 +296,8 @@ impl ViewKind for ImageTrack {
                 "component (rank)".to_string(),
             ),
         };
-        let column_covers =
-            node_covers(&positions, (positions.len() == 1).then_some(0.5)).map_err(|why| {
-                refuse(format!("the axis of the components cannot be drawn: {why}"))
-            })?;
+        let column_covers = node_covers(&positions, (positions.len() == 1).then_some(0.5))
+            .map_err(|why| refuse(format!("the axis of the components cannot be drawn: {why}")))?;
         let (x_from, x_to) = extent_of(&column_covers)
             .ok_or_else(|| refuse("no component has a finite position".to_string()))?;
 
@@ -325,8 +350,13 @@ impl ViewKind for ImageTrack {
         }
 
         // The scale of the values, and their colours.
-        let (scale, kind) = value_scale(settings.text("scale").unwrap_or(SCALES[0]), settings, &plane.values, &mut notes)
-            .map_err(refuse)?;
+        let (scale, kind) = value_scale(
+            settings.text("scale").unwrap_or(SCALES[0]),
+            settings,
+            &plane.values,
+            &mut notes,
+        )
+        .map_err(refuse)?;
         let log = kind == ScaleKind::Log10;
         let colours = value_colours(
             cx,
@@ -363,7 +393,11 @@ impl ViewKind for ImageTrack {
                 says: format!(
                     "{} pixel(s) hold a value the colours give no colour (absent{}): left transparent",
                     counts.not_coloured,
-                    if log { ", or not above zero on a logarithmic scale" } else { "" }
+                    if log {
+                        ", or not above zero on a logarithmic scale"
+                    } else {
+                        ""
+                    }
                 ),
             });
         }
@@ -372,7 +406,11 @@ impl ViewKind for ImageTrack {
         let title = property
             .title
             .clone()
-            .or_else(|| cx.index.node(uri).and_then(|node| node.title.as_deref().map(str::to_string)))
+            .or_else(|| {
+                cx.index
+                    .node(uri)
+                    .and_then(|node| node.title.as_deref().map(str::to_string))
+            })
             .unwrap_or_else(|| uri.to_string());
         let y_title = match &md_uom {
             Some(uom) => format!("MD ({uom})"),
@@ -400,7 +438,8 @@ impl ViewKind for ImageTrack {
             style::text(style::TITLE, style::INK, Anchor::Start),
         )]));
         list.layers.push(header);
-        list.layers.push(style::axes_layer(&frame_plot, &x_title, &y_title));
+        list.layers
+            .push(style::axes_layer(&frame_plot, &x_title, &y_title));
 
         let mut image = Layer::new("image");
         image.elements.push(Element::keyed(
@@ -421,14 +460,10 @@ impl ViewKind for ImageTrack {
             stroke: Some(energyml_sheet::draw::Stroke::solid(style::MUTED, 1.0)),
         }]));
         list.layers.push(outline);
-        list.layers.push(hit_layer(uri, area, &row_map, &column_map, &covers));
-        list.layers.push(legend_layer(
-            area,
-            &scale,
-            log,
-            &colours,
-            property.uom.as_deref(),
-        ));
+        list.layers
+            .push(hit_layer(uri, area, &row_map, &column_map, &covers));
+        list.layers
+            .push(legend_layer(area, &scale, log, &colours, property.uom.as_deref()));
         Ok(Drawn { list, notes })
     }
 }
@@ -481,9 +516,9 @@ fn pick_of(value: Option<&Value>, shape: &ElementShape) -> Result<(ComponentPick
         Reduction::from_id(id).ok_or_else(|| bad(format!("no reduction `{id}`")))
     };
     if let Some(axis) = map.get("along") {
-        let axis = axis
-            .as_u64()
-            .ok_or_else(|| bad("`along` is the number of a dimension".to_string()))? as usize;
+        let axis =
+            axis.as_u64()
+                .ok_or_else(|| bad("`along` is the number of a dimension".to_string()))? as usize;
         let at = indices("at")?.unwrap_or_else(|| vec![0; rank]);
         let reduced = indices("reduced")?.unwrap_or_default();
         let how = if reduced.is_empty() {
@@ -510,10 +545,17 @@ fn describe(pick: &ComponentPick) -> String {
         ComponentPick::At(at) => format!("component {at:?}"),
         ComponentPick::Along { axis, at } => format!("along dimension {axis} at {at:?}"),
         ComponentPick::Reduce(by) => format!("reduced by {}", by.id()),
-        ComponentPick::AlongReduced { axis, at, reduced, by } => {
-            format!("along dimension {axis} at {at:?}, {reduced:?} reduced by {}", by.id())
-        }
-        // `ComponentPick` is not `non_exhaustive`: every pick above.
+        ComponentPick::AlongReduced {
+            axis,
+            at,
+            reduced,
+            by,
+        } => {
+            format!(
+                "along dimension {axis} at {at:?}, {reduced:?} reduced by {}",
+                by.id()
+            )
+        } // `ComponentPick` is not `non_exhaustive`: every pick above.
     }
 }
 

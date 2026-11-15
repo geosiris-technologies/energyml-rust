@@ -8,7 +8,7 @@
 
 use energyml_core::xml::XmlText;
 use energyml_eml_2_3 as eml23;
-use energyml_geometry::around_well::projection::{WellProjection, WellProjections};
+use energyml_geometry::around_well::projection::WellProjections;
 use energyml_resqml_2_2 as resqml22;
 use energyml_section::along_well as section;
 use energyml_sheet::draw::DisplayList;
@@ -84,7 +84,11 @@ fn base() -> ViewAsk {
 }
 
 /// What the section itself would draw over the same package: the model and the view the face passes it.
-fn section_of(opened: &Opened, projection: &str, ask: Option<section::SectionAsk>) -> (section::Model, section::View) {
+fn section_of(
+    opened: &Opened,
+    projection: &str,
+    ask: Option<section::SectionAsk>,
+) -> (section::Model, section::View) {
     let wanted = section::Request {
         frame: frame_uri(),
         trajectory: None,

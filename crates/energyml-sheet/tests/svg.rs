@@ -82,7 +82,10 @@ fn laid(board: &Board, proportion: &str, height: HeightGoal) -> Layout {
 }
 
 fn layer<'a>(list: &'a DisplayList, name: &str) -> &'a [Element] {
-    &list.layer(name).unwrap_or_else(|| panic!("a layer `{name}`")).elements
+    &list
+        .layer(name)
+        .unwrap_or_else(|| panic!("a layer `{name}`"))
+        .elements
 }
 
 fn of_kind<'a>(list: &'a DisplayList, layer_name: &str, kind: &str) -> Vec<&'a Element> {
@@ -317,7 +320,7 @@ fn the_font_size_is_in_the_viewbox_unit() {
     assert!(seen > 6, "the texts were read: {seen}");
     // The written SVG says the same, on each text, with the unit of the page.
     let svg = energyml_sheet::svg::write(&layout).expect("an SVG");
-    assert!(svg.contains("width=\"180.000mm\""));
+    assert!(svg.contains("width=\"180mm\""));
     assert!(svg.contains("font-size=\"2.822\""), "{svg}");
     assert!(!svg.contains("pt\""), "no size in points");
 }
@@ -378,7 +381,10 @@ fn the_header_lines_stay_inside_the_header() {
             seen += 1;
         }
     }
-    assert!(seen >= 4, "the title, the mode note and the column headers were read: {seen}");
+    assert!(
+        seen >= 4,
+        "the title, the mode note and the column headers were read: {seen}"
+    );
     // Break it: start the column headers one line lower again.
 }
 

@@ -185,7 +185,11 @@ fn to_scale_a_cell_is_as_high_as_its_interval_times_the_scale() {
     assert!((tops[1] - tops[0] - 40.0).abs() < 1e-9 && (tops[2] - tops[1] - 40.0).abs() < 1e-9);
     // The page reaches the bottom of the body (a band of notes, if any, comes under it).
     let body_bottom = rect_of(cells[2]).y + rect_of(cells[2]).h;
-    assert!(list.size[1] >= body_bottom - 1e-9, "{:?} {body_bottom}", list.size);
+    assert!(
+        list.size[1] >= body_bottom - 1e-9,
+        "{:?} {body_bottom}",
+        list.size
+    );
     // Break it: double the scale in `Params`.
 }
 
@@ -200,8 +204,8 @@ fn the_view_draws_what_reading_layout_and_picture_give() {
     let source = &opened.store;
     let frame = source.read_object_at(&frame_uri()).expect("the frame");
     let resources = opened.store.resources();
-    let mut read = read::board_of_frame(frame.as_reflect(), &resources, source, &Options::new("MD"))
-        .expect("a board");
+    let mut read =
+        read::board_of_frame(frame.as_reflect(), &resources, source, &Options::new("MD")).expect("a board");
     read.board.title = Some("a frame".to_string());
     let laid = layout::compute(
         &read.board,
@@ -276,7 +280,11 @@ fn a_property_on_the_nodes_is_said_not_drawn() {
         sheet_package(true),
         ViewAsk::new("well-sheet").object(frame_uri()),
     );
-    assert_eq!(cells(&with.list).len(), 3, "the per-node property makes no column");
+    assert_eq!(
+        cells(&with.list).len(),
+        3,
+        "the per-node property makes no column"
+    );
     assert!(
         with.notes
             .iter()
@@ -338,7 +346,10 @@ fn a_trajectory_is_not_a_frame_and_an_unknown_mode_is_no_mode() {
             .object(frame_uri())
             .set("proportion", json!("sideways")),
     );
-    assert!(matches!(&why, ViewRefusal::BadSetting { name, .. } if name == "proportion"), "{why}");
+    assert!(
+        matches!(&why, ViewRefusal::BadSetting { name, .. } if name == "proportion"),
+        "{why}"
+    );
     // Nothing in the package at that uri.
     let why = refused(
         sheet_package(false),
@@ -367,7 +378,7 @@ fn the_picture_is_written_and_drawn_again_from_its_own_metadata() {
     let cx = opened.context(&NO_MAPS);
     let picture = draw_svg(&kinds, &ViewAsk::new("well-sheet").object(frame_uri()), &cx).expect("a picture");
     assert!(picture.svg.contains("data-layer=\"tracks\""));
-    assert!(picture.svg.contains("width=\"180.000mm\""), "a page in millimetres");
+    assert!(picture.svg.contains("width=\"180mm\""), "a page in millimetres");
     let again = redraw(&kinds, &picture.svg, &cx).expect("drawn again");
     assert_eq!(again.svg, picture.svg);
     // Break it: let the view read something other than the request (a clock, a random id).

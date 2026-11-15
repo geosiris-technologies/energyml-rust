@@ -62,7 +62,9 @@ pub use cells::{CurtainCell, CurtainGeometry, CurtainLayout, CurtainRefusal, cur
 pub use detect::{BoundaryOffer, Offer, offers};
 pub use horizons::{HorizonPoint, HorizonTrace, PlacedMesh, Undecided, computed_tops, horizon_in_curtain};
 pub use image::{ImageCounts, curtain_image};
-pub use layout::{LegendAsk, PlotFrame, ScaleKindAsk, View, draw, layout, plot_frame, read_metadata, redraw};
+pub use layout::{
+    LegendAsk, PlotFrame, ScaleKindAsk, View, curtain_scale, draw, layout, plot_frame, read_metadata, redraw,
+};
 pub use markers::{Dip, DipReference, MarkerNote, MarkerRefusal, MarkerTick, WellMarker, marker_ticks};
 pub use model::{
     AlongWellRefusal, AxisLinkAsk, AxisSignAsk, BoundaryAsk, CandidateNeedAsk, Curtain, CurtainAsk, FORMAT,
