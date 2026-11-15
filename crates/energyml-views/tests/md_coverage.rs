@@ -9,7 +9,9 @@ use std::io::Cursor;
 use std::sync::Arc;
 
 use energyml_core::registry::DynObject;
-use energyml_domain::md_extent::{self, Bar, Coverage, CoverageGroup, ExtentAxis, ExtentBasis, ExtentReaders};
+use energyml_domain::md_extent::{
+    self, Bar, Coverage, CoverageGroup, ExtentAxis, ExtentBasis, ExtentReaders,
+};
 use energyml_domain::{ObjectSource, units};
 use energyml_eml_2_3 as eml23;
 use energyml_resqml_2_2 as resqml22;
@@ -290,7 +292,10 @@ fn a_bar_sits_where_the_door_of_extents_puts_its_depths() {
     let f1 = extent_of(&opened, &frame_uri(F1));
     let (f1_band, _, f1_rect) = bar(&list, &frame_uri(F1));
     assert_eq!(f1_band, band, "a frame counts its MDs as its trajectory does");
-    assert!((f1_rect.y - scale.at(f1.from)).abs() < 1.0e-6, "the top of the frame");
+    assert!(
+        (f1_rect.y - scale.at(f1.from)).abs() < 1.0e-6,
+        "the top of the frame"
+    );
     assert!(
         (f1_rect.y + f1_rect.h - scale.at(f1.to)).abs() < 1.0e-6,
         "the bottom of the frame"
@@ -302,7 +307,10 @@ fn a_bar_sits_where_the_door_of_extents_puts_its_depths() {
     let (t3_band, _, t3_rect) = bar(&list, &trajectory_uri(T3));
     assert_eq!(t3_band, band);
     let metres = |value: f64| units::metres(value, "ft").expect("feet convert");
-    assert!((t3_rect.y - scale.at(metres(t3.from))).abs() < 1.0e-6, "T3 top, in metres");
+    assert!(
+        (t3_rect.y - scale.at(metres(t3.from))).abs() < 1.0e-6,
+        "T3 top, in metres"
+    );
     assert!(
         (t3_rect.y + t3_rect.h - scale.at(metres(t3.to))).abs() < 1.0e-6,
         "T3 bottom, in metres"
@@ -333,7 +341,12 @@ fn a_reference_that_cannot_be_compared_has_its_own_band_and_is_said() {
         .count();
     assert_eq!(axes, 2, "one graduated axis per band");
     let keys = note_keys(&drawn);
-    assert_eq!(keys.iter().filter(|key| **key == "incomparable-md-reference").count(), 1);
+    assert_eq!(
+        keys.iter()
+            .filter(|key| **key == "incomparable-md-reference")
+            .count(),
+        1
+    );
     // Break it: put every bar on the first band's axis.
 }
 
@@ -366,10 +379,15 @@ fn an_alignment_the_person_declares_puts_the_bar_on_the_other_axis_and_says_so()
     let (band_1, _, t1_rect) = bar(&drawn.list, &trajectory_uri(T1));
     let (band_2, element, t2_rect) = bar(&drawn.list, &trajectory_uri(T2));
     assert_eq!(band_1, band_2, "aligned onto T1: counted as T1's");
-    assert!(element.data.contains(&("aligned".to_string(), "true".to_string())));
-    let dashed = element.items.iter().any(|item| {
-        matches!(item, Item::Rect { stroke: Some(stroke), .. } if !stroke.dash.is_empty())
-    });
+    assert!(
+        element
+            .data
+            .contains(&("aligned".to_string(), "true".to_string()))
+    );
+    let dashed = element
+        .items
+        .iter()
+        .any(|item| matches!(item, Item::Rect { stroke: Some(stroke), .. } if !stroke.dash.is_empty()));
     assert!(dashed, "an aligned bar is outlined with a dash");
     let keys = note_keys(&drawn);
     assert!(keys.contains(&"aligned-by-assumption"));
@@ -515,10 +533,15 @@ fn an_extent_inherited_through_a_link_is_hatched_and_the_others_are_not() {
     assert!(matches!(fill_of("a"), Paint::Hatch(_)));
     assert!(matches!(fill_of("b"), Paint::Solid(_)));
     let a = bar(&list, "a").1;
-    assert!(a.data.contains(&("basis".to_string(), "through-link".to_string())));
+    assert!(
+        a.data
+            .contains(&("basis".to_string(), "through-link".to_string()))
+    );
     // The band that no reference states says so.
     assert!(
-        texts(&list).iter().any(|text| text.contains("reference not stated")),
+        texts(&list)
+            .iter()
+            .any(|text| text.contains("reference not stated")),
         "{:?}",
         texts(&list)
     );
@@ -543,7 +566,12 @@ fn what_is_off_the_md_axis_is_written_apart_and_has_no_bar() {
         })
         .collect();
     assert!(said.contains(&"A time log - time"), "{said:?}");
-    assert!(layer.elements.iter().any(|element| element.key.as_deref() == Some("log")));
+    assert!(
+        layer
+            .elements
+            .iter()
+            .any(|element| element.key.as_deref() == Some("log"))
+    );
     // Nothing apart: no such layer.
     let alone = coverage_list(&spec(&coverage, &titles, &[])).expect("laid out");
     assert!(alone.layer("off-axis").is_none());

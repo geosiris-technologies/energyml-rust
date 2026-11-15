@@ -8,9 +8,9 @@ use std::io::Cursor;
 use std::sync::Arc;
 
 use energyml_core::registry::DynObject;
-use energyml_domain::ArraySource;
+use energyml_domain::ObjectSource;
 use energyml_domain::palettes::{Palettes, Reading};
-use energyml_domain::table::{CellState, Table, classify_column, curve_pairs, Cell};
+use energyml_domain::table::{Cell, CellState, Table, classify_column, curve_pairs};
 use energyml_domain::units;
 use energyml_eml_2_3 as eml23;
 use energyml_sheet::draw::{DisplayList, Element, Item};
@@ -142,7 +142,11 @@ fn opened() -> Opened {
 }
 
 fn uri_in(opened: &Opened, n: u32) -> String {
-    opened.index.uri_of(&u(n)).expect("the package holds it").to_string()
+    opened
+        .index
+        .uri_of(&u(n))
+        .expect("the package holds it")
+        .to_string()
 }
 
 fn ask(opened: &Opened, n: u32) -> ViewAsk {
@@ -233,7 +237,10 @@ fn assert_affine(page: &[f64], data: &[f64], what: &str) {
     let (d0, d1) = (data[0], data[data.len() - 1]);
     for (at, (p, d)) in page.iter().zip(data).enumerate() {
         let expected = p0 + (d - d0) / (d1 - d0) * (p1 - p0);
-        assert!((p - expected).abs() < 1e-6, "{what}: row {at} is at {p}, expected {expected}");
+        assert!(
+            (p - expected).abs() < 1e-6,
+            "{what}: row {at} is at {p}, expected {expected}"
+        );
     }
 }
 
@@ -244,9 +251,16 @@ fn a_table_with_a_curve_is_offered_and_one_without_is_not() {
     let objects: Vec<&str> = offers.iter().map(|offer| offer.objects[0].as_str()).collect();
     assert!(objects.contains(&uri_in(&opened, 1).as_str()), "{objects:?}");
     assert!(objects.contains(&uri_in(&opened, 3).as_str()), "{objects:?}");
-    assert!(!objects.contains(&uri_in(&opened, 2).as_str()), "text only: {objects:?}");
+    assert!(
+        !objects.contains(&uri_in(&opened, 2).as_str()),
+        "text only: {objects:?}"
+    );
     assert_eq!(offers.len(), 2);
-    assert!(offers.iter().all(|offer| offer.missing.is_empty() && offer.view == ID));
+    assert!(
+        offers
+            .iter()
+            .all(|offer| offer.missing.is_empty() && offer.view == ID)
+    );
     // Break it: offer every table, or none.
 }
 
@@ -289,7 +303,10 @@ fn a_curve_per_proposed_pair_with_the_points_the_cells_give() {
             .collect();
         assert_eq!(points.len(), line.len());
         for (row, point) in points.iter().enumerate() {
-            assert_eq!(point.key.as_deref(), Some(format!("{uri}#col={y}&row={row}").as_str()));
+            assert_eq!(
+                point.key.as_deref(),
+                Some(format!("{uri}#col={y}&row={row}").as_str())
+            );
             let Item::Symbol { at, .. } = &point.items[0] else {
                 panic!("a symbol")
             };
@@ -303,16 +320,30 @@ fn a_curve_per_proposed_pair_with_the_points_the_cells_give() {
 fn two_families_of_units_get_two_axes_and_a_legend_per_column() {
     let opened = opened();
     let list = drawn(&opened, ask(&opened, 1)).list;
-    assert!(list.layer("axis-right").is_some(), "no unit and a pressure: two axes");
+    assert!(
+        list.layer("axis-right").is_some(),
+        "no unit and a pressure: two axes"
+    );
     let right = texts_of(&list, "axis-right");
-    assert!(right.iter().any(|text| text.contains("Pc") && text.contains("bar")), "{right:?}");
+    assert!(
+        right
+            .iter()
+            .any(|text| text.contains("Pc") && text.contains("bar")),
+        "{right:?}"
+    );
     let left = texts_of(&list, "axes");
     assert!(left.iter().any(|text| text == "Krw, Kro"), "{left:?}");
     assert!(left.iter().any(|text| text == "Sw"), "{left:?}");
     let legend = texts_of(&list, "legend");
     assert_eq!(legend.len(), 5, "four columns and the colours: {legend:?}");
-    assert!(legend[0].starts_with("Krw (Euc)") && legend[0].contains("Sw"), "{legend:?}");
-    assert!(legend[2].starts_with("Pc (bar)") && legend[2].contains("right axis"), "{legend:?}");
+    assert!(
+        legend[0].starts_with("Krw (Euc)") && legend[0].contains("Sw"),
+        "{legend:?}"
+    );
+    assert!(
+        legend[2].starts_with("Pc (bar)") && legend[2].contains("right axis"),
+        "{legend:?}"
+    );
     assert!(legend[3].starts_with("PcKpa (kPa)"), "{legend:?}");
     // The pressures are one family: the capillary pressure in kPa goes on the same axis, in bar.
     assert!(legend[4].contains("palette"), "{legend:?}");
@@ -340,13 +371,19 @@ fn a_column_in_another_unit_of_the_family_is_converted_to_the_first() {
         .iter()
         .map(|v| units::convert(v.expect("a number"), "kPa", "bar").expect("convertible"))
         .collect();
-    let in_bar: Vec<f64> = cells_of(&opened, &uri, 3).iter().map(|v| v.expect("a number")).collect();
+    let in_bar: Vec<f64> = cells_of(&opened, &uri, 3)
+        .iter()
+        .map(|v| v.expect("a number"))
+        .collect();
     for (a, b) in converted.iter().zip(&in_bar) {
         assert!((a - b).abs() < 1e-9, "{a} against {b}");
     }
     assert_eq!(bar.len(), kpa.len());
     for (a, b) in bar.iter().zip(&kpa) {
-        assert!((a[0] - b[0]).abs() < 1e-9 && (a[1] - b[1]).abs() < 1e-6, "{a:?} against {b:?}");
+        assert!(
+            (a[0] - b[0]).abs() < 1e-9 && (a[1] - b[1]).abs() < 1e-6,
+            "{a:?} against {b:?}"
+        );
     }
     // Break it: draw the kPa values as they are.
 }
@@ -363,7 +400,10 @@ fn a_pairs_setting_wins_over_the_proposal() {
         assert_eq!(curves[0].key.as_deref(), Some(format!("{uri}#col=2").as_str()));
         // Kro against Krw: the abscissa is Krw's cells, not the key column's.
         let page_x: Vec<f64> = line_of(curves[0]).iter().map(|p| p[0]).collect();
-        let data_x: Vec<f64> = cells_of(&opened, &uri, 1).iter().map(|v| v.expect("a number")).collect();
+        let data_x: Vec<f64> = cells_of(&opened, &uri, 1)
+            .iter()
+            .map(|v| v.expect("a number"))
+            .collect();
         assert_affine(&page_x, &data_x, "abscissa");
     }
     // Break it: ignore the setting.
@@ -404,7 +444,10 @@ fn a_pair_with_a_text_column_is_refused_and_so_is_a_table_with_no_pair() {
     match refused(&opened, ask(&opened, 2)) {
         ViewRefusal::Computing { view, why } => {
             assert_eq!(view, ID);
-            assert!(why.contains("no pair of numeric columns") && why.contains("facies"), "{why}");
+            assert!(
+                why.contains("no pair of numeric columns") && why.contains("facies"),
+                "{why}"
+            );
         }
         other => panic!("{other}"),
     }
@@ -417,7 +460,11 @@ fn an_absent_cell_leaves_its_row_out_and_the_picture_says_so() {
     let uri = uri_in(&opened, 3);
     let drawn = drawn(&opened, ask(&opened, 3));
     let rows = cells_of(&opened, &uri, 1);
-    assert_eq!(rows.iter().filter(|v| v.is_none()).count(), 1, "the library reads one absence");
+    assert_eq!(
+        rows.iter().filter(|v| v.is_none()).count(),
+        1,
+        "the library reads one absence"
+    );
     let points = of_kind(&drawn.list, "curves", "point");
     assert_eq!(points.len(), 3);
     assert!(
@@ -442,12 +489,23 @@ fn the_curves_take_the_categorical_palette_in_turn_and_a_palette_by_name() {
     let opened = opened();
     let uri = uri_in(&opened, 1);
     let palettes = Palettes::new();
-    let default = palettes.default_for(Reading::Categorical).expect("a categorical palette");
+    let default = palettes
+        .default_for(Reading::Categorical)
+        .expect("a categorical palette");
     let list = drawn(&opened, ask(&opened, 1)).list;
     for (rank, y) in (1..=4).enumerate() {
-        assert_eq!(stroke_colour(curve(&list, &uri, y)), default.category(rank), "curve {y}");
+        assert_eq!(
+            stroke_colour(curve(&list, &uri, y)),
+            default.category(rank),
+            "curve {y}"
+        );
     }
-    assert!(texts_of(&list, "legend").last().expect("a line").contains(default.name));
+    assert!(
+        texts_of(&list, "legend")
+            .last()
+            .expect("a line")
+            .contains(default.name)
+    );
     // Another categorical palette, by name (any but the default).
     let other = palettes
         .for_reading(Reading::Categorical)
@@ -456,7 +514,12 @@ fn the_curves_take_the_categorical_palette_in_turn_and_a_palette_by_name() {
         .expect("a second categorical palette");
     let list = drawn(&opened, ask(&opened, 1).set("palette", json!(other.name))).list;
     assert_eq!(stroke_colour(curve(&list, &uri, 1)), other.category(0));
-    assert!(texts_of(&list, "legend").last().expect("a line").contains(other.name));
+    assert!(
+        texts_of(&list, "legend")
+            .last()
+            .expect("a line")
+            .contains(other.name)
+    );
     // An unknown palette and a palette for a ramp are refused by their names.
     let continuous = palettes
         .for_reading(Reading::Continuous)

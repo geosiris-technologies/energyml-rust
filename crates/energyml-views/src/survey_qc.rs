@@ -35,8 +35,9 @@ use energyml_geometry::around_well::projection::{
 };
 use energyml_geometry::min_curvature::{self, Located, Measured};
 use energyml_geometry::stations::{
-    BetweenStations, CheckKind, DeclaredNorth, NorthSource, PlacedSurvey, RejectedStations, SurveyDeclarations,
-    SurveyStations, diagnose, placement_without_north, read_declaring, stations_of, survey_path,
+    BetweenStations, CheckKind, DeclaredNorth, NorthSource, PlacedSurvey, RejectedStations,
+    SurveyDeclarations, SurveyStations, diagnose, placement_without_north, read_declaring, stations_of,
+    survey_path,
 };
 use energyml_geometry::well::{PlacedPath, SurveyPlacement};
 use energyml_sheet::draw::{
@@ -217,11 +218,16 @@ impl ViewKind for SurveyQc {
             let first = read_declaring(survey, cx.source, &declared)
                 .err()
                 .map(|why| why.to_string());
-            let blocking = diagnosis
-                .failures()
-                .any(|(kind, _)| !matches!(kind, CheckKind::North | CheckKind::Placement | CheckKind::NorthInFrame));
+            let blocking = diagnosis.failures().any(|(kind, _)| {
+                !matches!(
+                    kind,
+                    CheckKind::North | CheckKind::Placement | CheckKind::NorthInFrame
+                )
+            });
             if blocking {
-                return Err(refuse(first.unwrap_or_else(|| "the survey is refused".to_string())));
+                return Err(refuse(
+                    first.unwrap_or_else(|| "the survey is refused".to_string()),
+                ));
             }
             oriented = false;
             for (at, (kind, finding)) in diagnosis.failures().enumerate() {
@@ -287,7 +293,11 @@ impl ViewKind for SurveyQc {
         match stated_against_computed(&stations, &kept, &located, &courses, chosen.as_ref()) {
             Ok(report) => {
                 for gap in &report.gaps {
-                    let Some(station) = gap.station.checked_sub(1).and_then(|at| stations.measured.get(at)) else {
+                    let Some(station) = gap
+                        .station
+                        .checked_sub(1)
+                        .and_then(|at| stations.measured.get(at))
+                    else {
                         continue;
                     };
                     let (stated, computed, limit) = if gap.field == StatedField::Dls {
@@ -369,7 +379,8 @@ impl ViewKind for SurveyQc {
                     north: [0.0, 1.0],
                 },
             };
-            let path = PlacedPath::from_local(local.clone(), &identity).map_err(|why| refuse(why.to_string()))?;
+            let path =
+                PlacedPath::from_local(local.clone(), &identity).map_err(|why| refuse(why.to_string()))?;
             let extent = path.md_extent();
             let span = (extent[1] - extent[0]).abs().max(1.0);
             let step = settings.number("step").unwrap_or(10.0);
@@ -488,7 +499,9 @@ impl ViewKind for SurveyQc {
             let outer = cell(size, at, order.len());
             let layers = match panel {
                 Panel::Plan => {
-                    let laid = plan.as_ref().expect("the plan is in the order only when it is laid");
+                    let laid = plan
+                        .as_ref()
+                        .expect("the plan is in the order only when it is laid");
                     let flagged = flagged_positions(&flags, &mds, laid);
                     draw_laid(
                         "plan",
@@ -504,7 +517,9 @@ impl ViewKind for SurveyQc {
                     )
                 }
                 Panel::Section => {
-                    let laid = section.as_ref().expect("the section is in the order only when it is laid");
+                    let laid = section
+                        .as_ref()
+                        .expect("the section is in the order only when it is laid");
                     let (azimuth, by) = chosen
                         .as_ref()
                         .map_or((0.0, "none"), |chosen| (chosen.azimuth, chosen.by));
@@ -525,7 +540,9 @@ impl ViewKind for SurveyQc {
                 Panel::Azimuth => draw_azimuth(&plot, outer),
                 Panel::Dls => draw_dls(&plot, outer),
                 Panel::Gap => {
-                    let comparison = gap.as_ref().expect("the gap is in the order only when it is computed");
+                    let comparison = gap
+                        .as_ref()
+                        .expect("the gap is in the order only when it is computed");
                     draw_gap(counterpart.unwrap_or(uri), comparison, outer)
                 }
             };
@@ -598,7 +615,11 @@ fn short(value: f64) -> String {
     let text = format!("{value:.2}");
     let text = text.trim_end_matches('0').trim_end_matches('.');
     // A value that rounds to nothing is written 0, never -0.
-    if text == "-0" { "0".to_string() } else { text.to_string() }
+    if text == "-0" {
+        "0".to_string()
+    } else {
+        text.to_string()
+    }
 }
 
 /// The first and the last measured depth of the stations.
@@ -814,7 +835,11 @@ fn series_frame(plot: &Plot<'_>, outer: Rect, y: [f64; 2]) -> PlotFrame {
 }
 
 /// The stations the file rejected, as crosses at `(md, value)`: they are left out of the computing, and shown.
-fn rejected_marks(plot: &Plot<'_>, frame: &PlotFrame, value: impl Fn(&Measured) -> Option<f64>) -> Vec<Element> {
+fn rejected_marks(
+    plot: &Plot<'_>,
+    frame: &PlotFrame,
+    value: impl Fn(&Measured) -> Option<f64>,
+) -> Vec<Element> {
     plot.stations
         .rejected
         .iter()
@@ -925,9 +950,7 @@ fn draw_azimuth(plot: &Plot<'_>, outer: Rect) -> Vec<Layer> {
             }],
         ));
     }
-    layer
-        .elements
-        .extend(rejected_marks(plot, &frame, |s| s.azimuth));
+    layer.elements.extend(rejected_marks(plot, &frame, |s| s.azimuth));
     layers.push(layer);
     layers
 }
@@ -935,7 +958,11 @@ fn draw_azimuth(plot: &Plot<'_>, outer: Rect) -> Vec<Layer> {
 /// The dogleg severity against MD: a bar per course, as high as that course's severity in degrees per
 /// [`RATE_LENGTH`]; the largest said; a limit and the courses above it; a ring where the file states another value.
 fn draw_dls(plot: &Plot<'_>, outer: Rect) -> Vec<Layer> {
-    let values: Vec<f64> = plot.courses.iter().map(|course| rate(course.severity())).collect();
+    let values: Vec<f64> = plot
+        .courses
+        .iter()
+        .map(|course| rate(course.severity()))
+        .collect();
     let largest = values.iter().copied().fold(0.0_f64, f64::max);
     let top = plot.limit.map_or(largest, |limit| largest.max(limit));
     let frame = series_frame(plot, outer, [0.0, top]);

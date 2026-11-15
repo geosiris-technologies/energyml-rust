@@ -185,7 +185,12 @@ impl ViewKind for MdCoverage {
 
         let alignments = alignments_of(&request.settings, cx.index)?;
         let coverage = md_extent::coverage(items, &alignments);
-        let name = |uri: &str| titles.get(uri).cloned().unwrap_or_else(|| title_of(cx.index, uri));
+        let name = |uri: &str| {
+            titles
+                .get(uri)
+                .cloned()
+                .unwrap_or_else(|| title_of(cx.index, uri))
+        };
         for note in &coverage.notes {
             match note {
                 CoverageNote::Incomparable {
@@ -304,7 +309,7 @@ fn alignments_of(settings: &Settled, index: &PackageIndex) -> Result<Vec<Alignme
     }
     let Some(list) = value.as_array() else {
         return Err(bad(
-            "a list of {\"item\": uri, \"onto\": uri} is expected".to_string(),
+            "a list of {\"item\": uri, \"onto\": uri} is expected".to_string()
         ));
     };
     let resolve = |entry: &Value, field: &str| -> Result<String, ViewRefusal> {
@@ -409,7 +414,11 @@ pub fn coverage_list(spec: &CoverageSpec<'_>) -> Result<DisplayList, String> {
         };
 
         // The band's header: its unit, then how its MDs are counted.
-        let unit = group.uom.as_deref().map(|uom| format!(" ({uom})")).unwrap_or_default();
+        let unit = group
+            .uom
+            .as_deref()
+            .map(|uom| format!(" ({uom})"))
+            .unwrap_or_default();
         let (first, second) = match &group.reference {
             Some(reference) => (
                 format!("MD{unit}"),
@@ -538,7 +547,11 @@ pub fn coverage_list(spec: &CoverageSpec<'_>) -> Result<DisplayList, String> {
                 "{name}: {} to {}{}",
                 short(bar.from),
                 short(bar.to),
-                group.uom.as_deref().map(|uom| format!(" {uom}")).unwrap_or_default()
+                group
+                    .uom
+                    .as_deref()
+                    .map(|uom| format!(" {uom}"))
+                    .unwrap_or_default()
             );
             element.data.push((
                 "basis".to_string(),

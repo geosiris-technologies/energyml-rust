@@ -246,7 +246,9 @@ impl ViewKind for TableCurve {
             let mut left_out = 0usize;
             for (row, (xv, yv)) in x_values.iter().zip(&y_values).enumerate() {
                 match (xv, yv) {
-                    (Some(xv), Some(yv)) => points.push((row, [xv * x_factor.0 + x_factor.1, yv * to_axis.0 + to_axis.1])),
+                    (Some(xv), Some(yv)) => {
+                        points.push((row, [xv * x_factor.0 + x_factor.1, yv * to_axis.0 + to_axis.1]))
+                    }
                     _ => left_out += 1,
                 }
             }
@@ -263,7 +265,10 @@ impl ViewKind for TableCurve {
             if points.is_empty() {
                 notes.push(ViewNote {
                     key: "curve-not-drawn",
-                    says: format!("the curve of `{}` is not drawn: it has no row with both values", column_name(sheet, y)),
+                    says: format!(
+                        "the curve of `{}` is not drawn: it has no row with both values",
+                        column_name(sheet, y)
+                    ),
                 });
                 continue;
             }
@@ -432,7 +437,9 @@ fn pairs_asked(
         why,
     };
     let Some(list) = asked.as_array() else {
-        return Err(bad("a list of couples of columns, like [[0, 1], [0, 2]]".to_string()));
+        return Err(bad(
+            "a list of couples of columns, like [[0, 1], [0, 2]]".to_string()
+        ));
     };
     if list.is_empty() {
         return Err(bad("the list is empty: name at least one couple".to_string()));
@@ -465,11 +472,16 @@ fn pairs_asked(
                 ))),
             };
         }
-        Err(bad(format!("`{value}` is neither a column rank nor a column title")))
+        Err(bad(format!(
+            "`{value}` is neither a column rank nor a column title"
+        )))
     };
     let mut out = Vec::new();
     for couple in list {
-        let Some([x, y]) = couple.as_array().map(Vec::as_slice).and_then(|c| <&[Value; 2]>::try_from(c).ok())
+        let Some([x, y]) = couple
+            .as_array()
+            .map(Vec::as_slice)
+            .and_then(|c| <&[Value; 2]>::try_from(c).ok())
         else {
             return Err(bad(format!("`{couple}` is not a couple [x, y]")));
         };
@@ -490,7 +502,10 @@ fn pairs_asked(
                     format!(
                         "column `{}` is {:?}, not a number: it cannot be a curve",
                         column_name(sheet, column),
-                        classes.get(column).map(|class| format!("{class:?}")).unwrap_or_default()
+                        classes
+                            .get(column)
+                            .map(|class| format!("{class:?}"))
+                            .unwrap_or_default()
                     ),
                 ));
             }
@@ -580,7 +595,11 @@ fn picture(
     for (rank, curve) in curves.iter().enumerate() {
         let colour = ink(palette.category(rank));
         let frame = &frames[curve.axis];
-        let dash = if curve.axis == 1 { vec![6.0, 3.0] } else { Vec::new() };
+        let dash = if curve.axis == 1 {
+            vec![6.0, 3.0]
+        } else {
+            Vec::new()
+        };
         let placed: Vec<[f64; 2]> = curve.points.iter().map(|(_, p)| frame.place(*p)).collect();
         if placed.len() >= 2 {
             let mut stroke = Stroke::solid(colour, 2.0);

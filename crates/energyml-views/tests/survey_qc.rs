@@ -391,7 +391,10 @@ fn the_plan_runs_east_and_the_section_follows_the_closure_when_the_file_gives_no
     );
     // The plan: an eastward hold, a horizontal line left to right, a point per station keyed by its MD.
     let plan = &polylines(&result.list, "plan", "survey")[0];
-    assert!((plan[0][1] - plan[plan.len() - 1][1]).abs() < 1.0e-6, "no northing");
+    assert!(
+        (plan[0][1] - plan[plan.len() - 1][1]).abs() < 1.0e-6,
+        "no northing"
+    );
     assert!(plan[plan.len() - 1][0] > plan[0][0], "east to the right");
     let stations = elements(&result.list, "plan", "station");
     assert_eq!(stations.len(), 5);
@@ -433,10 +436,17 @@ fn an_azimuth_near_the_vertical_is_hollow_and_the_rule_is_the_librarys() {
     let filled = elements(&result.list, "azimuth", "station");
     // Triangulation: `azimuth_significance` over the same stations, with its default threshold.
     let worth = azimuth_significance(&measured(&stations), &InclinationAtLeast(3.0));
-    let not_significant = worth.iter().filter(|w| **w == Significance::NotSignificant).count();
+    let not_significant = worth
+        .iter()
+        .filter(|w| **w == Significance::NotSignificant)
+        .count();
     let significant = worth.iter().filter(|w| **w == Significance::Significant).count();
     assert_eq!((hollow.len(), filled.len()), (not_significant, significant));
-    assert_eq!((hollow.len(), filled.len()), (1, 2), "the station at 1 degree is the hollow one");
+    assert_eq!(
+        (hollow.len(), filled.len()),
+        (1, 2),
+        "the station at 1 degree is the hollow one"
+    );
     assert_eq!(
         hollow[0].key.as_deref(),
         Some(format!("{}#md=100", survey_uri()).as_str())
@@ -446,7 +456,11 @@ fn an_azimuth_near_the_vertical_is_hollow_and_the_rule_is_the_librarys() {
 
 #[test]
 fn a_survey_that_states_no_north_is_not_placed_and_says_why_until_one_is_declared() {
-    let stations = [(0.0, 0.0, None), (100.0, 30.0, Some(90.0)), (200.0, 30.0, Some(90.0))];
+    let stations = [
+        (0.0, 0.0, None),
+        (100.0, 30.0, Some(90.0)),
+        (200.0, 30.0, Some(90.0)),
+    ];
     let result = drawn(package(survey(&stations, None), None), ask());
     assert!(!has_layer(&result.list, "plan") && !has_layer(&result.list, "section"));
     assert!(has_layer(&result.list, "inclination") && has_layer(&result.list, "dls"));
@@ -486,7 +500,11 @@ fn a_rejected_station_is_refused_or_left_out_and_marked() {
     let marks = symbol_centres(&result.list, "inclination", "rejected");
     assert_eq!(marks.len(), 1);
     assert_eq!(marks[0].0, format!("{}#md=100", survey_uri()));
-    assert_eq!(elements(&result.list, "inclination", "station").len(), 3, "the others stay");
+    assert_eq!(
+        elements(&result.list, "inclination", "station").len(),
+        3,
+        "the others stay"
+    );
     assert!(note(&result, "rejected-stations-left-out").is_some());
     // Break it: drop the rejected station silently instead of marking it, or leave it in the computing.
 }
@@ -522,17 +540,26 @@ fn a_stated_value_the_recomputation_contradicts_is_ringed_on_its_station() {
 #[test]
 fn the_gap_is_the_shift_between_the_survey_and_the_trajectory() {
     // The trajectory is the survey's hold, 2 m east of it: a gap of 2 m at every MD, all of it horizontal.
-    let store = package(survey(&hold(&[0.0, 100.0, 200.0, 300.0, 400.0]), grid()), Some((2.0, 300.0)));
+    let store = package(
+        survey(&hold(&[0.0, 100.0, 200.0, 300.0, 400.0]), grid()),
+        Some((2.0, 300.0)),
+    );
     let result = drawn(store, ask().object(trajectory_uri()));
     let total = &polylines(&result.list, "gap", "gap")[0];
     assert_eq!(total.len(), 4, "the stations both paths reach: MD 0 to 300");
-    assert!(total.iter().all(|p| (p[1] - total[0][1]).abs() < 1.0e-6), "the same gap everywhere");
+    assert!(
+        total.iter().all(|p| (p[1] - total[0][1]).abs() < 1.0e-6),
+        "the same gap everywhere"
+    );
     let vertical = &polylines(&result.list, "gap", "gap-vertical")[0];
     assert!(
         vertical.iter().all(|p| (p[1] - vertical[0][1]).abs() < 1.0e-6),
         "no vertical part: flat, and at the foot of the plot"
     );
-    assert!(vertical[0][1] > total[0][1], "the vertical part is under the total: it is zero, the total is 2 m");
+    assert!(
+        vertical[0][1] > total[0][1],
+        "the vertical part is under the total: it is zero, the total is 2 m"
+    );
     let words = texts(&result.list);
     assert!(
         words
@@ -540,7 +567,10 @@ fn the_gap_is_the_shift_between_the_survey_and_the_trajectory() {
             .any(|text| text.contains("largest gap 2 m at MD 0 m (mean 2 m)")),
         "{words:?}"
     );
-    assert!(note(&result, "north-fitted-not-stated").is_none(), "the north is known: no turn");
+    assert!(
+        note(&result, "north-fitted-not-stated").is_none(),
+        "the north is known: no turn"
+    );
     assert!(note(&result, "datums-assumed-equal").is_some());
     // Break it: measure the gap from the survey's stations to the trajectory's nodes by index, or drop the shift.
 }
@@ -552,7 +582,10 @@ fn with_no_north_the_gap_is_measured_after_a_fitted_turn_that_is_said() {
     let result = drawn(store, ask().object(trajectory_uri()));
     assert!(!has_layer(&result.list, "plan"), "no north, no plan");
     let says = note(&result, "north-fitted-not-stated").expect("the turn is said");
-    assert!(says.contains("fits best, 0 deg") || says.contains("fits best, 0°"), "{says}");
+    assert!(
+        says.contains("fits best, 0 deg") || says.contains("fits best, 0°"),
+        "{says}"
+    );
     assert!(
         texts(&result.list)
             .iter()

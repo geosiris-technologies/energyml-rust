@@ -23,7 +23,10 @@
 //! |---|---|
 //! | [`along_well`] | the geosteering section: a vertical section along a well, with the curtain of a property, the boundaries, the horizons and the tops |
 //! | [`image_track`] | a property with several values per element on a wellbore frame as an image: depth down, a plane of the matrix across, the value as a colour |
+//! | [`md_coverage`] | which objects cover which measured depths of a well: a band per MD reference, a bar per object, hatching for an extent inherited through a link, a cross for a reversed interval |
 //! | [`provenance_graph`] | where each object comes from: activities, files, carriers; the whole package or the graph around one object |
+//! | [`survey_qc`] | the control of a directional survey: plan and section, inclination, azimuth and dogleg against MD, the gap with a trajectory; rejected stations and contradicted stated values marked |
+//! | [`table_curve`] | the curves of a table (KrPc, PVT): a curve per pair of numeric columns, a legend per column with its unit, a second ordinate axis when two families of units cross |
 //! | [`table_schema`] | how the tables hold together: a box per table, an arrow per link |
 //! | [`target`] | the hole seen end on at one measured depth: a property in rings and sectors under a declared angle convention |
 //! | [`well_locator`] | a well laid flat (MD bar, MD against TVD, plan, vertical section) and a mark at a measured depth |
@@ -35,11 +38,14 @@ pub mod colour;
 pub mod graph;
 pub mod image_track;
 pub mod kind;
+pub mod md_coverage;
 pub mod picture;
 pub mod provenance_graph;
 pub mod refusal;
 pub mod setting;
 pub mod style;
+pub mod survey_qc;
+pub mod table_curve;
 pub mod table_schema;
 pub mod target;
 pub mod well_locator;
