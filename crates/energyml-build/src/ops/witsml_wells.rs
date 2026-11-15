@@ -107,6 +107,7 @@ use energyml_domain::provenance::Parameter;
 use energyml_domain::wellbore_table::stem;
 use energyml_eml_2_3 as eml;
 use energyml_geometry::geometry::Topology;
+use energyml_geometry::vector::distance;
 use energyml_witsml_2_1 as witsml;
 
 use crate::crs::FrameKind;
@@ -290,10 +291,6 @@ struct Surveyed {
 
 fn same(a: &str, b: &str) -> bool {
     a.eq_ignore_ascii_case(b)
-}
-
-fn distance(a: [f64; 3], b: [f64; 3]) -> f64 {
-    ((a[0] - b[0]).powi(2) + (a[1] - b[1]).powi(2) + (a[2] - b[2]).powi(2)).sqrt()
 }
 
 fn dor(one: &Ref) -> eml::DataObjectReference {

@@ -60,6 +60,9 @@
 
 use std::fmt;
 
+use crate::vector::distance;
+use crate::vector::plan::cross;
+
 /// A point, `[x, y, z]`.
 pub type Point = [f64; 3];
 
@@ -379,10 +382,6 @@ fn column(grid: usize, cell: &Hexahedron) -> Result<Column, CellsError> {
     })
 }
 
-fn cross(a: [f64; 2], b: [f64; 2]) -> f64 {
-    a[0] * b[1] - a[1] * b[0]
-}
-
 /// The roots of `a·t² + b·t + c` in `[low, high]`.
 fn roots(a: f64, b: f64, c: f64, low: f64, high: f64) -> Vec<f64> {
     let scale = a.abs().max(b.abs()).max(c.abs());
@@ -571,7 +570,7 @@ pub fn block(points: &[Point], mds: &[f64], grids: &[Grid]) -> Result<Blocked, C
     let mut chord_excess = 0.0f64;
     for node in 0..points.len() - 1 {
         let (a, b) = (points[node], points[node + 1]);
-        let chord = ((b[0] - a[0]).powi(2) + (b[1] - a[1]).powi(2) + (b[2] - a[2]).powi(2)).sqrt();
+        let chord = distance(a, b);
         let step = mds[node + 1] - mds[node];
         if step < chord - md_tolerance.max(1e-9 * chord) {
             return Err(CellsError::ShorterThanChord { node, step, chord });
@@ -754,8 +753,7 @@ mod tests {
     fn chord_mds(points: &[Point], start: f64) -> Vec<f64> {
         let mut out = vec![start];
         for w in points.windows(2) {
-            let d = ((w[1][0] - w[0][0]).powi(2) + (w[1][1] - w[0][1]).powi(2) + (w[1][2] - w[0][2]).powi(2))
-                .sqrt();
+            let d = distance(w[0], w[1]);
             out.push(out.last().unwrap() + d);
         }
         out

@@ -223,17 +223,6 @@ pub fn texts(list: &DisplayList) -> Vec<String> {
 /// The distance from a point to a polyline.
 pub fn distance_to_line(point: [f64; 2], line: &[[f64; 2]]) -> f64 {
     line.windows(2)
-        .map(|pair| {
-            let (a, b) = (pair[0], pair[1]);
-            let ab = [b[0] - a[0], b[1] - a[1]];
-            let length2 = ab[0] * ab[0] + ab[1] * ab[1];
-            let u = if length2 > 0.0 {
-                (((point[0] - a[0]) * ab[0] + (point[1] - a[1]) * ab[1]) / length2).clamp(0.0, 1.0)
-            } else {
-                0.0
-            };
-            let at = [a[0] + u * ab[0], a[1] + u * ab[1]];
-            (point[0] - at[0]).hypot(point[1] - at[1])
-        })
+        .map(|pair| energyml_geometry::vector::plan::distance_to_segment(point, pair[0], pair[1]))
         .fold(f64::INFINITY, f64::min)
 }

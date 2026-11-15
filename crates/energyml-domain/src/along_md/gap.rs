@@ -22,13 +22,8 @@ pub fn median_step(mds: &[f64]) -> Result<f64, StepRefusal> {
         }
         steps.push(mds[at] - mds[at - 1]);
     }
-    steps.sort_by(f64::total_cmp);
-    let n = steps.len();
-    Ok(if n % 2 == 1 {
-        steps[n / 2]
-    } else {
-        (steps[n / 2 - 1] + steps[n / 2]) / 2.0
-    })
+    // At least one step: the length was checked above.
+    Ok(crate::stats::median(&mut steps).expect("two nodes make one step"))
 }
 
 /// The widest interval that may be bridged: [`GAP_RATIO`] times the median

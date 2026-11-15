@@ -26,6 +26,7 @@
 //! catalogue; nothing is read.
 
 use crate::model::{Catalogue, Item, Note, ObjectId, Section, SectionKey, TraceItem, TraceRole};
+use energyml_geostat::polyline::z_in_any;
 
 /// The note's code ([`Note::code`]).
 pub const CODE: &str = "erosion";
@@ -154,24 +155,6 @@ pub fn notes(catalogue: &Catalogue) -> Vec<Note> {
     notes_of(std::iter::once(&catalogue.long).chain(&catalogue.crosses))
 }
 
-/// The `z` of a polyline set at `s`, when one of its spans covers `s`.
-fn z_at(spans: &[Vec<[f64; 2]>], s: f64) -> Option<f64> {
-    spans.iter().find_map(|span| {
-        let (first, last) = (span.first()?, span.last()?);
-        if s < first[0] || s > last[0] {
-            return None;
-        }
-        span.windows(2).find(|w| s >= w[0][0] && s <= w[1][0]).map(|w| {
-            let run = w[1][0] - w[0][0];
-            if run <= 0.0 {
-                w[0][1]
-            } else {
-                w[0][1] + (w[1][1] - w[0][1]) * (s - w[0][0]) / run
-            }
-        })
-    })
-}
-
 /// The stretches of `s` where `lower` is below `upper` - both exist there, and
 /// `z_lower < z_upper` by more than the tolerance. Between two breakpoints (a
 /// vertex of either) the difference is linear, so its sign change is exact.
@@ -192,12 +175,12 @@ fn below(upper: &[Vec<[f64; 2]>], lower: &[Vec<[f64; 2]>]) -> Vec<(f64, f64)> {
         // Both lines must run across the whole segment: probe the middle too,
         // so a gap between two spans is not bridged.
         let (Some(ua), Some(ub), Some(la), Some(lb), Some(_), Some(_)) = (
-            z_at(upper, a),
-            z_at(upper, b),
-            z_at(lower, a),
-            z_at(lower, b),
-            z_at(upper, mid),
-            z_at(lower, mid),
+            z_in_any(upper, a),
+            z_in_any(upper, b),
+            z_in_any(lower, a),
+            z_in_any(lower, b),
+            z_in_any(upper, mid),
+            z_in_any(lower, mid),
         ) else {
             continue;
         };

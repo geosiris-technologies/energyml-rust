@@ -57,6 +57,7 @@
 use std::collections::HashMap;
 
 use crate::Error;
+use energyml_geostat::vector::{cross, dot, norm, sub as minus};
 
 /// Which way is up, on the third coordinate.
 ///
@@ -235,11 +236,7 @@ pub fn lattice_slope(points: &[f64], fastest: usize, slowest: usize, up: Up) -> 
             }
             let u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
             let v = [d[0] - c[0], d[1] - c[1], d[2] - c[2]];
-            let mut n = [
-                u[1] * v[2] - u[2] * v[1],
-                u[2] * v[0] - u[0] * v[2],
-                u[0] * v[1] - u[1] * v[0],
-            ];
+            let mut n = cross(u, v);
             let length = (n[0] * n[0] + n[1] * n[1] + n[2] * n[2]).sqrt();
             if length <= 0.0 || !length.is_finite() {
                 unreached += 1;
@@ -432,26 +429,6 @@ fn cotangent(a: [f64; 3], b: [f64; 3], c: [f64; 3]) -> f64 {
 fn squared(a: [f64; 3], b: [f64; 3]) -> f64 {
     let d = minus(a, b);
     dot(d, d)
-}
-
-fn minus(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
-}
-
-fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
-    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-}
-
-fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    [
-        a[1] * b[2] - a[2] * b[1],
-        a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0],
-    ]
-}
-
-fn norm(a: [f64; 3]) -> f64 {
-    dot(a, a).sqrt()
 }
 
 /// One usable triangle.

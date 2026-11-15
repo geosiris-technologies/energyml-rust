@@ -244,7 +244,8 @@ impl AxesAccumulator {
                     per_position.push((p as u64, sum / *n as f64));
                 }
             }
-            let median = median_of(per_position.iter().map(|(_, s)| *s).collect());
+            let mut steps_here: Vec<f64> = per_position.iter().map(|(_, s)| *s).collect();
+            let median = super::quantile::median(&mut steps_here);
             let mut jumps = Vec::new();
             if let Some(median) = median {
                 for (at, step) in &per_position {
@@ -283,20 +284,6 @@ impl AxesAccumulator {
         }
         out
     }
-}
-
-/// The exact median: the middle value, or the mean of the two middle ones.
-fn median_of(mut values: Vec<f64>) -> Option<f64> {
-    if values.is_empty() {
-        return None;
-    }
-    values.sort_unstable_by(f64::total_cmp);
-    let n = values.len();
-    Some(if n % 2 == 1 {
-        values[n / 2]
-    } else {
-        (values[n / 2 - 1] + values[n / 2]) / 2.0
-    })
 }
 
 /// The variation along every axis of `values` held in memory.

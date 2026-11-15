@@ -41,6 +41,7 @@ use std::collections::HashMap;
 
 use crate::Error;
 use crate::isocontour::At;
+use crate::vector::{cross, dot, sub};
 
 /// How a value is taken to vary along an edge between two nodes.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -114,22 +115,6 @@ struct Corner {
 struct Cut {
     point: [f64; 3],
     at: At,
-}
-
-fn sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
-}
-
-fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    [
-        a[1] * b[2] - a[2] * b[1],
-        a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0],
-    ]
-}
-
-fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
-    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 }
 
 fn mean(corners: &[&Corner]) -> [f64; 3] {
@@ -415,6 +400,7 @@ pub fn marching_tetrahedra(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::vector::norm;
     use std::cell::Cell;
     use std::collections::HashMap;
 
@@ -440,10 +426,6 @@ mod tests {
             }
         }
         out
-    }
-
-    fn norm(p: [f64; 3]) -> f64 {
-        dot(p, p).sqrt()
     }
 
     /// A unit-spaced lattice of the given dimensions: the node `(i, j, l)` is at

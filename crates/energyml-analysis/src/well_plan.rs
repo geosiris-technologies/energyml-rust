@@ -62,6 +62,8 @@
 
 use std::f64::consts::PI;
 
+use energyml_geostat::vector::{add, scale as mul};
+
 /// The length a rate is counted over: a dogleg severity is in **degrees per
 /// 30 m** of measured depth - the metric convention used here (a
 /// build of about 13-17°/30 m).
@@ -242,14 +244,6 @@ impl PlanError {
 }
 
 type Vector = [f64; 3];
-
-fn add(a: Vector, b: Vector) -> Vector {
-    [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
-}
-
-fn mul(a: Vector, k: f64) -> Vector {
-    [a[0] * k, a[1] * k, a[2] * k]
-}
 
 /// The three pieces of the minimum curvature method, **from
 /// `energyml_geometry::min_curvature`** - reading a surveyed hole is reading a

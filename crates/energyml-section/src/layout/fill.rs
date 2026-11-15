@@ -16,6 +16,7 @@
 //! through itself - and the tests below state it again on their own numbers.
 
 use crate::model::{TraceItem, TraceRole};
+use energyml_geostat::polyline::{sample, z_at};
 
 /// A continuous polyline in `(s, z)`, `s` non-decreasing.
 pub type Span = Vec<[f64; 2]>;
@@ -78,26 +79,6 @@ pub fn clip_polygon(poly: &[[f64; 2]], lo: f64, hi: f64) -> Vec<[f64; 2]> {
     }
     let out = against(step, &|x| x <= hi, hi);
     if out.len() < 3 { Vec::new() } else { out }
-}
-
-/// A span's z at an abscissa - `None` outside it.
-fn z_at(span: &[[f64; 2]], s: f64) -> Option<f64> {
-    let (first, last) = (span.first()?, span.last()?);
-    if s < first[0] || s > last[0] {
-        return None;
-    }
-    for pair in span.windows(2) {
-        let (a, b) = (pair[0], pair[1]);
-        if s >= a[0] && s <= b[0] {
-            let ds = b[0] - a[0];
-            return Some(if ds.abs() < f64::EPSILON {
-                a[1]
-            } else {
-                a[1] + (b[1] - a[1]) * (s - a[0]) / ds
-            });
-        }
-    }
-    None
 }
 
 /// The polygons between an `upper` curve and a `lower` one - one per run where
@@ -253,32 +234,6 @@ pub fn nearest(mine: &[Span], others: &[(String, Vec<Span>)], up: bool) -> Vec<V
         }
     }
     out
-}
-
-/// A span's z at each of the ascending `steps` - `None` outside it. One pass.
-fn sample(span: &[[f64; 2]], steps: &[f64]) -> Vec<Option<f64>> {
-    let (Some(first), Some(last)) = (span.first(), span.last()) else {
-        return vec![None; steps.len()];
-    };
-    let mut j = 0;
-    steps
-        .iter()
-        .map(|&s| {
-            if s < first[0] || s > last[0] || span.len() < 2 {
-                return None;
-            }
-            while j + 2 < span.len() && span[j + 1][0] < s {
-                j += 1;
-            }
-            let (a, b) = (span[j], span[j + 1]);
-            let ds = b[0] - a[0];
-            Some(if ds.abs() < f64::EPSILON {
-                a[1]
-            } else {
-                a[1] + (b[1] - a[1]) * (s - a[0]) / ds
-            })
-        })
-        .collect()
 }
 
 /// The line the fill of one span goes to: the nearest candidate in each

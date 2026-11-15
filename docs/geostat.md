@@ -68,6 +68,7 @@ flagged for verification.
 | `nodes` | What erasing nodes or moving them does to a shape | - |
 | `cells`, `ijk`, `ijk_faults` | Cells in an IJK box or crossed by a wellbore path; an IJK grid between horizons (pillars, K gaps); an IJK grid cut by faults (split coordinate lines, stated throw) | - |
 | `measure`, `thickness`, `groups` | Areas, lengths and volumes of shapes; thickness between two horizons at every node; values split by a key (zone, stratigraphic unit) | - |
+| `vector`, `vector::plan` | The one place the 3D and plan-view vector arithmetic is written: add, subtract, scale, dot, cross, norm, distance, the unit vector with the caller's floor, the distance of a point to a chord or a segment, and the exact intersection test of two segments. `energyml_geometry::vector` re-exports it, so every crate reaches the same functions. See [ADR 0044](adr/0044-vectors-in-geostat.md) | - |
 
 ## Structural computations
 

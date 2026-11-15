@@ -8,8 +8,8 @@
 //!
 //! Contents: interpolation (`idw`, `kriging`, `variogram`, `rbf`, `mba`,
 //! `mba_frame`), meshing (`triangulate`, `isocontour`, `isosurface`, `resample`, `densify`,
-//! `loft`, `outline`, `cells`, `nodes`, `extend`) and tools (`measure`,
-//! `barrier`, the private `solve`).
+//! `loft`, `outline`, `cells`, `nodes`, `extend`) and tools (`measure`, `polyline`,
+//! `barrier`, `vector`, the private `solve`).
 //!
 //! House rules, applied:
 //! - **A `NaN` sample is set aside, never averaged** - it is how the data
@@ -39,11 +39,13 @@ pub mod mba_frame;
 pub mod measure;
 pub mod nodes;
 pub mod outline;
+pub mod polyline;
 pub mod rbf;
 pub mod resample;
 mod solve;
 pub mod triangulate;
 pub mod variogram;
+pub mod vector;
 
 pub use barrier::Barriers;
 pub use densify::{Along, Densified, Placement, densify};

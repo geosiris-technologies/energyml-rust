@@ -323,11 +323,7 @@ fn signed_volume(node: [u32; 8], points: &[Point]) -> f64 {
             let (a, b) = (at(face[index]), at(face[(index + 1) % 4]));
             let u = [a[0] - middle[0], a[1] - middle[1], a[2] - middle[2]];
             let w = [b[0] - middle[0], b[1] - middle[1], b[2] - middle[2]];
-            let normal = [
-                u[1] * w[2] - u[2] * w[1],
-                u[2] * w[0] - u[0] * w[2],
-                u[0] * w[1] - u[1] * w[0],
-            ];
+            let normal = crate::vector::cross(u, w);
             volume += (normal[0] * middle[0] + normal[1] * middle[1] + normal[2] * middle[2]) / 6.0;
         }
     }

@@ -9,6 +9,7 @@
 
 use crate::draw::list::{Anchor, DisplayList, Item, Rect, Stroke};
 use crate::draw::text::{ASCENT_PER_EM, DESCENT_PER_EM, string_width_pt};
+use energyml_geostat::vector::plan::{distance, distance_to_segment};
 
 /// How far from a line, in user units, a point still hits it.
 pub const HIT_SLOP: f64 = 3.0;
@@ -172,20 +173,6 @@ fn rect_ring(rect: &Rect) -> Vec<[f64; 2]> {
         [rect.x + rect.w, rect.y + rect.h],
         [rect.x, rect.y + rect.h],
     ]
-}
-
-fn distance(a: [f64; 2], b: [f64; 2]) -> f64 {
-    (a[0] - b[0]).hypot(a[1] - b[1])
-}
-
-fn distance_to_segment(p: [f64; 2], a: [f64; 2], b: [f64; 2]) -> f64 {
-    let (dx, dy) = (b[0] - a[0], b[1] - a[1]);
-    let length2 = dx * dx + dy * dy;
-    if length2 == 0.0 {
-        return distance(p, a);
-    }
-    let t = (((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / length2).clamp(0.0, 1.0);
-    distance(p, [a[0] + t * dx, a[1] + t * dy])
 }
 
 fn distance_to_polyline(p: [f64; 2], points: &[[f64; 2]]) -> f64 {

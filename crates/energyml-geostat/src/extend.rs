@@ -77,6 +77,7 @@
 use std::collections::HashMap;
 
 use crate::outline::boundary_loops;
+use crate::vector::{add, cross, dot, norm, scale, sub, unit_above};
 
 /// How far to extend.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -156,33 +157,9 @@ fn setting(which: Setting, why: impl Into<String>) -> ExtendError {
 /// More nodes than any extension somebody meant to ask for.
 pub const MOST_ADDED: usize = 2_000_000;
 
-// ---------------------------------------------------------------- vectors
-
-fn sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
-}
-fn add(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
-}
-fn scale(a: [f64; 3], k: f64) -> [f64; 3] {
-    [a[0] * k, a[1] * k, a[2] * k]
-}
-fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
-    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-}
-fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    [
-        a[1] * b[2] - a[2] * b[1],
-        a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0],
-    ]
-}
-fn norm(a: [f64; 3]) -> f64 {
-    dot(a, a).sqrt()
-}
+/// `a` normalised, or `None` for the zero vector or a non-finite one.
 fn unit(a: [f64; 3]) -> Option<[f64; 3]> {
-    let n = norm(a);
-    (n > 0.0 && n.is_finite()).then(|| scale(a, 1.0 / n))
+    unit_above(a, 0.0)
 }
 
 // ---------------------------------------------------------------- the robust fit

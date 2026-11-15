@@ -53,6 +53,7 @@ use serde_json::{Value, json};
 
 use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::Topology;
+use energyml_geometry::vector::distance;
 
 use crate::crs::FrameKind;
 use crate::declare::{Choice, Features, Inputs, ObjectRef, Params, Shape as ShapeIn, Suggestions};
@@ -284,10 +285,6 @@ pub(crate) fn topmost(zs: &[f64], vertical_up: Option<bool>) -> f64 {
         Some(false) => zs.iter().copied().fold(f64::INFINITY, f64::min),
         _ => zs.iter().copied().fold(f64::NEG_INFINITY, f64::max),
     }
-}
-
-fn distance(a: [f64; 3], b: [f64; 3]) -> f64 {
-    ((a[0] - b[0]).powi(2) + (a[1] - b[1]).powi(2) + (a[2] - b[2]).powi(2)).sqrt()
 }
 
 /// Measured depth at each point: the drop from the ground to the first, then

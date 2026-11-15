@@ -84,6 +84,7 @@ use crate::fault_throw::{self, Profile, Sense, VERTICAL};
 use crate::ijk::Stacked;
 use crate::intersect::intersect;
 use crate::surface::Up;
+use energyml_geostat::vector::plan as vplan;
 
 type Point = [f64; 3];
 
@@ -399,8 +400,8 @@ fn hanging_wall_side(trace: &[Point], dip_azimuth: f64, fault: &str) -> Result<f
     let (mut sum, mut total) = (0.0f64, 0.0f64);
     for pair in trace.windows(2) {
         let v = fault_throw::plan(&pair[0], &pair[1]);
-        sum += fault_throw::cross2(v, direction);
-        total += fault_throw::length2(v);
+        sum += vplan::cross(v, direction);
+        total += vplan::norm(v);
     }
     let mean = if total > 0.0 { sum / total } else { 0.0 };
     if mean.abs() < fault_throw::ACROSS {

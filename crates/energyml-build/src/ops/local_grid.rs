@@ -77,6 +77,7 @@ use serde_json::{Value, json};
 
 use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
+use energyml_geometry::vector;
 
 use crate::declare::{Inputs, Params, Shape, Suggestions, known_of};
 use crate::operation::{
@@ -412,15 +413,9 @@ fn interpolate(
 /// independently when a package is read back.
 fn oriented(node: [u32; 8], points: &[[f64; 3]]) -> [u32; 8] {
     let p = |n: u32| points[n as usize];
-    let sub = |a: [f64; 3], b: [f64; 3]| [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
     let (c0, c1, c3, c4) = (p(node[0]), p(node[1]), p(node[3]), p(node[4]));
-    let (e1, e2, e3) = (sub(c1, c0), sub(c3, c0), sub(c4, c0));
-    let cross = [
-        e1[1] * e2[2] - e1[2] * e2[1],
-        e1[2] * e2[0] - e1[0] * e2[2],
-        e1[0] * e2[1] - e1[1] * e2[0],
-    ];
-    let dot = cross[0] * e3[0] + cross[1] * e3[1] + cross[2] * e3[2];
+    let (e1, e2, e3) = (vector::sub(c1, c0), vector::sub(c3, c0), vector::sub(c4, c0));
+    let dot = vector::dot(vector::cross(e1, e2), e3);
     if dot >= 0.0 {
         node
     } else {

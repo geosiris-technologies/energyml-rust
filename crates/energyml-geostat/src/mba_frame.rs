@@ -71,38 +71,11 @@
 //! refuses is past what a first version answers; piecewise mean planes
 //! stitched together are a later increment, not attempted here.
 
-fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
-    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-}
-
-fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    [
-        a[1] * b[2] - a[2] * b[1],
-        a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0],
-    ]
-}
-
-fn sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
-}
-
-fn add(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
-}
-
-fn scale(a: [f64; 3], k: f64) -> [f64; 3] {
-    [a[0] * k, a[1] * k, a[2] * k]
-}
-
-fn norm(a: [f64; 3]) -> f64 {
-    dot(a, a).sqrt()
-}
+use crate::vector::{add, cross, dot, norm, scale, sub, unit_above};
 
 /// `a`, normalised - `None` when it is too close to zero to have a direction.
 fn unit(a: [f64; 3]) -> Option<[f64; 3]> {
-    let n = norm(a);
-    if n > 1e-12 { Some(scale(a, 1.0 / n)) } else { None }
+    unit_above(a, 1e-12)
 }
 
 /// What this module refuses, by name.

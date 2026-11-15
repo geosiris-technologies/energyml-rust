@@ -20,6 +20,7 @@
 use crate::around_well::hole_frame::{FrameRefusal, MIN_INCLINATION_DEGREES, offset_point};
 use crate::points::Point;
 use crate::units;
+use crate::vector::plan::{distance, segment_distance};
 use crate::well::{MdRange, PlacedPath};
 
 /// The most samples an axis takes.
@@ -607,23 +608,6 @@ pub struct LocatorMark {
     pub normal: Option<[f64; 2]>,
     /// Within the axis, or clamped to its end and said.
     pub range: MdRange,
-}
-
-fn distance(a: [f64; 2], b: [f64; 2]) -> f64 {
-    (a[0] - b[0]).hypot(a[1] - b[1])
-}
-
-/// The distance from `p` to the segment `a b`, and the parameter in [0, 1] of its nearest point.
-fn segment_distance(p: [f64; 2], a: [f64; 2], b: [f64; 2]) -> (f64, f64) {
-    let ab = [b[0] - a[0], b[1] - a[1]];
-    let length2 = ab[0] * ab[0] + ab[1] * ab[1];
-    let u = if length2 > 0.0 {
-        (((p[0] - a[0]) * ab[0] + (p[1] - a[1]) * ab[1]) / length2).clamp(0.0, 1.0)
-    } else {
-        0.0
-    };
-    let nearest = [a[0] + u * ab[0], a[1] + u * ab[1]];
-    (distance(p, nearest), u)
 }
 
 #[allow(clippy::too_many_arguments)]

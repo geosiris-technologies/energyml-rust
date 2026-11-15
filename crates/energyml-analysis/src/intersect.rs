@@ -60,11 +60,7 @@ type Boxed = ([Point; 3], [u32; 3], [f64; 3], [f64; 3]);
 fn plane(t: &[Point; 3]) -> Option<([f64; 3], f64)> {
     let u = [t[1][0] - t[0][0], t[1][1] - t[0][1], t[1][2] - t[0][2]];
     let v = [t[2][0] - t[0][0], t[2][1] - t[0][1], t[2][2] - t[0][2]];
-    let n = [
-        u[1] * v[2] - u[2] * v[1],
-        u[2] * v[0] - u[0] * v[2],
-        u[0] * v[1] - u[1] * v[0],
-    ];
+    let n = energyml_geostat::vector::cross(u, v);
     let len = (n[0] * n[0] + n[1] * n[1] + n[2] * n[2]).sqrt();
     if len < 1e-18 {
         return None;
@@ -118,11 +114,7 @@ fn meet(t1: &[Point; 3], i1: &[u32; 3], t2: &[Point; 3], i2: &[u32; 3]) -> Optio
     }
     // Both segments lie on the same line: order them along its direction and
     // keep the overlap. The direction is the cross product of the normals.
-    let dir = [
-        n1[1] * n2[2] - n1[2] * n2[1],
-        n1[2] * n2[0] - n1[0] * n2[2],
-        n1[0] * n2[1] - n1[1] * n2[0],
-    ];
+    let dir = energyml_geostat::vector::cross(n1, n2);
     let along = |p: &Point| p[0] * dir[0] + p[1] * dir[1] + p[2] * dir[2];
     let order = |s: &[Point]| -> (Point, Point, f64, f64) {
         let (a, b) = (s[0], s[1]);
@@ -247,55 +239,25 @@ pub fn pieces(
 }
 
 /// Weld pieces into traces on **exactly** shared ends - the rule of
-/// `energyml_geometry::section::chain`, without the profile.
+/// [`energyml_geometry::section::chain`], which does the walk (a junction of
+/// three or more ends is a stop, a ring is stated by `closed` and its first
+/// node is not repeated). The profile it also carries is not used here, so each
+/// piece is handed over with a zero one.
 pub fn chain(pieces: &[Piece]) -> Vec<Trace> {
-    let key = |p: &Point| -> [u64; 3] { [p[0].to_bits(), p[1].to_bits(), p[2].to_bits()] };
-    let mut by_end: HashMap<[u64; 3], Vec<usize>> = HashMap::new();
-    for (index, one) in pieces.iter().enumerate() {
-        for end in &one.ends {
-            by_end.entry(key(end)).or_default().push(index);
-        }
-    }
-    let mut used = vec![false; pieces.len()];
-    let mut out = Vec::new();
-    for start in 0..pieces.len() {
-        if used[start] {
-            continue;
-        }
-        used[start] = true;
-        let mut points = vec![pieces[start].ends[0], pieces[start].ends[1]];
-        for forward in [true, false] {
-            loop {
-                let tip = if forward {
-                    *points.last().unwrap()
-                } else {
-                    points[0]
-                };
-                let at_tip = by_end.get(&key(&tip)).map(Vec::as_slice).unwrap_or(&[]);
-                // Degree two or nothing: a junction is a stop.
-                if at_tip.len() != 2 {
-                    break;
-                }
-                let Some(&next) = at_tip.iter().find(|&&i| !used[i]) else {
-                    break;
-                };
-                used[next] = true;
-                let [a, b] = pieces[next].ends;
-                let extend = if key(&a) == key(&tip) { b } else { a };
-                if forward {
-                    points.push(extend)
-                } else {
-                    points.insert(0, extend)
-                }
-            }
-        }
-        let closed = points.len() > 2 && key(points.first().unwrap()) == key(points.last().unwrap());
-        if closed {
-            points.pop();
-        }
-        out.push(Trace { points, closed });
-    }
-    out
+    let cuts: Vec<energyml_geometry::section::Cut> = pieces
+        .iter()
+        .map(|one| energyml_geometry::section::Cut {
+            ends: one.ends,
+            profile: [[0.0; 2]; 2],
+        })
+        .collect();
+    energyml_geometry::section::chain(&cuts)
+        .into_iter()
+        .map(|one| Trace {
+            points: one.points,
+            closed: one.closed,
+        })
+        .collect()
 }
 
 /// The traces where surface A meets surface B.

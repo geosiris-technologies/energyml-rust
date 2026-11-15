@@ -86,4 +86,5 @@
 - [0041 Declared conventions, and the vertical without a CRS](adr/0041-declared-conventions-and-the-vertical-without-crs.md)
 - [0042 What a property says of itself](adr/0042-what-a-property-says-of-itself.md)
 - [0043 The views of a package through one door](adr/0043-the-views-of-a-package-through-one-door.md)
+- [0044 The vectors in geostat](adr/0044-vectors-in-geostat.md)
 - [0045 Text and numbers, one copy each](adr/0045-text-and-numbers-one-copy.md)

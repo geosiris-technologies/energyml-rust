@@ -21,6 +21,7 @@
 //! quadrilateral that is not convex in plan - are **set aside** and counted.
 
 use crate::Error;
+use energyml_geostat::vector::plan;
 
 /// A surface as flat arrays: `[x, y, z, …]`, and its faces as node indices -
 /// triangles by three, quadrilaterals by four, in ring order.
@@ -161,7 +162,7 @@ impl Index {
         for t in base.triangles.as_chunks::<3>().0.iter().map(|c| c.as_slice()) {
             let corners = [t[0] as usize, t[1] as usize, t[2] as usize];
             let [a, b, c] = corners.map(point);
-            if finite(&corners) && cross(a, b, c) != 0.0 {
+            if finite(&corners) && orient_xy(a, b, c) != 0.0 {
                 faces.push(Face::Triangle(corners));
             } else {
                 set_aside += 1;
@@ -172,7 +173,12 @@ impl Index {
             let [a, b, c, d] = corners.map(point);
             // Convex in plan, turning one way: the bilinear map is then one to
             // one over the cell, and its inverse is the height's only answer.
-            let turns = [cross(a, b, c), cross(b, c, d), cross(c, d, a), cross(d, a, b)];
+            let turns = [
+                orient_xy(a, b, c),
+                orient_xy(b, c, d),
+                orient_xy(c, d, a),
+                orient_xy(d, a, b),
+            ];
             let convex = turns.iter().all(|t| *t > 0.0) || turns.iter().all(|t| *t < 0.0);
             if finite(&corners) && convex {
                 faces.push(Face::Quad(corners));
@@ -277,17 +283,18 @@ impl Index {
     }
 }
 
-/// The plan-view cross product of `b − a` and `c − a` - twice the signed area.
-fn cross(a: [f64; 3], b: [f64; 3], c: [f64; 3]) -> f64 {
-    (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+/// The plan-view cross product of `b − a` and `c − a` - twice the signed area
+/// (`vector::plan::orient` on the plan positions).
+fn orient_xy(a: [f64; 3], b: [f64; 3], c: [f64; 3]) -> f64 {
+    plan::orient([a[0], a[1]], [b[0], b[1]], [c[0], c[1]])
 }
 
 /// The height of the triangle at `(x, y)`, if it lies over that position.
 fn in_triangle([a, b, c]: [[f64; 3]; 3], x: f64, y: f64) -> Option<f64> {
     let q = [x, y, 0.0];
-    let whole = cross(a, b, c);
-    let la = cross(q, b, c) / whole;
-    let lb = cross(a, q, c) / whole;
+    let whole = orient_xy(a, b, c);
+    let la = orient_xy(q, b, c) / whole;
+    let lb = orient_xy(a, q, c) / whole;
     let lc = 1.0 - la - lb;
     (la >= -ON_EDGE && lb >= -ON_EDGE && lc >= -ON_EDGE).then(|| la * a[2] + lb * b[2] + lc * c[2])
 }

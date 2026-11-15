@@ -42,6 +42,7 @@
 //! holes **and** crossings by the same route, with no special case.
 
 use crate::section::{self, Cut};
+use energyml_geostat::polyline::z_at;
 
 /// The relative tolerance of a wedge: beyond it, two surfaces cross; below it,
 /// they touch. Relative to the section's vertical extent, never absolute - a
@@ -138,26 +139,6 @@ fn curve_of_chains(chains: Vec<(section::Chain, Vec<section::CutEnd>)>) -> Sourc
         curve: out,
         sources: sourced,
     }
-}
-
-/// A curve's z at an abscissa, interpolated **within a span** - `None` outside
-/// the spans: between two spans, the surface does not exist.
-fn z_at(span: &[[f64; 2]], s: f64) -> Option<f64> {
-    let (first, last) = (span.first()?, span.last()?);
-    if s < first[0] || s > last[0] {
-        return None;
-    }
-    for pair in span.windows(2) {
-        let ([s0, z0], [s1, z1]) = (pair[0], pair[1]);
-        if s >= s0 && s <= s1 {
-            let span_s = s1 - s0;
-            if span_s.abs() < f64::EPSILON {
-                return Some(z0);
-            }
-            return Some(z0 + (z1 - z0) * (s - s0) / span_s);
-        }
-    }
-    None
 }
 
 /// One piece of a panel: continuous material between two surfaces.

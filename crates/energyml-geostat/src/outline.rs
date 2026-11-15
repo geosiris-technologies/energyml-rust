@@ -36,6 +36,7 @@
 use std::collections::BTreeMap;
 
 use crate::Error;
+use crate::vector::distance_to_chord;
 
 /// A closed loop of node indices - the first node is not repeated.
 pub type Loop = Vec<u32>;
@@ -207,23 +208,6 @@ fn dropped_this_pass(dropped: &mut bool, on_chord: bool, room: bool) -> bool {
     } else {
         false
     }
-}
-
-/// The distance from `b` to the line through `a` and `c`, in 3D. Coincident
-/// `a` and `c` make the chord a point; the distance is then to that point.
-fn distance_to_chord(a: [f64; 3], b: [f64; 3], c: [f64; 3]) -> f64 {
-    let ab = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
-    let ac = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
-    let ac_len = (ac[0] * ac[0] + ac[1] * ac[1] + ac[2] * ac[2]).sqrt();
-    if ac_len == 0.0 || !ac_len.is_finite() {
-        return (ab[0] * ab[0] + ab[1] * ab[1] + ab[2] * ab[2]).sqrt();
-    }
-    let cross = [
-        ab[1] * ac[2] - ab[2] * ac[1],
-        ab[2] * ac[0] - ab[0] * ac[2],
-        ab[0] * ac[1] - ab[1] * ac[0],
-    ];
-    (cross[0] * cross[0] + cross[1] * cross[1] + cross[2] * cross[2]).sqrt() / ac_len
 }
 
 /// The signed area of a loop in plan view - positive counterclockwise. What

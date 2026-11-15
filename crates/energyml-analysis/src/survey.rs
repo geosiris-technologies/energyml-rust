@@ -69,6 +69,7 @@
 use std::f64::consts::FRAC_PI_2;
 
 use crate::well_plan::{RATE_LENGTH, dogleg};
+use energyml_geostat::vector::{dot, norm, scale as mul, sub};
 
 /// How close to its hole a chord must be for the interval to be **straight**,
 /// and how close to the arc's a chord must be for the stations to be **on**
@@ -207,22 +208,6 @@ pub enum SurveyError {
 }
 
 type Vector = [f64; 3];
-
-fn sub(a: Vector, b: Vector) -> Vector {
-    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
-}
-
-fn mul(a: Vector, k: f64) -> Vector {
-    [a[0] * k, a[1] * k, a[2] * k]
-}
-
-fn dot(a: Vector, b: Vector) -> f64 {
-    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-}
-
-fn norm(a: Vector) -> f64 {
-    dot(a, a).sqrt()
-}
 
 /// What a chord of `hole` may be off by - see [`SLACK`] and [`FLOOR`].
 fn allowed(hole: f64) -> f64 {

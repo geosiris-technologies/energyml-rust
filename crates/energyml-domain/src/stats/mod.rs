@@ -63,6 +63,6 @@ pub mod sketch;
 pub use accumulate::{Accumulator, Moments};
 pub use binned::Binned;
 pub use cells::{CellRule, RuleTally, TallyRefusal, runs, tally};
-pub use quantile::{Quantiles, quantiles};
+pub use quantile::{Quantiles, median, quantiles};
 pub use scale::Scale;
 pub use sketch::LogSketch;

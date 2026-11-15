@@ -75,6 +75,7 @@ use std::collections::{HashMap, HashSet};
 use crate::fault_sticks::{self, Orientation};
 use crate::intersect::intersect;
 use crate::triangulate::{triangulate_xy, triangulate_xy_constrained};
+use energyml_geostat::vector::plan::{self as vplan, cross as cross2, norm as length2};
 
 /// Two positions this close in plan are one - a millionth of a metre, a length
 /// no survey states and far above the rounding of coordinates taken relative
@@ -320,16 +321,8 @@ pub enum TearError {
 
 type Point = [f64; 3];
 
-pub(crate) fn cross2(u: [f64; 2], v: [f64; 2]) -> f64 {
-    u[0] * v[1] - u[1] * v[0]
-}
-
 pub(crate) fn plan(a: &Point, b: &Point) -> [f64; 2] {
     [b[0] - a[0], b[1] - a[1]]
-}
-
-pub(crate) fn length2(v: [f64; 2]) -> f64 {
-    (v[0] * v[0] + v[1] * v[1]).sqrt()
 }
 
 /// The nearest point of a polyline to `p`, in plan: its abscissa along the
@@ -341,15 +334,9 @@ pub(crate) fn project(line: &[Point], p: &Point) -> Option<(f64, f64, f64)> {
     for pair in line.windows(2) {
         let v = plan(&pair[0], &pair[1]);
         let w = plan(&pair[0], p);
-        let long = v[0] * v[0] + v[1] * v[1];
-        let len = long.sqrt();
-        let t = if long > 0.0 {
-            ((w[0] * v[0] + w[1] * v[1]) / long).clamp(0.0, 1.0)
-        } else {
-            0.0
-        };
-        let q = [pair[0][0] + t * v[0], pair[0][1] + t * v[1]];
-        let d = ((p[0] - q[0]).powi(2) + (p[1] - q[1]).powi(2)).sqrt();
+        let len = length2(v);
+        let (d, t) =
+            vplan::segment_distance([p[0], p[1]], [pair[0][0], pair[0][1]], [pair[1][0], pair[1][1]]);
         if best.is_none_or(|(_, bd, _)| d < bd) {
             best = Some((run + t * len, d, cross2(v, w)));
         }
@@ -365,7 +352,11 @@ pub(crate) fn plan_length(line: &[Point]) -> f64 {
         .sum()
 }
 
-/// Whether two segments meet in plan, ends included, within [`TOLERANCE`].
+/// Whether two segments meet in plan, ends included, within [`TOLERANCE`]: an end
+/// within the tolerance of the other segment, or the exact test of
+/// `energyml_geostat::vector::plan::segments_meet` (a proper crossing, or an
+/// exact touch). The tolerance is this module's, because two patches of one
+/// fault round their shared corners their own way.
 fn segments_meet(a: &Point, b: &Point, c: &Point, d: &Point) -> bool {
     let distance =
         |p: &Point, s: &Point, e: &Point| project(&[*s, *e], p).map_or(f64::INFINITY, |(_, d, _)| d);
@@ -376,11 +367,8 @@ fn segments_meet(a: &Point, b: &Point, c: &Point, d: &Point) -> bool {
     {
         return true;
     }
-    let (ab, ac, ad) = (plan(a, b), plan(a, c), plan(a, d));
-    let (cd, ca, cb) = (plan(c, d), plan(c, a), plan(c, b));
-    let (s1, s2) = (cross2(ab, ac), cross2(ab, ad));
-    let (s3, s4) = (cross2(cd, ca), cross2(cd, cb));
-    s1 * s2 < 0.0 && s3 * s4 < 0.0
+    let xy = |p: &Point| [p[0], p[1]];
+    vplan::segments_meet(xy(a), xy(b), xy(c), xy(d))
 }
 
 fn lines_meet(first: &[Point], second: &[Point]) -> bool {

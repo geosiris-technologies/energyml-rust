@@ -13,7 +13,10 @@ graph TD
     schemas --> core
     domain[energyml-domain] --> storage
     proj[energyml-proj] --> domain
+    geostat[energyml-geostat]
     geometry[energyml-geometry] --> domain
+    geometry --> geostat
+    sheet --> geostat
     export[energyml-export] --> geometry
     cache[energyml-cache] --> geometry
     analysis[energyml-analysis] --> geometry

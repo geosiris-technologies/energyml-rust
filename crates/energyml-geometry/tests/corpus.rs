@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use energyml_core::registry::Registry;
 use energyml_geometry::parametric::Vertical;
+use energyml_geometry::vector::sub;
 use energyml_geometry::{Topology, VerticalQuantity, crs, geometry, points};
 use energyml_storage::EpcStore;
 
@@ -405,10 +406,6 @@ fn a_grid_comes_out_the_way_round_it_says_it_is() {
         checked > 0,
         "the corpus has non-square lattice grids; none was checked"
     );
-}
-
-fn sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
 }
 
 /// Two vectors equal to within what double precision can actually hold.

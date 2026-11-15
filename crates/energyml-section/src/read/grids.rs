@@ -55,6 +55,7 @@ use energyml_geometry::geometry::{Patch, Topology};
 use energyml_geometry::section::{self, Cut};
 
 use crate::model::{CutShape, SectionTrace, SurfaceCut};
+use energyml_geostat::polyline::z_at;
 
 type P = [f64; 2];
 
@@ -397,25 +398,6 @@ fn touches(above: &[P], below: &[P], tol_z: f64) -> bool {
         (Some(za), Some(zb)) => (za - zb).abs() <= tol_z,
         _ => false,
     }
-}
-
-fn z_at(chain: &[P], s: f64) -> Option<f64> {
-    let first = chain.first()?;
-    if chain.len() == 1 {
-        return Some(first[1]);
-    }
-    for pair in chain.windows(2) {
-        if s >= pair[0][0] && s <= pair[1][0] {
-            let width = pair[1][0] - pair[0][0];
-            let t = if width <= f64::EPSILON {
-                0.0
-            } else {
-                (s - pair[0][0]) / width
-            };
-            return Some(pair[0][1] + (pair[1][1] - pair[0][1]) * t);
-        }
-    }
-    None
 }
 
 /// The cut of one face as a chain of `(s, z)` by `s`, welded points merged.

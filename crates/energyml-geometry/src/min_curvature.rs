@@ -89,15 +89,7 @@
 
 use std::f64::consts::PI;
 
-type Vector = [f64; 3];
-
-fn sub(a: Vector, b: Vector) -> Vector {
-    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
-}
-
-fn norm(a: Vector) -> f64 {
-    (a[0] * a[0] + a[1] * a[1] + a[2] * a[2]).sqrt()
-}
+use crate::vector::{norm, sub};
 
 /// The unit direction of an inclination and an azimuth, in degrees: north,
 /// east, down.

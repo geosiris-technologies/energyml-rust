@@ -129,6 +129,30 @@ fn type7_sorted(sorted: &[f64], q: f64) -> f64 {
     }
 }
 
+/// The exact median of `values`, reordered in place: the middle value, or the
+/// mean of the two middle ones for an even count. `None` for no value.
+///
+/// The one median of the workspace's exact statistics (the along-MD step, the
+/// median step of an axis). The values are ordered by `f64::total_cmp`, so a
+/// `NaN` sorts to an end and is the caller's to set aside first; it is by
+/// selection, not by a full sort. It is the mean of the two middle values
+/// that is taken, not the type 7 interpolation of [`quantiles`] at 0.5: the two
+/// are the same number up to the last bit of the sum.
+pub fn median(values: &mut [f64]) -> Option<f64> {
+    let n = values.len();
+    if n == 0 {
+        return None;
+    }
+    let (below, middle, _) = values.select_nth_unstable_by(n / 2, f64::total_cmp);
+    let middle = *middle;
+    if n % 2 == 1 {
+        return Some(middle);
+    }
+    // The lower middle value is the largest of what lies below the upper one.
+    let lower = below.iter().copied().max_by(f64::total_cmp).unwrap_or(middle);
+    Some((lower + middle) / 2.0)
+}
+
 /// The quantiles `at` of `values`; `NaN` and infinities are set aside and
 /// counted, never sorted in.
 ///
@@ -180,6 +204,16 @@ pub fn quantiles(values: &[f64], at: &[f64], method: QuantileMethod) -> Result<Q
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_median_is_the_middle_or_the_mean_of_the_two_middle_values() {
+        assert_eq!(median(&mut []), None);
+        assert_eq!(median(&mut [7.0]), Some(7.0));
+        assert_eq!(median(&mut [9.0, 1.0, 5.0]), Some(5.0));
+        assert_eq!(median(&mut [4.0, 1.0, 3.0, 2.0]), Some(2.5));
+        assert_eq!(median(&mut [1.0, 1.0, 1.0, 100.0]), Some(1.0));
+        // Break it: take `below.iter().min_by(..)` as the lower middle value and the even case gives 1.5.
+    }
 
     #[test]
     fn auto_switches_to_a_sketch_above_the_limit_and_says_so() {

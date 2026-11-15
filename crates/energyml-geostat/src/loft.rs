@@ -30,6 +30,8 @@
 //!
 //! TODO(reference): verify - the citations of Christiansen and Sederberg (1978) and Fuchs, Kedem and Uselton (1977) are given without title, venue or DOI; complete and check them.
 
+use crate::vector::distance;
+
 /// One line of the loft: its vertices, whether it closes, and its name for a refusal.
 #[derive(Clone, Copy, Debug)]
 pub struct LoftLine<'a> {
@@ -46,10 +48,6 @@ pub struct Lofted {
     /// For each ring after the first: how many vertices it was turned by to
     /// bring its start next to the previous one's - `0` for open lines.
     pub turned: Vec<usize>,
-}
-
-fn distance(a: [f64; 3], b: [f64; 3]) -> f64 {
-    ((b[0] - a[0]).powi(2) + (b[1] - a[1]).powi(2) + (b[2] - a[2]).powi(2)).sqrt()
 }
 
 /// The normalised arc length of each vertex - and of the return to the first,

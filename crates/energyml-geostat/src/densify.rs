@@ -33,6 +33,8 @@
 //!
 //! TODO(reference): verify - the centripetal Catmull-Rom citation (Yuksel, Schaefer and Keyser, 2011) is given without title, venue or DOI; complete and check it.
 
+use crate::vector::{distance, plan};
+
 /// Where the added points go along the line.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Placement {
@@ -66,10 +68,9 @@ pub struct Densified {
 }
 
 fn length(a: [f64; 3], b: [f64; 3], along: Along) -> f64 {
-    let (dx, dy, dz) = (b[0] - a[0], b[1] - a[1], b[2] - a[2]);
     match along {
-        Along::Space => (dx * dx + dy * dy + dz * dz).sqrt(),
-        Along::Plan => dx.hypot(dy),
+        Along::Space => distance(a, b),
+        Along::Plan => plan::distance([a[0], a[1]], [b[0], b[1]]),
     }
 }
 
