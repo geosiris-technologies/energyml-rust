@@ -256,7 +256,7 @@ pub fn angles(t: [f64; 3], carried: f64) -> (f64, f64) {
     let inclination = t[2].clamp(-1.0, 1.0).acos().to_degrees();
     let horizontal = t[0].hypot(t[1]);
     let azimuth = if horizontal > 1e-12 {
-        t[1].atan2(t[0]).to_degrees().rem_euclid(360.0)
+        crate::survey::normalise_bearing(t[1].atan2(t[0]).to_degrees())
     } else {
         carried
     };
@@ -361,7 +361,7 @@ pub fn plan(tie: Tie, sections: &[Section], step: f64) -> Result<Planned, PlanEr
     // -- every section checked and measured, before a station is placed -----
     let mut laid = Vec::with_capacity(sections.len());
     let mut md = tie.md;
-    let (mut inclination, mut azimuth) = (tie.inclination, tie.azimuth.rem_euclid(360.0));
+    let (mut inclination, mut azimuth) = (tie.inclination, crate::survey::normalise_bearing(tie.azimuth));
     let mut t = direction(inclination, azimuth);
     let mut tightest: Option<f64> = None;
     for (at, section) in sections.iter().enumerate() {
@@ -461,7 +461,7 @@ pub fn plan(tie: Tie, sections: &[Section], step: f64) -> Result<Planned, PlanEr
                 let length = beta / per_metre;
                 let r = radius(rate);
                 tightest = Some(tightest.map_or(r, |seen: f64| seen.min(r)));
-                let end = (to_inclination, to_azimuth.rem_euclid(360.0));
+                let end = (to_inclination, crate::survey::normalise_bearing(to_azimuth));
                 laid.push(Laid::Arc {
                     from: md,
                     to: md + length,
@@ -502,7 +502,7 @@ pub fn plan(tie: Tie, sections: &[Section], step: f64) -> Result<Planned, PlanEr
         tie.md,
         at,
         tie.inclination,
-        tie.azimuth.rem_euclid(360.0),
+        crate::survey::normalise_bearing(tie.azimuth),
     ));
     for one in &laid {
         match *one {

@@ -290,7 +290,9 @@ impl Ordinary {
             }
             if let Some(value) = exact {
                 out.push(value);
-                variances.push(0.0);
+                if self.variance {
+                    variances.push(0.0);
+                }
                 continue;
             }
             // The fault after the radius (cheap first), the cap after the
@@ -310,7 +312,9 @@ impl Ordinary {
             }
             if near.is_empty() {
                 out.push(f64::NAN);
-                variances.push(f64::NAN);
+                if self.variance {
+                    variances.push(f64::NAN);
+                }
                 unreached += 1;
                 continue;
             }
@@ -367,6 +371,35 @@ mod tests {
 
     fn model() -> Model {
         Model::new(ModelKind::Spherical, 0.0, 1.0, 10.0).unwrap()
+    }
+
+    /// [geostat-proj-roundtrip S3] On the local path, `without_variance`
+    /// answers no variance at all, not one only for the exact and unreached
+    /// queries (which was shorter than `values` and shifted against it).
+    #[test]
+    fn the_local_path_without_variance_has_no_variance_for_any_query() {
+        let samples = [[0.0, 0.0], [100.0, 0.0]];
+        let values = [3.0, 9.0];
+        // An exact hit, an unreached query, and a reached one.
+        let queries = [[0.0, 0.0], [50.0, 0.0], [1.0, 0.0]];
+        let alone = Ordinary::new(model())
+            .without_variance()
+            .with_radius(5.0)
+            .interpolate(&samples, &values, &queries)
+            .unwrap();
+        assert_eq!(alone.values.len(), 3);
+        assert!(alone.variances.is_empty(), "{:?}", alone.variances);
+        assert_eq!(alone.values[0], 3.0);
+        assert!(alone.values[1].is_nan());
+        assert_eq!(alone.unreached, 1);
+        assert!(alone.values[2].is_finite());
+        // With the variance, there is exactly one per query.
+        let full = Ordinary::new(model())
+            .with_radius(5.0)
+            .interpolate(&samples, &values, &queries)
+            .unwrap();
+        assert_eq!(full.variances.len(), 3);
+        // Break it: push `0.0` / `f64::NAN` to `variances` without the `if self.variance` guard.
     }
 
     /// **The dual form gives the estimates of the primal one** - on scattered

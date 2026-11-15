@@ -27,8 +27,10 @@
 //! # Simplification drops what does not turn
 //!
 //! A node strictly between its neighbours contributes nothing to the outline
-//! and is dropped when it lies within `tolerance` of the chord - `0` keeps
-//! everything but the exactly collinear. Measured in the shape's own units, in
+//! and is dropped when it lies within `tolerance` of the outline that replaces
+//! it - `0` keeps everything but the exactly collinear. The bound holds for
+//! every dropped node against the **original** nodes (Douglas-Peucker), not
+//! pass by pass: see [`simplify`]. Measured in the shape's own units, in
 //! 3D: a point that is collinear in plan and steps in Z is a corner.
 //!
 //! TODO(reference): verify - Andrew's monotone chain is named without a full citation; add the original reference once checked.
@@ -36,7 +38,7 @@
 use std::collections::BTreeMap;
 
 use crate::Error;
-use crate::vector::distance_to_chord;
+use crate::vector::distance_to_segment;
 
 /// A closed loop of node indices - the first node is not repeated.
 pub type Loop = Vec<u32>;
@@ -157,57 +159,99 @@ pub fn hull_xy(points: &[[f64; 3]]) -> Result<Loop, Error> {
     Ok(lower.into_iter().map(|i| i as u32).collect())
 }
 
-/// The same loop without the nodes that do not turn: a node within
-/// `tolerance` of the chord between its neighbours is dropped. Never below
-/// three nodes - a ring of two is an edge, not an outline.
+/// The same loop without the nodes that do not turn: Douglas-Peucker on the
+/// ring, every dropped node measured against the **original** outline.
+///
+/// The bound: every node of `ring` is within `tolerance` (3D distance to a
+/// segment, in the shape's own units) of the segment between the two kept
+/// nodes that enclose it, so the answer never strays from the original nodes by
+/// more than `tolerance` - however many nodes were dropped, and however curved
+/// the outline. (The previous version dropped nodes by their neighbours'
+/// chords, pass after pass, and a smooth arc was flattened far past the
+/// tolerance.) `0` keeps everything but the exactly collinear.
+///
+/// The ring is split at two anchors: its lexicographically smallest node, an
+/// extreme node that no chord of the ring can cross, and the node farthest from
+/// it. Never below three nodes - a ring of two is an edge, not an outline: the
+/// dropped node deviating most is put back when fewer remain. A tolerance that
+/// is not a finite number >= 0 is `0`; a node whose distance is not a number
+/// is kept.
 pub fn simplify(points: &[[f64; 3]], ring: &[u32], tolerance: f64) -> Loop {
     let tolerance = if tolerance.is_finite() && tolerance >= 0.0 {
         tolerance
     } else {
         0.0
     };
-    let mut kept: Vec<u32> = ring.to_vec();
-    // Repeated until nothing is dropped: removing one node changes its
-    // neighbours' chords.
-    loop {
-        if kept.len() <= 3 {
-            return kept;
+    let n = ring.len();
+    if n <= 3 {
+        return ring.to_vec();
+    }
+    let at = |k: usize| points[ring[k % n] as usize];
+    // The first anchor: the smallest node, so a rotation of the ring does not
+    // change the answer.
+    let first = (0..n)
+        .min_by(|&a, &b| {
+            let (p, q) = (at(a), at(b));
+            p[0].total_cmp(&q[0])
+                .then(p[1].total_cmp(&q[1]))
+                .then(p[2].total_cmp(&q[2]))
+        })
+        .unwrap_or(0);
+    // The second: the farthest from the first (the first of equals).
+    let mut far = 1;
+    let mut far_distance = f64::NEG_INFINITY;
+    for k in 1..n {
+        let d = crate::vector::distance(at(first), at(first + k));
+        if d > far_distance {
+            far = k;
+            far_distance = d;
         }
-        let n = kept.len();
-        let mut next = Vec::with_capacity(n);
-        let mut dropped = false;
-        let mut i = 0;
-        while i < n {
-            let a = points[kept[(i + n - 1) % n] as usize];
-            let b = points[kept[i] as usize];
-            let c = points[kept[(i + 1) % n] as usize];
-            if !dropped_this_pass(
-                &mut dropped,
-                distance_to_chord(a, b, c) <= tolerance,
-                next.len() + (n - i) > 3,
-            ) {
-                next.push(kept[i]);
+    }
+    // Offsets from `first`; `keep[k]` is for the node at `first + k`.
+    let mut keep = vec![false; n];
+    keep[0] = true;
+    keep[far] = true;
+    let mut stack = vec![(0usize, far), (far, n)];
+    let mut deviation = vec![0.0f64; n];
+    while let Some((lo, hi)) = stack.pop() {
+        if hi - lo < 2 {
+            continue;
+        }
+        let (a, b) = (at(first + lo), at(first + hi));
+        let mut worst = lo + 1;
+        let mut worst_distance = f64::NEG_INFINITY;
+        for k in lo + 1..hi {
+            let d = distance_to_segment(at(first + k), a, b);
+            let d = if d.is_nan() { f64::INFINITY } else { d };
+            deviation[k] = d;
+            if d > worst_distance {
+                worst = k;
+                worst_distance = d;
             }
-            i += 1;
         }
-        if !dropped {
-            return next;
+        if worst_distance > tolerance {
+            keep[worst] = true;
+            stack.push((lo, worst));
+            stack.push((worst, hi));
         }
-        kept = next;
     }
-}
-
-/// Whether to drop this node: only if it lies on the chord, and only while
-/// three would remain. One drop per pass at most in a row is not needed -
-/// dropping two collinear neighbours in one pass is still correct, since each
-/// was tested against its original neighbours, and the loop repeats anyway.
-fn dropped_this_pass(dropped: &mut bool, on_chord: bool, room: bool) -> bool {
-    if on_chord && room {
-        *dropped = true;
-        true
-    } else {
-        false
+    // A ring of two is an edge: put back the node that deviated most.
+    if keep.iter().filter(|&&k| k).count() < 3 {
+        let mut back = None;
+        for k in 1..n {
+            if !keep[k] && back.is_none_or(|b: usize| deviation[k] > deviation[b]) {
+                back = Some(k);
+            }
+        }
+        if let Some(k) = back {
+            keep[k] = true;
+        }
     }
+    // The ring's own order and start, whatever the anchors were.
+    (0..n)
+        .filter(|&p| keep[(p + n - first) % n])
+        .map(|p| ring[p])
+        .collect()
 }
 
 /// The signed area of a loop in plan view - positive counterclockwise. What
@@ -330,6 +374,42 @@ mod tests {
         let ring = vec![0u32, 1, 2, 3, 4];
         assert_eq!(simplify(&points, &ring, 0.0).len(), 5);
         assert_eq!(simplify(&points, &ring, 0.6).len(), 4);
+    }
+
+    /// [geostat-proj-roundtrip S5] A smooth arc simplified with a tolerance
+    /// stays within it: the largest distance of an original node to the
+    /// simplified outline is measured. The previous passes dropped every node
+    /// within the tolerance of its neighbours' chord, so the whole circle
+    /// collapsed to a triangle 50 units from its nodes.
+    #[test]
+    fn simplifying_a_circle_never_strays_past_the_tolerance() {
+        let points: Vec<[f64; 3]> = (0..360)
+            .map(|k| {
+                let a = (k as f64).to_radians();
+                [100.0 * a.cos(), 100.0 * a.sin(), 0.0]
+            })
+            .collect();
+        let ring: Vec<u32> = (0..360).collect();
+        for tolerance in [0.05, 0.5, 2.0] {
+            let kept = simplify(&points, &ring, tolerance);
+            assert!(kept.len() >= 3 && kept.len() < 360, "{} nodes", kept.len());
+            let mut worst = 0.0f64;
+            for p in &points {
+                let near = (0..kept.len())
+                    .map(|i| {
+                        let a = points[kept[i] as usize];
+                        let b = points[kept[(i + 1) % kept.len()] as usize];
+                        distance_to_segment(*p, a, b)
+                    })
+                    .fold(f64::INFINITY, f64::min);
+                worst = worst.max(near);
+            }
+            assert!(
+                worst <= tolerance + 1e-9,
+                "tolerance {tolerance}: an original node is {worst} from the outline"
+            );
+        }
+        // Break it: drop each node by the chord of its two neighbours, pass after pass, as before.
     }
 
     #[test]

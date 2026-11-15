@@ -630,6 +630,40 @@ fn a_raster_whose_values_do_not_fit_its_shape_is_refused() {
     assert!(lattice_of(&raster).is_err());
 }
 
+/// Overwrite the one-value Long entries `ImageWidth` (256), `ImageLength` (257)
+/// and `RowsPerStrip` (278) of a built TIFF, leaving its few bytes of pixels.
+fn declaring(mut bytes: Vec<u8>, width: u32, height: u32) -> Vec<u8> {
+    let ifd_at = u32::from_le_bytes(bytes[4..8].try_into().unwrap()) as usize;
+    let n = u16::from_le_bytes(bytes[ifd_at..ifd_at + 2].try_into().unwrap()) as usize;
+    for k in 0..n {
+        let entry = ifd_at + 2 + k * 12;
+        let tag = u16::from_le_bytes(bytes[entry..entry + 2].try_into().unwrap());
+        let value = match tag {
+            256 => width,
+            257 | 278 => height,
+            _ => continue,
+        };
+        bytes[entry + 8..entry + 12].copy_from_slice(&value.to_le_bytes());
+    }
+    bytes
+}
+
+/// [export-providers-cache-rules S1] A header may not size an allocation the
+/// file cannot fill: a 200-byte TIFF declaring 4 294 967 295 x 4 294 967 295
+/// samples was `Vec::with_capacity` of the product, a capacity-overflow panic,
+/// and 10 000 x 10 000 asked for 800 MB before any strip was compared.
+#[test]
+fn a_header_that_declares_more_pixels_than_the_file_holds_is_refused_before_allocating() {
+    let huge = declaring(asymmetric().build(), u32::MAX, u32::MAX);
+    let why = message(read_geotiff(&huge).unwrap_err());
+    assert!(why.contains("truncated") || why.contains("declares"), "{why}");
+
+    let large = declaring(asymmetric().build(), 10_000, 10_000);
+    let why = message(read_geotiff(&large).unwrap_err());
+    assert!(why.contains("declares 10000 x 10000"), "{why}");
+    // Break it: `Vec::with_capacity(width.checked_mul(height)?)` before the byte check.
+}
+
 /// To make it fail: accept a file that is compressed, big-endian, tiled, multiband, integer or without georeferencing.
 #[test]
 fn what_is_not_read_is_refused_by_name() {

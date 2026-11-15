@@ -62,7 +62,7 @@ impl SectionAzimuth for StatedAzimuth {
 
     fn azimuth(&self, input: &SectionInput<'_>) -> Option<f64> {
         match input.stations.section.azimuth {
-            Some(Ok(a)) if a.is_finite() => Some(a.rem_euclid(360.0)),
+            Some(Ok(a)) if a.is_finite() => Some(crate::survey::normalise_bearing(a)),
             _ => None,
         }
     }
@@ -78,7 +78,9 @@ impl SectionAzimuth for UserAzimuth {
     }
 
     fn azimuth(&self, _input: &SectionInput<'_>) -> Option<f64> {
-        self.0.is_finite().then(|| self.0.rem_euclid(360.0))
+        self.0
+            .is_finite()
+            .then(|| crate::survey::normalise_bearing(self.0))
     }
 }
 

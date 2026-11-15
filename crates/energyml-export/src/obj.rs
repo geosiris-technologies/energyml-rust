@@ -213,16 +213,22 @@ fn header(
         writeln!(out, "# {key} {value}")?;
     }
     match (&object.crs, placement) {
-        (Some(crs), Placement::Local) => writeln!(out, "# crs {} (local coordinates)", crs.uuid)?,
+        // A reprojection (`target_epsg`) takes the points out of the local
+        // frame whatever the placement said, so it is the target that is named.
+        (Some(crs), Placement::Local) if options.target_epsg.is_none() => {
+            writeln!(out, "# crs {} (local coordinates)", crs.uuid)?
+        }
         (Some(crs), _) => {
-            let system = match crs.projected.epsg() {
-                Some(code) => format!("EPSG:{code}"),
-                None => format!("{:?}", crs.projected),
-            };
+            // The system the points are in: the reprojection's target when
+            // there is one, the CRS's own otherwise (`Options::crs_label`).
+            let system = options.crs_label(object).unwrap_or_default();
             // *"metres, z up"* would be a lie on a time axis, and the sort of
             // lie a reader has no way to catch: the numbers look like depths.
             let vertical = if crs.is_time() {
                 "z from travel time"
+            } else if options.target_epsg == Some(energyml_domain::reproject::Wgs84::EPSG) {
+                // Longitude and latitude, not metres: the third is still z up.
+                "x y in degrees, z up"
             } else {
                 "metres, z up"
             };

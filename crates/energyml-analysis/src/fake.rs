@@ -80,9 +80,22 @@ pub enum Cuts {
     Random { min: u32, max: u32 },
 }
 
+/// The most cuts one polyline may be divided into. A count typed with a
+/// zero too many would allocate tens of gigabytes per head and abort the
+/// process, so it is refused by name, as the other generators refuse theirs.
+pub const MOST_CUTS: u32 = 100_000;
+
 impl Cuts {
     fn validate(&self) -> Result<(), Error> {
         match *self {
+            Cuts::Fixed(count) if count > MOST_CUTS => Err(Error::TooManyCuts {
+                given: count,
+                most: MOST_CUTS,
+            }),
+            Cuts::Random { max, .. } if max > MOST_CUTS => Err(Error::TooManyCuts {
+                given: max,
+                most: MOST_CUTS,
+            }),
             Cuts::Fixed(count) if count >= 1 => Ok(()),
             Cuts::Fixed(count) => Err(Error::BadCuts {
                 given: f64::from(count),
@@ -224,6 +237,26 @@ pub fn vertical_polylines(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// [analysis R1] an absurd count is refused by name before any allocation.
+    #[test]
+    fn too_many_cuts_are_refused_by_name() {
+        let heads = [[0.0, 0.0, 100.0]];
+        let ask =
+            |cuts: Cuts| vertical_polylines(&heads, &cuts, &Length::Fixed(1.0), &Spacing::Regular, true, 1);
+        for cuts in [
+            Cuts::Fixed(u32::MAX),
+            Cuts::Fixed(MOST_CUTS + 1),
+            Cuts::Random {
+                min: 1,
+                max: u32::MAX,
+            },
+        ] {
+            assert!(matches!(ask(cuts), Err(Error::TooManyCuts { .. })), "{cuts:?}");
+        }
+        assert!(ask(Cuts::Fixed(MOST_CUTS)).is_ok());
+        // Break it: remove the `> MOST_CUTS` arms of `Cuts::validate`.
+    }
 
     #[test]
     fn end_lands_at_the_requested_length_in_the_up_direction() {

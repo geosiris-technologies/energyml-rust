@@ -524,10 +524,25 @@ fn inside(cell: &Column, a: Point, b: Point) -> Vec<(f64, f64, [Edge; 2])> {
 
 /// Where along the path each of these measured depths falls - on the chords,
 /// as [`block`] spreads the MD. A depth outside the path's is `None`.
-pub fn positions(points: &[Point], mds: &[f64], at: &[f64]) -> Vec<Option<Point>> {
-    at.iter()
+///
+/// The path is checked as [`block`] checks it, and a malformed one is a named
+/// [`CellsError`]: not one depth per node, fewer than two nodes, a non-finite
+/// node or depth, a depth that does not increase (two equal consecutive depths
+/// would be a `0 / 0` position). The segment of each depth is found by
+/// bisection.
+pub fn try_positions(points: &[Point], mds: &[f64], at: &[f64]) -> Result<Vec<Option<Point>>, CellsError> {
+    check_path(points, mds)?;
+    Ok(at
+        .iter()
         .map(|md| {
-            let segment = mds.windows(2).position(|w| w[0] <= *md && *md <= w[1])?;
+            // The first depth not below `md`: `md` is in (mds[i - 1], mds[i]].
+            let first_not_below = mds.partition_point(|m| m < md);
+            let segment = match first_not_below {
+                0 if *md == mds[0] => 0,
+                0 => return None,
+                n if n == mds.len() => return None,
+                n => n - 1,
+            };
             let t = (md - mds[segment]) / (mds[segment + 1] - mds[segment]);
             let (a, b) = (points[segment], points[segment + 1]);
             Some([
@@ -536,14 +551,18 @@ pub fn positions(points: &[Point], mds: &[f64], at: &[f64]) -> Vec<Option<Point>
                 a[2] + t * (b[2] - a[2]),
             ])
         })
-        .collect()
+        .collect())
 }
 
-/// Block a path through grids - see the module header.
-///
-/// `points` and `mds` are the path's nodes and their measured depths; `grids`
-/// are taken in the order given.
-pub fn block(points: &[Point], mds: &[f64], grids: &[Grid]) -> Result<Blocked, CellsError> {
+/// [`try_positions`] with no way to refuse: a malformed path places nothing,
+/// so every depth is `None`. A caller that must tell a bad path from a depth
+/// outside a good one calls [`try_positions`].
+pub fn positions(points: &[Point], mds: &[f64], at: &[f64]) -> Vec<Option<Point>> {
+    try_positions(points, mds, at).unwrap_or_else(|_| vec![None; at.len()])
+}
+
+/// The checks of a path, shared by [`block`] and [`try_positions`].
+fn check_path(points: &[Point], mds: &[f64]) -> Result<(), CellsError> {
     if points.len() != mds.len() {
         return Err(CellsError::Mismatched {
             nodes: points.len(),
@@ -565,6 +584,15 @@ pub fn block(points: &[Point], mds: &[f64], grids: &[Grid]) -> Result<Blocked, C
             });
         }
     }
+    Ok(())
+}
+
+/// Block a path through grids - see the module header.
+///
+/// `points` and `mds` are the path's nodes and their measured depths; `grids`
+/// are taken in the order given.
+pub fn block(points: &[Point], mds: &[f64], grids: &[Grid]) -> Result<Blocked, CellsError> {
+    check_path(points, mds)?;
     let span = mds[mds.len() - 1] - mds[0];
     let md_tolerance = 1e-9 * span.max(1.0);
     let mut chord_excess = 0.0f64;
@@ -700,6 +728,44 @@ mod tests {
     //! clipping and the roots above.
 
     use super::*;
+
+    /// [geostat-proj-roundtrip S16] `positions` on a malformed path: a named
+    /// refusal from `try_positions` (it used to panic on a short `points`, and
+    /// returned `0 / 0 = NaN` between two equal depths), `None` from the form
+    /// with no way to refuse; and the depths of a good path are found by
+    /// bisection at the stations, between them and outside them.
+    #[test]
+    fn positions_refuses_a_malformed_path_and_places_the_depths_of_a_good_one() {
+        let points = [[0.0, 0.0, 0.0], [10.0, 0.0, 0.0], [10.0, 10.0, 0.0]];
+        let mds = [0.0, 10.0, 20.0];
+        let placed =
+            try_positions(&points, &mds, &[-1.0, 0.0, 5.0, 10.0, 15.0, 20.0, 21.0, f64::NAN]).unwrap();
+        assert_eq!(
+            placed,
+            vec![
+                None,
+                Some([0.0, 0.0, 0.0]),
+                Some([5.0, 0.0, 0.0]),
+                Some([10.0, 0.0, 0.0]),
+                Some([10.0, 5.0, 0.0]),
+                Some([10.0, 10.0, 0.0]),
+                None,
+                None,
+            ]
+        );
+        // Fewer points than depths: was an index out of bounds.
+        assert_eq!(
+            try_positions(&points[..2], &mds, &[5.0]),
+            Err(CellsError::Mismatched { nodes: 2, mds: 3 })
+        );
+        // Two equal consecutive depths: was NaN.
+        assert!(matches!(
+            try_positions(&points, &[0.0, 10.0, 10.0], &[10.0]),
+            Err(CellsError::NotIncreasing { node: 2, .. })
+        ));
+        assert_eq!(positions(&points[..2], &mds, &[5.0]), vec![None]);
+        // Break it: `points[segment + 1]` and the division with no `check_path` before.
+    }
 
     /// A regular grid, `ni × nj × nk` boxes of `size`, its top at `z = 0`,
     /// K going **down** (elevation decreasing) - `[0..4]` on the upper level.

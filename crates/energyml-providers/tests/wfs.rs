@@ -43,6 +43,86 @@ fn paris() -> Area {
     ])
 }
 
+/// [export-providers-cache-rules S7] The area and the filter values are checked
+/// before any request, as the `cql` doc promises: a degenerate area or an
+/// out-of-list value is a named refusal, never `POLYGON(())` or `NaN NaN` on
+/// the wire.
+#[test]
+fn a_degenerate_area_or_an_unusable_value_is_refused_before_the_request() {
+    let provider = brgm();
+    let ask = |area: Option<Area>, value: &str| {
+        provider.page(
+            &Query {
+                collection: "boreholes".to_string(),
+                area,
+                terms: vec![Term {
+                    name: "codeSpace".to_string(),
+                    value: value.to_string(),
+                }],
+                most: None,
+            },
+            Page::first(10),
+        )
+    };
+    let refused = |result: energyml_providers::Result<Request>, word: &str| match result {
+        Err(Error::Refused(says)) => assert!(says.contains(word), "{says}"),
+        other => panic!("expected a refusal naming `{word}`, got {other:?}"),
+    };
+    // The same query with a good area and a good value is a request.
+    assert!(ask(Some(paris()), "BRGM").is_ok());
+    refused(ask(Some(Area::Ring(vec![])), "BRGM"), "at least 3");
+    refused(
+        ask(Some(Area::Ring(vec![(2.0, 48.0), (2.1, 48.1)])), "BRGM"),
+        "at least 3",
+    );
+    refused(
+        ask(
+            Some(Area::Ring(vec![(2.0, 48.0), (2.0, 48.0), (2.1, 48.1)])),
+            "BRGM",
+        ),
+        "3 distinct",
+    );
+    refused(
+        ask(
+            Some(Area::Box {
+                west: f64::NAN,
+                south: 48.0,
+                east: 2.0,
+                north: 49.0,
+            }),
+            "BRGM",
+        ),
+        "not a pair of numbers",
+    );
+    refused(
+        ask(
+            Some(Area::Box {
+                west: 3.0,
+                south: 48.0,
+                east: 2.0,
+                north: 49.0,
+            }),
+            "BRGM",
+        ),
+        "west",
+    );
+    refused(
+        ask(
+            Some(Area::Box {
+                west: 2.0,
+                south: 48.0,
+                east: 3.0,
+                north: 95.0,
+            }),
+            "BRGM",
+        ),
+        "latitude",
+    );
+    // `codeSpace` is declared `OneOf(["BRGM"])`.
+    refused(ask(Some(paris()), "ELSEWHERE"), "none of");
+    // Break it: remove `area.validate()` and `declared.kind.check(..)` in `Wfs::cql`.
+}
+
 #[test]
 fn a_query_becomes_the_url_the_service_expects() {
     let provider = brgm();

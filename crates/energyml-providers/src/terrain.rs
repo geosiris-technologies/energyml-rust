@@ -658,9 +658,25 @@ pub fn read_geotiff(bytes: &[u8]) -> Result<Raster> {
         )));
     }
 
-    let mut values = Vec::with_capacity(width.checked_mul(height).ok_or_else(truncated)?);
+    // The strips must physically hold `width * height` float32 samples, so the
+    // declared size is checked against the bytes **before** anything is
+    // allocated from it: a header claiming 65 535 x 65 535 over a 200-byte file
+    // would otherwise ask for tens of gigabytes (and a product that overflows
+    // would panic). Checked arithmetic throughout, so it cannot wrap on a
+    // 32-bit target either.
+    let pixels = width.checked_mul(height).ok_or_else(truncated)?;
+    let total_bytes = pixels.checked_mul(4).ok_or_else(truncated)?;
+    if total_bytes > bytes.len() {
+        return Err(bad(format!(
+            "the header declares {width} x {height} float32 samples ({total_bytes} bytes) \
+             but the file is {} bytes",
+            bytes.len()
+        )));
+    }
+    let mut values = Vec::with_capacity(pixels);
     for (s, (&offset, &count)) in offsets.iter().zip(&counts).enumerate() {
         let rows = rows_per_strip.min(height - s * rows_per_strip);
+        // `rows <= height` and `total_bytes` did not overflow: nor does this.
         let need = rows * width * 4;
         if (count as usize) < need {
             return Err(bad(format!("strip {s} holds {count} bytes, {need} are needed")));

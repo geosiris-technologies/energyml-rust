@@ -176,6 +176,8 @@ pub enum Error {
     BadCuts { given: f64 },
     #[error("a range of cuts must be at least 1..1, and increasing - not {min}..{max}")]
     BadCutsRange { min: f64, max: f64 },
+    #[error("{given} cut(s) asked where {most} is the most a polyline may be divided into")]
+    TooManyCuts { given: u32, most: u32 },
     #[error("the length must be a finite number >= 0, not {given}")]
     BadLength { given: f64 },
     #[error("a length range must be two finite numbers >= 0, increasing - not {min}..{max}")]

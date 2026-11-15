@@ -396,8 +396,7 @@ const LEVEL: f64 = 1e-9;
 /// anticlockwise from east, and a bearing measures clockwise from north.
 /// Swapping the arguments *is* the conversion, which is why it is written once.
 fn bearing(east: f64, north: f64) -> f64 {
-    let degrees = east.atan2(north).to_degrees();
-    if degrees < 0.0 { degrees + 360.0 } else { degrees }
+    crate::survey::normalise_bearing(east.atan2(north).to_degrees())
 }
 
 /// The interior angle at `a` in the triangle `a b c`.
@@ -580,6 +579,13 @@ impl Mesh {
 
 #[cfg(test)]
 mod tests {
+
+    /// [analysis C2] a direction a hair west of north is bearing 0, not 360.
+    #[test]
+    fn a_bearing_a_hair_west_of_north_is_zero_not_360() {
+        assert_eq!(super::bearing(-1e-300, 1.0), 0.0);
+        // Break it: `if degrees < 0.0 { degrees + 360.0 }` instead of `normalise_bearing`.
+    }
 
     /// A plane of a lattice read by central differences, at map coordinates
     /// and on a lattice turned 30° in its frame: the dip and the downhill

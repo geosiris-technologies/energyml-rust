@@ -55,9 +55,10 @@
 //!   recumbent fold, a very curved listric fault: two samples at the same
 //!   `(u, v)` with different `w`. No threshold read off a point cloud detects
 //!   this reliably; when the input is a triangulated surface, its own face
-//!   normals say it directly - a face whose normal has a negative dot product
-//!   with `w` is folded back under the mean plane, and the projection would
-//!   overlay it on itself. [`folded_faces`] counts them, and
+//!   orientations say it directly - a face whose projected orientation in
+//!   `(u, v)` is the opposite of the majority is folded back, and the
+//!   projection would overlay it on itself. The count does not depend on the
+//!   triangles' winding. [`folded_faces`] counts them, and
 //!   [`check_not_folded`] is the named refusal built on that count
 //!   (see below).
 //!
@@ -127,7 +128,20 @@ impl Frame {
         // Oriented up: a fault fitted twice (its points given in the reverse
         // order, say) must come out the same way, never flipped.
         let mut w = fitted.axis;
-        if w[2] < 0.0 {
+        // A (near) vertical plane has `w.z` at the noise of the eigen-solver,
+        // so its sign decides nothing: the first horizontal component above
+        // the noise is made positive instead, a tie-break that depends on the
+        // geometry alone and gives the same frame on every fit of the same
+        // fault.
+        let flip = if w[2].abs() < VERTICAL {
+            match [w[0], w[1]].into_iter().find(|c| c.abs() > VERTICAL) {
+                Some(first) => first < 0.0,
+                None => w[2] < 0.0,
+            }
+        } else {
+            w[2] < 0.0
+        };
+        if flip {
             w = scale(w, -1.0);
         }
         let z_axis = [0.0, 0.0, 1.0];
@@ -174,29 +188,44 @@ impl Frame {
     }
 }
 
-/// The count of triangle faces whose own geometric normal points against the
-/// mean plane's up (`frame.w`) - a fold-back the projection to `(u, v)`
-/// cannot represent as a function (module doc). A
+/// Below this, a component of the fitted normal is eigen-solver noise: the
+/// plane is vertical for the purpose of orienting `w`.
+const VERTICAL: f64 = 1e-9;
+
+/// The count of triangle faces folded back against the others once projected
+/// to `(u, v)` - the fold-back the projection cannot represent as a function
+/// (module doc).
+///
+/// The test does **not** depend on the triangles' winding. Each face's
+/// projected signed area has the sign of `normal . frame.w`; the faces with
+/// the minority sign are the folded ones (`min(positive, negative)`), so a
+/// consistently wound mesh is never folded whichever way it is wound, and a
+/// mesh wound both ways is folded by exactly the faces that disagree with the
+/// majority. Faces of no area (a collinear triangle) take no side. A
 /// non-finite corner, or a corner index past `points`, is skipped rather than
 /// counted: it is a different refusal's to name.
 pub fn folded_faces(points: &[[f64; 3]], triangles: &[[u32; 3]], frame: &Frame) -> usize {
-    triangles
-        .iter()
-        .filter(|&&[a, b, c]| {
-            let (Some(&pa), Some(&pb), Some(&pc)) = (
-                points.get(a as usize),
-                points.get(b as usize),
-                points.get(c as usize),
-            ) else {
-                return false;
-            };
-            if [pa, pb, pc].iter().flatten().any(|v| !v.is_finite()) {
-                return false;
-            }
-            let normal = cross(sub(pb, pa), sub(pc, pa));
-            dot(normal, frame.w) < 0.0
-        })
-        .count()
+    let (mut positive, mut negative) = (0usize, 0usize);
+    for &[a, b, c] in triangles {
+        let (Some(&pa), Some(&pb), Some(&pc)) = (
+            points.get(a as usize),
+            points.get(b as usize),
+            points.get(c as usize),
+        ) else {
+            continue;
+        };
+        if [pa, pb, pc].iter().flatten().any(|v| !v.is_finite()) {
+            continue;
+        }
+        let normal = cross(sub(pb, pa), sub(pc, pa));
+        let side = dot(normal, frame.w);
+        if side > 0.0 {
+            positive += 1;
+        } else if side < 0.0 {
+            negative += 1;
+        }
+    }
+    positive.min(negative)
 }
 
 /// The named refusal built on [`folded_faces`]: `Ok` when none are, the count
@@ -371,6 +400,60 @@ mod tests {
                 assert!((world[k] - want[k]).abs() < 1e-6, "{world:?} != {want:?}");
             }
         }
+    }
+
+    /// [geostat-proj-roundtrip S4] The fold count does not depend on the
+    /// winding: a mesh wound the same way is never folded, whichever way that
+    /// is, and a mixed mesh is folded by its minority only.
+    #[test]
+    fn the_fold_count_does_not_depend_on_the_winding() {
+        let frame = Frame::horizontal();
+        let points = [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [1.0, 1.0, 0.0]];
+        let up = [[0u32, 1, 2], [1, 3, 2]];
+        let down = [[0u32, 2, 1], [1, 2, 3]];
+        assert_eq!(folded_faces(&points, &up, &frame), 0);
+        assert_eq!(
+            folded_faces(&points, &down, &frame),
+            0,
+            "all faces wound downward"
+        );
+        assert_eq!(check_not_folded(&points, &down, &frame), Ok(()));
+        // Three up and one down: one folded.
+        let points = [
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [2.0, 0.0, 0.0],
+        ];
+        let mixed = [[0u32, 1, 2], [1, 3, 2], [1, 4, 3], [0, 2, 1]];
+        assert_eq!(folded_faces(&points, &mixed, &frame), 1);
+        // Break it: count `dot(normal, frame.w) < 0.0` faces instead of the minority side.
+    }
+
+    /// [geostat-proj-roundtrip S4] A vertical plane has no up: its normal is
+    /// oriented by its first horizontal component, whatever the order of the
+    /// points (and so whatever sign the eigen-solver returns).
+    #[test]
+    fn a_vertical_plane_is_oriented_by_its_first_horizontal_component() {
+        for normal in [
+            [0.0, 1.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [-1.0, 1.0, 0.0],
+        ] {
+            let points = plane_points(normal);
+            let reversed: Vec<[f64; 3]> = points.iter().rev().copied().collect();
+            for set in [&points, &reversed] {
+                let frame = Frame::fit(set).unwrap();
+                let first = [frame.w[0], frame.w[1]]
+                    .into_iter()
+                    .find(|c| c.abs() > 1e-9)
+                    .unwrap();
+                assert!(first > 0.0, "normal {normal:?}: w = {:?}", frame.w);
+            }
+        }
+        // Break it: orient `w` by `w[2] < 0.0` alone, as before.
     }
 
     /// **A folded triangulated surface is refused, naming the number of flipped

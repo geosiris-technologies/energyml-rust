@@ -83,6 +83,22 @@ An IJK grid asked for as a surface gives its outside - the faces used by exactly
 one cell - not every face twice. GeoJSON is always WGS 84, and every feature
 carries a `bbox`.
 
+What a file says is true of what it holds:
+
+- **Reprojection.** With `--target-epsg` the OBJ and VTK headers name the target
+  system, not the source's. On a time-domain object, a stated time equivalence and
+  a target system are both applied (the equivalence on the vertical, the
+  reprojection on the horizontals); GeoJSON places a time axis through the
+  equivalence too, in WGS 84 and with `--native-crs`, and writes the equivalence
+  as a `vertical_axis` property.
+- **`.vtp`.** `PolyData` has no volume cell: a hexahedron is six polygons and a
+  polyhedron one per face, so each cell's value is repeated over its polygons. A
+  cell property that does not have one value per cell is refused by name. (`.vtu`
+  keeps one cell per cell.)
+- **GeoJSON.** One feature holds one kind of geometry: patches of different
+  topologies, or an index that names no node, are refused by name instead of being
+  dropped.
+
 ## Repairing, relabelling, renaming
 
 ```sh

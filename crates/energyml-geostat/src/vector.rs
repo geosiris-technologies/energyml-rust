@@ -79,6 +79,19 @@ pub fn distance_to_chord(a: [f64; 3], b: [f64; 3], c: [f64; 3]) -> f64 {
     norm(cross(ab, ac)) / ac_len
 }
 
+/// The distance from `p` to the **segment** `a`-`b`, in 3D: to the nearest
+/// point of the segment, so a `p` beyond an end is measured to that end. A
+/// segment of no length (or of a length that is not finite) is the point `a`.
+pub fn distance_to_segment(p: [f64; 3], a: [f64; 3], b: [f64; 3]) -> f64 {
+    let ab = sub(b, a);
+    let length_squared = dot(ab, ab);
+    if length_squared == 0.0 || !length_squared.is_finite() {
+        return distance(p, a);
+    }
+    let t = (dot(sub(p, a), ab) / length_squared).clamp(0.0, 1.0);
+    distance(p, add(a, scale(ab, t)))
+}
+
 /// The same operations in the plan, on `[f64; 2]`.
 pub mod plan {
     /// `a + b`.

@@ -90,12 +90,22 @@ fn cut_by(corners: &[Point; 3], index: &[u32; 3], n: &[f64; 3], d: f64) -> Vec<P
         if span.abs() < 1e-300 {
             continue;
         }
-        let t = da / span;
-        let hit = [
-            corners[a][0] + (corners[b][0] - corners[a][0]) * t,
-            corners[a][1] + (corners[b][1] - corners[a][1]) * t,
-            corners[a][2] + (corners[b][2] - corners[a][2]) * t,
-        ];
+        // A corner exactly on the plane is the hit itself, copied: the two
+        // edges meeting at it would otherwise compute it from different ends
+        // (`t = 0` and `t = 1`) and `a + (b - a) * 1.0` is not always `b` to
+        // the bit, which made a third, distinct hit.
+        let hit = if da == 0.0 {
+            corners[a]
+        } else if db == 0.0 {
+            corners[b]
+        } else {
+            let t = da / span;
+            [
+                corners[a][0] + (corners[b][0] - corners[a][0]) * t,
+                corners[a][1] + (corners[b][1] - corners[a][1]) * t,
+                corners[a][2] + (corners[b][2] - corners[a][2]) * t,
+            ]
+        };
         if !hits.iter().any(|seen| seen == &hit) {
             hits.push(hit);
         }
@@ -277,6 +287,19 @@ pub fn intersect(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// [analysis C1] A plane through a vertex gives that vertex once, bit for
+    /// bit. Here `1.0 + (1e-20 - 1.0) * 1.0` is `0.0`, not `1e-20`, so the old
+    /// interpolation made the touched corner a different point from each of the
+    /// two edges and the cut had three hits.
+    #[test]
+    fn a_plane_through_a_vertex_gives_two_hits_not_three() {
+        let corners = [[1.0, 0.0, 0.0], [1e-20, 0.0, 0.0], [-1.0, 1.0, 0.0]];
+        let hits = cut_by(&corners, &[0, 1, 2], &[1.0, 0.0, 0.0], -1e-20);
+        assert_eq!(hits.len(), 2, "{hits:?}");
+        assert!(hits.contains(&[1e-20, 0.0, 0.0]), "{hits:?}");
+        // Break it: interpolate every hit with `t = da / span`, even when `da` or `db` is 0.
+    }
 
     /// A horizontal square at height `z`, split in two triangles.
     fn plate(z: f64) -> (Vec<Point>, Vec<[u32; 3]>) {

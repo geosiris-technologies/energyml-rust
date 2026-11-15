@@ -191,6 +191,36 @@ impl Exporter for VtkExporter {
     }
 }
 
+/// The longest title line a legacy file may hold, in bytes.
+const TITLE_MOST: usize = 255;
+
+/// `{title} [{uuid}]`, within [`TITLE_MOST`] bytes.
+///
+/// What is cut is the **title**, on a character boundary: the uuid at the end
+/// is the identity that traces the file back to its object, and slicing the
+/// whole line at a byte offset both panicked inside a multi-byte character and
+/// cut the uuid first.
+fn title_line(title: &str, uuid: &str) -> String {
+    let tail = format!(" [{uuid}]");
+    let title = one_line(title);
+    let budget = TITLE_MOST.saturating_sub(tail.len());
+    let mut end = title.len().min(budget);
+    while !title.is_char_boundary(end) {
+        end -= 1;
+    }
+    let mut line = format!("{}{tail}", &title[..end]);
+    // An identity longer than the line itself (not a uuid): cut it, on a
+    // boundary too, rather than write a line the format forbids.
+    if line.len() > TITLE_MOST {
+        let mut end = TITLE_MOST;
+        while !line.is_char_boundary(end) {
+            end -= 1;
+        }
+        line.truncate(end);
+    }
+    line
+}
+
 /// The cells of an object, as VTK counts them.
 struct Cells {
     /// Triangles, as three point indices.
@@ -337,8 +367,7 @@ impl VtkExporter {
         writeln!(out, "# vtk DataFile Version {}", self.version)?;
         // The title line is capped at 256 characters by the format, so it holds
         // the two things worth having and the rest goes to FieldData.
-        let title = format!("{} [{}]", one_line(&object.title), object.uuid);
-        writeln!(out, "{}", &title[..title.len().min(255)])?;
+        writeln!(out, "{}", title_line(&object.title, &object.uuid))?;
         writeln!(out, "ASCII")?;
         // A legacy file states one dataset kind up front, and `POLYDATA` has no
         // volume cells at all. A grid therefore has to be written as an
@@ -620,7 +649,7 @@ impl VtkExporter {
                 write_poly_cells(cells, out)?;
             }
         }
-        write_attributes(object, cells, out)?;
+        write_attributes(object, cells, self.flavour == Flavour::PolyData, out)?;
         writeln!(out, "    </Piece>")?;
         writeln!(out, "  </{container}>")?;
         writeln!(out, "</VTKFile>")?;
@@ -640,10 +669,9 @@ impl VtkExporter {
             ("type".to_string(), object.qualified_type.clone()),
         ];
         if let Some(crs) = &object.crs {
-            let system = match crs.projected.epsg() {
-                Some(code) => format!("EPSG:{code}"),
-                None => format!("{:?}", crs.projected),
-            };
+            // The system the points were **written** in: the target of a
+            // reprojection when one was asked for, the CRS's own otherwise.
+            let system = options.crs_label(object).unwrap_or_default();
             pairs.push(("crs".to_string(), format!("{} {system}", crs.uuid)));
         }
         // The equivalence, in the file's own metadata block. A VTK travels
@@ -670,7 +698,16 @@ impl VtkExporter {
 /// `Scalars="…"` on the block names the array a viewer colours by when it
 /// opens the file - without it ParaView shows the geometry in a flat colour
 /// and the values have to be found by hand.
-fn write_attributes(object: &SceneObject, cells: &Cells, out: &mut dyn Write) -> Result<()> {
+///
+/// `as_polys` is the `PolyData` flavour, where a hexahedron is written as six
+/// polygons and a polyhedron as one per face: `CellData` counts those, not the
+/// object's cells, so each cell's value is **repeated over its polygons**
+/// (a cell attribute of a grid has `n` values and the file has `6 n` polygons,
+/// which ParaView refuses or misaligns). The order is the one the cells are
+/// written in - see [`polys_per_cell`]. A cell attribute that does not have one
+/// value per cell cannot be spread, and is refused by name.
+fn write_attributes(object: &SceneObject, cells: &Cells, as_polys: bool, out: &mut dyn Write) -> Result<()> {
+    let volumetric = !cells.hexahedra.is_empty() || !cells.polyhedra.is_empty();
     for (scope, tag) in [
         (AttributeScope::Points, "PointData"),
         (AttributeScope::Cells, "CellData"),
@@ -683,7 +720,8 @@ fn write_attributes(object: &SceneObject, cells: &Cells, out: &mut dyn Write) ->
         if attributes.is_empty() {
             continue;
         }
-        let _ = cells;
+        let repeats =
+            (as_polys && volumetric && scope == AttributeScope::Cells).then(|| polys_per_cell(cells));
         writeln!(
             out,
             "      <{tag} Scalars=\"{}\">",
@@ -697,13 +735,54 @@ fn write_attributes(object: &SceneObject, cells: &Cells, out: &mut dyn Write) ->
                 escape(&sanitise(&attribute.name)),
                 attribute.components.max(1)
             )?;
-            let numbers: Vec<String> = attribute.values.iter().map(number).collect();
+            let numbers: Vec<String> = match &repeats {
+                Some(repeats) => {
+                    let width = attribute.components.max(1) as usize;
+                    let tuples = attribute.values.chunks(width);
+                    if tuples.len() != repeats.len() {
+                        return Err(Error::unsuitable(
+                            "vtp",
+                            format!(
+                                "the cell property `{}` has {} value(s) for {} cell(s), so it cannot be \
+                                 repeated over the polygons of each cell",
+                                attribute.name,
+                                tuples.len(),
+                                repeats.len()
+                            ),
+                        ));
+                    }
+                    tuples
+                        .zip(repeats)
+                        .flat_map(|(tuple, polys)| std::iter::repeat_n(tuple, *polys).flatten())
+                        .map(number)
+                        .collect()
+                }
+                None => attribute.values.iter().map(number).collect(),
+            };
             writeln!(out, "          {}", numbers.join(" "))?;
             writeln!(out, "        </DataArray>")?;
         }
         writeln!(out, "      </{tag}>")?;
     }
     Ok(())
+}
+
+/// How many polygons each cell is written as in a `PolyData` piece, in the
+/// order of [`Cells::count`]: a vertex, a line, a triangle, a quad or a polygon
+/// is one cell of `Verts`, `Lines` or `Polys`; a hexahedron is six polygons; a
+/// polyhedron is one per face. `CellData` is read in that order, so the cell
+/// values are repeated by these counts.
+fn polys_per_cell(cells: &Cells) -> Vec<usize> {
+    let flat = cells.vertices.len()
+        + cells.lines.len()
+        + cells.triangles.len()
+        + cells.quads.len()
+        + cells.polygons.len();
+    let mut repeats = Vec::with_capacity(cells.count());
+    repeats.extend(std::iter::repeat_n(1usize, flat));
+    repeats.extend(std::iter::repeat_n(HEXAHEDRON_FACES.len(), cells.hexahedra.len()));
+    repeats.extend(cells.polyhedra.iter().map(|cell| cell.len()));
+    repeats
 }
 
 /// A number VTK will read back as what was written.
@@ -936,3 +1015,24 @@ fn one_line(value: &str) -> String {
 
 // XML attribute text: the one door, `energyml_core::xml::escape_attr`.
 use energyml_core::xml::escape_attr as escape;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// [export-providers-cache-rules S2] A long title of two-byte characters
+    /// straddling byte 255 panicked the slice, and cut the uuid first.
+    #[test]
+    fn a_long_multibyte_title_is_cut_on_a_boundary_and_keeps_its_uuid() {
+        let uuid = "123e4567-e89b-42d3-a456-426614174000";
+        // 'e acute' is two bytes: 200 of them are 400 bytes.
+        let title = "\u{e9}".repeat(200);
+        let line = title_line(&title, uuid);
+        assert!(line.len() <= TITLE_MOST, "{} bytes", line.len());
+        assert!(line.ends_with(&format!(" [{uuid}]")), "{line}");
+        assert!(line.starts_with('\u{e9}'));
+        // A short title is written whole.
+        assert_eq!(title_line("a\nb", uuid), format!("a b [{uuid}]"));
+        // Break it: `&title[..title.len().min(255)]` on the whole line, as before.
+    }
+}

@@ -101,6 +101,40 @@ pub enum Kind {
     Flag,
 }
 
+impl Kind {
+    /// Whether `value` can be a value of this kind, or why it cannot.
+    ///
+    /// What a provider checks **before** the request: an out-of-list choice or a
+    /// non-number sent as it stands costs a round trip and comes back as the
+    /// server's XML exception, or as a silent zero-hit answer.
+    pub fn check(&self, value: &str) -> std::result::Result<(), String> {
+        match self {
+            Kind::Text => Ok(()),
+            Kind::Number => match value.trim().parse::<f64>() {
+                Ok(number) if number.is_finite() => Ok(()),
+                _ => Err(format!("`{value}` is not a number")),
+            },
+            Kind::OneOf(values) => {
+                if values.iter().any(|one| one == value) {
+                    Ok(())
+                } else {
+                    Err(format!("`{value}` is none of {}", values.join(", ")))
+                }
+            }
+            Kind::Flag => {
+                const YES_NO: [&str; 6] = ["true", "false", "yes", "no", "1", "0"];
+                if YES_NO.iter().any(|one| one.eq_ignore_ascii_case(value.trim())) {
+                    Ok(())
+                } else {
+                    Err(format!(
+                        "`{value}` is not a yes/no value (true, false, yes, no, 1, 0)"
+                    ))
+                }
+            }
+        }
+    }
+}
+
 /// An area, **in WGS 84 degrees**.
 ///
 /// The format of the map view, that of GeoJSON (RFC 7946), and the one a drawn
@@ -127,6 +161,67 @@ pub enum Area {
 }
 
 impl Area {
+    /// Whether this is an area at all, or why it is not.
+    ///
+    /// Every coordinate a finite number, longitude in `[-180, 180]` and latitude
+    /// in `[-90, 90]` (degrees: a value outside is metres or a swapped pair); a
+    /// box with `west < east` and `south < north` (one that crosses the
+    /// antimeridian is two boxes); a ring of at least three **distinct** points.
+    /// What is sent to a service is checked here first, so that a degenerate
+    /// area is a named refusal and not `POLYGON(())` or `NaN NaN` on the wire.
+    pub fn validate(&self) -> std::result::Result<(), String> {
+        let point = |lon: f64, lat: f64| -> std::result::Result<(), String> {
+            if !(lon.is_finite() && lat.is_finite()) {
+                return Err(format!("({lon}, {lat}) is not a pair of numbers"));
+            }
+            if !(-180.0..=180.0).contains(&lon) {
+                return Err(format!("longitude {lon} is outside [-180, 180] degrees"));
+            }
+            if !(-90.0..=90.0).contains(&lat) {
+                return Err(format!("latitude {lat} is outside [-90, 90] degrees"));
+            }
+            Ok(())
+        };
+        match self {
+            Area::Box {
+                west,
+                south,
+                east,
+                north,
+            } => {
+                point(*west, *south)?;
+                point(*east, *north)?;
+                if west >= east {
+                    return Err(format!(
+                        "the box has west {west} not below east {east} (one that crosses the antimeridian is two boxes)"
+                    ));
+                }
+                if south >= north {
+                    return Err(format!("the box has south {south} not below north {north}"));
+                }
+                Ok(())
+            }
+            Area::Ring(points) => {
+                for (lon, lat) in points {
+                    point(*lon, *lat)?;
+                }
+                let mut distinct: Vec<(u64, u64)> = points
+                    .iter()
+                    .map(|(lon, lat)| (lon.to_bits(), lat.to_bits()))
+                    .collect();
+                distinct.sort_unstable();
+                distinct.dedup();
+                if distinct.len() < 3 {
+                    return Err(format!(
+                        "a ring needs at least 3 distinct points, this one has {}",
+                        distinct.len()
+                    ));
+                }
+                Ok(())
+            }
+        }
+    }
+
     /// The extent of a ring, for a service that only takes a box.
     ///
     /// **Widening is not lying, provided it is said**: the box contains the
