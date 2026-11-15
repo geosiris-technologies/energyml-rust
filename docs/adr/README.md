@@ -33,8 +33,10 @@ new record that supersedes the old one, which keeps its text and a status line.
 | [0021](0021-own-tool-trait-rmcp-as-adapter.md) | Our own `Tool` trait; the MCP SDK is an adapter behind a feature |
 | [0022](0022-edge-kinds-from-the-specification.md) | The kind of an edge comes from the specification, labelled; the schema facts are generated |
 | [0023](0023-objects-held-by-value.md) | The data objects held by value are listed apart, and write their own references |
+| [0024](0024-facets-read-in-every-version.md) | Facets are read in every version, and say whether the schema lists them |
+| [0025](0025-log-mapping-of-a-colour-map.md) | A logarithmic mapping places the log of the value |
+| [0026](0026-a-head-portion-says-whether-the-file-describes-it.md) | A head portion says whether the file describes it, and is in the line's frame |
 | [0027](0027-gaps-seams-scales-and-quantiles.md) | Gaps, seams, scales and quantiles: the numbers the views share |
-
 | [0028](0028-one-drawing-for-every-view.md) | One drawing for every view: `draw` knows no format, one display list, one rule for graduations, a PNG is always the SVG rasterised |
 
 Decisions about the ETP protocol implementation are recorded in the

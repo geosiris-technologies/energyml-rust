@@ -63,6 +63,27 @@ default: choosing what to draw then is the decision of the view, which is the on
 that knows whether to derive a hue from the identifier, draw grey, or hide the
 object. This follows [refuse rather than draw](adr/0005-refuse-rather-than-draw.md).
 
+## Placing a value on the map
+
+Finding the colour map is one question; placing a value on it is another.
+`ColorMap::sample` takes the value and a `Scaling` (the `ColorInformation` of the
+object) and does this, in order:
+
+1. A missing value or a `NaN` has the map's null colour, whatever the scaling.
+2. `MinMax`, when given, is the range of values that spans the map; a value
+   outside it takes the extreme colour. Without `MinMax`, the map's own range
+   stands for the range of the values.
+3. Under `UseLogarithmicMapping`, **the log of the value** is what is placed
+   between the logs of that range (RESQML TRG 2.2 section 4.5, p. 56).
+4. `InterpolationMethod` (`linear` or `logarithmic`, section 4.7 p. 58) is a
+   different thing: the spacing **between two stops** of a continuous map. The
+   two may be combined, and neither stands for the other.
+
+A range that reaches zero or less has no logarithm. `ColorMap::check_scaling`
+refuses it by name, `try_sample` returns that refusal, and `sample` answers
+`None` (call `check_scaling` once to say why). The null colour is still given to a
+missing value. See [ADR 0025](adr/0025-log-mapping-of-a-colour-map.md).
+
 ## Cycles and duplicates
 
 A collection that holds itself, near or far, is a cycle: it is named, and the

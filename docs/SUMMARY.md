@@ -58,6 +58,10 @@
 - [0019 Synthetic data is flagged and sourced](adr/0019-synthetic-data-is-flagged-and-sourced.md)
 - [0020 A grid is never reprojected](adr/0020-a-grid-is-never-reprojected.md)
 - [0021 Our own Tool trait; rmcp as an adapter](adr/0021-own-tool-trait-rmcp-as-adapter.md)
+- [0022 The kind of an edge comes from the specification](adr/0022-edge-kinds-from-the-specification.md)
+- [0023 Objects held by value](adr/0023-objects-held-by-value.md)
+- [0024 Facets read in every version](adr/0024-facets-read-in-every-version.md)
+- [0025 The log mapping of a colour map](adr/0025-log-mapping-of-a-colour-map.md)
+- [0026 A head portion says whether the file describes it](adr/0026-a-head-portion-says-whether-the-file-describes-it.md)
 - [0027 Gaps, seams, scales and quantiles](adr/0027-gaps-seams-scales-and-quantiles.md)
-
 - [0028 One drawing for every view](adr/0028-one-drawing-for-every-view.md)

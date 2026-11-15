@@ -234,6 +234,29 @@ values.boolean();
 `read` widens to one type per family; `read_native` keeps the file's own type;
 `read_into` allocates nothing.
 
+**Strings.** A string dataset in HDF5 (fixed or variable length, ASCII or UTF-8)
+is read as `ArrayValues::Text`, and `values::read` widens it to `Values::Text`.
+An empty string is a value, not a gap. A backend that does not decode strings
+makes the column refuse by its name; it never answers an empty column or numbers
+in place of text (`ArrayValues::Text` has no bytes to lend, and `as_bytes` answers
+an empty slice). The HDF5 backend reads fixed-length strings up to 1024 bytes and
+refuses longer ones by name; it does not write strings.
+
+**Tables.** A table column that declares `ValueCountPerRow` greater than 1 reads
+its values per row: `Rows::per_row` says how many, `Rows::values_of(row, column)`
+gives the values of one row and `Rows::row_values(row)` those of a whole row.
+`Rows::cell` answers only for a scalar column, and says `None` for the others
+instead of a value that belongs to another row. The keys of a `DoubleTableLookup`
+keep their fractional part (`Values::Floating`); those of a `StringTableLookup`
+stay integers.
+
+**Facets.** A property or a table column carries qualifiers, read by one function
+whatever the release: RESQML 2.0.1 writes the kind in `Facet` and the value in
+`Value`, EML 2.3 and RESQML 2.2 write the kind in `Kind` and the value in `Facet`.
+`Facet.value` is a `FacetValue`, `Standard` when the schema lists it and
+`Extension` when it is the producer's own
+([ADR 0024](adr/0024-facets-read-in-every-version.md)).
+
 ## From a representation to something you can draw
 
 ```rust

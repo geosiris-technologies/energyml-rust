@@ -151,6 +151,8 @@ values, dimensions = pkg.read_array_part(ref, start=[1, 0], count=[1, 3])   # a 
 pkg.write_array(ref, np.asarray(points, dtype=np.float64).ravel(), [len(points), 3])
 ```
 
+An HDF5 string dataset comes out as a `list[str]`, not a numpy array.
+
 Arrays are **flat copies** (a view would outlive the memory it points to). The
 dtype decides what is written (float32/64, int8-64, uint8-64); anything else is
 refused by name. A shape that disagrees with the number of values is refused,
