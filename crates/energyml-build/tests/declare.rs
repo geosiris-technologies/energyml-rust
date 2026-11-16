@@ -533,17 +533,19 @@ fn a_geometry_bound_twice_is_not_copied() {
 /// The same for the features and the table of an entry.
 #[test]
 fn features_and_a_table_bound_twice_are_not_copied() {
-    let collection = energyml_build::geojson::read(
+    let Ok(collection) = energyml_build::geojson::read(
         r#"{"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[1.0,2.0]}}]}"#,
-    )
-    .ok()
-    .expect("a collection");
+    ) else {
+        panic!("a collection")
+    };
     let text = "A;B
 1;2
 ";
-    let table = energyml_build::tabular::read("t.csv", text, energyml_build::tabular::Dialect::sniff(text))
-        .ok()
-        .expect("a table");
+    let Ok(table) =
+        energyml_build::tabular::read("t.csv", text, energyml_build::tabular::Dialect::sniff(text))
+    else {
+        panic!("a table")
+    };
     let bag = Pieces::empty()
         .with(
             "features",

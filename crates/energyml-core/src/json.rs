@@ -120,20 +120,22 @@ impl ObjectSource for NoObjects {
     }
 }
 
+/// The versions of one uuid held in memory: `(object version, object)`, in the order given.
+type Versions<'a> = Vec<(Option<String>, &'a dyn Reflect)>;
+
 /// An [`ObjectSource`] over objects already in memory.
 ///
 /// Keeps **every version** of a uuid: one uuid held twice is two objects, and a
 /// reference names one of them.
 pub struct ObjectsInMemory<'a> {
     /// Lower-case uuid, then `(object version, object)` in the order given.
-    by_uuid: std::collections::HashMap<String, Vec<(Option<String>, &'a dyn Reflect)>>,
+    by_uuid: std::collections::HashMap<String, Versions<'a>>,
 }
 
 impl<'a> ObjectsInMemory<'a> {
     /// Index the objects that carry an identity; the others are ignored.
     pub fn new(objects: impl IntoIterator<Item = &'a dyn Reflect>) -> Self {
-        let mut by_uuid: std::collections::HashMap<String, Vec<(Option<String>, &'a dyn Reflect)>> =
-            std::collections::HashMap::new();
+        let mut by_uuid: std::collections::HashMap<String, Versions<'a>> = std::collections::HashMap::new();
         for object in objects {
             let Some(address) = identity::address_of_reflect(object) else {
                 continue;

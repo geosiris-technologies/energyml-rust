@@ -383,18 +383,20 @@ mod tests {
     fn a_negative_count_of_cuts_is_refused() {
         let fixed = |count| Cuts::Fixed(FixedCuts { count });
         assert!(matches!(cuts_of(&fixed(3)), Ok(fake::Cuts::Fixed(3))));
-        let refusal = cuts_of(&fixed(-2)).err().expect("refused");
+        let Err(refusal) = cuts_of(&fixed(-2)) else {
+            panic!("refused")
+        };
         assert_eq!(refusal.slot.as_deref(), Some("count"), "{refusal:?}");
         let random = |cuts_min, cuts_max| Cuts::Random(RandomCuts { cuts_min, cuts_max });
         assert!(cuts_of(&random(1, 4)).is_ok());
-        assert_eq!(
-            cuts_of(&random(-1, 4)).err().expect("refused").slot.as_deref(),
-            Some("cuts_min")
-        );
-        assert_eq!(
-            cuts_of(&random(1, -4)).err().expect("refused").slot.as_deref(),
-            Some("cuts_max")
-        );
+        let Err(low) = cuts_of(&random(-1, 4)) else {
+            panic!("refused")
+        };
+        assert_eq!(low.slot.as_deref(), Some("cuts_min"));
+        let Err(high) = cuts_of(&random(1, -4)) else {
+            panic!("refused")
+        };
+        assert_eq!(high.slot.as_deref(), Some("cuts_max"));
         // Break it: put `.max(0) as u32` back in `count_of`, and -2 is read as 0 cuts.
     }
 }
