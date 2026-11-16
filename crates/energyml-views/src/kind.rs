@@ -51,7 +51,7 @@ pub struct Offer {
     pub title: String,
     /// What a request must still give and nobody proposes (a setting the file does not say), in words; empty: ready.
     pub missing: Vec<String>,
-    /// What a request should give but that [`crate::assist`] proposes for a first drawing, in words: the entries
+    /// What a request should give but that [`crate::assist()`] proposes for a first drawing, in words: the entries
     /// that left `missing`. A proposal is always said as one.
     pub proposed: Vec<String>,
     /// What the view shows of its objects when it is not the whole object (`the curtain Rh`, `the hole`); `None`

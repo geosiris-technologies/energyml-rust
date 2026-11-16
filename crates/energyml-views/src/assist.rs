@@ -2,7 +2,7 @@
 //!
 //! Some values are not in the file: the roles of the two dimensions of a curtain, the table that holds its
 //! coordinates. A request that does not give them is refused ([`crate::ViewRefusal::MissingSetting`]), and a
-//! person who does not know what to give sees nothing. [`assist`] asks the view what it can *propose* from the
+//! person who does not know what to give sees nothing. [`assist()`] asks the view what it can *propose* from the
 //! package: a [`Proposal`] is a value for a setting, with the reason it is proposed. It is never a value read from the
 //! file, and a face says so wherever it shows one (the command line writes a note, a form marks the field).
 //!
@@ -263,7 +263,7 @@ impl AxisTable {
     }
 }
 
-/// Whether [`assist`] will propose the links of a curtain whose dimensions have these sizes, **from the index
+/// Whether [`assist()`] will propose the links of a curtain whose dimensions have these sizes, **from the index
 /// alone** (an offer has no array source): exactly one `ColumnBasedTable` goes with the curtain by the convention of
 /// ADR 0029 (one key column, one numeric value column per dimension and nothing else, as many rows as every dimension
 /// has positions). A table whose row count the index cannot tell (its columns in an external array, read at drawing
