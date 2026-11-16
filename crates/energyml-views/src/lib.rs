@@ -57,6 +57,6 @@ pub mod well_sheet;
 pub use ask::ViewAsk;
 pub use colour::{ColourDoor, ColourSource, NoColourMaps, PackageColours, ValueColours, value_colours};
 pub use kind::{Drawn, ObjectSlot, Offer, Request, ViewContext, ViewKind, ViewKinds, ViewNote, local_type};
-pub use picture::{Picture, draw_list, draw_svg, png, read_ask, redraw};
+pub use picture::{Picture, draw_list, draw_svg, png, read_ask, redraw, write_svg};
 pub use refusal::ViewRefusal;
 pub use setting::{SettingKind, Settled, ViewSetting};

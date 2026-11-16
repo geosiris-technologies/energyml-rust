@@ -3,7 +3,7 @@
 //! ([`png`]).
 
 use energyml_domain::package_index::PackageIndex;
-use energyml_sheet::draw::{Metadata, svg};
+use energyml_sheet::draw::{DisplayList, Metadata, svg};
 
 use crate::ask::ViewAsk;
 use crate::kind::{Drawn, ObjectSlot, Request, ViewContext, ViewKind, ViewKinds, ViewNote, local_type};
@@ -154,7 +154,24 @@ pub fn draw_list(
 /// The request refused against its view, the view's own refusal, or the SVG writer's.
 pub fn draw_svg(kinds: &ViewKinds, ask: &ViewAsk, cx: &ViewContext<'_>) -> Result<Picture, ViewRefusal> {
     let (drawn, completed) = draw_list(kinds, ask, cx)?;
-    let body = serde_json::to_string(&completed).map_err(|why| ViewRefusal::Metadata(why.to_string()))?;
+    let svg = write_svg(&drawn.list, &completed)?;
+    Ok(Picture {
+        svg,
+        ask: completed,
+        notes: drawn.notes,
+    })
+}
+
+/// **The one writer of a view's SVG**: a list already drawn (by [`draw_list`]), written with its completed request
+/// in the metadata. For a face that holds the list (a window, which points at it and draws over it) and writes the
+/// picture without drawing it twice; [`draw_svg`] writes through it, so the two give the same bytes and
+/// [`redraw`] reads both.
+///
+/// # Errors
+///
+/// The request that does not serialise, or the SVG writer's refusal.
+pub fn write_svg(list: &DisplayList, completed: &ViewAsk) -> Result<String, ViewRefusal> {
+    let body = serde_json::to_string(completed).map_err(|why| ViewRefusal::Metadata(why.to_string()))?;
     let metadata = Metadata {
         element: METADATA_ELEMENT.to_string(),
         namespace: METADATA_NAMESPACE.to_string(),
@@ -162,12 +179,7 @@ pub fn draw_svg(kinds: &ViewKinds, ask: &ViewAsk, cx: &ViewContext<'_>) -> Resul
         version: env!("CARGO_PKG_VERSION").to_string(),
         body,
     };
-    let svg = svg::write(&drawn.list, Some(&metadata))?;
-    Ok(Picture {
-        svg,
-        ask: completed,
-        notes: drawn.notes,
-    })
+    Ok(svg::write(list, Some(&metadata))?)
 }
 
 /// The request a drawing was made from.

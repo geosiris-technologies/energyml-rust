@@ -450,6 +450,19 @@ fn declared_convention(settings: &Settled) -> Result<Option<AngleConvention>, Vi
     }))
 }
 
+/// The measured depths of the nodes of the frame a property hangs on, as the view reads them: what a face needs to
+/// offer a cursor of MD over the target (from the first node to the last). The frame's full uri comes with them.
+///
+/// # Errors
+///
+/// The property that does not read, hangs on no wellbore frame, or whose frame states no node depths.
+pub fn frame_mds(cx: &ViewContext<'_>, property_uri: &str) -> Result<(String, Vec<f64>), ViewRefusal> {
+    let (uri, frame) = frame_of(cx, property_uri)?;
+    let mds = strata_by_md::node_mds(frame.as_reflect(), cx.source)
+        .map_err(|why| ViewRefusal::computing(ID, why.to_string()))?;
+    Ok((uri, mds))
+}
+
 /// The frame a property hangs on: its full uri and the object.
 fn frame_of(
     cx: &ViewContext<'_>,
