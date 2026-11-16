@@ -18,8 +18,10 @@
 //!   secondary expansions, need to know the kind of each edge. Which relationship
 //!   is primary is ML-specific (ETP 1.2 §8.1.1.1.1, note 1: *"see the relevant
 //!   ML's ETP implementation specification"*); a store that derives its edges
-//!   from the objects states it by the rules of [`crate::kinds`], and for an ML
-//!   with no rule the edge has no kind ([`crate::graph::Edge::kind`]). The
+//!   from the objects states it by the rules of [`crate::kinds`], which give
+//!   every edge a kind (primary by default where no rule applies, labelled so).
+//!   An edge can still have none: one nobody judged (a store without rules), or
+//!   one a caller's rules leave unknown ([`crate::graph::Edge::kind`]). The
 //!   refusal is **met**, not global: a request by kind answers while its walk
 //!   meets only edges that have a kind, and refuses ([`crate::Error::UnstatedKind`],
 //!   naming the type and the cause) at the first edge that has none.
