@@ -21,8 +21,10 @@ graph TD
   domain --> proj["energyml-proj: reprojection over proj4rs"]
   geometry --> build["energyml-build: creating objects"]
   geometry --> section["energyml-section / energyml-sheet: SVG drawings"]
+  section --> views["energyml-views: the views of a package as pictures"]
   build --> cli["energyml-cli, Python bridge"]
   export --> cli
+  views --> cli
 ```
 
 - **`energyml-core`** has no knowledge of any schema and no native dependency
