@@ -140,34 +140,15 @@ fn ring_keep(
             [x, y, 0.0]
         })
         .collect();
-    let ring_of = |slot: &str, shape: &Shape| -> Result<Vec<f64>, Refusal> {
-        let ring_points: Vec<[f64; 3]> = shape
-            .geometry
-            .patches
-            .iter()
-            .flat_map(|p| p.points.iter().copied())
-            .collect();
-        if ring_points.len() < 3 {
-            return Err(Refusal::on(
-                slot,
-                format!(
-                    "`{}` holds {} point(s): a ring encloses something with at least 3",
-                    shape.name,
-                    ring_points.len()
-                ),
-            ));
-        }
-        Ok(ring_points.iter().flat_map(|p| [p[0], p[1]]).collect())
-    };
     let mut keep: Option<Vec<usize>> = None;
     if let Some(shape) = outer {
-        let ring = ring_of("outer", shape)?;
+        let ring = super::blocks::ring_corners("outer", shape)?;
         let kept = energyml_geometry::clip::nodes_in_ring(&flat, &ring, false)
             .map_err(|why| Refusal::on("outer", why))?;
         keep = Some(kept.into_iter().map(|at| at as usize).collect());
     }
     for shape in inner {
-        let ring = ring_of("inner", shape)?;
+        let ring = super::blocks::ring_corners("inner", shape)?;
         let kept: std::collections::HashSet<usize> =
             energyml_geometry::clip::nodes_in_ring(&flat, &ring, true)
                 .map_err(|why| Refusal::on("inner", why))?
@@ -176,7 +157,14 @@ fn ring_keep(
                 .collect();
         keep = Some(match keep {
             Some(previous) => previous.into_iter().filter(|at| kept.contains(at)).collect(),
-            None => kept.into_iter().collect(),
+            // In rank order: a `HashSet`'s order changes from one run to the
+            // next, and the fit sums in sample order, so the result (and the
+            // identity derived from it) would not repeat.
+            None => {
+                let mut ranks: Vec<usize> = kept.into_iter().collect();
+                ranks.sort_unstable();
+                ranks
+            }
         });
     }
     Ok(keep)

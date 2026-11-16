@@ -48,7 +48,11 @@
 //! quadratic along a straight chord, and where the path crosses it is a root.
 //! A leaning pillar, or a column that is no parallelogram, is **refused by
 //! name**: the surface between its corners is then no bilinear patch in plan,
-//! and cutting it by a diagonal the file never chose would be a guess.
+//! and cutting it by a diagonal the file never chose would be a guess. A column
+//! is judged **only where the path meets it** - where a segment's box meets the
+//! column's box, as `blocked-wellbore` reads only the cells near the path: an
+//! irregular column far from the path, never read, refuses nothing, and one the
+//! path reaches is refused whatever else the grid holds.
 //!
 //! A stretch of path **two cells of one grid both claim** - a path running
 //! along the face they share - is refused, naming both: which cell holds it is
@@ -59,6 +63,10 @@
 //! face in the second: it was not entered through one.
 
 use std::fmt;
+
+use crate::buckets;
+use crate::vector::distance;
+use crate::vector::plan::cross;
 
 /// A point, `[x, y, z]`.
 pub type Point = [f64; 3];
@@ -326,8 +334,31 @@ struct Column {
     ring: [[f64; 2]; 4],
     /// The corner heights of each level, `[smaller K, larger K]`.
     heights: [[f64; 4]; 2],
-    /// The column's box in plan, and its range of heights.
+}
+
+/// The column's box in plan has four finite bounds, so the grid of buckets can
+/// file it.
+fn cell_box_is_finite(reach: &[[f64; 2]; 3]) -> bool {
+    reach[..2].iter().all(|r| r.iter().all(|v| v.is_finite()))
+}
+
+/// A cell's box (plan and heights) from its eight corners, whatever its shape.
+fn reach_of(cell: &Hexahedron) -> [[f64; 2]; 3] {
+    let mut reach = [[f64::INFINITY, f64::NEG_INFINITY]; 3];
+    for corner in &cell.corners {
+        for axis in 0..3 {
+            reach[axis][0] = reach[axis][0].min(corner[axis]);
+            reach[axis][1] = reach[axis][1].max(corner[axis]);
+        }
+    }
+    reach
+}
+
+/// A cell read: its box, always, and its column or why it is refused. The
+/// refusal is only raised when a segment of the path meets the box.
+struct Read {
     reach: [[f64; 2]; 3],
+    column: Result<Column, CellsError>,
 }
 
 fn column(grid: usize, cell: &Hexahedron) -> Result<Column, CellsError> {
@@ -359,13 +390,6 @@ fn column(grid: usize, cell: &Hexahedron) -> Result<Column, CellsError> {
         [ring[1][0] - ring[0][0], ring[1][1] - ring[0][1]],
         [ring[3][0] - ring[0][0], ring[3][1] - ring[0][1]],
     ];
-    let mut reach = [[f64::INFINITY, f64::NEG_INFINITY]; 3];
-    for corner in c {
-        for axis in 0..3 {
-            reach[axis][0] = reach[axis][0].min(corner[axis]);
-            reach[axis][1] = reach[axis][1].max(corner[axis]);
-        }
-    }
     Ok(Column {
         index: cell.index,
         origin: ring[0],
@@ -375,12 +399,7 @@ fn column(grid: usize, cell: &Hexahedron) -> Result<Column, CellsError> {
             [c[0][2], c[1][2], c[2][2], c[3][2]],
             [c[4][2], c[5][2], c[6][2], c[7][2]],
         ],
-        reach,
     })
-}
-
-fn cross(a: [f64; 2], b: [f64; 2]) -> f64 {
-    a[0] * b[1] - a[1] * b[0]
 }
 
 /// The roots of `a·t² + b·t + c` in `[low, high]`.
@@ -525,10 +544,25 @@ fn inside(cell: &Column, a: Point, b: Point) -> Vec<(f64, f64, [Edge; 2])> {
 
 /// Where along the path each of these measured depths falls - on the chords,
 /// as [`block`] spreads the MD. A depth outside the path's is `None`.
-pub fn positions(points: &[Point], mds: &[f64], at: &[f64]) -> Vec<Option<Point>> {
-    at.iter()
+///
+/// The path is checked as [`block`] checks it, and a malformed one is a named
+/// [`CellsError`]: not one depth per node, fewer than two nodes, a non-finite
+/// node or depth, a depth that does not increase (two equal consecutive depths
+/// would be a `0 / 0` position). The segment of each depth is found by
+/// bisection.
+pub fn try_positions(points: &[Point], mds: &[f64], at: &[f64]) -> Result<Vec<Option<Point>>, CellsError> {
+    check_path(points, mds)?;
+    Ok(at
+        .iter()
         .map(|md| {
-            let segment = mds.windows(2).position(|w| w[0] <= *md && *md <= w[1])?;
+            // The first depth not below `md`: `md` is in (mds[i - 1], mds[i]].
+            let first_not_below = mds.partition_point(|m| m < md);
+            let segment = match first_not_below {
+                0 if *md == mds[0] => 0,
+                0 => return None,
+                n if n == mds.len() => return None,
+                n => n - 1,
+            };
             let t = (md - mds[segment]) / (mds[segment + 1] - mds[segment]);
             let (a, b) = (points[segment], points[segment + 1]);
             Some([
@@ -537,14 +571,18 @@ pub fn positions(points: &[Point], mds: &[f64], at: &[f64]) -> Vec<Option<Point>
                 a[2] + t * (b[2] - a[2]),
             ])
         })
-        .collect()
+        .collect())
 }
 
-/// Block a path through grids - see the module header.
-///
-/// `points` and `mds` are the path's nodes and their measured depths; `grids`
-/// are taken in the order given.
-pub fn block(points: &[Point], mds: &[f64], grids: &[Grid]) -> Result<Blocked, CellsError> {
+/// [`try_positions`] with no way to refuse: a malformed path places nothing,
+/// so every depth is `None`. A caller that must tell a bad path from a depth
+/// outside a good one calls [`try_positions`].
+pub fn positions(points: &[Point], mds: &[f64], at: &[f64]) -> Vec<Option<Point>> {
+    try_positions(points, mds, at).unwrap_or_else(|_| vec![None; at.len()])
+}
+
+/// The checks of a path, shared by [`block`] and [`try_positions`].
+fn check_path(points: &[Point], mds: &[f64]) -> Result<(), CellsError> {
     if points.len() != mds.len() {
         return Err(CellsError::Mismatched {
             nodes: points.len(),
@@ -566,12 +604,21 @@ pub fn block(points: &[Point], mds: &[f64], grids: &[Grid]) -> Result<Blocked, C
             });
         }
     }
+    Ok(())
+}
+
+/// Block a path through grids - see the module header.
+///
+/// `points` and `mds` are the path's nodes and their measured depths; `grids`
+/// are taken in the order given.
+pub fn block(points: &[Point], mds: &[f64], grids: &[Grid]) -> Result<Blocked, CellsError> {
+    check_path(points, mds)?;
     let span = mds[mds.len() - 1] - mds[0];
     let md_tolerance = 1e-9 * span.max(1.0);
     let mut chord_excess = 0.0f64;
     for node in 0..points.len() - 1 {
         let (a, b) = (points[node], points[node + 1]);
-        let chord = ((b[0] - a[0]).powi(2) + (b[1] - a[1]).powi(2) + (b[2] - a[2]).powi(2)).sqrt();
+        let chord = distance(a, b);
         let step = mds[node + 1] - mds[node];
         if step < chord - md_tolerance.max(1e-9 * chord) {
             return Err(CellsError::ShorterThanChord { node, step, chord });
@@ -582,21 +629,57 @@ pub fn block(points: &[Point], mds: &[f64], grids: &[Grid]) -> Result<Blocked, C
     // -- each grid on its own ----------------------------------------------------
     let mut held: Vec<Vec<Piece>> = Vec::with_capacity(grids.len());
     for (rank, grid) in grids.iter().enumerate() {
-        let columns: Vec<Column> = grid
+        // A column is judged only where the path meets it: its box is read for
+        // every cell, its shape is refused (leaning, not a parallelogram) only
+        // when a segment's box meets that box - as `blocked-wellbore` reads only
+        // the cells near the path. A cell no path comes near is never refused.
+        // The columns' plan boxes are filed once in the grid of buckets, and each
+        // segment visits the columns whose box its own box meets, in the order of
+        // `columns`. A column with no finite box is not indexable and is always
+        // visited.
+        let columns: Vec<Read> = grid
             .cells
             .iter()
-            .map(|cell| column(rank, cell))
-            .collect::<Result<_, _>>()?;
+            .map(|cell| Read {
+                reach: reach_of(cell),
+                column: column(rank, cell),
+            })
+            .collect();
+        let boxes: Vec<buckets::Bounds> = columns
+            .iter()
+            .map(|cell| {
+                (
+                    [cell.reach[0][0], cell.reach[1][0]],
+                    [cell.reach[0][1], cell.reach[1][1]],
+                )
+            })
+            .collect();
+        let index = buckets::Grid::new(&boxes);
+        let unindexed: Vec<usize> = if index.left_out() == 0 {
+            Vec::new()
+        } else {
+            (0..columns.len())
+                .filter(|&at| !cell_box_is_finite(&columns[at].reach))
+                .collect()
+        };
         let mut pieces: Vec<Piece> = Vec::new();
         for node in 0..points.len() - 1 {
             let (a, b) = (points[node], points[node + 1]);
             let (ma, mb) = (mds[node], mds[node + 1]);
             let low = [a[0].min(b[0]), a[1].min(b[1]), a[2].min(b[2])];
             let high = [a[0].max(b[0]), a[1].max(b[1]), a[2].max(b[2])];
-            for cell in &columns {
-                if (0..3).any(|axis| high[axis] < cell.reach[axis][0] || low[axis] > cell.reach[axis][1]) {
+            let mut near = index.query([low[0], low[1]], [high[0], high[1]]);
+            if !unindexed.is_empty() {
+                near.extend_from_slice(&unindexed);
+                near.sort_unstable();
+                near.dedup();
+            }
+            for at in near {
+                let read = &columns[at];
+                if (0..3).any(|axis| high[axis] < read.reach[axis][0] || low[axis] > read.reach[axis][1]) {
                     continue;
                 }
+                let cell = read.column.as_ref().map_err(Clone::clone)?;
                 for (s, e, ends) in inside(cell, a, b) {
                     pieces.push(Piece {
                         cell: cell.index,
@@ -702,6 +785,44 @@ mod tests {
 
     use super::*;
 
+    /// [geostat-proj-roundtrip S16] `positions` on a malformed path: a named
+    /// refusal from `try_positions` (it used to panic on a short `points`, and
+    /// returned `0 / 0 = NaN` between two equal depths), `None` from the form
+    /// with no way to refuse; and the depths of a good path are found by
+    /// bisection at the stations, between them and outside them.
+    #[test]
+    fn positions_refuses_a_malformed_path_and_places_the_depths_of_a_good_one() {
+        let points = [[0.0, 0.0, 0.0], [10.0, 0.0, 0.0], [10.0, 10.0, 0.0]];
+        let mds = [0.0, 10.0, 20.0];
+        let placed =
+            try_positions(&points, &mds, &[-1.0, 0.0, 5.0, 10.0, 15.0, 20.0, 21.0, f64::NAN]).unwrap();
+        assert_eq!(
+            placed,
+            vec![
+                None,
+                Some([0.0, 0.0, 0.0]),
+                Some([5.0, 0.0, 0.0]),
+                Some([10.0, 0.0, 0.0]),
+                Some([10.0, 5.0, 0.0]),
+                Some([10.0, 10.0, 0.0]),
+                None,
+                None,
+            ]
+        );
+        // Fewer points than depths: was an index out of bounds.
+        assert_eq!(
+            try_positions(&points[..2], &mds, &[5.0]),
+            Err(CellsError::Mismatched { nodes: 2, mds: 3 })
+        );
+        // Two equal consecutive depths: was NaN.
+        assert!(matches!(
+            try_positions(&points, &[0.0, 10.0, 10.0], &[10.0]),
+            Err(CellsError::NotIncreasing { node: 2, .. })
+        ));
+        assert_eq!(positions(&points[..2], &mds, &[5.0]), vec![None]);
+        // Break it: `points[segment + 1]` and the division with no `check_path` before.
+    }
+
     /// A regular grid, `ni × nj × nk` boxes of `size`, its top at `z = 0`,
     /// K going **down** (elevation decreasing) - `[0..4]` on the upper level.
     fn boxes(origin: [f64; 2], size: [f64; 3], counts: [usize; 3]) -> Grid {
@@ -754,8 +875,7 @@ mod tests {
     fn chord_mds(points: &[Point], start: f64) -> Vec<f64> {
         let mut out = vec![start];
         for w in points.windows(2) {
-            let d = ((w[1][0] - w[0][0]).powi(2) + (w[1][1] - w[0][1]).powi(2) + (w[1][2] - w[0][2]).powi(2))
-                .sqrt();
+            let d = distance(w[0], w[1]);
             out.push(out.last().unwrap() + d);
         }
         out
@@ -831,6 +951,68 @@ mod tests {
                 assert_eq!(b.faces[0], Some(opposite), "{a:?} then {b:?}");
             }
         }
+    }
+
+    /// [geostat-proj-roundtrip S2] A path through a grid of 20 000 columns, each
+    /// segment visiting only the columns its box meets (the grid of buckets):
+    /// every interval is held by the cell the arithmetic finds at its middle, and
+    /// a column far from the path that is no parallelogram refuses nothing (it
+    /// is never read).
+    #[test]
+    fn a_path_through_a_large_grid_is_held_by_the_cells_arithmetic_finds() {
+        let (origin, size, counts) = ([5000.0, 7000.0], [10.0, 10.0, 4.0], [100, 100, 2]);
+        let grid = boxes(origin, size, counts);
+        // A wandering path of 120 nodes from the grid's corner to its far side.
+        let points: Vec<Point> = (0..120)
+            .map(|n| {
+                let t = n as f64;
+                [
+                    5003.0 + t * 8.1,
+                    7004.0 + t * 7.3 + 40.0 * (t * 0.21).sin(),
+                    5.0 - t * 0.13,
+                ]
+            })
+            .collect();
+        let mds = chord_mds(&points, 10.0);
+        let blocked = block(&points, &mds, std::slice::from_ref(&grid)).unwrap();
+        assert!(
+            blocked.cell_count() > 50,
+            "the path crosses many cells: {}",
+            blocked.cell_count()
+        );
+        for (n, one) in blocked.intervals.iter().enumerate() {
+            let middle = 0.5 * (blocked.node_md[n] + blocked.node_md[n + 1]);
+            let expected = by_arithmetic(origin, size, counts, at_md(&points, &mds, middle));
+            assert_eq!(one.map(|held| held.cell), expected, "interval {n}, MD {middle}");
+        }
+        // [fin-F2] A kite far from the path, never read, refuses nothing, and the
+        // blocking is the one of the regular grid.
+        let mut kite = grid;
+        let last = kite.cells.len() - 1;
+        for n in [2, 6] {
+            kite.cells[last].corners[n][0] += 2.0;
+        }
+        assert_eq!(block(&points, &mds, &[kite]), Ok(blocked));
+        // Break it: read (and refuse) every column before the search, and the far kite refuses the grid.
+    }
+
+    /// [fin-F2] A kite the path reaches is refused by name, whichever other
+    /// columns the grid holds: the lazy reading judges the columns the path meets.
+    #[test]
+    fn an_irregular_column_on_the_path_is_refused_by_name() {
+        let grid = boxes([0.0, 0.0], [10.0, 10.0, 10.0], [20, 1, 1]);
+        let points = [[5.0, 5.0, -5.0], [195.0, 5.0, -5.0]];
+        let mds = [0.0, 190.0];
+        assert!(block(&points, &mds, std::slice::from_ref(&grid)).is_ok());
+        let mut kite = grid;
+        for n in [2, 6] {
+            kite.cells[7].corners[n][0] += 2.0;
+        }
+        assert_eq!(
+            block(&points, &mds, &[kite]),
+            Err(CellsError::NotParallelogram { grid: 0, cell: 7 })
+        );
+        // Break it: skip the refusal of a column once its box is met, and the kite on the path is blocked as a box.
     }
 
     #[test]

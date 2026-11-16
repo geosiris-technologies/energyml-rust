@@ -19,6 +19,7 @@
 //! rather than by its RESQML number; accepting an artefact as a support.
 
 use serde_json::json;
+use std::sync::Arc;
 
 use energyml_build::operation::{Choices, Identity, Numbers, Plan, Registry, When};
 use energyml_build::pieces::{Known, Pieces, Ref, Source};
@@ -103,7 +104,7 @@ fn bag(geometry: Geometry) -> Pieces {
         .with(
             "support",
             Source::Shape {
-                geometry,
+                geometry: Arc::new(geometry),
                 closed: None,
             },
         )
@@ -366,7 +367,7 @@ fn an_artefact_is_no_support() {
     let pieces = Pieces::empty().with(
         "support",
         Source::Shape {
-            geometry: boxes(None),
+            geometry: Arc::new(boxes(None)),
             closed: None,
         },
     );

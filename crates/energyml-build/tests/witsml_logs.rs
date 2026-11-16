@@ -18,6 +18,7 @@
 //! back into the generated WITSML types before anything is asserted of it.
 
 use serde_json::{Value, json};
+use std::sync::Arc;
 
 use energyml_build::operation::{Choices, Identity, Plan, Registry, When};
 use energyml_build::pieces::{Known, KnownProperty, Pieces, Ref, Source};
@@ -106,7 +107,7 @@ fn frame_bag(pieces: Pieces, count: usize) -> Pieces {
         .collect();
     let n = points.len() as u32;
     let shape = Source::Shape {
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind: "polyline",
             patches: vec![Patch {
                 index: 0,
@@ -115,7 +116,7 @@ fn frame_bag(pieces: Pieces, count: usize) -> Pieces {
                 topology: Topology::Polylines(vec![n]),
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     };
     pieces

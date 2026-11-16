@@ -17,6 +17,7 @@
 //! module computed.
 
 use serde_json::{Value, json};
+use std::sync::Arc;
 
 use energyml_build::operation::{Choices, Identity, NewObject, Numbers, Plan, Registry, When};
 use energyml_build::pieces::{Known, Pieces, Ref, Source};
@@ -81,7 +82,7 @@ fn frame(bag: Pieces, at: usize, title: &str, mds: &[f64]) -> Pieces {
     bag.with(
         name.clone(),
         Source::Shape {
-            geometry,
+            geometry: Arc::new(geometry),
             closed: None,
         },
     )
@@ -109,7 +110,7 @@ fn bag() -> Pieces {
         "table",
         Source::Table {
             name: "essai.csv".into(),
-            table: read(FILE),
+            table: Arc::new(read(FILE)),
             template,
         },
     );

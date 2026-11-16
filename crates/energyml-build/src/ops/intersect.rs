@@ -41,6 +41,7 @@
 use energyml_analysis::intersect;
 use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
+use std::sync::Arc;
 
 use crate::declare::{Inputs, Params, Shape, Suggestions};
 use crate::operation::{About, Category, Context, Made, Need, Note, Operation, Plan, Refusal, Slot};
@@ -236,10 +237,10 @@ impl Operation for Intersect {
         let name = format!("{} on {} surface(s)", fault.name, per_surface.len());
         let shape = Shape {
             name: name.clone(),
-            geometry: Geometry {
+            geometry: Arc::new(Geometry {
                 kind: "intersect",
                 patches: patches.clone(),
-            },
+            }),
             closed: Some(closed_all),
             known: None,
         };

@@ -1,0 +1,26 @@
+# Traduction française du thème survey : titres et textes. Pas encore relue par
+# un relecteur francophone ; ce qui manque se lit en anglais, et le dit.
+
+[[rule]]
+id = "house/survey/declared-north"
+title = "Un levé qui ne dit pas son nord n'est placé qu'avec un nord déclaré par l'appelant"
+text = """
+Un levé qui quitte la verticale sans dire de quel nord partent ses azimuts (`AziRef` absent) est refusé par son nom (`NorthNotStated`), sauf si l'appelant déclare le nord de grille ou le nord de chantier. Le nord déclaré est porté par le résultat (`NorthSource::Declared`), n'est jamais écrit dans le paquet, et ne remplace jamais un nord que le fichier donne (`NorthAlreadyStated`)."""
+
+[[rule]]
+id = "house/survey/north-corrections-applied"
+title = "Un nord vrai ou magnétique est ramené au nord de grille par les corrections que le fichier donne"
+text = """
+Un levé en nord vrai est ramené au nord de grille en retranchant la convergence ; en nord magnétique, en ajoutant la déclinaison puis en retranchant la convergence. La valeur d'une station (`StnGridConUsed`, `StnMagDeclUsed`) passe avant celle de la trajectoire (`GridConUsed`, `MagDeclUsed`). Une correction que le fichier ne donne pas est refusée par son nom (`NorthNotApplied`) ; le nord astronomique et le nord compas, qu'aucun champ ne corrige, sont refusés."""
+
+[[rule]]
+id = "house/survey/rejected-station-left-out-on-declaration"
+title = "Une station rejetée n'est laissée de côté que si l'appelant le déclare"
+text = """
+Un levé qui contient une station au statut `rejected` est refusé par son nom (`RejectedStation`), sauf si l'appelant déclare que les stations rejetées sont laissées de côté. Elles le sont alors : les positions se calculent sur les autres stations, le résultat liste les stations gardées, et un refus nomme toujours une station par son numéro dans le fichier."""
+
+[[rule]]
+id = "house/survey/deviation-survey-grid-north"
+title = "Un levé de déviation RESQML 2.0.1 part du nord de grille et se joint par la courbure minimale"
+text = """
+Les azimuts d'une `DeviationSurveyRepresentation` se lisent depuis le nord du CRS projeté, ses inclinaisons depuis la verticale ; aucune méthode n'est donnée, les stations se joignent donc par la courbure minimale. `FirstStationLocation` est lu et montré, jamais utilisé pour placer : le levé se place depuis son `MdDatum`, et il est refusé par son nom quand ce datum ne nomme aucun CRS projeté."""

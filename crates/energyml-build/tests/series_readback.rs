@@ -17,6 +17,7 @@
 //! `energyml_analysis::flow_law`'s, called here directly.
 
 use serde_json::json;
+use std::sync::Arc;
 
 use energyml_analysis::flow_law::{self, Law};
 use energyml_build::operation::{Choices, Identity, NewObject, Plan, Registry, When};
@@ -97,7 +98,7 @@ fn frame_bag() -> Pieces {
         ..Known::default()
     };
     let shape = Source::Shape {
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind: "polyline",
             patches: vec![Patch {
                 index: 0,
@@ -106,7 +107,7 @@ fn frame_bag() -> Pieces {
                 topology: Topology::Polylines(vec![n]),
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     };
     Pieces::empty()

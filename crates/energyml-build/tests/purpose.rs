@@ -19,6 +19,7 @@
 use energyml_build::operation::{Choices, Identity, Purpose, Registry, When};
 use energyml_build::pieces::{Pieces, Source};
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
+use std::sync::Arc;
 
 fn when() -> When {
     When {
@@ -31,7 +32,7 @@ fn ring() -> Pieces {
     Pieces::empty().with(
         "shape",
         Source::Shape {
-            geometry: Geometry {
+            geometry: Arc::new(Geometry {
                 kind: "ring",
                 patches: vec![Patch {
                     index: 0,
@@ -45,7 +46,7 @@ fn ring() -> Pieces {
                     topology: Topology::Polylines(vec![4]),
                     closed: Vec::new(),
                 }],
-            },
+            }),
             closed: Some(vec![true]),
         },
     )
@@ -153,7 +154,7 @@ fn what_the_computation_asks_for_stays_required_on_a_geometry_plan() {
     let cloud = Pieces::empty().with(
         "shape",
         Source::Shape {
-            geometry: Geometry {
+            geometry: Arc::new(Geometry {
                 kind: "cloud",
                 patches: vec![Patch {
                     index: 0,
@@ -167,7 +168,7 @@ fn what_the_computation_asks_for_stays_required_on_a_geometry_plan() {
                     topology: Topology::Points,
                     closed: Vec::new(),
                 }],
-            },
+            }),
             closed: None,
         },
     );

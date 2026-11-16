@@ -13,6 +13,7 @@ use energyml_build::operation::{Choices, Identity, Plan, Purpose, Registry, When
 use energyml_build::pieces::{Pieces, Source};
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 use serde_json::json;
+use std::sync::Arc;
 
 fn when() -> When {
     When {
@@ -55,10 +56,10 @@ fn surface() -> Source {
         closed: vec![false],
     };
     Source::Shape {
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind: "test",
             patches: vec![fan, more],
-        },
+        }),
         closed: None,
     }
 }

@@ -27,7 +27,6 @@ use serde_json::{Value, json};
 
 use energyml_build::operation::{Choices, Identity, Numbers, Plan, Registry, When};
 use energyml_build::pieces::{Known, Pieces, Ref, Source};
-use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 
 const X0: f64 = 651_000.0;
@@ -170,7 +169,7 @@ fn bag_in(horizons: &[(&str, Geometry)], frame: &Ref, up: bool) -> Pieces {
             .with(
                 slot_name(rank),
                 Source::Shape {
-                    geometry: geometry.clone(),
+                    geometry: std::sync::Arc::new(geometry.clone()),
                     closed: None,
                 },
             )
@@ -258,7 +257,7 @@ fn number(plan: &Plan, title: &str) -> f64 {
         .parameters
         .iter()
         .find_map(|one| match one {
-            Parameter::Double { title: t, value, .. } if t == title => Some(*value),
+            other if other.title() == title => other.number(),
             _ => None,
         })
         .unwrap_or_else(|| panic!("`{title}` is not a number of the activity"))
@@ -774,7 +773,7 @@ fn the_grid_is_in_the_frame_of_its_horizons_or_refused() {
             .with(
                 slot_name(rank),
                 Source::Shape {
-                    geometry: geometry.clone(),
+                    geometry: std::sync::Arc::new(geometry.clone()),
                     closed: None,
                 },
             )
@@ -796,7 +795,7 @@ fn the_grid_is_in_the_frame_of_its_horizons_or_refused() {
             .with(
                 slot_name(rank),
                 Source::Shape {
-                    geometry: geometry.clone(),
+                    geometry: std::sync::Arc::new(geometry.clone()),
                     closed: None,
                 },
             )
@@ -842,7 +841,7 @@ fn the_geometry_reader_reads_the_nodes_and_the_cells_planned() {
         pieces = pieces.with(
             slot_name(rank),
             Source::Shape {
-                geometry: geometry.clone(),
+                geometry: std::sync::Arc::new(geometry.clone()),
                 closed: None,
             },
         );

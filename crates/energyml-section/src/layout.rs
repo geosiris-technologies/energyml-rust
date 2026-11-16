@@ -602,6 +602,15 @@ fn width_of(view: &View, key: &str, default: f64) -> f64 {
         .unwrap_or(default)
 }
 
+/// The note that says a given window was set aside (`[section S10]`).
+fn unusable_window_warning(w: &Window) -> String {
+    format!(
+        "the window x {:?} y {:?} cannot be drawn (a bound is not finite, or a range has no positive width): \
+         the whole drawing is shown instead",
+        w.x, w.y
+    )
+}
+
 fn valid_width(w: f64) -> bool {
     w.is_finite() && w > 0.0 && w <= crate::model::MAX_WIDTH_PX
 }
@@ -854,10 +863,19 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
             y: padded(z.y, 0.05),
         }
     };
-    let window = view.window.unwrap_or(whole);
+    // A window that cannot be scaled to (non-finite, zero-width or reversed) is
+    // not drawn: the whole drawing is, and it is said (`[section S10]`).
+    let given = match view.window {
+        Some(w) if !w.is_usable() => {
+            warnings.push(unusable_window_warning(&w));
+            None
+        }
+        other => other,
+    };
+    let window = given.unwrap_or(whole);
     // Wells wholly outside a given window are not written (the cost of a drawing is its nodes).
     wells.retain(|w| {
-        view.window.is_none()
+        given.is_none()
             || w.path
                 .iter()
                 .chain(std::iter::once(&w.head))
@@ -1501,33 +1519,62 @@ fn erosion_marks(
         if hi <= lo {
             continue;
         }
-        let part = |t: &KeptTrace<'_>| t.item.spans.iter().find_map(|s| fill::clip_span(s, lo, hi));
-        let (Some(upper), Some(lower)) = (part(older), part(younger)) else {
-            continue;
+        // Every span of each surface, as drawn (`t.spans`: hidden or
+        // portion-cut data is respected), clipped to the portion: a faulted
+        // horizon is cut into several spans and the portion can run across
+        // them (`[section S15]`). One lens per pair of spans, over the
+        // abscissas both cover.
+        let parts = |t: &KeptTrace<'_>| -> Vec<fill::Span> {
+            t.spans
+                .iter()
+                .filter_map(|s| fill::clip_span(s, lo, hi))
+                .collect()
         };
-        let mut ring = upper.clone();
-        ring.extend(lower.iter().rev().copied());
+        let mut shapes = Vec::new();
+        for upper in parts(older) {
+            for lower in parts(younger) {
+                let (Some(u0), Some(ul), Some(l0), Some(ll)) =
+                    (upper.first(), upper.last(), lower.first(), lower.last())
+                else {
+                    continue;
+                };
+                let (from, to) = (u0[0].max(l0[0]), ul[0].min(ll[0]));
+                if !matches!(to.partial_cmp(&from), Some(std::cmp::Ordering::Greater)) {
+                    continue;
+                }
+                let (Some(upper), Some(lower)) = (
+                    fill::clip_span(&upper, from, to),
+                    fill::clip_span(&lower, from, to),
+                ) else {
+                    continue;
+                };
+                let mut ring = upper.clone();
+                ring.extend(lower.iter().rev().copied());
+                shapes.push(Shape::Polygon {
+                    points: map.points(&ring),
+                    fill: EROSION_COLOUR.into(),
+                    opacity: FILL_OPACITY,
+                    stroke: None,
+                    dash: false,
+                });
+                shapes.push(Shape::Polyline {
+                    points: map.points(&upper),
+                    stroke: EROSION_COLOUR.into(),
+                    width: 3.0,
+                    dash: true,
+                });
+            }
+        }
+        if shapes.is_empty() {
+            continue;
+        }
         out.push(LaidObject {
             attr: Attr::Decor("erosion".into()),
             kind: "erosion".into(),
             title: format!("{} / {}", portion.older.title, portion.younger.title),
             highlighted: false,
             at: None,
-            shapes: vec![
-                Shape::Polygon {
-                    points: map.points(&ring),
-                    fill: EROSION_COLOUR.into(),
-                    opacity: FILL_OPACITY,
-                    stroke: None,
-                    dash: false,
-                },
-                Shape::Polyline {
-                    points: map.points(&upper),
-                    stroke: EROSION_COLOUR.into(),
-                    width: 3.0,
-                    dash: true,
-                },
-            ],
+            shapes,
             intervals: Vec::new(),
         });
     }
@@ -2238,7 +2285,13 @@ fn plan(catalogue: &Catalogue, view: &View) -> Layout {
             e.add(*f);
         }
     }
-    let given = view.window;
+    let given = match view.window {
+        Some(w) if !w.is_usable() => {
+            warnings.push(unusable_window_warning(&w));
+            None
+        }
+        other => other,
+    };
     let everything = Window {
         x: padded(e.x, 0.05),
         y: padded(e.y, 0.05),
@@ -3051,14 +3104,9 @@ fn strata_legend(
     if entries.is_empty() {
         return Vec::new();
     }
-    let room = (((bottom - top) - LINE_PX - 8.0) / LINE_PX).floor().max(1.0) as usize;
     let extra = usize::from(no_strata.is_some());
-    let shown = if entries.len() + extra > room {
-        room.saturating_sub(1 + extra)
-    } else {
-        entries.len()
-    };
-    let height = LINE_PX * (shown + 1 + extra + usize::from(shown < entries.len())) as f64 + 10.0;
+    let LegendBox { shown, mut frame } =
+        legend_box(x, width, top, bottom, "Stratigraphy", entries.len(), extra);
     let decor = |name: &str, title: String, shapes: Vec<Shape>| LaidObject {
         attr: Attr::Decor(name.into()),
         kind: name.into(),
@@ -3068,35 +3116,13 @@ fn strata_legend(
         shapes,
         intervals: Vec::new(),
     };
-    let mut frame = vec![
-        Shape::Polygon {
-            points: vec![
-                [x, top],
-                [x + width, top],
-                [x + width, top + height],
-                [x, top + height],
-            ],
-            fill: "#ffffff".into(),
-            opacity: 0.92,
-            stroke: Some("#999999".into()),
-            dash: false,
-        },
-        Shape::Text {
-            at: [x + 8.0, top + LINE_PX],
-            text: "Stratigraphy".into(),
-            anchor: Anchor::Start,
-            size: FONT_PX,
-            fill: INK.into(),
-        },
-    ];
     if shown < entries.len() {
-        frame.push(Shape::Text {
-            at: [x + 8.0, top + LINE_PX * ((shown + extra) as f64 + 2.0)],
-            text: format!("+ {} more units", entries.len() - shown),
-            anchor: Anchor::Start,
-            size: SMALL_PX,
-            fill: INK.into(),
-        });
+        frame.push(more_line(
+            x,
+            top,
+            shown + extra,
+            format!("+ {} more units", entries.len() - shown),
+        ));
     }
     let mut out = vec![decor("strata-box", String::new(), frame)];
     let titles = strata_titles(entries, view);
@@ -3173,6 +3199,72 @@ fn strata_legend(
     out
 }
 
+/// The frame of a legend box and how many rows of it fit.
+struct LegendBox {
+    /// How many of the rows are shown (the rest are said on the last line).
+    shown: usize,
+    /// The white box and its heading.
+    frame: Vec<Shape>,
+}
+
+/// **The one legend box**: a white box at `x` from `top` down to at most
+/// `bottom`, a heading, room for `rows` rows plus `extra` rows that always
+/// show. When the rows do not all fit the box keeps a line for [`more_line`].
+///
+/// Written three times before (the strata legend, the legend of codes and the
+/// markers): the overflow arithmetic is here once.
+fn legend_box(
+    x: f64,
+    width: f64,
+    top: f64,
+    bottom: f64,
+    heading: &str,
+    rows: usize,
+    extra: usize,
+) -> LegendBox {
+    let room = (((bottom - top) - LINE_PX - 8.0) / LINE_PX).floor().max(1.0) as usize;
+    let shown = if rows + extra > room {
+        room.saturating_sub(1 + extra)
+    } else {
+        rows
+    };
+    let height = LINE_PX * (shown + 1 + extra + usize::from(shown < rows)) as f64 + 10.0;
+    let frame = vec![
+        Shape::Polygon {
+            points: vec![
+                [x, top],
+                [x + width, top],
+                [x + width, top + height],
+                [x, top + height],
+            ],
+            fill: "#ffffff".into(),
+            opacity: 0.92,
+            stroke: Some("#999999".into()),
+            dash: false,
+        },
+        Shape::Text {
+            at: [x + 8.0, top + LINE_PX],
+            text: heading.into(),
+            anchor: Anchor::Start,
+            size: FONT_PX,
+            fill: INK.into(),
+        },
+    ];
+    LegendBox { shown, frame }
+}
+
+/// The last line of a legend box that could not show every row: `text`, after
+/// `rows_before` rows.
+fn more_line(x: f64, top: f64, rows_before: usize, text: String) -> Shape {
+    Shape::Text {
+        at: [x + 8.0, top + LINE_PX * (rows_before as f64 + 2.0)],
+        text,
+        anchor: Anchor::Start,
+        size: SMALL_PX,
+        fill: INK.into(),
+    }
+}
+
 /// One line of the legend of codes.
 struct LegendEntry {
     code: String,
@@ -3212,34 +3304,10 @@ fn legend(mut entries: Vec<LegendEntry>, x: f64, width: f64, top: f64, bottom: f
             .cmp(&family(&b.code))
             .then(number(&a.code).cmp(&number(&b.code)))
     });
-    let room = (((bottom - top) - LINE_PX - 8.0) / LINE_PX).floor().max(1.0) as usize;
-    let shown = if entries.len() > room {
-        room.saturating_sub(1)
-    } else {
-        entries.len()
-    };
-    let height = LINE_PX * (shown + 1 + usize::from(shown < entries.len())) as f64 + 10.0;
-    let mut shapes = vec![
-        Shape::Polygon {
-            points: vec![
-                [x, top],
-                [x + width, top],
-                [x + width, top + height],
-                [x, top + height],
-            ],
-            fill: "#ffffff".into(),
-            opacity: 0.92,
-            stroke: Some("#999999".into()),
-            dash: false,
-        },
-        Shape::Text {
-            at: [x + 8.0, top + LINE_PX],
-            text: "Legend".into(),
-            anchor: Anchor::Start,
-            size: FONT_PX,
-            fill: INK.into(),
-        },
-    ];
+    let LegendBox {
+        shown,
+        frame: mut shapes,
+    } = legend_box(x, width, top, bottom, "Legend", entries.len(), 0);
     let code_w = entries
         .iter()
         .map(|e| labels::width_px(&e.code, SMALL_PX))
@@ -3277,13 +3345,12 @@ fn legend(mut entries: Vec<LegendEntry>, x: f64, width: f64, top: f64, bottom: f
         });
     }
     if shown < entries.len() {
-        shapes.push(Shape::Text {
-            at: [x + 8.0, top + LINE_PX * (shown as f64 + 2.0)],
-            text: format!("+ {} more - in the objects list", entries.len() - shown),
-            anchor: Anchor::Start,
-            size: SMALL_PX,
-            fill: INK.into(),
-        });
+        shapes.push(more_line(
+            x,
+            top,
+            shown,
+            format!("+ {} more - in the objects list", entries.len() - shown),
+        ));
     }
     Some(LaidObject {
         attr: Attr::Decor("legend".into()),

@@ -2,6 +2,7 @@
 //! to `super::well::write` exactly as `well-from-polyline` does for one.
 
 use std::collections::HashSet;
+use std::sync::Arc;
 
 use energyml_build::operation::{Choices, Fitness, Identity, Registry, When};
 use energyml_build::pieces::{Known, Pieces, Ref, Source};
@@ -37,7 +38,7 @@ fn set(lines: Vec<Vec<[f64; 3]>>, vertical_up: Option<bool>) -> Pieces {
         pieces = pieces.with(
             name.clone(),
             Source::Shape {
-                geometry: Geometry {
+                geometry: Arc::new(Geometry {
                     kind: "polyline",
                     patches: vec![Patch {
                         index: 0,
@@ -46,7 +47,7 @@ fn set(lines: Vec<Vec<[f64; 3]>>, vertical_up: Option<bool>) -> Pieces {
                         topology: Topology::Polylines(vec![n]),
                         closed: Vec::new(),
                     }],
-                },
+                }),
                 closed: None,
             },
         );
@@ -174,7 +175,7 @@ fn a_frame_in_degrees_is_refused() {
     pieces = pieces.with(
         "trace",
         Source::Shape {
-            geometry: Geometry {
+            geometry: Arc::new(Geometry {
                 kind: "polyline",
                 patches: vec![Patch {
                     index: 0,
@@ -183,7 +184,7 @@ fn a_frame_in_degrees_is_refused() {
                     topology: Topology::Polylines(vec![n]),
                     closed: Vec::new(),
                 }],
-            },
+            }),
             closed: None,
         },
     );

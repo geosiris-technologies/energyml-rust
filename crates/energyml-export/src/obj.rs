@@ -11,6 +11,7 @@
 
 use std::io::Write;
 
+use energyml_geometry::shape::{HEXAHEDRON_FACES, polyline_runs};
 use energyml_geometry::{Placement, SceneObject, Topology};
 
 use crate::error::{Error, Result};
@@ -99,19 +100,11 @@ impl Exporter for ObjExporter {
                         }
                     }
                     Topology::Polylines(runs) => {
-                        let mut start = base;
-                        for (rank, run) in runs.iter().enumerate() {
-                            if *run >= 2 {
-                                let mut indices: Vec<String> =
-                                    (0..*run).map(|i| (start + i).to_string()).collect();
-                                // A ring the file calls closed ends on its first
-                                // vertex: an OBJ `l` has no closing flag.
-                                if patch.closed.get(rank) == Some(&true) {
-                                    indices.push(start.to_string());
-                                }
-                                writeln!(out, "l {}", indices.join(" "))?;
-                            }
-                            start += run;
+                        // A ring the file calls closed ends on its first
+                        // vertex: an OBJ `l` has no closing flag.
+                        for line in polyline_runs(runs, &patch.closed) {
+                            let indices: Vec<String> = line.iter().map(|i| (base + i).to_string()).collect();
+                            writeln!(out, "l {}", indices.join(" "))?;
                         }
                     }
                     // A cell becomes its six faces. Interior faces are written
@@ -220,16 +213,22 @@ fn header(
         writeln!(out, "# {key} {value}")?;
     }
     match (&object.crs, placement) {
-        (Some(crs), Placement::Local) => writeln!(out, "# crs {} (local coordinates)", crs.uuid)?,
+        // A reprojection (`target_epsg`) takes the points out of the local
+        // frame whatever the placement said, so it is the target that is named.
+        (Some(crs), Placement::Local) if options.target_epsg.is_none() => {
+            writeln!(out, "# crs {} (local coordinates)", crs.uuid)?
+        }
         (Some(crs), _) => {
-            let system = match crs.projected.epsg() {
-                Some(code) => format!("EPSG:{code}"),
-                None => format!("{:?}", crs.projected),
-            };
+            // The system the points are in: the reprojection's target when
+            // there is one, the CRS's own otherwise (`Options::crs_label`).
+            let system = options.crs_label(object).unwrap_or_default();
             // *"metres, z up"* would be a lie on a time axis, and the sort of
             // lie a reader has no way to catch: the numbers look like depths.
             let vertical = if crs.is_time() {
                 "z from travel time"
+            } else if options.target_epsg == Some(energyml_domain::reproject::Wgs84::EPSG) {
+                // Longitude and latitude, not metres: the third is still z up.
+                "x y in degrees, z up"
             } else {
                 "metres, z up"
             };
@@ -247,17 +246,6 @@ fn header(
     }
     Ok(())
 }
-
-/// The six faces of a hexahedron in VTK corner order, each wound so its normal
-/// points out of the cell.
-const HEXAHEDRON_FACES: [[usize; 4]; 6] = [
-    [0, 3, 2, 1], // the 0-1-2-3 face, reversed so the normal points outward
-    [4, 5, 6, 7],
-    [0, 1, 5, 4],
-    [1, 2, 6, 5],
-    [2, 3, 7, 6],
-    [3, 0, 4, 7],
-];
 
 /// An OBJ object name: no spaces, and never empty.
 fn sanitise(title: &str, uuid: &str) -> String {

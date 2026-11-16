@@ -228,7 +228,7 @@ pub fn read_text(
         drop(span);
         return Ok(Source::Table {
             name: name.to_string(),
-            table,
+            table: std::sync::Arc::new(table),
             template: template.clone(),
         });
     }
@@ -249,7 +249,7 @@ pub fn read_text(
     }
     Ok(Source::Features {
         name: name.to_string(),
-        features: collection.features,
+        features: std::sync::Arc::new(collection.features),
     })
 }
 

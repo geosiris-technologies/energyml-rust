@@ -18,6 +18,7 @@
 //! the organisation.
 
 use serde_json::json;
+use std::sync::Arc;
 
 use energyml_build::operation::{Choices, Identity, NewObject, Numbers, Plan, Registry, When};
 use energyml_build::pieces::{Known, Pieces, Ref, Source};
@@ -61,7 +62,7 @@ fn object(reference: Ref) -> Source {
 
 fn shape(points: Vec<[f64; 3]>, topology: Topology) -> Source {
     Source::Shape {
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind: "test",
             patches: vec![Patch {
                 index: 0,
@@ -70,7 +71,7 @@ fn shape(points: Vec<[f64; 3]>, topology: Topology) -> Source {
                 topology,
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     }
 }
@@ -153,7 +154,7 @@ fn torn() -> (Source, Source, Vec<Vec<i64>>) {
         .map_err(|why| why.message())
         .expect("torn");
     let geometry = |at: usize| Source::Shape {
-        geometry: plan.shapes[at].geometry.clone(),
+        geometry: Arc::new(plan.shapes[at].geometry.clone()),
         closed: None,
     };
     let surface = plan

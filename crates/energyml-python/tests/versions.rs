@@ -151,3 +151,32 @@ fn uri_of_refuses_a_uuid_held_under_two_versions_naming_both() {
     assert!(package.uri_of(PLAIN).expect("one entry").is_some());
     assert_eq!(package.uri_of("00000000-0000-4000-8000-000000000000"), Ok(None));
 }
+
+#[test]
+fn referenced_by_answers_for_the_version_it_is_asked_about() {
+    let (_directory, package) = package();
+    let of = |version: &str| {
+        package
+            .objects()
+            .into_iter()
+            .find(|one| one.object_version.as_deref() == Some(version))
+            .expect("the version is held")
+    };
+    // The horizon names version 2 and only version 2: asking by the full uri
+    // must not hand it to version 1 because both share the uuid.
+    let second: Vec<String> = package
+        .referenced_by(&of("2").uri)
+        .expect("it reads")
+        .into_iter()
+        .map(|link| link.uuid)
+        .collect();
+    assert_eq!(second, vec![HORIZON.to_string()]);
+    let first = package.referenced_by(&of("1").uri).expect("it reads");
+    assert!(
+        first.is_empty(),
+        "version 1 is not what the horizon points at: {:?}",
+        first.iter().map(|link| &link.uri).collect::<Vec<_>>()
+    );
+    // Break it: pass the uuid alone to `graph::dependents` again in
+    // `Package::referenced_by`; version 1 then answers with the horizon.
+}

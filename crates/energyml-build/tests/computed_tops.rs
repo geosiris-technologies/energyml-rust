@@ -15,7 +15,6 @@ use serde_json::json;
 
 use energyml_build::operation::{Choices, Identity, NewObject, Plan, Registry, When};
 use energyml_build::pieces::{Known, KnownPath, Pieces, Ref, Source};
-use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 use energyml_geometry::parametric::{Path, Vertical};
 
@@ -56,7 +55,7 @@ fn well(path: Path, frame: Ref) -> Vec<(String, Source)> {
         (
             "well".to_string(),
             Source::Shape {
-                geometry: Geometry {
+                geometry: std::sync::Arc::new(Geometry {
                     kind: "trajectory",
                     patches: vec![Patch {
                         index: 0,
@@ -65,7 +64,7 @@ fn well(path: Path, frame: Ref) -> Vec<(String, Source)> {
                         topology: Topology::Polylines(vec![count]),
                         closed: Vec::new(),
                     }],
-                },
+                }),
                 closed: None,
             },
         ),
@@ -130,7 +129,7 @@ fn horizon(slot: &str, rank: usize, title: &str, geometry: Geometry, frame: Ref)
         (
             slot.to_string(),
             Source::Shape {
-                geometry,
+                geometry: std::sync::Arc::new(geometry),
                 closed: None,
             },
         ),
@@ -197,7 +196,7 @@ fn recorded(plan: &Plan, name: &str) -> Option<f64> {
         .parameters
         .iter()
         .find_map(|parameter| match parameter {
-            Parameter::Double { title, value, .. } if title == name => Some(*value),
+            other if other.title() == name => other.number(),
             _ => None,
         })
 }
@@ -533,7 +532,7 @@ fn a_well_drawn_away_from_its_line_is_refused() {
     let path = straight(&[(head, 0.0), ([head[0], head[1], head[2] - 500.0], 500.0)]);
     let mut pieces = well(path, frame());
     if let Source::Shape { geometry, .. } = &mut pieces[0].1 {
-        for point in &mut geometry.patches[0].points {
+        for point in &mut std::sync::Arc::make_mut(geometry).patches[0].points {
             point[2] += 500.0;
         }
     }
@@ -670,7 +669,7 @@ fn markers_are_applied_saved_and_read_back_on_their_horizon() {
         .with(
             "shape",
             Source::Shape {
-                geometry: Geometry {
+                geometry: std::sync::Arc::new(Geometry {
                     kind: "triangles",
                     patches: vec![Patch {
                         index: 0,
@@ -679,7 +678,7 @@ fn markers_are_applied_saved_and_read_back_on_their_horizon() {
                         topology: Topology::Triangles(vec![[0, 1, 2], [0, 2, 3]]),
                         closed: Vec::new(),
                     }],
-                },
+                }),
                 closed: None,
             },
         )

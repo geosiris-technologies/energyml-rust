@@ -23,13 +23,14 @@
 
 use energyml_analysis::Heights;
 use energyml_analysis::project::{Onto, project};
-use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch};
+use std::sync::Arc;
 
 use crate::declare::{Inputs, Params, Shape, Suggestions};
 use crate::operation::{About, Category, Context, Need, Note, Operation, Plan, Refusal, Slot};
 use crate::pieces::Pieces;
 
+use super::blocks::double;
 use super::support;
 use super::transform::{Kind, flipped_in, kind_of, write_as};
 use super::written::Written;
@@ -79,14 +80,6 @@ pub struct ProjectInputs {
     /// the surface to project onto - its triangles, or a grid's cells; left out when projecting onto a level
     #[input(topology = "triangles")]
     pub surface: Option<Shape>,
-}
-
-fn double(title: &str, value: f64) -> Parameter {
-    Parameter::Double {
-        title: title.to_string(),
-        value,
-        uom: None,
-    }
 }
 
 impl Operation for Project {
@@ -164,7 +157,7 @@ impl Operation for Project {
                 if let (Some(a), Some(b)) = (
                     shape.known.as_ref().and_then(|k| k.crs.as_ref()),
                     surface.known.as_ref().and_then(|k| k.crs.as_ref()),
-                ) && a.uuid != b.uuid
+                ) && !a.uuid.eq_ignore_ascii_case(&b.uuid)
                 {
                     return Err(Refusal::new(
                         "frames",
@@ -186,7 +179,17 @@ impl Operation for Project {
                 }
                 Some(support::Faces::of(&surface.geometry))
             }
-            (OntoParams::Level(_), None) => None,
+            (OntoParams::Level(level), None) => {
+                // Stamped on every chosen node: a NaN or an infinity would
+                // draw nothing and poison every box that meets it.
+                if !level.z.is_finite() {
+                    return Err(Refusal::on(
+                        "z",
+                        format!("the level is {}, which is no height", level.z),
+                    ));
+                }
+                None
+            }
         };
         let heights = match &faces {
             Some(faces) => Some(
@@ -218,10 +221,10 @@ impl Operation for Project {
             .collect();
         let result = Shape {
             name: shape.name.clone(),
-            geometry: Geometry {
+            geometry: Arc::new(Geometry {
                 kind: "project",
                 patches,
-            },
+            }),
             closed: shape.closed.clone(),
             known: shape.known.clone(),
         };

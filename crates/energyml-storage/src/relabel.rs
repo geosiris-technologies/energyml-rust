@@ -138,10 +138,12 @@ pub fn save_reindexed_bytes(
             Vec::new(),
         ));
     }
-    let bytes = first.into_inner();
+    // Shared, not copied: the reader and the error path both hold the first
+    // pass, and a copy of a package of hundreds of MB would triple the peak.
+    let bytes = Arc::new(first.into_inner());
 
     let reopened = match crate::EpcStore::from_reader(
-        Box::new(std::io::Cursor::new(bytes.clone())),
+        Box::new(std::io::Cursor::new(SharedBytes(Arc::clone(&bytes)))),
         "relabel-pass1.epc",
         registry,
     ) {
@@ -151,20 +153,39 @@ pub fn save_reindexed_bytes(
                 format!(
                     "the parts were relabelled but the package could not be reopened to rebuild its relationships, so what comes back is byte-perfect with the index it had: {e}"
                 ),
-                bytes,
+                take_shared(bytes),
             ));
         }
     };
     let mut second = std::io::Cursor::new(Vec::new());
     if let Err(e) = reopened.write_to(&mut second, options) {
+        // The reopened store holds the other handle on the buffer: let it go
+        // so the buffer can be taken back without a copy.
+        drop(reopened);
         return Err((
             format!(
                 "the parts were relabelled but the relationships could not be rebuilt, so what comes back is byte-perfect with the index it had: {e}"
             ),
-            bytes,
+            take_shared(bytes),
         ));
     }
     Ok(second.into_inner())
+}
+
+/// The first pass's buffer, shared between the reader of the second pass and
+/// the error path.
+struct SharedBytes(Arc<Vec<u8>>);
+
+impl AsRef<[u8]> for SharedBytes {
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_slice()
+    }
+}
+
+/// Take the buffer back: moved when this is the last handle, copied only if a
+/// reader still holds another (never on the paths above, which drop it first).
+fn take_shared(bytes: Arc<Vec<u8>>) -> Vec<u8> {
+    Arc::try_unwrap(bytes).unwrap_or_else(|shared| (*shared).clone())
 }
 
 /// What relabelling a whole package would touch.

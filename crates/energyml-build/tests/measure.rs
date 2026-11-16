@@ -11,11 +11,11 @@
 //! in the grid; measuring in degrees; adding metres and feet.
 
 use serde_json::json;
+use std::sync::Arc;
 
 use energyml_build::operation::{Choices, Identity, Numbers, Plan, Registry, When};
 use energyml_build::pieces::{Known, Pieces, Ref, Source};
 use energyml_domain::crs::{Crs, CrsKind, VerticalDirection, VerticalQuantity};
-use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 
 fn when() -> When {
@@ -41,6 +41,7 @@ fn frame(horizontal: &str, vertical: &str, quantity: VerticalQuantity) -> Crs {
         time_uom: None,
         projected: CrsKind::Epsg(2154),
         vertical: CrsKind::Absent,
+        axes: energyml_domain::crs::AxisReading::NotStated,
     }
 }
 
@@ -67,7 +68,7 @@ fn bag(topology: Topology, points: Vec<[f64; 3]>, closed: Vec<bool>, known: Know
         .with(
             "shape",
             Source::Shape {
-                geometry: Geometry {
+                geometry: Arc::new(Geometry {
                     kind: "x",
                     patches: vec![Patch {
                         index: 0,
@@ -76,7 +77,7 @@ fn bag(topology: Topology, points: Vec<[f64; 3]>, closed: Vec<bool>, known: Know
                         topology,
                         closed,
                     }],
-                },
+                }),
                 closed: None,
             },
         )
@@ -103,7 +104,7 @@ fn reported(plan: &Plan, title: &str) -> f64 {
         .parameters
         .iter()
         .find_map(|p| match p {
-            Parameter::Double { title: t, value, .. } if t == title => Some(*value),
+            other if other.title() == title => other.number(),
             _ => None,
         })
         .unwrap_or_else(|| panic!("`{title}` is not reported"))

@@ -71,11 +71,14 @@ use energyml_core::value::Reflect;
 use energyml_storage::graph::{self, Edge, Graph, Node, Pointer};
 use energyml_storage::{EpcStore, ObjectSummary};
 
-use crate::property::{self, IndexableElement, Property, PropertyKindRef, TimeRef};
+use crate::property::shape::{ElementShape, ShapeRefusal};
+use crate::property::{self, Facet, IndexableElement, Instant, Property, PropertyKindRef, TimeRef};
 use crate::source::ObjectSource;
 use crate::values;
 
+mod kinship;
 mod relations;
+pub use kinship::{CandidateNeed, CandidateRole, ShapeCandidate};
 pub use relations::{AssociationRow, GraphicalRow, Membership, ModelRef};
 
 /// A node's position in [`PackageIndex`]. `u32` because a package of 77 090
@@ -179,6 +182,21 @@ pub struct IndexNode {
     /// order absent nodes come out in, and the referrer whose reference supplied
     /// their type and title. Zero for anything else.
     seen: u64,
+}
+
+/// One outgoing reference of a node, borrowed from the index
+/// ([`PackageIndex::references_at`]): the node it resolves to and the path that
+/// carries it. The borrowed form of [`Pointer`].
+#[derive(Clone, Copy, Debug)]
+pub struct ReferenceRef<'a> {
+    /// The uri of the node the reference resolves to.
+    pub uri: &'a str,
+    /// Its qualified type.
+    pub qualified_type: &'a str,
+    /// Its concept without `obj_`: the key the carrier rules are written in.
+    pub type_key: &'a str,
+    /// The path of the reference in the object that holds it.
+    pub path: &'a str,
 }
 
 /// The version a node's uri names (`…(uuid,version='1')`), when it names one.
@@ -297,12 +315,35 @@ pub struct PropertySheet {
     pub has_realization_indices: bool,
     /// Where the first value array sits: `ValuesForPatch[0]`.
     pub values_path: Option<Arc<str>>,
+    /// Qualifiers, as `property::read` gives them.
+    pub facets: Box<[Facet]>,
+    /// `LabelPerComponent`, linearised; empty when the file gives none.
+    pub label_per_component: Box<[Arc<str>]>,
+    /// 2.2 `Time`, for a property dated on its own.
+    pub instant: Option<Box<Instant>>,
 }
 
 impl PropertySheet {
     /// `Property::values_per_element`, on the sheet.
     pub fn values_per_element(&self) -> u64 {
         self.value_count_per_element.iter().product::<u64>().max(1)
+    }
+
+    /// The component shape, as [`ElementShape::of`] reads the property: the
+    /// counts per element and the labels the sheet keeps.
+    pub fn element_shape(&self) -> Result<ElementShape, ShapeRefusal> {
+        let labels: Vec<String> = self
+            .label_per_component
+            .iter()
+            .map(|label| label.to_string())
+            .collect();
+        ElementShape::of(&self.value_count_per_element, &labels)
+    }
+
+    /// Whether time is a dimension of the values (see
+    /// [`property::shape::time_is_a_dimension`]).
+    pub fn time_is_a_dimension(&self) -> bool {
+        property::shape::time_is_a_dimension(self.time.as_deref())
     }
 
     /// The kind as a [`PropertyKindRef`], for code written against `property`.
@@ -337,10 +378,12 @@ pub struct PackageIndex {
     inn: Vec<Vec<(NodeId, PathId)>>,
     strings: Interner,
     sheets: HashMap<NodeId, PropertySheet>,
+    /// One sheet per table: what lists and classifies the tables without reading an array.
+    tables: HashMap<NodeId, crate::table::TableSheet>,
     /// Objects that could not be read: uuid and reason.
     unreadable: Vec<(String, String)>,
-    /// Properties that read but whose sheet could not be taken: uuid and reason -
-    /// `property::read` refused them (an indexable element this build does not
+    /// Properties and tables that read but whose sheet could not be taken: uuid and reason -
+    /// `property::read` (or `Table::read`) refused them (an indexable element this build does not
     /// know). Named rather than skipped, like `property::Index::build`'s refused.
     unsheeted: Vec<(String, String)>,
     /// Nodes whose absence/presence must be re-decided at the end of a pass or
@@ -415,6 +458,7 @@ impl PackageIndex {
             inn: Vec::new(),
             strings: Interner::default(),
             sheets: HashMap::new(),
+            tables: HashMap::new(),
             unreadable: Vec::new(),
             unsheeted: Vec::new(),
             to_settle: Vec::new(),
@@ -600,6 +644,19 @@ impl PackageIndex {
         self.sheets.get(&id)
     }
 
+    /// The sheet of a table, by its address (a uri, or a bare uuid at the entry).
+    pub fn table_sheet(&self, table: &str) -> Option<&crate::table::TableSheet> {
+        let id = self.find(table)?;
+        self.tables.get(&id)
+    }
+
+    /// Every table sheet, with the table's uri. Unordered.
+    pub fn tables(&self) -> impl Iterator<Item = (&str, &crate::table::TableSheet)> {
+        self.tables
+            .iter()
+            .map(|(id, sheet)| (&*self.nodes[*id as usize].uri, sheet))
+    }
+
     /// Every sheet, with the property's uri. Unordered.
     pub fn properties(&self) -> impl Iterator<Item = (&str, &PropertySheet)> {
         self.sheets
@@ -640,13 +697,20 @@ impl PackageIndex {
         })
     }
 
-    /// Who references this uuid - `graph::dependents`, from the index.
+    /// Who references the node an **address** names - `graph::dependents_of_uri`,
+    /// from the index.
     ///
-    /// One [`Pointer`] per reference. Same set as `graph::dependents` over the
-    /// same objects; the order is by source node, then by path id, where
-    /// `graph::dependents` gives the order the walk met them in.
-    pub fn dependents_of(&self, uuid: &str) -> Vec<Pointer> {
-        let Some(id) = self.id_of(&uuid.to_ascii_lowercase()) else {
+    /// The address is read by the one door ([`PackageIndex::node`]): a full uri
+    /// answers for that exact entry, so an object held in two versions does not
+    /// hand one version the referrers of the other. A bare uuid is accepted
+    /// only as an entry adapter and answers the uuid's default node.
+    ///
+    /// One [`Pointer`] per reference. Same set as `graph::dependents_of_uri`
+    /// over the same objects (and as `graph::dependents` when the uuid is held
+    /// once); the order is by source node, then by path id, where the graph
+    /// functions give the order the walk met them in.
+    pub fn dependents_of(&self, address: &str) -> Vec<Pointer> {
+        let Some(id) = self.find(address) else {
             return Vec::new();
         };
         let mut out = Vec::new();
@@ -678,6 +742,31 @@ impl PackageIndex {
             .iter()
             .map(|&(target, path)| self.pointer(&self.nodes[target as usize], path))
             .collect()
+    }
+
+    /// What the node an **address** names references, borrowed from the index.
+    ///
+    /// The uri-addressed form of [`PackageIndex::references_of`]: the address is
+    /// read by the one door ([`PackageIndex::node`]), so an object held in two
+    /// versions answers the references of the version the uri names, not of the
+    /// uuid's default node. Nothing is allocated per edge - a [`ReferenceRef`]
+    /// borrows the node's uri, its type and the interned path - so a caller that
+    /// filters (a walk that follows only some fields) pays for the edges it
+    /// keeps. Empty when the address names no node.
+    pub fn references_at<'a>(&'a self, address: &str) -> impl Iterator<Item = ReferenceRef<'a>> + use<'a> {
+        let edges: &'a [(NodeId, PathId)] = match self.find(address) {
+            Some(id) => &self.out[id as usize],
+            None => &[],
+        };
+        edges.iter().map(move |&(target, path)| {
+            let node = &self.nodes[target as usize];
+            ReferenceRef {
+                uri: &node.uri,
+                qualified_type: &node.qualified_type,
+                type_key: &node.type_key,
+                path: self.strings.get(path),
+            }
+        })
     }
 
     fn pointer(&self, node: &IndexNode, path: PathId) -> Pointer {
@@ -1127,6 +1216,7 @@ impl PackageIndex {
         targets.sort_unstable();
         targets.dedup();
         self.sheets.remove(&id);
+        self.tables.remove(&id);
         // The rows this node laid in the relation tables go with its edges -
         // the same place a re-read puts them back.
         self.relations.forget(id, &outgoing, &self.strings);
@@ -1319,6 +1409,22 @@ impl PackageIndex {
                 }
             }
         }
+        // A table keeps its sheet (titles, kinds, facets, counts), never an array.
+        if matches!(
+            &*self.nodes[id as usize].type_key,
+            "ColumnBasedTable" | "StringTableLookup" | "DoubleTableLookup"
+        ) {
+            match crate::table::Table::read(object) {
+                Ok(table) => {
+                    let sheet = crate::table::TableSheet::of_table(&table, &self.nodes[id as usize].uri);
+                    self.tables.insert(id, sheet);
+                }
+                Err(why) => {
+                    let uuid = self.nodes[id as usize].uuid.to_string();
+                    self.unsheeted.push((uuid, why.to_string()));
+                }
+            }
+        }
     }
 
     fn absent_node(&mut self, edge: &identity::RefEdge<'_>, seen: u64) -> IndexNode {
@@ -1378,6 +1484,14 @@ impl PackageIndex {
             realization: read.realization,
             has_realization_indices: read.has_realization_indices,
             values_path,
+            facets: read.facets.clone().into_boxed_slice(),
+            label_per_component: read
+                .label_per_component
+                .iter()
+                .map(|label| self.strings.arc(label))
+                .collect::<Vec<_>>()
+                .into_boxed_slice(),
+            instant: read.instant.clone().map(Box::new),
         }
     }
 
@@ -1433,6 +1547,7 @@ impl PackageIndex {
             self.by_uuid.remove(key.as_str());
         }
         self.sheets.remove(&id);
+        self.tables.remove(&id);
         let node = &mut self.nodes[id as usize];
         node.state = NodeState::Gone;
         node.title = None;

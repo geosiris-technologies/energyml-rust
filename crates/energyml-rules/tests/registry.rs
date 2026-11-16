@@ -72,11 +72,13 @@ fn english_is_present_everywhere() {
     }
 }
 
-/// The 32 rules (inheritance, colours, attachments) and the two published ids
+/// The 33 rules (inheritance, colours, attachments) and the two published ids
 /// are all in, with the statuses the design gives: the inheritance rules
 /// (ADR-0009) were `designed` and are `active` since the walk is coded; the
 /// earlier FIRP rule and the colour cascade are `superseded` by `rank-order`,
-/// in the same commit.
+/// in the same commit. The `stats` theme (4 rules) and the `well` theme (4
+/// rules) bring the registry to 43; the five link rules of the `table` theme
+/// (ADR-0030) and the four of the `survey` theme bring it to 52; the directional ratio of the `property` theme (ADR-0036) brings it to 53; the four of the `provenance` theme (ADR-0035) bring it to 57.
 ///
 /// To break it: put `house/inherit/firp-parents` back to `active` (the test goes
 /// red), or leave it `superseded` without `rank-order` naming it (the build
@@ -86,11 +88,28 @@ fn the_rules_are_complete_and_statuses_follow_the_design() {
     let count = |theme: &str| in_theme(theme).count();
     assert_eq!(
         (count("inherit"), count("colour"), count("attach")),
-        (9, 14, 9),
-        "the 32 rules of the registry"
+        (9, 15, 9),
+        "the 33 rules of the registry"
     );
-    assert_eq!(count("table") + count("series"), 2, "the two published ids");
-    assert_eq!(all().len(), 34);
+    assert_eq!(
+        count("table") + count("series"),
+        7,
+        "the two published ids and the five link rules"
+    );
+    assert_eq!(count("stats"), 4, "S7 and S8: gaps, seams, scales and bounds");
+    assert_eq!(count("well"), 4, "the four readings around the well");
+    assert_eq!(
+        count("survey"),
+        4,
+        "the north, the corrections, rejected stations and deviation surveys"
+    );
+    assert_eq!(
+        count("property"),
+        1,
+        "the order two directional properties keep (ADR-0036)"
+    );
+    assert_eq!(count("provenance"), 4, "provenance read and written (ADR-0035)");
+    assert_eq!(all().len(), 57);
 
     let coded_by_the_new_walk = [
         id::INHERIT_RANK_ORDER,

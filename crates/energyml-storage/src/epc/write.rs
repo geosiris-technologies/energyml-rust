@@ -162,7 +162,20 @@ pub fn write_package<W: Write + Seek>(
 
     {
         let _span = tracing::info_span!("epc.write.objects", parts = plan.objects.len()).entered();
+        // Bytes carried under an object's own part name replace the object's XML:
+        // a part is written once (a zip with two entries of one name is refused,
+        // and OPC forbids it). The object still decides the `.rels` and the
+        // content type, and the bytes are what the caller posted.
+        let carried: BTreeSet<&str> = package
+            .attachments
+            .iter()
+            .chain(&package.verbatim)
+            .map(|attachment| attachment.part.as_str())
+            .collect();
         for (part, object) in plan.objects.iter() {
+            if carried.contains(part.as_str()) {
+                continue;
+            }
             let xml = to_part(*object, XmlWriteOptions::default())?;
             write_part(&mut zip, part, xml.as_bytes())?;
         }
@@ -673,12 +686,8 @@ fn content_type_for(extension: &str) -> Option<&'static str> {
     })
 }
 
-fn escape(value: &str) -> String {
-    value
-        .replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('"', "&quot;")
-}
+// An attribute value: the one door, `energyml_core::xml::escape_attr`.
+use energyml_core::xml::escape_attr as escape;
 
 // ---------------------------------------------------------------------------
 // One uuid, several objects

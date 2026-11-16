@@ -26,12 +26,17 @@ use energyml_core::value::{FieldValue, Reflect};
 use energyml_domain::crs::{self, Crs};
 use energyml_domain::metadata::{Metadata, Spec};
 
-use crate::error::Result;
-use crate::geometry::{self, Geometry};
+use crate::error::{Error, Result};
+use crate::geometry::{self, Geometry, field_text};
 use crate::points::Point;
 use crate::readers::Readers;
 use crate::shape::Shape;
 use crate::source::ValueSource;
+
+/// The metadata key under which an object records that the coordinate reference
+/// system it names could not be read (the value is the reason). Absent for an
+/// object that names no CRS: that case is legal and is not recorded.
+pub const CRS_UNREADABLE: &str = "crs_unreadable";
 
 /// Which coordinates an exporter wants.
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
@@ -234,7 +239,19 @@ impl SceneObject {
     fn place(&self, points: Vec<Point>, placement: Placement) -> Result<Vec<Point>> {
         let Some(crs) = &self.crs else {
             // No CRS is not an error: plenty of representations name none, and
-            // their local coordinates are the only answer there is.
+            // their local coordinates are the only answer there is. A CRS that
+            // was named and could not be read is another matter: metres cannot
+            // be promised, so it is refused by name (`[geometry G4]`).
+            if matches!(placement, Placement::Metres)
+                && let Some(why) = self.metadata.get(CRS_UNREADABLE)
+            {
+                return Err(Error::malformed(
+                    &self.uri,
+                    format!(
+                        "its coordinate reference system cannot be read ({why}), so its points cannot be placed in metres"
+                    ),
+                ));
+            }
             return Ok(points);
         };
         match placement {
@@ -392,9 +409,16 @@ pub fn object_of_with(
     let info = representation.type_info();
     let geometry = geometry::of_with(readers, representation, source)?;
     // The CRS is read even when it is absent or unreadable: a shape with no
-    // stated place is still a shape, and refusing to export it would be worse
-    // than exporting it unplaced.
-    let crs = crs::of(representation, source).unwrap_or(None);
+    // stated place is still a shape, and exporting it unplaced beats losing it.
+    // But **unreadable is not absent** (`[geometry G4]`): a CRS the object names
+    // and that cannot be read is recorded in the metadata under
+    // [`CRS_UNREADABLE`], where every export carries it, and a placement in
+    // metres refuses it (see `place`) instead of returning local coordinates
+    // as if they were placed.
+    let (crs, crs_unreadable) = match crs::of(representation, source) {
+        Ok(found) => (found, None),
+        Err(why) => (None, Some(why.to_string())),
+    };
 
     let interpretation = related(representation, INTERPRETS);
     // The feature hangs off the interpretation, not the representation, so it
@@ -410,10 +434,13 @@ pub fn object_of_with(
     // Evaluated here rather than in the exporter, because this is where the
     // store is: a path that crosses a reference needs to resolve it, and an
     // exporter is given an object rather than a package.
-    let metadata = match spec {
+    let mut metadata = match spec {
         Some(spec) => spec.read(representation, source),
         None => Metadata::default(),
     };
+    if let Some(why) = crs_unreadable {
+        metadata.insert(CRS_UNREADABLE, why);
+    }
 
     Ok(SceneObject {
         uuid: energyml_core::identity::uuid_of_reflect(representation)
@@ -775,15 +802,23 @@ pub fn attributes_for(
         // `ValueCountPerIndexableElement`. The values are usable as scalars,
         // and refusing them would lose a real array over a wrong number, so
         // they are attached **as scalars with the disagreement reported**.
-        if components > 1 && expected > 0 && values.len() == expected {
-            refused.push(format!(
-                "`{}` declares {components} values per element and holds exactly one; it is \
-                 attached as a scalar array, and the document's own count is what is wrong",
-                read.title.as_deref().unwrap_or(&read.uuid)
-            ));
-            components = 1;
-        }
-        if expected == 0 || values.len() != expected * components as usize {
+        // The one rule, shared with `Property::check` and every other reader:
+        // `energyml_domain::property::count_fit`.
+        let mismatch =
+            match energyml_domain::property::count_fit(expected as u64, components, values.len() as u64) {
+                energyml_domain::property::CountFit::Fits => false,
+                energyml_domain::property::CountFit::OnePerElement { declared } => {
+                    refused.push(format!(
+                        "`{}` declares {declared} values per element and holds exactly one; it is \
+                     attached as a scalar array, and the document's own count is what is wrong",
+                        read.title.as_deref().unwrap_or(&read.uuid)
+                    ));
+                    components = 1;
+                    false
+                }
+                energyml_domain::property::CountFit::Mismatch { .. } => true,
+            };
+        if mismatch {
             // Reported, not repaired: padding or truncating would put values
             // on the wrong elements, which is exactly the failure this check
             // exists for.
@@ -857,27 +892,21 @@ fn related(object: &dyn Reflect, fields: &[&str]) -> Option<Related> {
         }
         return Some(Related {
             uuid: uuid.to_string(),
-            title: string_field(reference, "Title").unwrap_or_default(),
-            qualified_type: string_field(reference, "QualifiedType")
-                .or_else(|| string_field(reference, "ContentType"))
+            title: field_text(reference, "Title").unwrap_or_default(),
+            qualified_type: field_text(reference, "QualifiedType")
+                .or_else(|| field_text(reference, "ContentType"))
                 .unwrap_or_default(),
         });
     }
     None
 }
 
+/// The title of an object: its own `Title` or its citation's, by the identity
+/// layer's one reading ([`energyml_core::identity::title_of_reflect`]).
 fn title_of(object: &dyn Reflect) -> String {
-    match object.field("Citation") {
-        Some(FieldValue::Object(citation)) => string_field(citation, "Title").unwrap_or_default(),
-        _ => String::new(),
-    }
-}
-
-fn string_field(object: &dyn Reflect, field: &str) -> Option<String> {
-    match object.field(field)? {
-        FieldValue::Scalar(scalar) => scalar.as_str().map(str::to_string).filter(|s| !s.is_empty()),
-        _ => None,
-    }
+    energyml_core::identity::title_of_reflect(object)
+        .unwrap_or_default()
+        .to_string()
 }
 
 #[cfg(test)]

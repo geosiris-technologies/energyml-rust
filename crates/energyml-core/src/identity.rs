@@ -277,21 +277,42 @@ impl ObjectId {
     }
 
     /// Build from an ETP URI, returning the dataspace it carried, if any.
+    ///
+    /// The uri is read by [`EtpUri::parse`](crate::identifiers::EtpUri::parse),
+    /// the one door, and the identity is built from what it returns: this keeps
+    /// no reading of its own. So what the door refuses this refuses - a uuid
+    /// that is not a uuid, a type with a character a type cannot carry - and the
+    /// uuid comes back in lowercase. Two things the door reads and an identity
+    /// cannot hold are refused here, by name: a uri that names a dataspace and no
+    /// object, and one that goes on below the object (`/resqml22.Foo?query`).
+    /// The versioned form, `(uuid=…,version='…')` - Identifier Specification
+    /// v5.0 §3.4.2 (p. 14) - gives the object's version: part of the identity,
+    /// never of the uuid.
     pub fn from_etp_uri(uri: &str) -> Result<(Option<String>, Self)> {
-        let (dataspace, qualified_type, uuid) = split_etp_uri(uri)?;
-        // The versioned form, `(uuid=…,version='…')` - Identifier Specification
-        // v5.0 §3.4.2 (p. 14): the version is part of the identity, never of
-        // the uuid.
-        let (uuid, object_version) = match uuid.split_once(",version='") {
-            Some((uuid, version)) => (
-                uuid.trim(),
-                Some(version.strip_suffix('\'').unwrap_or(version).replace("''", "'")),
-            ),
-            None => (uuid, None),
+        let parsed = crate::identifiers::EtpUri::parse(uri)?;
+        let (Some(domain), Some(version), Some(object_type), Some(uuid)) =
+            (parsed.domain, parsed.version, parsed.object_type, parsed.uuid)
+        else {
+            return Err(Error::parse(uri, "etpUri", "names a dataspace, not an object"));
         };
-        let mut id = ObjectId::from_qualified_type(qualified_type, uuid)?;
-        id.object_version = object_version;
-        Ok((dataspace.map(str::to_string), id))
+        if parsed.rest.is_some() {
+            return Err(Error::parse(
+                uri,
+                "etpUri",
+                "goes on below the object: it names a collection, not an object",
+            ));
+        }
+        Ok((
+            parsed.dataspace,
+            ObjectId {
+                domain,
+                version: naming::dotted_version(&version),
+                object_type,
+                uuid,
+                object_version: parsed.object_version,
+                title: None,
+            },
+        ))
     }
 
     /// Identity of a type, with a uuid supplied separately. `None` for a type
@@ -399,11 +420,28 @@ pub struct ContentTypeParts<'a> {
     pub object_type: &'a str,
 }
 
-/// Split `application/x-resqml+xml;version=2.0;type=obj_Activity`.
-///
-/// The `obj_` prefix is **kept**: stripping it here is how a 2.0.1 content type
-/// gets corrupted on the way back out.
-pub fn parse_content_type(value: &str) -> Result<ContentTypeParts<'_>> {
+/// What a content type says, borrowed: the one reading of the grammar
+/// `application/x-<domain>+xml;version=<v>[;type=<T>]` and of the media types
+/// that are not Energistics ones (`application/x-hdf5;version=1.0`).
+pub(crate) struct ContentTypeSplit<'a> {
+    /// `resqml` - `None` for a media type that is not `x-<domain>+xml`.
+    pub(crate) domain: Option<&'a str>,
+    /// The media type after `application/`, when it is not `x-<domain>+xml`.
+    pub(crate) mime: Option<&'a str>,
+    /// `2.0`, as written.
+    pub(crate) version: &'a str,
+    /// `obj_Activity`, verbatim - `None` for a part that is not an object.
+    pub(crate) object_type: Option<&'a str>,
+}
+
+fn is_word(text: &str) -> bool {
+    !text.is_empty() && text.chars().all(|c| c.is_alphanumeric() || c == '_')
+}
+
+/// Read a content type, tolerating the order of `version=` and `type=` and
+/// ignoring any other parameter. [`ContentType::parse`](crate::identifiers::ContentType::parse)
+/// and [`parse_content_type`] both read through it.
+pub(crate) fn split_content_type(value: &str) -> Result<ContentTypeSplit<'_>> {
     let err = || {
         Error::parse(
             value,
@@ -412,27 +450,70 @@ pub fn parse_content_type(value: &str) -> Result<ContentTypeParts<'_>> {
         )
     };
     let mut parts = value.split(';').map(str::trim);
-    let media = parts.next().ok_or_else(err)?;
-    let domain = media
-        .strip_prefix("application/x-")
-        .and_then(|rest| rest.strip_suffix("+xml"))
+    let media = parts
+        .next()
+        .and_then(|media| media.strip_prefix("application/"))
         .ok_or_else(err)?;
+    let (domain, mime) = match media
+        .strip_prefix("x-")
+        .and_then(|rest| rest.strip_suffix("+xml"))
+    {
+        Some(domain) if is_word(domain) => (Some(domain), None),
+        _ if !media.is_empty()
+            && media
+                .chars()
+                .all(|c| c.is_alphanumeric() || matches!(c, '_' | '.' | '+' | '-')) =>
+        {
+            (None, Some(media))
+        }
+        _ => return Err(err()),
+    };
 
     let mut version = None;
     let mut object_type = None;
     for part in parts {
         if let Some(v) = part.strip_prefix("version=") {
-            version = Some(v.trim());
+            let v = v.trim();
+            if v.is_empty() || v.chars().any(char::is_whitespace) {
+                return Err(err());
+            }
+            version = Some(v);
         } else if let Some(t) = part.strip_prefix("type=") {
-            object_type = Some(t.trim());
+            let t = t.trim();
+            if !is_word(t) {
+                return Err(err());
+            }
+            object_type = Some(t);
         }
     }
 
-    Ok(ContentTypeParts {
+    Ok(ContentTypeSplit {
         domain,
+        mime,
         version: version.ok_or_else(err)?,
-        object_type: object_type.ok_or_else(err)?,
+        object_type,
     })
+}
+
+/// Split `application/x-resqml+xml;version=2.0;type=obj_Activity`.
+///
+/// The `obj_` prefix is **kept**: stripping it here is how a 2.0.1 content type
+/// gets corrupted on the way back out. A content type that names no domain or no
+/// type is refused.
+pub fn parse_content_type(value: &str) -> Result<ContentTypeParts<'_>> {
+    let split = split_content_type(value)?;
+    match (split.domain, split.object_type) {
+        (Some(domain), Some(object_type)) => Ok(ContentTypeParts {
+            domain,
+            version: split.version,
+            object_type,
+        }),
+        _ => Err(Error::parse(
+            value,
+            "contentType",
+            "expected application/x-<domain>+xml;version=..;type=..",
+        )),
+    }
 }
 
 /// The three parts of a qualified type, borrowed.
@@ -452,10 +533,13 @@ pub fn parse_qualified_type(value: &str) -> Result<QualifiedTypeParts<'_>> {
     let (head, object_type) = value.split_once('.').ok_or_else(err)?;
     let split = head.find(|c: char| c.is_ascii_digit()).ok_or_else(err)?;
     let (domain, version) = head.split_at(split);
-    if domain.is_empty() || version.is_empty() || object_type.is_empty() {
+    if domain.is_empty() || !domain.chars().all(|c| c.is_ascii_alphabetic()) {
         return Err(err());
     }
-    if !version.chars().all(|c| c.is_ascii_digit()) {
+    if version.is_empty() || !version.chars().all(|c| c.is_ascii_digit()) {
+        return Err(err());
+    }
+    if !is_word(object_type) {
         return Err(err());
     }
     Ok(QualifiedTypeParts {
@@ -463,38 +547,6 @@ pub fn parse_qualified_type(value: &str) -> Result<QualifiedTypeParts<'_>> {
         version,
         object_type,
     })
-}
-
-/// Split an ETP 1.2 data-object URI into dataspace, qualified type and uuid.
-fn split_etp_uri(uri: &str) -> Result<(Option<&str>, &str, &str)> {
-    let err = || {
-        Error::parse(
-            uri,
-            "etpUri",
-            "expected eml:///[dataspace('..')/]<qualifiedType>(<uuid>)",
-        )
-    };
-    let rest = uri.trim().strip_prefix("eml:///").ok_or_else(err)?;
-
-    let (dataspace, rest) = match rest.strip_prefix("dataspace('") {
-        Some(after) => {
-            let (ds, tail) = after.split_once("')").ok_or_else(err)?;
-            (Some(ds), tail.strip_prefix('/').unwrap_or(tail))
-        }
-        None => (None, rest),
-    };
-
-    let open = rest.find('(').ok_or_else(err)?;
-    let close = rest.rfind(')').ok_or_else(err)?;
-    if close < open {
-        return Err(err());
-    }
-    let qualified_type = &rest[..open];
-    let uuid = rest[open + 1..close].trim().trim_start_matches("uuid=");
-    if qualified_type.is_empty() || uuid.is_empty() {
-        return Err(err());
-    }
-    Ok((dataspace, qualified_type, uuid))
 }
 
 // ---------------------------------------------------------------------------
@@ -708,6 +760,21 @@ pub fn uuid_of_reflect(object: &dyn Reflect) -> Option<&str> {
     role_str(object, object.type_info().roles.uuid)
 }
 
+/// The uuid of an object or a reference reached dynamically, as stored, when
+/// it carries a non-empty one: the reading every reader of a reference's uuid
+/// shares (an empty uuid names nothing).
+pub fn non_empty_uuid_of_reflect(object: &dyn Reflect) -> Option<String> {
+    uuid_of_reflect(object)
+        .filter(|uuid| !uuid.is_empty())
+        .map(str::to_string)
+}
+
+/// The uuid of the object a field of `object` references, as stored - `None`
+/// when the field is absent, is no reference, or names no uuid.
+pub fn reference_uuid(object: &dyn Reflect, field: &str) -> Option<String> {
+    non_empty_uuid_of_reflect(object.field(field)?.as_object()?)
+}
+
 /// Title of an object reached dynamically: its own `Title`, or the one inside
 /// its `Citation`.
 pub fn title_of_reflect(object: &dyn Reflect) -> Option<&str> {
@@ -865,6 +932,40 @@ pub fn parse_address(address: &str) -> (String, Option<String>) {
     (address.to_ascii_lowercase(), None)
 }
 
+/// Whether an address names an object at all: a uri with a uuid, a bare uuid -
+/// or any other text the reader of an address keeps as it stands - but not an
+/// empty text and not a uri that names a dataspace and no object.
+fn names_an_object(address: &str) -> bool {
+    let address = address.trim();
+    if address.is_empty() {
+        return false;
+    }
+    match crate::identifiers::EtpUri::parse(address) {
+        Ok(parsed) if address.get(..4).is_some_and(|s| s.eq_ignore_ascii_case("eml:")) => {
+            parsed.uuid.is_some()
+        }
+        _ => true,
+    }
+}
+
+/// **Whether two addresses name the same object**: the same uuid (read by
+/// [`parse_address`]), and object versions that do not contradict each other -
+/// an absent version means "the latest", so it matches any
+/// ([`ObjectKey::same_object`]). The one comparison of two addresses: the
+/// libraries above this one call it and keep none of their own.
+///
+/// An address that names no object - an empty text, a uri of a dataspace -
+/// is the same as nothing, **not even as itself**: two dataspace uris carry no
+/// uuid, and `None == None` is no identity.
+pub fn same_address(a: &str, b: &str) -> bool {
+    if !names_an_object(a) || !names_an_object(b) {
+        return false;
+    }
+    let (uuid_a, version_a) = parse_address(a);
+    let (uuid_b, version_b) = parse_address(b);
+    uuid_a == uuid_b && versions_agree(version_a.as_deref(), version_b.as_deref())
+}
+
 /// What kind of identity a type carries, from its metadata alone.
 pub fn identity_kind_of(info: &'static TypeInfo) -> IdentityKind {
     if info.is_object_ref {
@@ -1007,52 +1108,146 @@ pub struct RefEdge<'a> {
 /// object that writes the reference, see
 /// [`identity_owned::collect_refs_owned`](crate::identity_owned::collect_refs_owned).
 pub fn collect_refs(root: &dyn Reflect) -> Vec<RefEdge<'_>> {
-    let mut out = Vec::new();
-    walk_refs(root, String::new(), &mut out);
-    out
+    let mut refs = Refs { out: Vec::new() };
+    walk(root, &mut refs);
+    refs.out
 }
 
-fn walk_refs<'a>(object: &'a dyn Reflect, prefix: String, out: &mut Vec<RefEdge<'a>>) {
+/// The visitor behind [`collect_refs`]: every reference, with its full path.
+struct Refs<'a> {
+    out: Vec<RefEdge<'a>>,
+}
+
+impl<'a> Visitor<'a> for Refs<'a> {
+    fn reference(&mut self, path: &str, child: &'a dyn Reflect, expected: Option<&'static TypeInfo>) {
+        if let Some(target) = key_of_reflect(child) {
+            self.out.push(RefEdge {
+                path: path.to_string(),
+                target,
+                expected,
+            });
+        }
+    }
+
+    fn untyped(&mut self, path: &str, any: &'a crate::any_xml::AnyXml) {
+        // The model could not type this subtree, so its references are in the
+        // text. Read them rather than lose them.
+        // A fault is not lost: `unreadable_subtrees` reports it by path, which
+        // a visitor of this walk has no way to return.
+        let _ = refs_in_source(&any.content, path, &mut self.out);
+    }
+}
+
+/// A kept-verbatim subtree whose source could not be read to its end.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct UnreadableSubtree {
+    /// Dotted path of the subtree in the object, as for a reference.
+    pub path: String,
+    /// What the reader said, with the byte it stopped at.
+    pub reason: String,
+}
+
+/// The kept-verbatim subtrees of `root` whose references cannot be listed
+/// completely, because their source is malformed or truncated.
+///
+/// [`collect_refs`] returns the references it could read; this is the other half
+/// of the answer, so that a reduced list is never taken for the whole one (the
+/// `.rels` regenerated from it would quietly lose links). A caller that builds a
+/// relationship index calls both, and names each item here as a defect.
+pub fn unreadable_subtrees(root: &dyn Reflect) -> Vec<UnreadableSubtree> {
+    struct Unreadable {
+        out: Vec<UnreadableSubtree>,
+    }
+    impl<'a> Visitor<'a> for Unreadable {
+        fn reference(&mut self, _: &str, _: &'a dyn Reflect, _: Option<&'static TypeInfo>) {}
+
+        fn untyped(&mut self, path: &str, any: &'a crate::any_xml::AnyXml) {
+            let mut found = Vec::new();
+            if let Err(reason) = refs_in_source(&any.content, path, &mut found) {
+                self.out.push(UnreadableSubtree {
+                    path: path.to_string(),
+                    reason,
+                });
+            }
+        }
+    }
+    let mut visitor = Unreadable { out: Vec::new() };
+    walk(root, &mut visitor);
+    visitor.out
+}
+
+/// What a reflection walk meets.
+///
+/// **The one walk.** Three readers used to carry their own copy of *for each
+/// field, extend the dotted path, recurse into an object, number the items of a
+/// list, treat a reference and a kept-verbatim subtree apart*, and differed
+/// only in what they did at a leaf. [`walk`] is that skeleton once; a reader is
+/// a `Visitor` that says what to do with the three things it can meet. The path
+/// is one buffer pushed and truncated as the walk goes down and up, not a
+/// `format!` per field.
+pub(crate) trait Visitor<'a> {
+    /// A data object reference (a type with `is_object_ref`) at `path`;
+    /// `expected` is the field's declared type.
+    fn reference(&mut self, path: &str, child: &'a dyn Reflect, expected: Option<&'static TypeInfo>);
+
+    /// A subtree the model could not type, kept as source text.
+    fn untyped(&mut self, path: &str, any: &'a crate::any_xml::AnyXml);
+
+    /// An ordinary object about to be entered (its fields are walked next).
+    fn enter(&mut self, _path: &str, _child: &'a dyn Reflect) {}
+
+    /// The object entered by the last unmatched [`Visitor::enter`] is done.
+    fn leave(&mut self) {}
+}
+
+/// Walk `root` by reflection, reporting to `visitor`. Paths are the dotted XML
+/// names from the root, `[i]` after a list item (`ChannelSet[0].Channel[2]`);
+/// the root itself is not entered.
+pub(crate) fn walk<'a>(root: &'a dyn Reflect, visitor: &mut impl Visitor<'a>) {
+    walk_fields(root, &mut String::new(), visitor);
+}
+
+fn walk_fields<'a>(object: &'a dyn Reflect, path: &mut String, visitor: &mut impl Visitor<'a>) {
     for field in object.type_info().fields {
         let Some(value) = object.field(field.name) else {
             continue;
         };
-        let base = if prefix.is_empty() {
-            field.xml_name.to_string()
-        } else {
-            format!("{prefix}.{}", field.xml_name)
-        };
-        visit_value(value, base, field.ty.type_info(), out);
+        let mark = path.len();
+        if !path.is_empty() {
+            path.push('.');
+        }
+        path.push_str(field.xml_name);
+        walk_value(value, path, field.ty.type_info(), visitor);
+        path.truncate(mark);
     }
 }
 
-fn visit_value<'a>(
+fn walk_value<'a>(
     value: FieldValue<'a>,
-    path: String,
+    path: &mut String,
     expected: Option<&'static TypeInfo>,
-    out: &mut Vec<RefEdge<'a>>,
+    visitor: &mut impl Visitor<'a>,
 ) {
+    use std::fmt::Write as _;
+
     match value {
         FieldValue::Object(child) => {
             if child.type_info().is_object_ref {
-                if let Some(target) = key_of_reflect(child) {
-                    out.push(RefEdge {
-                        path,
-                        target,
-                        expected,
-                    });
-                }
+                visitor.reference(path.as_str(), child, expected);
             } else if let Some(any) = child.as_any().downcast_ref::<crate::any_xml::AnyXml>() {
-                // The model could not type this subtree, so its references are
-                // in the text. Read them rather than lose them.
-                refs_in_source(&any.content, &path, out);
+                visitor.untyped(path.as_str(), any);
             } else {
-                walk_refs(child, path, out);
+                visitor.enter(path.as_str(), child);
+                walk_fields(child, path, visitor);
+                visitor.leave();
             }
         }
         FieldValue::List(items) => {
             for (i, item) in items.into_iter().enumerate() {
-                visit_value(item, format!("{path}[{i}]"), expected, out);
+                let mark = path.len();
+                let _ = write!(path, "[{i}]");
+                walk_value(item, path, expected, visitor);
+                path.truncate(mark);
             }
         }
         _ => {}
@@ -1088,49 +1283,33 @@ pub struct NestedObject<'a> {
 /// Only a type that can be a part (`is_top_level`) and that carries a uuid
 /// counts: a nested `Citation` is no data object.
 pub fn nested_objects(root: &dyn Reflect) -> Vec<NestedObject<'_>> {
-    let mut out = Vec::new();
-    walk_nested(root, String::new(), &mut out);
-    out
+    let mut nested = Nested { out: Vec::new() };
+    walk(root, &mut nested);
+    nested.out
 }
 
-fn walk_nested<'a>(object: &'a dyn Reflect, prefix: String, out: &mut Vec<NestedObject<'a>>) {
-    for field in object.type_info().fields {
-        let Some(value) = object.field(field.name) else {
-            continue;
-        };
-        let base = if prefix.is_empty() {
-            field.xml_name.to_string()
-        } else {
-            format!("{prefix}.{}", field.xml_name)
-        };
-        visit_nested(value, base, out);
-    }
+/// The visitor behind [`nested_objects`]: a data object is a type that can be a
+/// part and has a non-empty uuid; a reference is not entered, and a kept-verbatim
+/// subtree holds none.
+struct Nested<'a> {
+    out: Vec<NestedObject<'a>>,
 }
 
-fn visit_nested<'a>(value: FieldValue<'a>, path: String, out: &mut Vec<NestedObject<'a>>) {
-    match value {
-        FieldValue::Object(child) => {
-            let info = child.type_info();
-            if info.is_object_ref {
-                return;
-            }
-            if info.is_top_level
-                && let Some(key) = key_of_reflect(child)
-                && !key.uuid.trim().is_empty()
-            {
-                out.push(NestedObject {
-                    path: path.clone(),
-                    key,
-                });
-            }
-            walk_nested(child, path, out);
+impl<'a> Visitor<'a> for Nested<'a> {
+    fn reference(&mut self, _path: &str, _child: &'a dyn Reflect, _expected: Option<&'static TypeInfo>) {}
+
+    fn untyped(&mut self, _path: &str, _any: &'a crate::any_xml::AnyXml) {}
+
+    fn enter(&mut self, path: &str, child: &'a dyn Reflect) {
+        if child.type_info().is_top_level
+            && let Some(key) = key_of_reflect(child)
+            && !key.uuid.trim().is_empty()
+        {
+            self.out.push(NestedObject {
+                path: path.to_string(),
+                key,
+            });
         }
-        FieldValue::List(items) => {
-            for (i, item) in items.into_iter().enumerate() {
-                visit_nested(item, format!("{path}[{i}]"), out);
-            }
-        }
-        _ => {}
     }
 }
 
@@ -1161,7 +1340,18 @@ fn visit_nested<'a>(value: FieldValue<'a>, path: String, out: &mut Vec<NestedObj
 ///
 /// Everything borrows from `source`, which belongs to the object being walked,
 /// so this allocates nothing but the paths.
-pub(crate) fn refs_in_source<'a>(source: &'a str, prefix: &str, out: &mut Vec<RefEdge<'a>>) {
+///
+/// # A subtree that does not read
+///
+/// The references found before the fault are pushed, and the fault is
+/// **returned** (a malformed or truncated source, or an element never closed),
+/// never swallowed into a shorter list. The visitors of the walk cannot return it, so
+/// [`unreadable_subtrees`] is the door that reports it, by path.
+pub(crate) fn refs_in_source<'a>(
+    source: &'a str,
+    prefix: &str,
+    out: &mut Vec<RefEdge<'a>>,
+) -> std::result::Result<(), String> {
     use quick_xml::events::Event;
 
     /// One open element: where it is, and what its children have said so far.
@@ -1190,7 +1380,23 @@ pub(crate) fn refs_in_source<'a>(source: &'a str, prefix: &str, out: &mut Vec<Re
 
     loop {
         match reader.read_event() {
-            Err(_) | Ok(Event::Eof) => break,
+            Err(why) => {
+                return Err(format!(
+                    "{why} (at byte {} of the kept source)",
+                    reader.buffer_position()
+                ));
+            }
+            Ok(Event::Eof) => {
+                // `quick_xml` does not call an element left open at the end an
+                // error; it is a truncation all the same.
+                return match stack.last() {
+                    Some(frame) => Err(format!(
+                        "the element at `{}` is not closed: the kept source ends first",
+                        frame.path
+                    )),
+                    None => Ok(()),
+                };
+            }
             Ok(Event::Start(e)) => {
                 let name = local_name_of(e.name().as_ref());
                 let counter = match stack.last_mut() {
@@ -1302,7 +1508,7 @@ mod tests {
             r#"<eml23:Silent><eml23:Uuid>cccc</eml23:Uuid><eml23:QualifiedType>resqml22.Fault</eml23:QualifiedType></eml23:Silent>"#,
         );
         let mut out = Vec::new();
-        refs_in_source(source, "GraphicalInformation[0]", &mut out);
+        refs_in_source(source, "GraphicalInformation[0]", &mut out).expect("the source reads");
         let by_uuid = |uuid: &str| {
             out.iter()
                 .find(|e| e.target.uuid == uuid)
@@ -1318,6 +1524,59 @@ mod tests {
         assert_eq!(by_uuid("aaaa").path, "GraphicalInformation[0].TargetObject");
         assert_eq!(by_uuid("bbbb").target.object_version, Some("7"));
         assert_eq!(by_uuid("cccc").target.object_version, None);
+    }
+
+    /// An object holding kept-verbatim subtrees, to walk.
+    #[derive(Debug, Default, Clone, PartialEq, crate::prelude::EnergymlObject)]
+    #[energyml(package = "eml", version = "2.3", xml_name = "Holder")]
+    pub struct Holder {
+        /// The subtrees.
+        #[energyml(elem, xml_name = "Kept")]
+        pub kept: Vec<crate::any_xml::AnyXml>,
+    }
+
+    fn subtree(content: &str) -> crate::any_xml::AnyXml {
+        crate::any_xml::AnyXml {
+            content: content.to_string(),
+            ..Default::default()
+        }
+    }
+
+    /// `[core-derive-schemas S15]`: a kept subtree whose source is malformed or
+    /// truncated is **named**, with its path, rather than ending the scan
+    /// silently on a shorter list. The references before the fault are kept.
+    ///
+    /// Break it: turn the `Err` arm of `refs_in_source` back into a `break` (or
+    /// drop the open-element check at `Eof`); both assertions on the unreadable
+    /// paths fail.
+    #[test]
+    fn a_subtree_that_does_not_read_is_named_not_swallowed() {
+        let good = "<t><Uuid>aaaa</Uuid></t>";
+        let holder = Holder {
+            kept: vec![
+                subtree(good),
+                // A mismatched end tag, after one reference that reads.
+                subtree("<t><Uuid>bbbb</Uuid></t><u></v>"),
+                // Truncated: the element is never closed.
+                subtree("<t><Uuid>cccc</Uuid></t><u><x>"),
+            ],
+        };
+
+        let mut found = Vec::new();
+        let outcome = refs_in_source(&holder.kept[1].content, "Kept[1]", &mut found);
+        assert!(outcome.is_err(), "a mismatched end tag is a fault");
+        assert_eq!(found.len(), 1, "what was read before the fault is kept");
+
+        let unreadable = unreadable_subtrees(&holder);
+        let paths: Vec<&str> = unreadable.iter().map(|item| item.path.as_str()).collect();
+        assert_eq!(paths, ["Kept[1]", "Kept[2]"], "{unreadable:?}");
+        assert!(
+            unreadable[1].reason.contains("not closed"),
+            "a truncation says so: {}",
+            unreadable[1].reason
+        );
+        // The good one is not reported.
+        assert!(!paths.contains(&"Kept[0]"));
     }
 
     #[test]
@@ -1402,5 +1661,131 @@ mod tests {
         let a = ObjectId::from_qualified_type("resqml22.Activity", "ABCD").unwrap();
         let b = ObjectId::from_qualified_type("resqml22.Activity", "abcd").unwrap();
         assert_eq!(a, b);
+    }
+
+    const UUID: &str = "0e2ec4e1-1b0c-4b9f-8e9f-2a0d4c1f6a11";
+
+    /// Decision D1: `from_etp_uri` builds its identity from what
+    /// `EtpUri::parse` returns. The object version, the dataspace and the
+    /// lowercase uuid are the door's.
+    #[test]
+    fn from_etp_uri_is_built_from_the_door_s_answer() {
+        use crate::identifiers::EtpUri;
+        let text = format!(
+            "eml:///dataspace('demo')/resqml20.obj_Activity(uuid={},version='O''Neil')",
+            UUID.to_ascii_uppercase()
+        );
+        let door = EtpUri::parse(&text).unwrap();
+        let (dataspace, id) = ObjectId::from_etp_uri(&text).unwrap();
+        assert_eq!(dataspace, door.dataspace);
+        assert_eq!(
+            Some(id.uuid.as_str()),
+            door.uuid.as_deref(),
+            "the door lowercases it"
+        );
+        assert_eq!(id.object_version, door.object_version);
+        assert_eq!(id.object_version.as_deref(), Some("O'Neil"));
+        assert_eq!(id.version, "2.0");
+        assert_eq!(id.object_type, "obj_Activity");
+        // Break it: read the uri again by hand in `from_etp_uri`, and keep the uuid as written.
+    }
+
+    /// The inputs the old hand-written splitter took and the door refuses are
+    /// refused by name - a uuid that is not a uuid, a type with a character a
+    /// type cannot carry - and so are the two shapes the door reads and an
+    /// identity cannot hold.
+    #[test]
+    fn from_etp_uri_refuses_what_the_door_refuses_and_what_is_no_object() {
+        for refused in [
+            "eml:///resqml22.Activity(not-a-uuid)".to_string(),
+            format!("eml:///resqml22.Foo-Bar({UUID})"),
+            format!("eml:///resqml22.Activity({UUID}"),
+            "eml:///dataspace('demo')".to_string(),
+            format!("eml:///resqml22.Activity({UUID})/resqml22.Other?query"),
+            format!("resqml22.Activity({UUID})"),
+        ] {
+            assert!(ObjectId::from_etp_uri(&refused).is_err(), "{refused}");
+        }
+        // The `uuid=` form, which the door reads, is read here too.
+        let (_, id) = ObjectId::from_etp_uri(&format!("eml:///resqml22.Activity(uuid={UUID})")).unwrap();
+        assert_eq!(id.uuid, UUID);
+        assert_eq!(id.object_version, None);
+        // Break it: let `from_etp_uri` take the uuid text without the door.
+    }
+
+    /// One grammar for a qualified type and for a content type: the owned and
+    /// the borrowed readers accept and refuse the same strings.
+    #[test]
+    fn the_owned_and_the_borrowed_parsers_agree() {
+        use crate::identifiers::{ContentType, QualifiedType};
+        for qualified in [
+            "resqml22.Activity",
+            "resqml20.obj_Activity",
+            " eml23.Foo ",
+            "resqml22.Foo-Bar",
+            "resqml22.Foo.Bar",
+            "re_sqml22.Foo",
+            "resqml.Foo",
+            "resqml22.",
+            "22.Foo",
+        ] {
+            assert_eq!(
+                QualifiedType::parse(qualified).is_ok(),
+                parse_qualified_type(qualified).is_ok(),
+                "{qualified}"
+            );
+        }
+        assert!(parse_qualified_type("resqml22.Foo-Bar").is_err());
+        assert!(parse_qualified_type("resqml22.Foo.Bar").is_err());
+        for content in [
+            "application/x-resqml+xml;version=2.0;type=obj_Activity",
+            "application/x-resqml+xml; version=2.0 ; type=obj_Activity",
+            "application/x-resqml+xml;type=obj_Activity;version=2.0",
+            "application/x-resqml+xml;version=2.0",
+            "application/x-hdf5;version=1.0",
+            "application/x-resqml+xml;version=2.0;type=obj Activity",
+            "application/x-resqml+xml;version=;type=obj_Activity",
+            "text/plain",
+        ] {
+            let owned = ContentType::parse(content);
+            let borrowed = parse_content_type(content);
+            // The borrowed reader wants an object type and a domain besides.
+            assert_eq!(
+                borrowed.is_ok(),
+                owned
+                    .as_ref()
+                    .is_ok_and(|c| c.object_type.is_some() && c.raw_mime.is_none()),
+                "{content}"
+            );
+            if let (Ok(owned), Ok(borrowed)) = (owned, borrowed) {
+                assert_eq!(owned.domain, borrowed.domain);
+                assert_eq!(owned.version, borrowed.version);
+            }
+        }
+        // Break it: let `parse_qualified_type` accept a `.` inside the type again.
+    }
+
+    /// Two addresses that name no object are not the same object: `None ==
+    /// None` is no identity (a dataspace uri carries no uuid).
+    #[test]
+    fn two_addresses_that_name_no_object_are_not_the_same_object() {
+        assert!(!same_address("eml:///dataspace('a')", "eml:///dataspace('b')"));
+        assert!(!same_address("eml:///dataspace('a')", "eml:///dataspace('a')"));
+        assert!(!same_address("", ""));
+        let one = format!("eml:///resqml22.Activity({UUID})");
+        let upper = format!(
+            "eml:///dataspace('x')/resqml22.Activity({})",
+            UUID.to_ascii_uppercase()
+        );
+        let versioned = format!("eml:///resqml22.Activity(uuid={UUID},version='2')");
+        let other_version = format!("eml:///resqml22.Activity(uuid={UUID},version='3')");
+        assert!(
+            same_address(&one, &upper),
+            "the case of a uuid and the dataspace do not split it"
+        );
+        assert!(same_address(&one, &versioned), "a short uri matches any version");
+        assert!(!same_address(&versioned, &other_version));
+        assert!(same_address(UUID, &one), "a bare uuid is read as the uuid it is");
+        // Break it: drop the `names_an_object` test in `same_address`.
     }
 }

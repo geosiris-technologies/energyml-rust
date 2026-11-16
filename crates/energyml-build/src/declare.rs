@@ -16,6 +16,8 @@
 //! - [`Input`], [`InputParam`], [`Inputs`] - the same for what an operation
 //!   **takes**, and [`Binder`], the one place that knows how pieces are named.
 
+use std::sync::Arc;
+
 use energyml_domain::color::Hsv;
 use energyml_geometry::geometry::Geometry;
 
@@ -507,6 +509,17 @@ pub fn paired(bag: &Pieces) -> Vec<Piece<'_>> {
     // `read::pieces_of_object` writes, and it is read here and nowhere
     // else.
     let companion = |name: &str| -> bool { name.ends_with(" (object)") };
+    // The companions by the name of the piece they belong to (`X (object)` is
+    // filed under `X`), built once: looking each piece up in it costs no
+    // allocation, where building the companion's name per piece and per
+    // candidate was quadratic. The first companion of a name wins, as the scan
+    // it replaces did.
+    let mut companions: std::collections::HashMap<&str, &Known> = std::collections::HashMap::new();
+    for (name, known) in objects.iter().copied() {
+        if let Some(of) = name.strip_suffix(" (object)") {
+            companions.entry(of).or_insert(known);
+        }
+    }
     let mut out: Vec<Piece<'_>> = bag
         .iter()
         .filter(|(name, source)| !matches!(source, Source::Object(_)) || !companion(name))
@@ -517,10 +530,7 @@ pub fn paired(bag: &Pieces) -> Vec<Piece<'_>> {
                 // An object piece **is** what is known of it: looking for a
                 // companion named `X (object)` would be expecting a second one.
                 Source::Object(known) => Some(known),
-                _ => objects
-                    .iter()
-                    .find(|(object, _)| *object == format!("{name} (object)"))
-                    .map(|(_, k)| *k),
+                _ => companions.get(name).copied(),
             },
         })
         .collect();
@@ -618,12 +628,28 @@ macro_rules! input_param {
 pub struct Shape {
     /// Its name in the bag.
     pub name: String,
-    /// The patches.
-    pub geometry: Geometry,
+    /// The patches. Shared with the bag the shape was bound from: binding
+    /// never copies the points, and two slots bound to one entry hold the
+    /// same allocation. An operation that changes them clones them itself.
+    pub geometry: Arc<Geometry>,
     /// The closure of its polylines, when the producer said.
     pub closed: Option<Vec<bool>>,
     /// What is known of the object it came from.
     pub known: Option<Known>,
+}
+
+impl Shape {
+    /// What names the shape in a message: the title of the object behind it,
+    /// else its name in the bag. An empty title is no title - the name stands
+    /// in - so every operation names the same shape the same way.
+    pub fn title(&self) -> String {
+        self.known
+            .as_ref()
+            .and_then(|known| known.reference.as_ref())
+            .map(|reference| reference.title.clone())
+            .filter(|title| !title.is_empty())
+            .unwrap_or_else(|| self.name.clone())
+    }
 }
 
 impl Input for Shape {
@@ -632,7 +658,7 @@ impl Input for Shape {
         match piece.source {
             Source::Shape { geometry, closed } => Ok(Shape {
                 name: piece.name.to_string(),
-                geometry: geometry.clone(),
+                geometry: Arc::clone(geometry),
                 closed: closed.clone(),
                 known: piece.known.cloned(),
             }),
@@ -652,8 +678,8 @@ pub struct Features {
     pub name: String,
     /// The file it came from, for a suggested stage or title.
     pub file: String,
-    /// The features, in the producer's order.
-    pub features: Vec<Feature>,
+    /// The features, in the producer's order. Shared with the bag.
+    pub features: Arc<Vec<Feature>>,
 }
 
 impl Input for Features {
@@ -663,7 +689,7 @@ impl Input for Features {
             Source::Features { name, features } => Ok(Features {
                 name: piece.name.to_string(),
                 file: name.clone(),
-                features: features.clone(),
+                features: Arc::clone(features),
             }),
             other => Err(format!(
                 "`{}` is {}, and features are wanted",
@@ -681,8 +707,8 @@ pub struct TableIn {
     pub name: String,
     /// The file it comes from.
     pub file: String,
-    /// The rows.
-    pub table: crate::tabular::Table,
+    /// The rows. Shared with the bag.
+    pub table: Arc<crate::tabular::Table>,
     /// What its columns mean.
     pub template: crate::osdu::Template,
 }
@@ -698,7 +724,7 @@ impl Input for TableIn {
             } => Ok(TableIn {
                 name: piece.name.to_string(),
                 file: name.clone(),
-                table: table.clone(),
+                table: Arc::clone(table),
                 template: template.clone(),
             }),
             other => Err(format!(

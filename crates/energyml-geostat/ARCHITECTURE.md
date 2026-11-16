@@ -17,6 +17,7 @@ Domain-neutral interpolation and meshing algorithms: IDW, kriging and variograms
 - **Duplicates are counted, not refused**, and collinear input is refused at computation time, not before: collinearity is only visible when triangulating.
 - **A model nobody stated is reported.** A kriging without a variogram fits one and says so: an unstated model is a decision, not a default.
 - **Absurd sizes are refused with their count** (an interpolation grid beyond ten million nodes), and a node out of reach stays a hole (`NaN`), never an extrapolated value presented as data.
+- **An iso-surface is cut in tetrahedra, never cubes.** `isosurface` splits each cell by the Kuhn subdivision (six tetrahedra sharing one diagonal), so two neighbouring cells cut their common face the same way and the surface has no crack, and no tetrahedron has an ambiguous case. A vertex is keyed by the lattice edge it lies on, interpolated from the smaller node index to the larger, so the mesh is welded and reproducible bit for bit. When nothing is cut the answer is a `Crossing` that says why, never an empty mesh. A lattice that folds back on itself cannot be seen here: the caller refuses before the call.
 - **The private linear solver (`solve`) is not part of the API.**
 
 ## References

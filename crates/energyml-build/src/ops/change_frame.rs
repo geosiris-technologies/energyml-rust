@@ -111,6 +111,7 @@
 //!   TODO(reference): verify - no publication is cited for the law; add one if it follows a published source.
 
 use serde_json::{Value, json};
+use std::sync::Arc;
 
 use energyml_analysis::t2d::LinearVelocity;
 use energyml_domain::crs::{Crs, CrsKind, VerticalDirection};
@@ -622,41 +623,15 @@ fn turn_between(from: &Crs, to: &Crs) -> f64 {
 }
 
 /// The lattice of the nodes as the target stores them - origin and spacing -
-/// or the first node that is not where a lattice along +x then +y puts it.
+/// or why they are none.
 ///
-/// The reading `horizon-from-law` makes of its reference, on the nodes once
-/// moved: a lattice that was one in the shape's frame is one in a frame of the
-/// same azimuth, and a rotated, reversed or irregular one is refused rather
-/// than re-indexed.
+/// The reading `horizon-from-law` and `clip` make, on the nodes once moved
+/// (`energyml_analysis::ijk::lattice_of`, the one door): a lattice that was one
+/// in the shape's frame is one in a frame of the same azimuth, and a rotated,
+/// reversed or irregular one is refused rather than re-indexed.
 fn lattice_of(points: &[[f64; 3]], ni: usize, nj: usize) -> Result<([f64; 2], [f64; 2]), String> {
-    let at = |i: usize, j: usize| points[j * ni + i];
-    let origin = at(0, 0);
-    let (dx, dy) = (at(1, 0)[0] - origin[0], at(0, 1)[1] - origin[1]);
-    if !(dx.is_finite() && dx > 0.0 && dy.is_finite() && dy > 0.0) {
-        return Err(format!(
-            "runs along ({}, {}) then ({}, {}) in the target frame: `grid` writes a lattice along +x then +y, and a rotated or reversed one is not re-indexed here",
-            at(1, 0)[0] - origin[0],
-            at(1, 0)[1] - origin[1],
-            at(0, 1)[0] - origin[0],
-            at(0, 1)[1] - origin[1]
-        ));
-    }
-    // A millionth of a cell: what the reader's running sum of spacings, and
-    // the placement's arithmetic at map coordinates, can drift by.
-    let tolerance = 1e-6 * dx.min(dy);
-    for j in 0..nj {
-        for i in 0..ni {
-            let node = at(i, j);
-            let (x, y) = (origin[0] + i as f64 * dx, origin[1] + j as f64 * dy);
-            if !((node[0] - x).abs() <= tolerance && (node[1] - y).abs() <= tolerance) {
-                return Err(format!(
-                    "node ({i}, {j}) is at ({}, {}) in the target frame where a regular lattice along +x then +y puts it at ({x}, {y}): a rotated or irregular grid is not what `grid` writes",
-                    node[0], node[1]
-                ));
-            }
-        }
-    }
-    Ok(([origin[0], origin[1]], [dx, dy]))
+    let lattice = energyml_analysis::ijk::lattice_of(points, [ni, nj]).map_err(|why| why.to_string())?;
+    Ok((lattice.origin, lattice.spacing))
 }
 
 /// The object a `crs` answer names - a `DataObjectReference` (its uuid, type and
@@ -1006,10 +981,10 @@ impl Operation for ChangeFrame {
             Form::Other(kind) => {
                 let result = Shape {
                     name: shape.name.clone(),
-                    geometry: Geometry {
+                    geometry: Arc::new(Geometry {
                         kind: "change-frame",
                         patches,
-                    },
+                    }),
                     closed: shape.closed.clone(),
                     known: shape.known.clone(),
                 };
@@ -1077,15 +1052,7 @@ impl Operation for ChangeFrame {
             // `Citation/Description` holds 2000 characters (eml 2.3
             // `Citation`, `DescriptionString`): refused rather than cut short,
             // since a source cut short cites nothing.
-            if description.chars().count() > 2000 {
-                return Err(Refusal::on(
-                    "source",
-                    format!(
-                        "makes a description of {} characters, and a Citation/Description holds 2000 - cite the document shorter",
-                        description.chars().count()
-                    ),
-                ));
-            }
+            super::blocks::checked_description(&description)?;
             if let Some(object) = plan
                 .objects
                 .iter_mut()
@@ -1094,12 +1061,9 @@ impl Operation for ChangeFrame {
                 object.json["Citation"]["Description"] = json!(description);
                 // The reference-model rule on invented objects (ADR-0019), as `horizon-from-law`
                 // writes it: a time converted by a law is not a time measured.
-                object.json["ExtensionNameValue"] = json!([{
-                    "$type": "eml23.ExtensionNameValue",
-                    "Name": "synthetic",
-                    "Value": { "$type": "eml23.StringMeasure", "_": "true" },
-                    "Description": "converted by `change-frame` through a stated velocity law, not measured",
-                }]);
+                object.json["ExtensionNameValue"] = super::blocks::synthetic_extension(
+                    "converted by `change-frame` through a stated velocity law, not measured",
+                );
             }
             says.push(Note {
                 key: "law",

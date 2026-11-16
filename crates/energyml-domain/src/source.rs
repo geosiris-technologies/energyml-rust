@@ -203,12 +203,30 @@ impl ArraySource for NoObjects {
 /// empty - a reader that silently sees no array draws a representation with no
 /// points and says nothing.
 pub struct Prefetched {
-    /// Objects by lowercase uuid.
-    objects: std::collections::HashMap<String, Box<dyn DynObject>>,
-    /// Array locations by lowercase uuid of the object that declared them.
-    locations: std::collections::HashMap<String, Vec<ArrayLocation>>,
+    /// What it holds, by lowercase uuid: **every version** of an object, in
+    /// insertion order, never one over another. The identity of an entry is its
+    /// uuid and its object version (the uri, without the dataspace): a uri names
+    /// the version it names ([`ObjectSource::object_at`]), and a bare uuid is
+    /// only the entry adapter, which answers the version inserted last.
+    objects: std::collections::HashMap<String, Vec<Held>>,
     /// Array data by the identity of its location.
     arrays: std::collections::HashMap<String, ArrayData>,
+}
+
+/// One version of one object, with the array locations it declared.
+struct Held {
+    /// The object version, trimmed; `None` when the object declares none.
+    version: Option<String>,
+    object: Box<dyn DynObject>,
+    locations: Vec<ArrayLocation>,
+}
+
+/// A version as an identity keeps it: trimmed, and `None` when blank.
+fn named_version(version: Option<&str>) -> Option<String> {
+    version
+        .map(str::trim)
+        .filter(|version| !version.is_empty())
+        .map(str::to_string)
 }
 
 /// What identifies one array read: everything the store needs to perform it.
@@ -234,14 +252,13 @@ impl Prefetched {
     pub fn new() -> Self {
         Prefetched {
             objects: std::collections::HashMap::new(),
-            locations: std::collections::HashMap::new(),
             arrays: std::collections::HashMap::new(),
         }
     }
 
-    /// How many objects it holds.
+    /// How many objects it holds - each version of an object counts.
     pub fn len(&self) -> usize {
-        self.objects.len()
+        self.objects.values().map(Vec::len).sum()
     }
 
     /// Whether it holds nothing.
@@ -256,24 +273,66 @@ impl Prefetched {
         out
     }
 
-    /// The array locations recorded for one object.
+    /// The version of an object that `uuid` and `wanted` name: the version
+    /// named, else one that names none or that the object does not contradict
+    /// ([`energyml_core::identity::version_fit`]); the one inserted last among
+    /// equals. `None` when every version held contradicts the one wanted - the
+    /// refusal is by name, never another version's object.
+    fn pick(&self, uuid: &str, wanted: Option<&str>) -> Option<&Held> {
+        use energyml_core::identity::{VersionFit, version_fit};
+        let held = self.objects.get(&uuid.to_ascii_lowercase())?;
+        let mut best: Option<(VersionFit, &Held)> = None;
+        for one in held {
+            let fit = version_fit(wanted, one.version.as_deref());
+            if fit == VersionFit::Contradicts {
+                continue;
+            }
+            // `<=`: a later insertion wins a tie.
+            if best.is_none_or(|(known, _)| fit <= known) {
+                best = Some((fit, one));
+            }
+        }
+        best.map(|(_, one)| one)
+    }
+
+    /// The array locations recorded for one object, by uuid: those of the
+    /// version inserted last. [`Prefetched::locations_at`] is the one that names
+    /// the version.
     pub fn locations_of(&self, uuid: &str) -> &[ArrayLocation] {
-        self.locations
+        self.objects
             .get(&uuid.to_ascii_lowercase())
-            .map(Vec::as_slice)
+            .and_then(|held| held.last())
+            .map(|one| one.locations.as_slice())
             .unwrap_or_default()
     }
 
-    /// Every location recorded, across every object.
+    /// The array locations recorded for the object a uri names, the version it
+    /// names included. Empty when the cache holds no such object.
+    pub fn locations_at(&self, uri: &str) -> &[ArrayLocation] {
+        let (uuid, version) = energyml_core::identity::parse_address(uri);
+        self.pick(&uuid, version.as_deref())
+            .map(|one| one.locations.as_slice())
+            .unwrap_or_default()
+    }
+
+    /// Every location recorded, across every object and every version.
     pub fn locations(&self) -> Vec<ArrayLocation> {
-        let mut keys: Vec<&String> = self.locations.keys().collect();
+        let mut keys: Vec<&String> = self.objects.keys().collect();
         keys.sort();
         keys.into_iter()
-            .flat_map(|uuid| self.locations[uuid].iter().cloned())
+            .flat_map(|uuid| {
+                self.objects[uuid]
+                    .iter()
+                    .flat_map(|one| one.locations.iter().cloned())
+            })
             .collect()
     }
 
     /// Put one object in, and record the arrays it declares.
+    ///
+    /// An object is identified by its uuid **and its object version**: inserting
+    /// a second version of an object keeps both, and inserting the same version
+    /// again replaces it.
     ///
     /// `locate` is how the store resolves an `EpcExternalPartReference`; pass
     /// the store's own [`energyml_storage::storage::EnergymlStorage::arrays_of`].
@@ -288,11 +347,17 @@ impl Prefetched {
             return;
         };
         let uuid = uuid.to_ascii_lowercase();
-        let found = locate(object.as_reflect());
-        if !found.is_empty() {
-            self.locations.insert(uuid.clone(), found);
-        }
-        self.objects.insert(uuid, object);
+        let version = named_version(energyml_core::identity::object_version_of_reflect(
+            object.as_reflect(),
+        ));
+        let locations = locate(object.as_reflect());
+        let held = self.objects.entry(uuid).or_default();
+        held.retain(|one| one.version != version);
+        held.push(Held {
+            version,
+            object,
+            locations,
+        });
     }
 
     /// Put the data of one array in.
@@ -322,12 +387,21 @@ impl Prefetched {
         S: energyml_storage::storage::EnergymlStorage + ?Sized,
     {
         let inventory = store.resources().await?;
-        // uuid → URI, because a reference names a uuid and the store is asked
-        // by URI. The uuid is the only identity a DOR is guaranteed to carry.
-        let by_uuid: std::collections::HashMap<String, String> = inventory
-            .iter()
-            .map(|summary| (summary.uuid.to_ascii_lowercase(), summary.uri.clone()))
-            .collect();
+        // uuid → every URI of the inventory under it, with its version: a
+        // reference names a uuid (and a version, when it carries one) and the
+        // store is asked by URI. Two versions of one uuid are two entries, so a
+        // reference to either is followed to the right one.
+        let mut by_uuid: std::collections::HashMap<String, Vec<(Option<String>, String)>> =
+            std::collections::HashMap::new();
+        for summary in &inventory {
+            // The version is the one the uri names; a uri that is no ETP uri
+            // names none (`parse_address` reads a bare text as a uuid alone).
+            let version = energyml_core::identity::parse_address(&summary.uri).1;
+            by_uuid
+                .entry(summary.uuid.to_ascii_lowercase())
+                .or_default()
+                .push((named_version(version.as_deref()), summary.uri.clone()));
+        }
 
         let mut cache = Prefetched::new();
         let mut frontier: Vec<String> = roots.to_vec();
@@ -344,11 +418,25 @@ impl Prefetched {
                     if edge.target.uuid.is_empty() {
                         continue;
                     }
-                    let Some(uri) = by_uuid.get(&edge.target.uuid.to_ascii_lowercase()) else {
+                    let Some(entries) = by_uuid.get(&edge.target.uuid.to_ascii_lowercase()) else {
                         continue;
                     };
-                    if asked.insert(uri.clone()) {
-                        next.push(uri.clone());
+                    // The versions the reference names - or, when it names
+                    // none, every one of them: a short reference contradicts
+                    // nothing, and the cache answers the uri it is later asked.
+                    use energyml_core::identity::{VersionFit, version_fit};
+                    let wanted = edge.target.object_version;
+                    let best = entries
+                        .iter()
+                        .map(|(version, _)| version_fit(wanted, version.as_deref()))
+                        .min();
+                    let Some(best) = best.filter(|fit| *fit != VersionFit::Contradicts) else {
+                        continue;
+                    };
+                    for (version, uri) in entries {
+                        if version_fit(wanted, version.as_deref()) == best && asked.insert(uri.clone()) {
+                            next.push(uri.clone());
+                        }
                     }
                 }
                 cache.insert(object, &|reflected| store.arrays_of(reflected));
@@ -387,10 +475,31 @@ impl Prefetched {
 }
 
 impl ObjectSource for Prefetched {
+    /// By uuid: the version inserted last. A caller holding a uri asks
+    /// [`ObjectSource::object_at`], which names the version.
     fn object(&self, uuid: &str) -> Option<Box<dyn DynObject>> {
         self.objects
             .get(&uuid.to_ascii_lowercase())
-            .map(|object| object.clone_box())
+            .and_then(|held| held.last())
+            .map(|one| one.object.clone_box())
+    }
+
+    /// The version the uri names, or one that contradicts nothing when it names
+    /// none; `None` when the cache holds only other versions.
+    fn object_at(&self, uri: &str) -> Option<Box<dyn DynObject>> {
+        let (uuid, version) = energyml_core::identity::parse_address(uri);
+        self.pick(&uuid, version.as_deref())
+            .map(|one| one.object.clone_box())
+    }
+
+    fn read_object_at(&self, uri: &str) -> std::result::Result<Box<dyn DynObject>, String> {
+        let (uuid, version) = energyml_core::identity::parse_address(uri);
+        self.object_at(uri).ok_or_else(|| match version {
+            Some(version) if self.objects.contains_key(&uuid) => {
+                format!("this cache holds object `{uuid}`, but not at version `{version}`")
+            }
+            _ => "this cache holds no such object".to_string(),
+        })
     }
 }
 
@@ -401,7 +510,12 @@ impl ArraySource for Prefetched {
         // cache has no idea what an `EpcExternalPartReference` stands for.
         // That is the whole reason `fetch` records them at insertion time.
         if let Some(uuid) = energyml_core::identity::uuid_of_reflect(object) {
-            return self.locations_of(uuid).to_vec();
+            // The version the object declares: two versions of one object do
+            // not share their locations.
+            return self
+                .pick(uuid, energyml_core::identity::object_version_of_reflect(object))
+                .map(|one| one.locations.clone())
+                .unwrap_or_default();
         }
         // A part of an object, not the object - what every value reader hands
         // over (`source.locate(array)`), and it has no uuid to look up. Its
@@ -413,9 +527,10 @@ impl ArraySource for Prefetched {
         energyml_storage::array::locate(object)
             .into_iter()
             .filter_map(|found| {
-                self.locations
+                self.objects
                     .values()
                     .flatten()
+                    .flat_map(|one| one.locations.iter())
                     .find(|recorded| {
                         recorded.path_in_file == found.path_in_file
                             && recorded.proxy_uuid == found.proxy_uuid
@@ -444,7 +559,13 @@ impl ArraySource for Prefetched {
     fn read_into(&self, location: &ArrayLocation, out: &mut ArrayBuffer<'_>) -> Result<ArrayMetadata> {
         use energyml_storage::array::ArrayValues;
 
-        let data = self.read(location)?;
+        // Borrowed from the cache: `read` hands out an owned `ArrayData`, and
+        // cloning the whole array only to copy it again into `out` would make a
+        // block reader pay a full-array clone per slab.
+        let data = self
+            .arrays
+            .get(&slot(location))
+            .ok_or_else(|| not_prefetched(location))?;
         // The typed copy, not a byte copy: a buffer of `f64` handed an array of
         // `i32` would take the bytes and read numbers that were never there.
         // The element types have to meet, and a refusal has to say so.
@@ -482,7 +603,7 @@ impl ArraySource for Prefetched {
                 ));
             }
         }
-        Ok(data.metadata)
+        Ok(data.metadata.clone())
     }
 }
 
@@ -495,4 +616,109 @@ fn not_prefetched(location: &ArrayLocation) -> crate::Error {
             location.field_path, location.path_in_file
         ),
     )
+}
+
+/// An object named by a uri written as a value (a cell of a table, a field of a
+/// document): what the uri names, and whether the package holds it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ObjectChip {
+    /// The uri, trimmed, as written.
+    pub uri: String,
+    /// The object's qualified type: the object's own when it is held, else the one the uri names.
+    pub qualified_type: Option<String>,
+    /// `Citation.Title`, when the object is held.
+    pub title: Option<String>,
+    /// Where the named object is.
+    pub presence: Presence,
+}
+
+/// Where the named object is.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Presence {
+    /// The source holds it.
+    InPackage,
+    /// The uri names an object of this dataspace that the source does not hold.
+    NotInPackage,
+    /// The uri names another dataspace than the one `objects` stands for: not looked up.
+    OtherDataspace {
+        /// The dataspace the uri names.
+        dataspace: String,
+    },
+}
+
+/// Why a value is no object uri.
+#[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
+pub enum UriRefusal {
+    /// The value does not match the ETP uri grammar.
+    #[error("`{value}` is not an ETP uri")]
+    NotAnEtpUri {
+        /// The value as written.
+        value: String,
+    },
+    /// An ETP uri of a dataspace, which names no object.
+    #[error("`{value}` names a dataspace, not an object")]
+    NotAnObject {
+        /// The value as written.
+        value: String,
+    },
+}
+
+/// What a uri written as a value names: the object chip.
+///
+/// `here` is the dataspace `objects` stands for (`None`: the default dataspace, which an
+/// EPC is). A uri of another dataspace is **not looked up** (`OtherDataspace`): looking it up
+/// here would answer "absent" for an object that lives elsewhere. A held object is found by
+/// [`ObjectSource::object_at`], the one door of an object by uri; the cost is one read of the
+/// object, so the caller keeps the chip.
+///
+/// # Errors
+///
+/// [`UriRefusal::NotAnEtpUri`] for a value that is not an ETP uri, [`UriRefusal::NotAnObject`] for
+/// a dataspace uri (ETP v1.2 section 25.3.6).
+pub fn object_chip(
+    value: &str,
+    here: Option<&str>,
+    objects: &dyn ObjectSource,
+) -> std::result::Result<ObjectChip, UriRefusal> {
+    let value = value.trim();
+    let uri = energyml_core::identifiers::EtpUri::parse(value).map_err(|_| UriRefusal::NotAnEtpUri {
+        value: value.to_string(),
+    })?;
+    if uri.uuid.is_none() {
+        return Err(UriRefusal::NotAnObject {
+            value: value.to_string(),
+        });
+    }
+    let named_type = uri.qualified_type().map(|qualified| qualified.to_string());
+    if uri.dataspace.as_deref() != here {
+        return Ok(ObjectChip {
+            uri: value.to_string(),
+            qualified_type: named_type,
+            title: None,
+            presence: Presence::OtherDataspace {
+                dataspace: uri.dataspace.clone().unwrap_or_default(),
+            },
+        });
+    }
+    match objects.object_at(value) {
+        Some(object) => {
+            let reflect = object.as_reflect();
+            Ok(ObjectChip {
+                uri: value.to_string(),
+                qualified_type: reflect
+                    .type_info()
+                    .qualified_type
+                    .map(str::to_string)
+                    .or(named_type),
+                title: energyml_core::identity::title_of_reflect(reflect).map(str::to_string),
+                presence: Presence::InPackage,
+            })
+        }
+        None => Ok(ObjectChip {
+            uri: value.to_string(),
+            qualified_type: named_type,
+            title: None,
+            presence: Presence::NotInPackage,
+        }),
+    }
 }

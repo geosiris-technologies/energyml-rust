@@ -13,9 +13,9 @@
 
 use energyml_build::operation::{Choices, Fitness, Identity, Plan, Purpose, Registry, When};
 use energyml_build::pieces::{Known, Pieces, Source};
-use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 use serde_json::json;
+use std::sync::Arc;
 
 fn when() -> When {
     When {
@@ -26,7 +26,7 @@ fn when() -> When {
 
 fn shape(points: Vec<[f64; 3]>, topology: Topology) -> Source {
     Source::Shape {
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind: "test",
             patches: vec![Patch {
                 index: 0,
@@ -35,7 +35,7 @@ fn shape(points: Vec<[f64; 3]>, topology: Topology) -> Source {
                 topology,
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     }
 }
@@ -67,7 +67,7 @@ fn plan(bag: &Pieces, choices: Choices) -> Plan {
 /// A recorded number, by its title.
 fn double(plan: &Plan, title: &str) -> Option<f64> {
     plan.activity.parameters.iter().find_map(|p| match p {
-        Parameter::Double { title: t, value, .. } if t == title => Some(*value),
+        other if other.title() == title => other.number(),
         _ => None,
     })
 }
@@ -293,11 +293,7 @@ fn a_translation_alone_has_no_pivot() {
         .activity
         .parameters
         .iter()
-        .map(|p| match p {
-            Parameter::Double { title, .. }
-            | Parameter::Text { title, .. }
-            | Parameter::Object { title, .. } => title.clone(),
-        })
+        .map(|p| p.title().to_string())
         .collect();
     assert!(!titles.iter().any(|t| t.starts_with("pivot")), "{titles:?}");
     // Given anyway, it is refused by name - it would do nothing.
@@ -448,7 +444,7 @@ fn a_grid_or_a_mixture_is_unfit_saying_so() {
     let mixed = Pieces::empty().with(
         "shape",
         Source::Shape {
-            geometry: Geometry {
+            geometry: Arc::new(Geometry {
                 kind: "test",
                 patches: vec![
                     Patch {
@@ -466,7 +462,7 @@ fn a_grid_or_a_mixture_is_unfit_saying_so() {
                         closed: Vec::new(),
                     },
                 ],
-            },
+            }),
             closed: None,
         },
     );
@@ -497,4 +493,33 @@ fn a_flipped_triangle_is_counted() {
     );
     let still = plan(&bag, Choices::new().set("dz", 3.0));
     assert_eq!(double(&still, "flippedTriangles"), Some(0.0));
+}
+
+/// `[build-ops-3 S1]`: a line or a surface moved with `sourceEpsg` and a
+/// different `project` is reprojected the way a point set is - never written
+/// with its original degrees under the new system's label.
+///
+/// Break it: remove the `geometry_placed` call in `transform::write_as`; the
+/// longitude then stays `2.3` under EPSG:2154.
+#[test]
+fn a_line_is_reprojected_when_the_source_and_the_target_differ() {
+    let bag = Pieces::empty().with(
+        "shape",
+        shape(
+            vec![[2.30, 48.80, 0.0], [2.31, 48.81, 0.0], [2.32, 48.82, 0.0]],
+            Topology::Polylines(vec![3]),
+        ),
+    );
+    let made = plan(
+        &bag,
+        Choices::new()
+            .set("dx", 1.0)
+            .set("sourceEpsg", 4326)
+            .set("project", 2154),
+    );
+    let points = points_of(&made);
+    assert!(
+        points.iter().all(|p| p[0] > 100_000.0 && p[1] > 1_000_000.0),
+        "metres of Lambert-93, not degrees: {points:?}"
+    );
 }

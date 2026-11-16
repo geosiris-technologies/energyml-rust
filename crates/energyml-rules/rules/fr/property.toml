@@ -1,0 +1,8 @@
+# Traduction française du thème property. Pas encore relue par un relecteur
+# francophone ; ce qui manque se lit en anglais, et le dit.
+
+[[rule]]
+id = "house/property/directional-ratio"
+title = "Deux propriétés directionnelles d'une même grandeur gardent l'ordre qu'un milieu stratifié attend"
+text = """
+Deux propriétés d'un même genre, sur un même support, de même forme, distinguées seulement par une facette `direction` verticale et une latérale, sont comparées valeur par valeur. Pour une résistivité, la valeur verticale ne doit pas être sous la latérale : quand plus de 5 % des paires ont une valeur verticale sous 0,95 fois la latérale, c'est un avertissement. Une direction écrite comme valeur d'extension (`nwdf:vertical`) n'est pas lue : la règle est alors invérifiable, sauf si l'appelant déclare quelle propriété est la verticale."""

@@ -648,9 +648,7 @@ pub fn check_declared_types<'a>(
 /// the dataspace of its **source**, read here from the source's own uri through
 /// the one door, [`identifiers::EtpUri::parse`].
 fn dataspace_of(uri: &str) -> Option<String> {
-    identifiers::EtpUri::parse(uri)
-        .ok()
-        .and_then(|parsed| parsed.dataspace)
+    identifiers::EtpUri::dataspace_of(uri)
 }
 
 /// The data objects nested inside the objects given, by uuid - each with a
@@ -1449,10 +1447,14 @@ pub struct Related<'a> {
 /// index-driven viewer short an edge; a link the index makes and the objects do
 /// not leaves it drawing one from nothing.
 ///
-/// A part name is matched on its **file name** rather than its path. A `.rels`
-/// target is relative to the `_rels` folder's parent, so the same object is
-/// written `Foo.xml` from the root and `../Foo.xml` from a subfolder - and an
-/// EPC part name is unique across the package whichever layout it uses.
+/// A `.rels` target is relative to the `_rels` folder's parent, so the same
+/// object is written `Foo.xml` from the root and `../Foo.xml` from a subfolder:
+/// it is resolved against the part holding the `.rels` and matched on the
+/// **whole part name** (`media::resolve_target`). A file name alone is used only
+/// as a fallback, and only when it is unique: this crate's writer puts the
+/// versions of one object in `version_<id>/` folders under the same file name,
+/// so a file name is not an identity. Objects are keyed by **uri**, never by
+/// uuid, for the same reason.
 ///
 /// # Why this one *is* EPC-only, and stays so
 ///
@@ -1474,29 +1476,65 @@ pub fn check_relationships(objects: &[Related<'_>]) -> Vec<RelIssue> {
             .to_ascii_lowercase()
     };
 
-    // Part file name → uuid, for turning a relationship target into an object.
+    // **Parts are keyed by their whole normalised name, objects by their uri.**
+    // A part name is unique across the package, but its *file name* is not: this
+    // crate's own writer puts the versions of one object in
+    // `version_<id>/<same file name>` folders, and a key on the file name or on
+    // the uuid made two entries collapse into one, so a relationship to one
+    // version was judged against another (`[storage-2 S3]`).
     let mut by_part: std::collections::HashMap<String, &ObjectSummary> = std::collections::HashMap::new();
+    let mut by_leaf: std::collections::HashMap<String, Vec<&ObjectSummary>> =
+        std::collections::HashMap::new();
+    // Every entry of a uuid: what a reference naming it may mean.
+    let mut holders: std::collections::HashMap<String, Vec<&ObjectSummary>> =
+        std::collections::HashMap::new();
     for item in objects {
-        by_part.insert(leaf(&item.summary.locator), item.summary);
-    }
-    // Uuid → object, for the undeclared references below. It was a linear
-    // `find` over every object **per reference**: 108 s on a package of
-    // 77 090 objects and 319 244 references), invisible on the corpus.
-    // The first object holding a uuid wins, as `find` did.
-    let mut by_uuid: std::collections::HashMap<String, &ObjectSummary> = std::collections::HashMap::new();
-    for item in objects {
-        by_uuid
+        by_part.insert(
+            item.summary.locator.trim_start_matches('/').to_ascii_lowercase(),
+            item.summary,
+        );
+        by_leaf
+            .entry(leaf(&item.summary.locator))
+            .or_default()
+            .push(item.summary);
+        holders
             .entry(item.summary.uuid.to_ascii_lowercase())
-            .or_insert(item.summary);
+            .or_default()
+            .push(item.summary);
     }
+
+    /// One reference an object makes, as much of its identity as the reference
+    /// carries.
+    struct Link {
+        /// Lower-cased uuid of what it names (of the container, for a nested object).
+        uuid: String,
+        /// Where in the object.
+        path: String,
+        /// The qualified type the reference declares; empty for a nested object.
+        qualified: String,
+        /// The `objectVersion` it names, if it names one.
+        version: Option<String>,
+    }
+
+    // The entries a reference may mean: `entries_named`, the one rule.
+    let pool_of = |link: &Link| -> Vec<&ObjectSummary> {
+        holders
+            .get(&link.uuid)
+            .map(|all| entries_named(all, &link.qualified, link.version.as_deref()))
+            .unwrap_or_default()
+    };
+    let names = |link: &Link, target: &ObjectSummary| -> bool {
+        pool_of(link).iter().any(|one| one.uri == target.uri)
+    };
+
     // A reference to a nested object is a link to the part that holds it -
     // what the writer records (see [`nested_index`]).
     let nested = nested_index(objects.iter().map(|item| (item.summary, item.object)));
-    // Who references whom, from the objects themselves.
-    let mut references: std::collections::HashMap<String, Vec<(String, String)>> =
-        std::collections::HashMap::new();
+    // Who references whom, from the objects themselves, by the uri of the one
+    // that makes the reference.
+    let mut references: std::collections::HashMap<String, Vec<Link>> = std::collections::HashMap::new();
     for item in objects {
-        let mut edges: Vec<(String, String)> = identity::collect_refs(item.object)
+        let mut links: Vec<Link> = identity::collect_refs(item.object)
             .into_iter()
             .filter(|edge| !edge.target.uuid.is_empty())
             .filter_map(|edge| {
@@ -1504,24 +1542,41 @@ pub fn check_relationships(objects: &[Related<'_>]) -> Vec<RelIssue> {
                 match nested.get(&uuid) {
                     // Nested in this very object: no link between two parts.
                     Some((_, container, _)) if *container == item.summary.uuid.to_ascii_lowercase() => None,
-                    Some((_, container, _)) => Some((container.clone(), edge.path.clone())),
-                    None => Some((uuid, edge.path.clone())),
+                    Some((_, container, _)) => Some(Link {
+                        uuid: container.clone(),
+                        path: edge.path.clone(),
+                        qualified: String::new(),
+                        version: None,
+                    }),
+                    None => Some(Link {
+                        uuid,
+                        path: edge.path.clone(),
+                        qualified: edge.target.qualified_type(),
+                        version: edge
+                            .target
+                            .object_version
+                            .map(str::trim)
+                            .filter(|version| !version.is_empty())
+                            .map(str::to_string),
+                    }),
                 }
             })
             .collect();
-        edges.sort();
-        edges.dedup_by(|a, b| a.0 == b.0);
-        references.insert(item.summary.uuid.to_ascii_lowercase(), edges);
+        // One link per distinct target, the first path wins - as it did per uuid.
+        links.sort_by(|a, b| {
+            (&a.uuid, &a.qualified, &a.version, &a.path).cmp(&(&b.uuid, &b.qualified, &b.version, &b.path))
+        });
+        links.dedup_by(|a, b| a.uuid == b.uuid && a.qualified == b.qualified && a.version == b.version);
+        references.insert(item.summary.uri.clone(), links);
     }
 
     let mut out = Vec::new();
+    let no_links: Vec<Link> = Vec::new();
     for item in objects {
         let part = &item.summary.locator;
-        let mine = references
-            .get(&item.summary.uuid.to_ascii_lowercase())
-            .cloned()
-            .unwrap_or_default();
+        let mine = references.get(&item.summary.uri).unwrap_or(&no_links);
 
+        // The uris of the entries the object's own relationships declare.
         let mut declared: std::collections::HashSet<String> = std::collections::HashSet::new();
         for relationship in item.relationships {
             // An external relationship names a file, not a part: that is how an
@@ -1549,7 +1604,20 @@ pub fn check_relationships(objects: &[Related<'_>]) -> Vec<RelIssue> {
             if kind != "destinationObject" && kind != "sourceObject" {
                 continue;
             }
-            let Some(target) = by_part.get(&leaf(&relationship.target)) else {
+            // The whole part name first (a target is relative to the folder of
+            // the part whose `.rels` holds it); a producer's sloppy relative
+            // spelling still resolves **when its file name is unique**, which is
+            // all the old matching could ever do - and is refused, as a missing
+            // part, when namesakes make it ambiguous.
+            let target = crate::epc::media::resolve_target(part, &relationship.target)
+                .and_then(|full| by_part.get(&full.to_ascii_lowercase()).copied())
+                .or_else(
+                    || match by_leaf.get(&leaf(&relationship.target)).map(Vec::as_slice) {
+                        Some([only]) => Some(*only),
+                        _ => None,
+                    },
+                );
+            let Some(target) = target else {
                 out.push(RelIssue {
                     part: part.clone(),
                     target: relationship.target.clone(),
@@ -1559,16 +1627,14 @@ pub fn check_relationships(objects: &[Related<'_>]) -> Vec<RelIssue> {
                 });
                 continue;
             };
-            let target_uuid = target.uuid.to_ascii_lowercase();
-            let me = item.summary.uuid.to_ascii_lowercase();
             // Which way the link really goes, from the objects.
-            let forward = mine.iter().any(|(uuid, _)| *uuid == target_uuid);
+            let forward = mine.iter().any(|link| names(link, target));
             let backward = references
-                .get(&target_uuid)
-                .is_some_and(|edges| edges.iter().any(|(uuid, _)| *uuid == me));
+                .get(&target.uri)
+                .is_some_and(|links| links.iter().any(|link| names(link, item.summary)));
 
             if kind == "destinationObject" {
-                declared.insert(target_uuid.clone());
+                declared.insert(target.uri.clone());
                 if !forward {
                     out.push(RelIssue {
                         part: part.clone(),
@@ -1591,7 +1657,7 @@ pub fn check_relationships(objects: &[Related<'_>]) -> Vec<RelIssue> {
                 // is what makes the forward link "declared", so the second
                 // complaint below does not fire as well.
                 if forward {
-                    declared.insert(target_uuid.clone());
+                    declared.insert(target.uri.clone());
                 }
                 out.push(RelIssue {
                     part: part.clone(),
@@ -1614,18 +1680,21 @@ pub fn check_relationships(objects: &[Related<'_>]) -> Vec<RelIssue> {
         // Only for targets the package holds - a reference out of the package
         // cannot have a relationship, and `check_references` already reports it
         // as dangling.
-        for (uuid, path) in &mine {
-            if declared.contains(uuid) {
+        for link in mine {
+            let pool = pool_of(link);
+            // A relationship to any entry the reference may mean declares it.
+            if pool.iter().any(|one| declared.contains(&one.uri)) {
                 continue;
             }
-            // `uuid` is already lower-cased (see `references` above).
-            let Some(target) = by_uuid.get(uuid) else {
+            let Some(target) = pool.first() else {
                 continue;
             };
             out.push(RelIssue {
                 part: part.clone(),
                 target: target.uri.clone(),
-                kind: RelIssueKind::Undeclared { path: path.clone() },
+                kind: RelIssueKind::Undeclared {
+                    path: link.path.clone(),
+                },
             });
         }
     }
@@ -1779,8 +1848,16 @@ struct Held {
     version: Option<String>,
 }
 
+/// The type key of a node: the object type of its qualified type without the
+/// `obj_` prefix, or the qualified type itself when it does not parse.
+fn type_key_of(qualified_type: &str) -> String {
+    identity::parse_qualified_type(qualified_type)
+        .map(|parts| naming::strip_obj_prefix(parts.object_type).to_string())
+        .unwrap_or_else(|_| qualified_type.to_string())
+}
+
 /// The `objectVersion` an object states, as an identity: blank is none.
-fn version_of(object: &dyn Reflect) -> Option<String> {
+pub(crate) fn version_of(object: &dyn Reflect) -> Option<String> {
     identity::object_version_of_reflect(object)
         .map(str::trim)
         .filter(|version| !version.is_empty())
@@ -1834,9 +1911,7 @@ pub fn build<'a>(objects: impl IntoIterator<Item = (&'a ObjectSummary, &'a dyn R
             uri: summary.uri.clone(),
             uuid: summary.uuid.clone(),
             qualified_type: summary.qualified_type.clone(),
-            type_key: identity::parse_qualified_type(&summary.qualified_type)
-                .map(|parts| naming::strip_obj_prefix(parts.object_type).to_string())
-                .unwrap_or_else(|_| summary.qualified_type.clone()),
+            type_key: type_key_of(&summary.qualified_type),
             title: title_of(*object),
             present: true,
             externally_defined: is_externally_defined(&summary.qualified_type),
@@ -1959,9 +2034,7 @@ pub fn assemble<'a>(
             uri: summary.uri.clone(),
             uuid: summary.uuid.clone(),
             qualified_type: summary.qualified_type.clone(),
-            type_key: identity::parse_qualified_type(&summary.qualified_type)
-                .map(|parts| naming::strip_obj_prefix(parts.object_type).to_string())
-                .unwrap_or_else(|_| summary.qualified_type.clone()),
+            type_key: type_key_of(&summary.qualified_type),
             title: titles(&summary.uri),
             present: true,
             externally_defined: is_externally_defined(&summary.qualified_type),
@@ -1988,9 +2061,7 @@ pub fn assemble<'a>(
             nodes.push(Node {
                 uri: uri.clone(),
                 uuid,
-                type_key: identity::parse_qualified_type(&qualified_type)
-                    .map(|parts| naming::strip_obj_prefix(parts.object_type).to_string())
-                    .unwrap_or_else(|_| qualified_type.clone()),
+                type_key: type_key_of(&qualified_type),
                 externally_defined: is_externally_defined(&qualified_type),
                 qualified_type,
                 title: None,
@@ -2187,7 +2258,9 @@ pub fn references_in(object: &dyn Reflect, dataspace: Option<&str>) -> Vec<Point
 ///
 /// The comparison is on the uuid and case-insensitive, because that is what an
 /// EPC writer varies and what the identifier specification says is the same
-/// object.
+/// object. **That mixes the versions of one uuid**: for a package holding
+/// several, ask [`dependents_of_uri`], which answers for one entry
+/// (`[cross-doors S8]`).
 pub fn dependents<'a>(
     objects: impl IntoIterator<Item = (&'a ObjectSummary, &'a dyn Reflect)>,
     uuid: &str,
@@ -2209,6 +2282,126 @@ pub fn dependents<'a>(
                 title: title_of(object),
                 path: edge.path.clone(),
             });
+        }
+    }
+    out
+}
+
+/// The entries of `held` (the entries of **one uuid**) that a reference naming
+/// `qualified` and `version` may mean - the one rule, shared by the checks that
+/// resolve a reference to an entry.
+///
+/// The same rule as the store's own resolution: the **type** narrows when it
+/// matches something (and when it matches nothing the uuid alone decides, a
+/// release apart), the **version** narrows when an entry carries it, and a
+/// version nobody carries is a stale copy that still resolves among what is
+/// left - a finding for the reference check, not a dangling pointer. An empty
+/// `qualified` states no type; `None` states no version.
+fn entries_named<'a>(
+    held: &[&'a ObjectSummary],
+    qualified: &str,
+    version: Option<&str>,
+) -> Vec<&'a ObjectSummary> {
+    let mut pool: Vec<&'a ObjectSummary> = if qualified.is_empty() {
+        held.to_vec()
+    } else {
+        let typed: Vec<&'a ObjectSummary> = held
+            .iter()
+            .copied()
+            .filter(|one| same_qualified_type(qualified, &one.qualified_type))
+            .collect();
+        if typed.is_empty() { held.to_vec() } else { typed }
+    };
+    if let Some(wanted) = version {
+        let exact: Vec<&'a ObjectSummary> = pool
+            .iter()
+            .copied()
+            .filter(|one| {
+                identifiers::EtpUri::parse(&one.uri)
+                    .ok()
+                    .and_then(|uri| uri.object_version)
+                    .is_some_and(|carried| carried == wanted)
+            })
+            .collect();
+        if !exact.is_empty() {
+            pool = exact;
+        }
+    } else {
+        // A reference that names no version fits an entry that carries none
+        // exactly (`identity::version_fit`, the store's `choose`): that entry is
+        // the one it means when the package holds it beside versioned ones.
+        let unversioned: Vec<&'a ObjectSummary> = pool
+            .iter()
+            .copied()
+            .filter(|one| {
+                identifiers::EtpUri::parse(&one.uri)
+                    .ok()
+                    .is_some_and(|uri| uri.object_version.is_none())
+            })
+            .collect();
+        if !unversioned.is_empty() {
+            pool = unversioned;
+        }
+    }
+    pool
+}
+
+/// Who points at **this entry**, by its full uri - the form of [`dependents`]
+/// that does not mix the versions of one uuid.
+///
+/// A package may hold one uuid several times (under two `objectVersion`s, or two
+/// releases), each with its own uri; [`dependents`] answers for the uuid and so
+/// returns the referrers of every version, and skips a revision that references
+/// its own earlier version because it shares the uuid. Here a reference counts
+/// for `uri` only when it **resolves to it** (`entries_named`), and the only
+/// object skipped is the entry itself. A `uri` the objects do not hold falls
+/// back to the uuid, as the references to it cannot be resolved among anything.
+pub fn dependents_of_uri<'a>(
+    objects: impl IntoIterator<Item = (&'a ObjectSummary, &'a dyn Reflect)>,
+    uri: &str,
+) -> Vec<Pointer> {
+    let objects: Vec<(&ObjectSummary, &dyn Reflect)> = objects.into_iter().collect();
+    let Ok(parsed) = identifiers::EtpUri::parse(uri) else {
+        return Vec::new();
+    };
+    let Some(wanted) = parsed.uuid else {
+        return Vec::new();
+    };
+    let held: Vec<&ObjectSummary> = objects
+        .iter()
+        .map(|(summary, _)| *summary)
+        .filter(|summary| summary.uuid.eq_ignore_ascii_case(&wanted))
+        .collect();
+    let is_held = held.iter().any(|summary| summary.uri == uri);
+
+    let mut out = Vec::new();
+    for (summary, object) in objects {
+        if summary.uri == uri {
+            continue;
+        }
+        for edge in identity::collect_refs(object) {
+            if !edge.target.uuid.eq_ignore_ascii_case(&wanted) {
+                continue;
+            }
+            let names_it = !is_held || {
+                let version = edge
+                    .target
+                    .object_version
+                    .map(str::trim)
+                    .filter(|version| !version.is_empty());
+                entries_named(&held, &edge.target.qualified_type(), version)
+                    .iter()
+                    .any(|one| one.uri == uri)
+            };
+            if names_it {
+                out.push(Pointer {
+                    uri: summary.uri.clone(),
+                    uuid: summary.uuid.clone(),
+                    qualified_type: summary.qualified_type.clone(),
+                    title: title_of(object),
+                    path: edge.path.clone(),
+                });
+            }
         }
     }
     out
@@ -2317,23 +2510,7 @@ impl Graph {
     /// version-independent one, for colouring), `title`, `present`,
     /// `externallyDefined`; and on an edge `from`, `to`, `path`.
     pub fn to_json(&self) -> String {
-        let string = |value: &str| -> String {
-            let mut out = String::with_capacity(value.len() + 2);
-            out.push('"');
-            for c in value.chars() {
-                match c {
-                    '"' => out.push_str("\\\""),
-                    '\\' => out.push_str("\\\\"),
-                    '\n' => out.push_str("\\n"),
-                    '\r' => out.push_str("\\r"),
-                    '\t' => out.push_str("\\t"),
-                    c if (c as u32) < 0x20 => out.push_str(&format!("\\u{:04x}", c as u32)),
-                    c => out.push(c),
-                }
-            }
-            out.push('"');
-            out
-        };
+        let string = energyml_core::json::quote;
 
         let mut out = String::from("{\n  \"nodes\": [\n");
         for (n, node) in self.nodes.iter().enumerate() {

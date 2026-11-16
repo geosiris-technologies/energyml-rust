@@ -124,6 +124,7 @@ use crate::operation::{
 };
 use crate::pieces::Pieces;
 
+use super::blocks::double;
 use super::support;
 use super::thickness::Vertical;
 use super::written::Written;
@@ -173,25 +174,6 @@ pub struct IjkGridInputs {
     pub horizons: Vec<Shape>,
 }
 
-/// A count, as the activity records it.
-fn double(title: &str, value: f64) -> Parameter {
-    Parameter::Double {
-        title: title.to_string(),
-        value,
-        uom: None,
-    }
-}
-
-/// The title the object behind a shape carries, or the shape's name.
-fn title_of(shape: &Shape) -> String {
-    shape
-        .known
-        .as_ref()
-        .and_then(|known| known.reference.as_ref())
-        .map(|r| r.title.clone())
-        .unwrap_or_else(|| shape.name.clone())
-}
-
 /// The key a horizon enters the seed by: its uuid, or its name in the bag.
 fn key_of(shape: &Shape) -> String {
     shape
@@ -207,21 +189,21 @@ fn grid_counts(shape: &Shape) -> Result<[usize; 2], String> {
     let [patch] = shape.geometry.patches.as_slice() else {
         return Err(format!(
             "`{}` holds {} patch(es): a horizon of the grid is one 2D grid",
-            title_of(shape),
+            shape.title(),
             shape.geometry.patches.len()
         ));
     };
     let Topology::Grid { fastest, slowest } = &patch.topology else {
         return Err(format!(
             "`{}` is no 2D grid: the pillars stand on the horizons' lattice, so each horizon is a Grid2dRepresentation - make one with `interpolate` first",
-            title_of(shape)
+            shape.title()
         ));
     };
     let counts = [*fastest, *slowest];
     if patch.points.len() != counts[0] * counts[1] {
         return Err(format!(
             "`{}` declares {} × {} nodes and holds {}",
-            title_of(shape),
+            shape.title(),
             counts[0],
             counts[1],
             patch.points.len()
@@ -237,9 +219,9 @@ fn one_lattice(horizons: &[Shape]) -> Result<analysis::Lattice, Refusal> {
     for shape in horizons {
         let counts = grid_counts(shape).map_err(|why| Refusal::on("horizons", why))?;
         let lattice = analysis::lattice_of(&shape.geometry.patches[0].points, counts)
-            .map_err(|why| Refusal::on("horizons", format!("`{}` {why}", title_of(shape))))?;
+            .map_err(|why| Refusal::on("horizons", format!("`{}` {why}", shape.title())))?;
         let Some((reference, name)) = &first else {
-            first = Some((lattice, title_of(shape)));
+            first = Some((lattice, shape.title()));
             continue;
         };
         if !reference.same_as(&lattice) {
@@ -247,7 +229,7 @@ fn one_lattice(horizons: &[Shape]) -> Result<analysis::Lattice, Refusal> {
                 "horizons",
                 format!(
                     "`{}` is on a lattice of {} × {} nodes from ({}, {}) every ({}, {}), and `{name}` on one of {} × {} from ({}, {}) every ({}, {}): the pillars stand on one lattice - grid the horizons on the same one",
-                    title_of(shape),
+                    shape.title(),
                     lattice.counts[0],
                     lattice.counts[1],
                     lattice.origin[0],
@@ -443,9 +425,9 @@ pub(super) fn between(
                 "frames",
                 format!(
                     "`{}` is in `{}` and `{}` in `{}`: a grid between heights read in two frames stacks two origins - bring them into one frame first",
-                    title_of(&horizons[0]),
+                    horizons[0].title(),
                     a.title,
-                    title_of(shape),
+                    shape.title(),
                     b.title
                 ),
             ));
@@ -457,8 +439,8 @@ pub(super) fn between(
                 "units",
                 format!(
                     "`{}` counts its heights in `{a}` and `{}` in `{b}` - one unit, or no grid",
-                    title_of(&horizons[0]),
-                    title_of(shape)
+                    horizons[0].title(),
+                    shape.title()
                 ),
             ));
         }
@@ -466,13 +448,7 @@ pub(super) fn between(
     if let Some(frame) = &first_frame {
         match (&params.written.frame.crs, params.written.frame.source_epsg) {
             (Some(named), _) => {
-                let uuid = named
-                    .0
-                    .get("Uuid")
-                    .and_then(|v| v.as_str())
-                    .or_else(|| named.0.as_str())
-                    .unwrap_or_default();
-                if !uuid.eq_ignore_ascii_case(&frame.uuid) {
+                if !super::blocks::names_frame(named, &frame.uuid) {
                     return Err(Refusal::on(
                         "crs",
                         format!(
@@ -518,7 +494,7 @@ pub(super) fn between(
         crossing: rule,
     })
     .map_err(|why| {
-        let name = |at: usize| horizons.get(at).map(title_of).unwrap_or_else(|| format!("horizon {}", at + 1));
+        let name = |at: usize| horizons.get(at).map(Shape::title).unwrap_or_else(|| format!("horizon {}", at + 1));
         match &why {
             IjkError::LayerCount { .. } | IjkError::GapAtEdge { .. } | IjkError::GapsTogether { .. } => Refusal::on("layers", &why),
             IjkError::Step { .. } | IjkError::TooMany { .. } => Refusal::on("coarsening", &why),
@@ -766,7 +742,7 @@ pub(super) fn between(
     let undefined = built.undefined_cells();
     let mut says = Vec::new();
     let mut say = |key: &'static str, detail: String| says.push(Note { key, detail });
-    let order: Vec<String> = horizons.iter().map(title_of).collect();
+    let order: Vec<String> = horizons.iter().map(Shape::title).collect();
     say(
         "order",
         format!(

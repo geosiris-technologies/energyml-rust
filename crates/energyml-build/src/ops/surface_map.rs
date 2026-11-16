@@ -59,6 +59,7 @@ use crate::operation::{About, Category, Context, Need, Note, Operation, Plan, Re
 use crate::pieces::Pieces;
 
 use super::property::PropertyParams;
+use super::support;
 use super::thickness::Vertical;
 
 /// The operation.
@@ -163,22 +164,13 @@ pub struct SurfaceMapInputs {
     pub shape: Shape,
 }
 
-/// The surface as one mesh: the coordinates flat, the triangles global.
-///
-/// The patches are concatenated in their own order, each one's indices moved
-/// by the nodes before it - the node numbering a representation states, so a
-/// value lands on the node it was computed for.
+/// The surface as one mesh: the coordinates flat, the triangles global - the
+/// one reading, [`support::Faces`] (patches concatenated in their own order,
+/// each one's indices moved by the nodes before it, so a value lands on the
+/// node it was computed for).
 fn mesh_of(shape: &Shape) -> (Vec<f64>, Vec<u32>) {
-    let mut points: Vec<f64> = Vec::new();
-    let mut triangles: Vec<u32> = Vec::new();
-    for patch in &shape.geometry.patches {
-        let base = (points.len() / 3) as u32;
-        points.extend(patch.points.iter().flatten().copied());
-        if let Topology::Triangles(list) = &patch.topology {
-            triangles.extend(list.iter().flatten().map(|&i| i + base));
-        }
-    }
-    (points, triangles)
+    let faces = support::Faces::of(&shape.geometry);
+    (faces.points, faces.triangles)
 }
 
 /// The lattice a shape is, when it is **one** 2D grid - `(fastest, slowest)`.
@@ -297,21 +289,7 @@ impl Operation for SurfaceMap {
         // would be a second copy of one.
         let kind = match params.property_kind {
             Some(given) => given.0,
-            None => {
-                let found = energyml_domain::property_kind::with_default(|dictionary| {
-                    dictionary
-                        .by_title(map.kind)
-                        .first()
-                        .map(|kind| (kind.uuid.clone(), kind.title.clone()))
-                });
-                let (uuid, title) = found.ok_or_else(|| {
-                    Refusal::on(
-                        "propertyKind",
-                        format!("the dictionary in use holds no kind called `{}`: name a `propertyKind` of the package", map.kind),
-                    )
-                })?;
-                json!({ "$type": "eml23.DataObjectReference", "Uuid": uuid, "QualifiedType": "eml23.PropertyKind", "Title": title })
-            }
+            None => super::blocks::standard_kind_dor(map.kind, "propertyKind")?,
         };
         let known = inputs.shape.known.as_ref();
         let title = match params.title {

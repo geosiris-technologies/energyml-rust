@@ -80,7 +80,7 @@ pub struct Window {
 /// Statistics of numeric data; `None` for non-numeric values.
 ///
 /// Numeric is decided by the element type (every [`ArrayValues`] variant is
-/// numeric) and by the logical type the metadata carries: an array of booleans
+/// numeric but `Text`) and by the logical type the metadata carries: an array of booleans
 /// travels as bytes and has no meaningful mean. Folds the borrowed slice; the
 /// only conversion is per element, nothing is copied.
 ///
@@ -104,6 +104,8 @@ pub fn stats_of(data: &ArrayData) -> Option<Stats> {
         // Exhaustive on purpose: a variant added to `ArrayValues` stops this
         // from compiling, rather than being taken as numeric or dropped.
         ArrayValues::U8(v) => fold(v.iter().map(|x| f64::from(*x))),
+        // Strings have no statistics: not a quantity, not a block of numbers.
+        ArrayValues::Text(_) => return None,
     })
 }
 

@@ -97,25 +97,38 @@ pub fn traces(inputs: &Inputs) -> Result<(Vec<SectionTrace>, Vec<Note>), InputsE
         });
     }
 
-    // Every pair, the colinear ones that overlap included.
-    for i in 1..out.len() {
-        for j in i + 1..out.len() {
-            if meet(&out[i].trace, &out[j].trace).is_some() {
-                notes.push(Note {
-                    code: "crossesCross".to_string(),
-                    sections: vec![out[i].key, out[j].key],
-                    objects: Vec::new(),
-                    said: format!(
-                        "cross sections {} and {} run through each other; both are computed \
-                         as asked",
-                        i - 1,
-                        j - 1
-                    ),
-                });
+    for (i, j, _) in cross_meetings(&out) {
+        notes.push(Note {
+            code: "crossesCross".to_string(),
+            sections: vec![out[i].key, out[j].key],
+            objects: Vec::new(),
+            said: format!(
+                "cross sections {} and {} run through each other; both are computed \
+                 as asked",
+                i - 1,
+                j - 1
+            ),
+        });
+    }
+    Ok((out, notes))
+}
+
+/// Where the cross sections meet each other: `(i, j, at)` for every pair of
+/// sections `i < j` (indices into `sections`, the long section at 0 left out),
+/// the colinear ones that overlap included, with the abscissas [`meet`] gives.
+///
+/// The one pairwise loop: [`traces`] says it in a note, and the assembly puts
+/// a mark on it.
+pub fn cross_meetings(sections: &[SectionTrace]) -> Vec<(usize, usize, [f64; 2])> {
+    let mut out = Vec::new();
+    for i in 1..sections.len() {
+        for j in i + 1..sections.len() {
+            if let Some(at) = meet(&sections[i].trace, &sections[j].trace) {
+                out.push((i, j, at));
             }
         }
     }
-    Ok((out, notes))
+    out
 }
 
 /// The length of a polyline.

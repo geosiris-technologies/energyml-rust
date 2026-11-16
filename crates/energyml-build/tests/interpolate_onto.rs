@@ -20,6 +20,7 @@
 //! node out of reach; moving the uuid of a grid written without `onto`.
 
 use serde_json::{Value, json};
+use std::sync::Arc;
 
 use energyml_build::operation::{Applies, Choices, Identity, Numbers, Plan, Registry, When};
 use energyml_build::pieces::{Known, Pieces, Ref, Source};
@@ -128,7 +129,7 @@ fn bag(samples: Geometry, samples_frame: &Ref, onto: Option<(Geometry, &Ref)>) -
         .with(
             "shape",
             Source::Shape {
-                geometry: samples,
+                geometry: Arc::new(samples),
                 closed: None,
             },
         )
@@ -146,7 +147,7 @@ fn bag(samples: Geometry, samples_frame: &Ref, onto: Option<(Geometry, &Ref)>) -
             .with(
                 "onto",
                 Source::Shape {
-                    geometry: grid,
+                    geometry: Arc::new(grid),
                     closed: None,
                 },
             )
@@ -217,21 +218,13 @@ fn bits(lattice: &([f64; 2], [f64; 2], [usize; 2])) -> ([u64; 2], [u64; 2], [usi
 
 fn double(plan: &Plan, title: &str) -> Option<f64> {
     plan.activity.parameters.iter().find_map(|p| match p {
-        Parameter::Double { title: t, value, .. } if t == title => Some(*value),
+        other if other.title() == title => other.number(),
         _ => None,
     })
 }
 
 fn titles(plan: &Plan) -> Vec<&str> {
-    plan.activity
-        .parameters
-        .iter()
-        .map(|p| match p {
-            Parameter::Double { title, .. }
-            | Parameter::Text { title, .. }
-            | Parameter::Object { title, .. } => title.as_str(),
-        })
-        .collect()
+    plan.activity.parameters.iter().map(Parameter::title).collect()
 }
 
 /// Two horizons, two seed sets over two different parts of the ground, onto
@@ -363,14 +356,14 @@ fn a_grid_in_another_frame_is_refused_naming_both() {
         .with(
             "shape",
             Source::Shape {
-                geometry: samples.clone(),
+                geometry: Arc::new(samples.clone()),
                 closed: None,
             },
         )
         .with(
             "onto",
             Source::Shape {
-                geometry: ground(),
+                geometry: Arc::new(ground()),
                 closed: None,
             },
         )

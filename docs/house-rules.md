@@ -49,8 +49,32 @@ energyml rules --house --anchor <anchor>       # the rules that apply where some
 energyml rules --house --json
 ```
 
-Themes today include attachments, colour, inheritance of properties, series and
-tables (`energyml rules --house` lists the five themes of this release).
+Themes today include attachments, colour, inheritance of properties, series,
+statistics, tables, the well, directional surveys, properties and provenance (`energyml rules --house` lists the ten themes of this release).
+
+### Statistics, scales and gaps
+
+Along the measured depth, a gap wider than 3 median steps is never bridged, and a jump of the value wider than 10 median steps of its variation is signalled as a seam. A logarithmic scale is proposed when the values span 3 decades, and automatic bounds are the 1st and 99th percentiles. Read them with `energyml rules --house --theme stats`; the decisions are in [ADR 0027](adr/0027-gaps-seams-scales-and-quantiles.md).
+
+### Around the well
+
+Where a trajectory is evaluated, the direction at a knot of a linear line is that of the interval that ends there, and a hole under 1 degree of inclination has no high side, so its frame is refused at that node by name. A true vertical depth along a well is counted below the MD datum, and a convention the file does not state (the sense of angles, the axes of a per-node matrix) is declared by the caller, never guessed. Read them with `energyml rules --house --theme well`; the decisions are in [ADR 0031](adr/0031-tangent-at-a-knot.md), [ADR 0032](adr/0032-hole-frame-in-a-direct-placed-frame.md), [ADR 0033](adr/0033-tvd-below-the-md-datum.md) and [ADR 0041](adr/0041-declared-conventions-and-the-vertical-without-crs.md).
+
+### Tables and links
+
+A column links to another table by one `qualifier` facet that holds the complete uri of the target (convention B, [ADR 0029](adr/0029-convention-b-links-by-qualifier-facet.md)); the target table has one key column, by which a value names a row, or none, and then a value names a row by its rank from 0. A link that leads nowhere is an error, a key held by two rows, a declaration made in a description or a title, and a uri that names no object of the package are warnings, and a link that cannot be checked is said to be uncheckable, never passed. Read them with `energyml rules --house --theme table`; the decisions are in [ADR 0030](adr/0030-table-links-keys-and-ranks.md) and the way to use them in [Tables, keys and links](tables.md).
+
+### Directional surveys
+
+A survey that states no north is placed only with a north the caller declares, which is carried in the result and never written into the package, and a declaration never overrules a north the file states. A survey in true or magnetic north is turned to grid north by the convergence and the declination the file states, and a station left out as rejected is left out only when the caller declares so. A RESQML 2.0.1 deviation survey is read from the north of its projected CRS. Read them with `energyml rules --house --theme survey`; the decisions are in [ADR 0034](adr/0034-survey-north-and-stations.md).
+
+### Properties
+
+Two properties of one quantity on one support, told apart only by a vertical and a lateral `direction` facet, are expected to keep the order a layered medium gives them: for a resistivity, the vertical value is not below the lateral one. When more than 5 % of their pairs have a vertical value under 0.95 times the lateral one, the check report carries a warning, never an error: the specification names the directions and says nothing of the order of their values, so the expectation is ours and a package that breaks it is kept. A direction written as an extension value (`nwdf:vertical`) is not guessed: the check is then unverifiable, unless the caller declares which property is vertical. Read it with `energyml rules --house --theme property`; the decision is in [ADR 0036](adr/0036-directional-ratio.md).
+
+### Provenance
+
+An activity is held to the template its `ActivityDescriptor` names: each parameter has an equivalent of the same title, of an allowed kind and in the allowed numbers, and a departure is a warning in the check report, never a refusal, because the activity is read and drawn all the same. The role of a parameter (input, output, sub-activity) comes from its template or from a named rule, and is undeclared otherwise: it is never guessed from a title. What this library writes, it declares in its own templates, the files a step read included. Read them with `energyml rules --house --theme provenance`; the decisions are in [ADR 0035](adr/0035-provenance-read-and-written.md).
 
 ## The full list
 

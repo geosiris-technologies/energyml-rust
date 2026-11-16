@@ -27,10 +27,10 @@
 use energyml_build::operation::{Choices, Fitness, Identity, NewObject, Plan, Registry, When};
 use energyml_build::pieces::{Known, Pieces, Ref, Source};
 use energyml_core::registry::DynObject;
-use energyml_domain::provenance::Parameter;
 use energyml_eml_2_3 as eml;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 use energyml_witsml_2_1 as witsml;
+use std::sync::Arc;
 
 const COMPOUND: &str = "0c0c0c0c-0000-4000-8000-000000000001";
 const PROJECTED: &str = "0c0c0c0c-0000-4000-8000-000000000002";
@@ -181,7 +181,7 @@ fn frame_of(hole: &Hole) -> (Source, Known) {
     let points: Vec<[f64; 3]> = hole.nodes.iter().map(|(_, at)| *at).collect();
     let count = points.len() as u32;
     let shape = Source::Shape {
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind: "polyline",
             patches: vec![Patch {
                 index: 0,
@@ -190,7 +190,7 @@ fn frame_of(hole: &Hole) -> (Source, Known) {
                 topology: Topology::Polylines(vec![count]),
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     };
     let known = Known {
@@ -313,7 +313,7 @@ fn recorded(plan: &Plan, name: &str) -> Option<f64> {
         .parameters
         .iter()
         .find_map(|parameter| match parameter {
-            Parameter::Double { title, value, .. } if title == name => Some(*value),
+            other if other.title() == name => other.number(),
             _ => None,
         })
 }

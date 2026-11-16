@@ -12,8 +12,8 @@
 
 use energyml_build::operation::{Choices, Identity, Plan, Purpose, Registry, When};
 use energyml_build::pieces::{Pieces, Source};
-use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
+use std::sync::Arc;
 
 fn when() -> When {
     When {
@@ -56,7 +56,7 @@ fn ring(corners: &[[f64; 2]]) -> Source {
         }],
     };
     Source::Shape {
-        geometry,
+        geometry: Arc::new(geometry),
         closed: Some(vec![true]),
     }
 }
@@ -67,7 +67,7 @@ fn square(n: usize, topology: Topology) -> Source {
         .flat_map(|j| (0..n).map(move |i| [i as f64, j as f64, i as f64 + 10.0 * j as f64]))
         .collect();
     Source::Shape {
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind: "test",
             patches: vec![Patch {
                 index: 0,
@@ -76,7 +76,7 @@ fn square(n: usize, topology: Topology) -> Source {
                 topology,
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     }
 }
@@ -96,7 +96,7 @@ fn plan(bag: &Pieces) -> Result<Plan, String> {
 
 fn reported(plan: &Plan, title: &str) -> Option<f64> {
     plan.activity.parameters.iter().find_map(|p| match p {
-        Parameter::Double { title: t, value, .. } if t == title => Some(*value),
+        other if other.title() == title => other.number(),
         _ => None,
     })
 }

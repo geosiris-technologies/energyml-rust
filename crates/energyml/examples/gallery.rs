@@ -281,11 +281,8 @@ impl Canvas {
     }
 }
 
-fn escape(text: &str) -> String {
-    text.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-}
+// XML text: the one door, `energyml_core::xml::escape_text`.
+use energyml_core::xml::escape_text as escape;
 
 /// The whole document: a title, the canvases' bodies and a footer line.
 fn document(width: f64, height: f64, title: &str, bodies: &[&str], footer: &str) -> String {
@@ -404,7 +401,7 @@ fn well_sheet(store: &EpcStore) -> Result<String, Failure> {
         text_size_pt: 8.0,
     };
     let laid = layout::compute(&read.board, &params)?;
-    Ok(svg::write(&laid))
+    Ok(svg::write(&laid)?)
 }
 
 // ---------------------------------------------------------------------------

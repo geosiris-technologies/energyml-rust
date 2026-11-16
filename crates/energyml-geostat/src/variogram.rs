@@ -68,13 +68,7 @@ pub fn empirical<const N: usize>(
     {
         return Err(Error::BadRadius { given: reach });
     }
-    let usable: Vec<([f64; N], f64)> = samples
-        .iter()
-        .zip(values)
-        .filter(|(point, value)| value.is_finite() && point.iter().all(|c| c.is_finite()))
-        .map(|(point, value)| (*point, *value))
-        .collect();
-    let set_aside = samples.len() - usable.len();
+    let (usable, set_aside) = crate::samples::usable(samples, values);
     if usable.len() < 2 {
         return Err(Error::TooFewSamples {
             usable: usable.len(),
@@ -82,13 +76,7 @@ pub fn empirical<const N: usize>(
         });
     }
 
-    let distance = |a: &[f64; N], b: &[f64; N]| -> f64 {
-        a.iter()
-            .zip(b)
-            .map(|(x, y)| (x - y) * (x - y))
-            .sum::<f64>()
-            .sqrt()
-    };
+    let distance = crate::samples::distance::<N>;
     let farthest = {
         let mut top = 0.0f64;
         for (at, (a, _)) in usable.iter().enumerate() {
@@ -224,7 +212,17 @@ impl Model {
                 needed: 3,
             });
         }
-        let shortest = bins.iter().map(|b| b.distance).fold(f64::MAX, f64::min);
+        // The range grid starts at the shortest class that has a distance: a
+        // class holding only coincident pairs has mean distance 0, and a
+        // range of 0 (or `0 * inf = NaN` candidates) is no variogram.
+        let shortest = bins
+            .iter()
+            .map(|b| b.distance)
+            .filter(|d| d.is_finite() && *d > 0.0)
+            .fold(f64::MAX, f64::min);
+        if shortest == f64::MAX {
+            return Err(Error::TooFewClasses { held: 0, needed: 3 });
+        }
         let longest = bins.iter().map(|b| b.distance).fold(0.0f64, f64::max);
 
         let mut best: Option<(f64, Model)> = None;
@@ -246,7 +244,10 @@ impl Model {
                 best = Some((sse, candidate));
             }
         }
-        Ok(best.expect("64 candidates were scored").1)
+        // Through the same door as a hand-stated model: what it refuses, the
+        // fit does not return.
+        let (_, fitted) = best.expect("64 candidates were scored");
+        Model::new(fitted.kind, fitted.nugget, fitted.sill, fitted.range)
     }
 }
 
@@ -413,6 +414,49 @@ mod tests {
         let fitted = Model::fit(&observed, ModelKind::Spherical).unwrap();
         assert!(fitted.nugget >= 0.0);
         assert!(fitted.sill >= fitted.nugget);
+    }
+
+    /// [geostat-proj-roundtrip S6] A first class that holds only coincident
+    /// pairs (mean distance 0) gave `range = 0` and NaN candidates: the fit
+    /// returned a model `Model::new` would refuse. It now starts its range grid
+    /// at the shortest class that has a distance, and refuses by name when
+    /// none has.
+    #[test]
+    fn a_class_of_coincident_pairs_does_not_give_a_range_of_zero() {
+        let truth = Model::new(ModelKind::Spherical, 0.1, 1.0, 6.0).unwrap();
+        let mut bins = vec![Bin {
+            distance: 0.0,
+            semivariance: 0.05,
+            pairs: 3,
+        }];
+        bins.extend((1..=8).map(|at| Bin {
+            distance: at as f64,
+            semivariance: truth.evaluate(at as f64),
+            pairs: 20,
+        }));
+        let fitted = Model::fit(&Empirical { bins, set_aside: 0 }, ModelKind::Spherical).unwrap();
+        assert!(
+            fitted.range.is_finite() && fitted.range > 0.0,
+            "range {}",
+            fitted.range
+        );
+        assert!(Model::new(fitted.kind, fitted.nugget, fitted.sill, fitted.range).is_ok());
+        // Three classes, none with a distance: refused by name.
+        let none = Empirical {
+            bins: (0..3)
+                .map(|_| Bin {
+                    distance: 0.0,
+                    semivariance: 0.0,
+                    pairs: 2,
+                })
+                .collect(),
+            set_aside: 0,
+        };
+        assert_eq!(
+            Model::fit(&none, ModelKind::Spherical),
+            Err(Error::TooFewClasses { held: 0, needed: 3 })
+        );
+        // Break it: take `shortest` over every class, 0 included, as before.
     }
 
     #[test]

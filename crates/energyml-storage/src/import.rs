@@ -32,9 +32,11 @@ use energyml_core::registry::DynObject;
 use energyml_core::value::{FieldValue, OwnedValue, Reflect, Scalar};
 
 use crate::array::ArrayLocation;
+use crate::backend::bare_name as bare;
 use crate::epc::EpcStore;
 use crate::error::{Error, Result};
-use crate::graph;
+use crate::graph::{self, version_of};
+use crate::rename::renamed;
 use crate::resource::ObjectSummary;
 
 // ---------------------------------------------------------------------------
@@ -600,14 +602,6 @@ fn push_once(list: &mut Vec<String>, value: &str) {
     }
 }
 
-/// The `objectVersion` an object states, as an identity: blank is none.
-fn version_of(object: &dyn Reflect) -> Option<String> {
-    energyml_core::identity::object_version_of_reflect(object)
-        .map(str::trim)
-        .filter(|version| !version.is_empty())
-        .map(str::to_string)
-}
-
 fn is_proxy(qualified_type: &str) -> bool {
     qualified_type.contains("EpcExternalPartReference")
 }
@@ -1046,20 +1040,6 @@ fn free_name(name: &str, used: impl Fn(&str) -> bool) -> String {
             return candidate;
         }
         n += 1;
-    }
-}
-
-/// The last segment of a name or a URI.
-fn bare(name: &str) -> &str {
-    name.rsplit(['/', '\\']).next().unwrap_or(name)
-}
-
-/// The same location with its file name replaced, keeping what led to it -
-/// the rule of `rename.rs`: `./data/model.h5` renamed is `./data/new.h5`.
-fn renamed(declared: &str, to: &str) -> String {
-    match declared.rfind(['/', '\\']) {
-        Some(at) => format!("{}{to}", &declared[..=at]),
-        None => to.to_string(),
     }
 }
 

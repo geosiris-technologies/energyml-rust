@@ -16,6 +16,7 @@
 
 use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
+use std::sync::Arc;
 
 use crate::declare::{Inputs, Params, Shape, Suggestions};
 use crate::operation::{About, Category, Context, Need, Note, Operation, Plan, Refusal, Slot};
@@ -98,7 +99,7 @@ impl Operation for PolylineThrough {
         let known = inputs.shape.first().and_then(|one| one.known.clone());
         let line = Shape {
             name: names.join(" + "),
-            geometry: Geometry {
+            geometry: Arc::new(Geometry {
                 kind: "polyline-through",
                 patches: vec![Patch {
                     index: 0,
@@ -107,7 +108,7 @@ impl Operation for PolylineThrough {
                     topology: Topology::Polylines(vec![count as u32]),
                     closed: Vec::new(),
                 }],
-            },
+            }),
             closed: Some(vec![params.closed]),
             known,
         };

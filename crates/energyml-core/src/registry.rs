@@ -14,7 +14,7 @@ use quick_xml::events::BytesStart;
 
 use crate::error::{Error, Result};
 use crate::identifiers::QualifiedType;
-use crate::identity::{ObjectKey, parse_content_type};
+use crate::identity::{ObjectKey, VersionRef, parse_content_type, parse_qualified_type};
 use crate::naming;
 use crate::reflect::TypeInfo;
 use crate::relations::{RelationsIndex, TypeRelations};
@@ -107,6 +107,10 @@ pub struct Registry {
     by_qualified_type: HashMap<String, usize>,
     by_content_type: HashMap<String, usize>,
     by_package_version_name: HashMap<(String, String, String), usize>,
+    /// The schema version each spelling of a package version stands for, keyed
+    /// by the package (lowercase) and the compact spelling: `resqml`/`201` and
+    /// `resqml`/`20` both give `2.0`. See [`Registry::schema_version_of`].
+    schema_versions: HashMap<(String, String), &'static str>,
     /// Every version of one concept, keyed by `type_key` lowercased. This is
     /// what makes "all the versions of Activity" an O(1) lookup instead of a
     /// scan, and it is the index a version translator works from.
@@ -344,6 +348,15 @@ impl Registry {
             ),
             idx,
         );
+        // Both spellings of the package version answer to the schema version.
+        for spelling in [info.version, info.schema_version] {
+            self.schema_versions
+                .entry((
+                    info.package.to_ascii_lowercase(),
+                    naming::compact_version(spelling),
+                ))
+                .or_insert(info.schema_version);
+        }
         self.by_type_key
             .entry(info.type_key.to_ascii_lowercase())
             .or_default()
@@ -396,6 +409,66 @@ impl Registry {
                 && e.info.package.eq_ignore_ascii_case(package)
                 && naming::version_eq(e.info.version, version)
         })
+    }
+
+    /// The schema version a spelling of a package version stands for: `2.0.1`,
+    /// `201` and `2.0` of `resqml` all give `2.0`, the version a RESQML 2.0.1
+    /// object's own key carries ([`TypeInfo::schema_version`]). A spelling no
+    /// registered type of the package answers to is refused by name, never
+    /// passed through.
+    ///
+    /// This is what makes a reference whose `ContentType` says `version=2.0.1`
+    /// (fesapi writes it) and the object it points at one identity: both reach
+    /// the same key, so both have the same uri.
+    pub fn schema_version_of(&self, package: &str, version: &str) -> Result<&'static str> {
+        self.schema_versions
+            .get(&(
+                package.to_ascii_lowercase(),
+                naming::compact_version(version.trim()),
+            ))
+            .copied()
+            .ok_or_else(|| {
+                Error::parse(
+                    version,
+                    "schemaVersion",
+                    format!("no registered {package} type answers to this version"),
+                )
+            })
+    }
+
+    /// The key of a reference or an object with its version normalized to the
+    /// schema version ([`Registry::schema_version_of`]). Refused when the
+    /// registry does not know the version.
+    pub fn canonical_key<'a>(&self, key: &ObjectKey<'a>) -> Result<ObjectKey<'a>> {
+        let schema = self.schema_version_of(key.domain, &key.version.dotted())?;
+        Ok(ObjectKey {
+            version: VersionRef::Dotted(schema),
+            ..*key
+        })
+    }
+
+    /// A qualified type with its version normalized to the schema version:
+    /// `resqml201.obj_Activity` becomes `resqml20.obj_Activity`. The `obj_`
+    /// prefix and the case of the type are kept. Refused when the text is no
+    /// qualified type or the registry does not know its version.
+    pub fn canonical_qualified_type(&self, qualified_type: &str) -> Result<String> {
+        let parts = parse_qualified_type(qualified_type)?;
+        let schema = self.schema_version_of(parts.domain, parts.version)?;
+        Ok(format!(
+            "{}{}.{}",
+            parts.domain,
+            naming::compact_version(schema),
+            parts.object_type
+        ))
+    }
+
+    /// [`key_of_reflect`](crate::identity::key_of_reflect) with the version
+    /// normalized: the key of an object, or of a reference, in the form the
+    /// object it names has. `Ok(None)` when it names no identity.
+    pub fn key_of_reflect<'a>(&self, object: &'a dyn Reflect) -> Result<Option<ObjectKey<'a>>> {
+        crate::identity::key_of_reflect(object)
+            .map(|key| self.canonical_key(&key))
+            .transpose()
     }
 
     /// Every registered type, in registration order.
@@ -928,5 +1001,115 @@ fn normalize_content_type(value: &str) -> String {
             naming::strip_obj_prefix(parts.object_type).to_ascii_lowercase()
         ),
         Err(_) => value.trim().to_ascii_lowercase(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::reflect::{Roles, TypeKind};
+
+    /// A registry holding one top-level RESQML 2.0.1 type, the way the generated
+    /// crate declares it: directory version `2.0.1`, schema version `2.0`.
+    fn registry_with_resqml_201() -> Registry {
+        static INFO: TypeInfo = TypeInfo {
+            name: "Activity",
+            package: "resqml",
+            version: "2.0.1",
+            schema_version: "2.0",
+            xml_name: "Activity",
+            object_type: "obj_Activity",
+            type_key: "Activity",
+            xml_ns: crate::ns::EML,
+            content_type: Some("application/x-resqml+xml;version=2.0;type=obj_Activity"),
+            qualified_type: Some("resqml20.obj_Activity"),
+            root_element: None,
+            doc: "",
+            kind: TypeKind::Struct,
+            is_abstract: false,
+            is_top_level: true,
+            is_nestable: false,
+            is_object_ref: false,
+            roles: Roles::EMPTY,
+            base: None,
+            fields: &[],
+            variants: &[],
+            subtypes: &[],
+            is_open: false,
+            other_pattern: None,
+            make: None,
+        };
+        let mut registry = Registry::new();
+        registry.register(TypeEntry {
+            info: &INFO,
+            make_default: || unreachable!("not built by this test"),
+            read_xml: |_, _| unreachable!("not read by this test"),
+        });
+        registry
+    }
+
+    /// Identifier Specification v5.0 section 3.4.2 (p. 14): a reference and its
+    /// object share one uri. The reference spells `version=2.0.1`, the object
+    /// `2.0`.
+    #[test]
+    fn a_reference_201_and_its_object_have_the_same_uri() {
+        let registry = registry_with_resqml_201();
+        let uuid = "0e2ec4e1-1b0c-4b9f-8e9f-2a0d4c1f6a11";
+        let object = crate::identity::ObjectId::from_content_type(
+            "application/x-resqml+xml;version=2.0;type=obj_Activity",
+            uuid,
+        )
+        .unwrap();
+        let reference = crate::identity::ObjectId::from_content_type(
+            "application/x-resqml+xml;version=2.0.1;type=obj_Activity",
+            uuid,
+        )
+        .unwrap();
+        assert_ne!(
+            object.etp_uri(None),
+            reference.etp_uri(None),
+            "without the registry the two spellings are two uris"
+        );
+        let object_key = registry.canonical_key(&object.as_key()).unwrap();
+        let reference_key = registry.canonical_key(&reference.as_key()).unwrap();
+        assert_eq!(reference_key.etp_uri(None), object_key.etp_uri(None));
+        assert_eq!(
+            reference_key.etp_uri(None),
+            format!("eml:///resqml20.obj_Activity({uuid})")
+        );
+        assert_eq!(
+            registry
+                .canonical_qualified_type("resqml201.obj_Activity")
+                .unwrap(),
+            "resqml20.obj_Activity"
+        );
+        assert_eq!(
+            registry
+                .canonical_qualified_type("resqml20.obj_Activity")
+                .unwrap(),
+            "resqml20.obj_Activity"
+        );
+        // Break it: make `schema_version_of` return the version it was given.
+    }
+
+    /// A spelling the registry does not know is refused, by the version it names.
+    #[test]
+    fn a_version_the_registry_does_not_know_is_refused_by_name() {
+        let registry = registry_with_resqml_201();
+        for (package, version) in [("resqml", "2.9"), ("witsml", "2.0"), ("resqml", "")] {
+            let refused = registry
+                .schema_version_of(package, version)
+                .unwrap_err()
+                .to_string();
+            assert!(refused.contains("schemaVersion"), "{refused}");
+            assert!(refused.contains(package), "{refused}");
+        }
+        assert!(
+            registry
+                .canonical_qualified_type("resqml29.obj_Activity")
+                .is_err()
+        );
+        assert!(registry.canonical_qualified_type("not a type").is_err());
+        // Break it: let `schema_version_of` fall back to the given version.
     }
 }

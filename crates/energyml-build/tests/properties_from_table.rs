@@ -9,6 +9,7 @@
 //! wrong node.
 
 use serde_json::{Value, json};
+use std::sync::Arc;
 
 use energyml_build::operation::{Choices, Identity, Numbers, Registry, When};
 use energyml_build::pieces::{Known, Pieces, Ref, Source};
@@ -66,7 +67,7 @@ fn frame(bag: Pieces, at: usize, title: &str, mds: &[f64]) -> Pieces {
     bag.with(
         name.clone(),
         Source::Shape {
-            geometry,
+            geometry: Arc::new(geometry),
             closed: None,
         },
     )
@@ -92,7 +93,7 @@ fn bag(text: &str, frames: &[(&str, &[f64])]) -> Pieces {
         "table",
         Source::Table {
             name: "essai.csv".into(),
-            table,
+            table: Arc::new(table),
             template,
         },
     );
@@ -385,7 +386,7 @@ F1,20,2,sable
                 "table",
                 Source::Table {
                     name: file.into(),
-                    table,
+                    table: Arc::new(table),
                     template,
                 },
             ),
@@ -558,14 +559,14 @@ fn a_frame_that_states_no_depths_is_refused_by_name() {
             "table",
             Source::Table {
                 name: "essai.csv".into(),
-                table,
+                table: Arc::new(table),
                 template,
             },
         )
         .with(
             "frames",
             Source::Shape {
-                geometry,
+                geometry: Arc::new(geometry),
                 closed: None,
             },
         )
@@ -599,7 +600,7 @@ fn a_table_of_heads_is_refused_towards_the_operation_that_takes_it() {
             "table",
             Source::Table {
                 name: "tetes.csv".into(),
-                table,
+                table: Arc::new(table),
                 template,
             },
         ),
@@ -633,7 +634,7 @@ fn passes_bag(text: &str, frames: &[(&str, &[f64])]) -> Pieces {
         "table",
         Source::Table {
             name: "essai.csv".into(),
-            table,
+            table: Arc::new(table),
             template,
         },
     );
@@ -727,4 +728,17 @@ F1,1.5,2,0.7
     };
     // Nodes 0, 1, 1.5, 2: the first pass covers [0, 1] and [1, 1.5].
     assert_eq!(values, vec![0.5, 0.5, 0.7]);
+}
+
+/// `[build-ops-2 S4]`: two depths half a micrometre apart are one node for the
+/// match, so they are one depth for the duplicate check - refused, not one
+/// of the two measurements silently overwritten.
+///
+/// Break it: put `f64::EPSILON` back as the duplicate tolerance in
+/// `rows_by_depth`; the plan is then accepted and the first value is lost.
+#[test]
+fn two_rows_one_node_apart_by_less_than_the_match_tolerance_are_refused() {
+    let text = "SONDAGE,PROF,PHI,STRA\nF1,1000,1,a\nF1,1000.0000005,2,b\n";
+    let why = plan(&bag(text, &[("F1 - frame", &[1000.0])]), json!({})).expect_err("refused");
+    assert!(why.contains("F1") && why.contains("two rows"), "{why}");
 }

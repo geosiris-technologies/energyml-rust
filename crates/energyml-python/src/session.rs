@@ -23,7 +23,6 @@
 //! does already.
 
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 
 use energyml_geometry::geometry as geom;
 use energyml_geometry::scene::{self, AttributeScope, Placement};
@@ -107,6 +106,8 @@ pub enum Block {
     U32(Vec<u32>),
     U16(Vec<u16>),
     U8(Vec<u8>),
+    /// Strings read from a string dataset: they cross as a Python `list[str]`.
+    Text(Vec<String>),
 }
 
 impl Block {
@@ -123,6 +124,7 @@ impl Block {
             Block::U32(v) => v.len(),
             Block::U16(v) => v.len(),
             Block::U8(v) => v.len(),
+            Block::Text(v) => v.len(),
         }
     }
 
@@ -143,6 +145,7 @@ impl Block {
             ArrayValues::U32(v) => Block::U32(v),
             ArrayValues::U16(v) => Block::U16(v),
             ArrayValues::U8(v) => Block::U8(v),
+            ArrayValues::Text(v) => Block::Text(v),
             // `ArrayValues` is `non_exhaustive`: a variant added there must
             // not break the build here, but it must not pass for an empty
             // array either. It gets named.
@@ -162,6 +165,8 @@ impl Block {
             Block::U32(v) => ArrayValues::U32(v),
             Block::U16(v) => ArrayValues::U16(v),
             Block::U8(v) => ArrayValues::U8(v),
+            // A write of strings is refused by the backend, by name.
+            Block::Text(v) => ArrayValues::Text(v),
         }
     }
 
@@ -178,6 +183,7 @@ impl Block {
             Block::U32(_) => "uint32",
             Block::U16(_) => "uint16",
             Block::U8(_) => "uint8",
+            Block::Text(_) => "string",
         }
     }
 }
@@ -299,7 +305,7 @@ pub struct Format {
 /// development drop (`resqml 2.2_dev3`) is read, never offered. Without the
 /// flag the whole registry comes back, the drop included, as an inventory.
 pub fn model_types(package: Option<&str>, top_level_only: bool) -> Vec<TypeSummary> {
-    let registry = energyml_schemas::all();
+    let registry = energyml_schemas::shared();
     let mut out: Vec<TypeSummary> = registry
         .types()
         .filter(|info| !top_level_only || (info.is_top_level && energyml_schemas::may_create(info)))
@@ -319,7 +325,7 @@ pub fn model_types(package: Option<&str>, top_level_only: bool) -> Vec<TypeSumma
 pub fn describe_type(name: &str) -> Result<TypeDescription, String> {
     use energyml_core::reflect::TypeKind;
 
-    let registry = energyml_schemas::all();
+    let registry = energyml_schemas::shared();
     let info = registry
         .by_qualified_type(name)
         .map(|entry| entry.info)
@@ -402,7 +408,7 @@ pub fn describe_type(name: &str) -> Result<TypeDescription, String> {
 /// does, and `tests/model.rs` says so out loud rather than pretending to cover
 /// it.
 pub fn template(qualified_type: &str, uuid: Option<&str>) -> Result<String, String> {
-    let registry = energyml_schemas::all();
+    let registry = energyml_schemas::shared();
     if let Some(entry) = registry.by_qualified_type(qualified_type)
         && entry.info.is_abstract
     {
@@ -500,6 +506,56 @@ pub struct RenamePlan {
     pub refusals: Vec<String>,
 }
 
+/// Where the search found the file a package declares.
+///
+/// `energyml_storage::Resolution`, converted.
+#[derive(Debug, Clone)]
+pub struct FoundFile {
+    /// The path of the file the numbers come out of.
+    pub path: String,
+    /// Which kind of place that was, in words (`Origin::describe`).
+    pub origin: String,
+    /// Whether the package already said the right thing.
+    pub agrees: bool,
+}
+
+/// One file name the package's array pointers declare, and where it resolves.
+///
+/// `energyml_storage::repair::Row`, converted: the same survey `energyml h5`
+/// prints.
+#[derive(Debug, Clone)]
+pub struct ArrayFile {
+    /// The declared name (empty when a pointer names none).
+    pub declared: String,
+    /// How many array pointers name it.
+    pub pointers: usize,
+    /// Where the search found it, when it did.
+    pub found: Option<FoundFile>,
+    /// A dataset path inside the file, to say what was looked for.
+    pub example: String,
+    /// The `EpcExternalPartReference` proxies (lower case uuids) that use it.
+    pub proxies: Vec<String>,
+}
+
+/// What repairing the declared file names did.
+///
+/// `energyml_storage::repair::Fixed`, converted, plus the verdict
+/// (`Fixed::lost`) read back from the written package.
+#[derive(Debug, Clone, Default)]
+pub struct ArraysRepaired {
+    /// `(declared, now)` for each name rewritten.
+    pub renamed: Vec<(String, String)>,
+    /// How many declarations were rewritten.
+    pub declarations: usize,
+    /// What the writer had to say.
+    pub diagnostics: Vec<String>,
+    /// Pointers naming no file before the repair.
+    pub before: usize,
+    /// Pointers that named a file before and name none in the written
+    /// package. Non-zero: the repair did not repair.
+    pub lost: usize,
+}
+
 /// What a rename did.
 #[derive(Debug, Clone, Default)]
 pub struct Renamed {
@@ -527,6 +583,8 @@ pub struct CheckReport {
     pub errors: usize,
     /// How many are worth knowing without condemning it.
     pub warnings: usize,
+    /// Whether the file is sound, by the report's own rule (`is_sound`), not a rule of this bridge.
+    pub sound: bool,
     /// What the reader noticed: severity, part, message.
     pub diagnostics: Vec<(String, String, String)>,
     /// Parts that could not be read: uri, and why.
@@ -767,7 +825,7 @@ impl Package {
     /// by a bare file name, not by a path.
     pub fn open(path: impl AsRef<Path>) -> Result<Self, String> {
         let path = path.as_ref();
-        let registry = Arc::new(energyml_schemas::all());
+        let registry = energyml_schemas::shared();
         // **The refusal names the path.** What comes up from the I/O layer is
         // `The system cannot find the file specified. (os error 2)` - the operating
         // system's own sentence, in the operating system's own language, and
@@ -797,7 +855,7 @@ impl Package {
     /// [`Package::set_data_root`] says, and until then in the working
     /// directory.
     pub fn create(name: &str) -> Result<Self, String> {
-        let registry = Arc::new(energyml_schemas::all());
+        let registry = energyml_schemas::shared();
         let bytes = energyml_storage::extract::empty_package(None).map_err(|why| format!("{why}"))?;
         #[allow(unused_mut)]
         let mut store = EpcStore::from_reader(Box::new(std::io::Cursor::new(bytes)), name, registry)
@@ -882,6 +940,55 @@ impl Package {
                 _ => None,
             },
         })
+    }
+
+    /// Every file name the package's arrays declare and where each resolves
+    /// (`energyml h5`). Changes nothing; an empty list means no external array.
+    ///
+    /// A name the search could not find is `found: None`; tell the package
+    /// where the file is with [`Package::pin_data_file`] and ask again.
+    pub fn array_files(&self) -> Vec<ArrayFile> {
+        energyml_storage::repair::survey(&self.store)
+            .into_iter()
+            .map(|(declared, row)| ArrayFile {
+                declared,
+                pointers: row.pointers,
+                found: row.found.map(|found| FoundFile {
+                    path: found.path.display().to_string(),
+                    origin: found.origin.describe().to_string(),
+                    agrees: found.agrees(),
+                }),
+                example: row.example,
+                proxies: row.proxies.into_iter().collect(),
+            })
+            .collect()
+    }
+
+    /// Write the answer of [`Package::array_files`] down in `out`
+    /// (`energyml h5 --fix`): every name whose file was found under another
+    /// name is rewritten to the name of the file found.
+    ///
+    /// The survey, the rewrite and the verdict are
+    /// `energyml_storage::repair`'s; this converts. `None` when every array
+    /// already names the file it is in (nothing is written). The written
+    /// package is reopened and counted, and `lost` carries the verdict.
+    pub fn repair_arrays(&mut self, out: impl AsRef<Path>) -> Result<Option<ArraysRepaired>, String> {
+        let out = out.as_ref();
+        let rows = energyml_storage::repair::survey(&self.store);
+        let Some(fixed) =
+            energyml_storage::repair::fix(&mut self.store, &rows, out).map_err(|why| format!("{why}"))?
+        else {
+            return Ok(None);
+        };
+        let written = Package::open(out)?;
+        let lost = fixed.lost(&written.store);
+        Ok(Some(ArraysRepaired {
+            diagnostics: fixed.diagnostics.iter().map(|one| format!("{one}")).collect(),
+            renamed: fixed.renamed,
+            declarations: fixed.declarations,
+            before: fixed.before,
+            lost,
+        }))
     }
 
     /// Where it came from, when it came from a file.
@@ -1151,11 +1258,14 @@ impl Package {
         // Named before anything is read, because *this package holds no such
         // object* is a different answer from *this shape carries nothing*, and
         // a walk that simply found nothing would give the second for the first.
+        // Through the one lookup (`EpcStore::resolve`), which reads a uri the way
+        // the store does - an equivalent spelling finds the object too - and not
+        // by comparing the text of the uri with the listing.
+        let wanted = self
+            .store
+            .resolve(uri)
+            .map_err(|why| format!("this package holds no object at {uri}: {why}"))?;
         let resources = self.store.resources();
-        let wanted = resources
-            .iter()
-            .find(|summary| summary.uri == uri)
-            .ok_or_else(|| format!("this package holds no object at {uri}"))?;
 
         // **The one door** (`scene::of_package`), which is what brings the
         // colour ramps with the values: they need the whole package.
@@ -1251,18 +1361,21 @@ impl Package {
     /// direction a package has no index for: every object has to be read. On a
     /// large package that is the cost of building the graph, and it is a call
     /// rather than a field so a caller can see when they pay it.
+    ///
+    /// **An object that cannot be read refuses the question.** The answer is
+    /// built from what every object points at; one that does not parse might be
+    /// the one that points here, and "nothing depends on it" would then be false
+    /// exactly when a caller is about to delete or cut. The refusal names the
+    /// unreadable objects.
     pub fn referenced_by(&self, uri: &str) -> Result<Vec<Link>, String> {
-        let uuid = self
-            .store
-            .resource(uri)
-            .map_err(|why| format!("{why}"))?
-            .uuid
-            .clone();
-        let (held, _) = self.store.read_objects(None);
-        Ok(energyml_storage::graph::dependents(
+        // The entry must exist; the question is then asked for **its uri**, so
+        // that two versions of one uuid are not mixed (`dependents_of_uri`).
+        self.store.resource(uri).map_err(|why| format!("{why}"))?;
+        let held = refuse_unreadable(self.store.read_objects(None), "referenced_by")?;
+        Ok(energyml_storage::graph::dependents_of_uri(
             held.iter()
                 .map(|(summary, object)| (summary, object.as_reflect())),
-            &uuid,
+            uri,
         )
         .into_iter()
         .map(|one| Link {
@@ -1286,8 +1399,12 @@ impl Package {
     /// held, minus what the standard publishes in a catalogue: a closure that
     /// dropped those in silence would call a set closed when the package it
     /// came from was already broken.
+    ///
+    /// **An object that cannot be read refuses the question**, for the reason
+    /// given on [`Package::referenced_by`]: a closure computed without it could
+    /// leave out something the set needs.
     pub fn needs(&self, uris: &[String]) -> Result<(Vec<String>, Vec<String>), String> {
-        let (held, _) = self.store.read_objects(None);
+        let held = refuse_unreadable(self.store.read_objects(None), "needs")?;
         let graph = energyml_storage::graph::build(
             held.iter()
                 .map(|(summary, object)| (summary, object.as_reflect())),
@@ -1359,11 +1476,10 @@ impl Package {
         let only: Vec<String> = uris
             .iter()
             .map(|uri| {
-                resources
-                    .iter()
-                    .find(|summary| &summary.uri == uri)
+                self.store
+                    .resolve(uri)
                     .map(|summary| summary.uuid.clone())
-                    .ok_or_else(|| format!("this package holds no object at {uri}"))
+                    .map_err(|why| format!("this package holds no object at {uri}: {why}"))
             })
             .collect::<Result<_, _>>()?;
         let read = scene::of_package(
@@ -1399,21 +1515,21 @@ impl Package {
                     ),
                 }
             })?;
-            let prepared =
-                energyml_export::registry::prepare(built, &options).map_err(|why| format!("{uri}: {why}"))?;
-            if !exporter.handles_with(&prepared, &options) {
-                return Err(format!(
-                    "`{format}` does not write {} ({})",
-                    prepared.qualified_type, uri
-                ));
-            }
-            ready.push(prepared.into_owned());
+            ready.push(built.clone());
         }
 
+        // **The writing is the library's** (`energyml_export::run`), the same
+        // call the command line makes: here an object the format cannot write
+        // is a refusal naming it, there the command line shows it and goes on.
         let mut out = Vec::new();
-        exporter
-            .write_all(&ready, &mut out, &options)
-            .map_err(|why| format!("{why}"))?;
+        energyml_export::run::run(
+            &ready,
+            exporter,
+            &options,
+            energyml_export::run::OnUnhandled::Refuse,
+            energyml_export::run::Sink::Stream(&mut out),
+        )
+        .map_err(|why| format!("{why}"))?;
         Ok(out)
     }
 
@@ -1476,6 +1592,7 @@ impl Package {
         CheckReport {
             errors: report.errors(),
             warnings: report.warnings(),
+            sound: report.is_sound(),
             diagnostics: report
                 .diagnostics
                 .iter()
@@ -1726,4 +1843,123 @@ fn version_of(version: Option<String>) -> Option<String> {
     version
         .map(|version| version.trim().to_string())
         .filter(|version| !version.is_empty())
+}
+
+/// What a question asked about **every** object may be answered from: the
+/// objects read, or a refusal naming the ones that were not.
+///
+/// `EpcStore::read_objects` returns the unreadable as a list so that nobody has
+/// to lose the answer over one bad part; but `referenced_by` and `needs` are
+/// asked before a deletion or a cut, and an answer computed without an object
+/// that might point at the target is a wrong "safe". At most five are named.
+fn refuse_unreadable<T>((read, unreadable): (T, Vec<String>), question: &str) -> Result<T, String> {
+    if unreadable.is_empty() {
+        return Ok(read);
+    }
+    let shown = unreadable.iter().take(5).cloned().collect::<Vec<_>>().join("; ");
+    let more = unreadable.len().saturating_sub(5);
+    let rest = if more > 0 {
+        format!(" (and {more} more)")
+    } else {
+        String::new()
+    };
+    Err(format!(
+        "cannot answer `{question}`: {} object(s) of the package could not be read, and one of them may be the one that points here: {shown}{rest}",
+        unreadable.len()
+    ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn citation(title: &str) -> serde_json::Value {
+        serde_json::json!({
+            "$type": "eml23.Citation",
+            "Title": title,
+            "Originator": "test",
+            "Creation": "2026-09-19T12:00:00Z",
+            "Format": "energyml-rust",
+        })
+    }
+
+    /// A feature, and an interpretation that points at it, whose part is then
+    /// damaged: the one object that depends on the feature cannot be read.
+    fn package_with_a_dependent() -> (Package, String) {
+        let feature_uuid = "ed3aa217-17ba-40b2-afa4-4f7d2cd586da";
+        let mut package = Package::create("damaged.epc").expect("an empty package");
+        let feature = package
+            .put(
+                &serde_json::json!({
+                    "$type": "resqml22.BoundaryFeature",
+                    "uuid": feature_uuid,
+                    "schemaVersion": "2.2",
+                    "Citation": citation("Top Chalk"),
+                })
+                .to_string(),
+            )
+            .expect("the feature is put");
+        let _interpretation = package
+            .put(
+                &serde_json::json!({
+                    "$type": "resqml22.HorizonInterpretation",
+                    "uuid": "8cd38954-3e92-4b50-91c5-6b262a5f8b3e",
+                    "schemaVersion": "2.2",
+                    "Citation": citation("Top Chalk, picked"),
+                    "Domain": "depth",
+                    "InterpretedFeature": {
+                        "$type": "eml23.DataObjectReference",
+                        "QualifiedType": "resqml22.BoundaryFeature",
+                        "Title": "Top Chalk",
+                        "Uuid": feature_uuid,
+                    },
+                })
+                .to_string(),
+            )
+            .expect("the interpretation is put");
+        // Healthy first: the question is answered and names the dependent.
+        let healthy = package
+            .referenced_by(&feature)
+            .expect("a healthy package answers");
+        assert_eq!(healthy.len(), 1, "the interpretation depends on the feature");
+
+        (package, feature)
+    }
+
+    #[test]
+    fn a_healthy_package_answers_referenced_by_and_needs() {
+        let (package, feature) = package_with_a_dependent();
+        assert_eq!(package.referenced_by(&feature).expect("answered").len(), 1);
+        package.needs(&[feature]).expect("answered");
+    }
+
+    /// `referenced_by` and `needs` both read the package through
+    /// `refuse_unreadable`: one object that cannot be read may be the one that
+    /// points at the target, so "nothing depends on it" would be false.
+    #[test]
+    fn an_unreadable_object_refuses_the_question_by_its_name() {
+        let unreadable = vec![
+            "eml:///resqml22.HorizonInterpretation(8cd38954-3e92-4b50-91c5-6b262a5f8b3e): not XML"
+                .to_string(),
+        ];
+        let why =
+            refuse_unreadable((Vec::<u8>::new(), unreadable), "referenced_by").expect_err("it must refuse");
+        assert!(why.contains("could not be read"), "{why}");
+        assert!(why.contains("referenced_by"), "{why}");
+        assert!(why.contains("HorizonInterpretation"), "{why}");
+        assert_eq!(refuse_unreadable((7, Vec::new()), "needs"), Ok(7));
+        // Break it: return `Ok(read)` whatever `unreadable` holds.
+    }
+
+    #[test]
+    fn the_refusal_names_at_most_five() {
+        let list: Vec<String> = (0..7).map(|n| format!("u{n}")).collect();
+        let why = refuse_unreadable(((), list), "needs").expect_err("seven unreadable");
+        assert!(why.contains("u4") && !why.contains("u5"), "{why}");
+        assert!(why.contains("and 2 more"), "{why}");
+    }
+
+    // Break it: put `let held = self.store.read_objects(None).0;` back in
+    // `referenced_by` or `needs` and the first two tests fail (they get Ok);
+    // make `refuse_unreadable` return `Ok(read)` always and all three fail.
 }

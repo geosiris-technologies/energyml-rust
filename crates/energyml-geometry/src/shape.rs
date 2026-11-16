@@ -78,6 +78,44 @@ use crate::error::{Error, Result};
 use crate::geometry::{Geometry, Patch, Topology};
 use crate::points::Point;
 
+/// The six faces of a hexahedron, from VTK's corner order (VTK file formats,
+/// "Cell types": `VTK_HEXAHEDRON` = 12, corners 0-3 the bottom face
+/// counter-clockwise seen from above, 4-7 the top face above them). Each face
+/// is wound so its right-hand normal points out of the cell.
+///
+/// The one table: the boundary of a grid, the signed volume of a cell, the OBJ
+/// and VTK exporters and the builders of `energyml-build` all read it
+/// (`[export-providers-cache-rules S10]`).
+pub const HEXAHEDRON_FACES: [[usize; 4]; 6] = [
+    [0, 3, 2, 1],
+    [4, 5, 6, 7],
+    [0, 1, 5, 4],
+    [1, 2, 6, 5],
+    [2, 3, 7, 6],
+    [3, 0, 4, 7],
+];
+
+/// The index runs of a [`Topology::Polylines`] patch, as lists of patch-local
+/// node indices: runs of fewer than two nodes are dropped, and a run the file
+/// states closed (`closed[rank]` true - an absent entry states nothing) ends on
+/// its first node, since a line cell has no closing flag. The one expansion,
+/// for every exporter; each adds its own base offset.
+pub fn polyline_runs(runs: &[u32], closed: &[bool]) -> Vec<Vec<u32>> {
+    let mut start = 0u32;
+    let mut out = Vec::new();
+    for (rank, run) in runs.iter().enumerate() {
+        if *run >= 2 {
+            let mut line: Vec<u32> = (start..start + run).collect();
+            if closed.get(rank) == Some(&true) {
+                line.push(start);
+            }
+            out.push(line);
+        }
+        start += run;
+    }
+    out
+}
+
 /// The form a caller wants a representation drawn in.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Shape {
@@ -471,7 +509,7 @@ pub(crate) fn reshape(topology: &Topology, points: &[Point], shape: Shape) -> Re
                 )))
             }
             Topology::Hexahedra { cells, .. } => {
-                let boundary = boundary_of(cells, points);
+                let boundary = boundary_of(cells);
                 Ok(Topology::Segments(unique_edges(
                     boundary.iter().map(|cell| cell.as_slice()),
                 )))
@@ -490,7 +528,7 @@ pub(crate) fn reshape(topology: &Topology, points: &[Point], shape: Shape) -> Re
             Topology::Grid { fastest, slowest } => {
                 Ok(Topology::Quads(grid_cells(*fastest, *slowest, points)))
             }
-            Topology::Hexahedra { cells, .. } => Ok(Topology::Quads(boundary_of(cells, points))),
+            Topology::Hexahedra { cells, .. } => Ok(Topology::Quads(boundary_of(cells))),
             // The same rule one level of generality up. A hexahedron's faces
             // are quadrilaterals and its sharing has to be rediscovered by
             // hashing corner sets; an unstructured cell's faces are rings of
@@ -580,32 +618,31 @@ fn wound(ring: [u32; 4], points: &[Point]) -> [u32; 4] {
 /// count rather than a guess.
 ///
 /// The six faces come from the corner order [`Topology::Hexahedra`] already
-/// guarantees (VTK's), so their winding is inherited rather than chosen.
-fn boundary_of(cells: &[[u32; 8]], points: &[Point]) -> Vec<[u32; 4]> {
-    // VTK's hexahedron: bottom 0-1-2-3, top 4-5-6-7.
-    const FACES: [[usize; 4]; 6] = [
-        [0, 3, 2, 1],
-        [4, 5, 6, 7],
-        [0, 1, 5, 4],
-        [1, 2, 6, 5],
-        [2, 3, 7, 6],
-        [3, 0, 4, 7],
-    ];
-
-    let mut seen: HashMap<[u32; 4], (usize, [u32; 4])> = HashMap::new();
+/// guarantees (VTK's, cells oriented by `ijk::oriented`), so their winding is
+/// inherited rather than chosen and every ring keeps its outward normal. The
+/// faces come back in first-seen order (cell by cell, face by face), so the
+/// result is the same on every run (`[geometry G2]`).
+fn boundary_of(cells: &[[u32; 8]]) -> Vec<[u32; 4]> {
+    // Each distinct face: how many cells claim it, and the ring of the first.
+    let mut faces: Vec<(usize, [u32; 4])> = Vec::new();
+    let mut at: HashMap<[u32; 4], usize> = HashMap::new();
     for cell in cells {
-        for face in FACES {
+        for face in HEXAHEDRON_FACES {
             let ring = [cell[face[0]], cell[face[1]], cell[face[2]], cell[face[3]]];
             // The key ignores winding and starting corner, so the same face
             // seen from either of its two cells hashes the same.
             let mut key = ring;
             key.sort_unstable();
-            let entry = seen.entry(key).or_insert((0, ring));
-            entry.0 += 1;
+            let slot = *at.entry(key).or_insert_with(|| {
+                faces.push((0, ring));
+                faces.len() - 1
+            });
+            faces[slot].0 += 1;
         }
     }
-    seen.into_values()
+    faces
+        .into_iter()
         .filter(|(count, _)| *count == 1)
-        .map(|(_, ring)| wound(ring, points))
+        .map(|(_, ring)| ring)
         .collect()
 }

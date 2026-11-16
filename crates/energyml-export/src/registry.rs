@@ -175,19 +175,64 @@ impl<'a> Options<'a> {
     /// The single funnel every exporter goes through, so that "which
     /// coordinates am I writing" has one answer and not one per format.
     pub fn points(&self, object: &SceneObject, placement: Placement) -> Result<Vec<Point>> {
-        // A time axis, before anything else: `Placement::Metres` refuses it by
-        // name and `points_in_epsg` starts from metres, so both roads end at
-        // the same refusal. With an equivalence stated there is something to
-        // write, and it is written here rather than in each format.
-        if let Some(per_second) = self.time_equivalence
-            && object.crs.as_ref().is_some_and(|crs| crs.is_time())
-        {
-            return self.time_points(object, per_second);
-        }
         match self.target_epsg {
+            // Reprojected, whatever the vertical axis: a time axis with an
+            // equivalence is placed first (see `placed_metres`), so asking for
+            // both gets both - the reprojection is never dropped.
             Some(target) => self.points_in_epsg(object, target),
+            None => self.points_native(object, placement),
+        }
+    }
+
+    /// The points placed as asked and **not reprojected** - `target_epsg` is
+    /// not read. What a format writes in [`Options::native_crs`] mode.
+    ///
+    /// A time axis: `Placement::Metres` refuses it by name. With an equivalence
+    /// stated there is something to write, and it is written here rather than
+    /// in each format.
+    pub fn points_native(&self, object: &SceneObject, placement: Placement) -> Result<Vec<Point>> {
+        match self.time_equivalence_applies(object) {
+            Some(per_second) => self.time_points(object, per_second),
             None => Ok(object.points_in(placement)?),
         }
+    }
+
+    /// The equivalence to apply to this object, when it has a time axis and one
+    /// was stated.
+    fn time_equivalence_applies(&self, object: &SceneObject) -> Option<f64> {
+        let per_second = self.time_equivalence?;
+        object
+            .crs
+            .as_ref()
+            .is_some_and(|crs| crs.is_time())
+            .then_some(per_second)
+    }
+
+    /// The object's points placed in metres: the vertical axis through the
+    /// stated equivalence when it is a time, `Placement::Metres` otherwise.
+    fn placed_metres(&self, object: &SceneObject) -> Result<Vec<Point>> {
+        match self.time_equivalence_applies(object) {
+            Some(per_second) => self.time_points(object, per_second),
+            None => Ok(object.points_in(Placement::Metres)?),
+        }
+    }
+
+    /// The coordinate system the points of [`Options::points`] are **in**, as a
+    /// label for a file header.
+    ///
+    /// The target of the reprojection when one was asked for, the CRS's own
+    /// system otherwise - never the source's name over reprojected points,
+    /// which is a header that says one thing about numbers that are another.
+    /// `None` when the object names no CRS.
+    pub fn crs_label(&self, object: &SceneObject) -> Option<String> {
+        let crs = object.crs.as_ref()?;
+        Some(match self.target_epsg {
+            Some(target) => format!("EPSG:{target}"),
+            None => match crs.projected.epsg() {
+                Some(code) => format!("EPSG:{code}"),
+                None => format!("{:?}", crs.projected),
+            },
+        })
     }
 
     /// A time-domain object, placed with a stated equivalence.
@@ -240,12 +285,16 @@ impl<'a> Options<'a> {
     /// For a format whose coordinate system is fixed by its own specification -
     /// GeoJSON is WGS 84 and nothing else - rather than chosen by the caller.
     ///
-    /// Placement is **always** `Metres` here, and not the caller's choice:
+    /// Placement is **always** `Metres` here (a time axis with a stated
+    /// equivalence: metres through it), and not the caller's choice:
     /// a reprojection consumes projected metres. Feeding it local coordinates,
     /// or metres that have already been reprojected, is the kind of mistake
     /// that produces a plausible-looking file in the wrong hemisphere.
     pub fn points_in_epsg(&self, object: &SceneObject, target: u64) -> Result<Vec<Point>> {
-        let placed = object.points_in(Placement::Metres)?;
+        // Metres, or - for a time axis with an equivalence stated - the
+        // horizontals in metres and the vertical through the equivalence: the
+        // reprojection leaves the third coordinate alone.
+        let placed = self.placed_metres(object)?;
         let Some(source) = object.epsg() else {
             return Err(Error::Placement(format!(
                 "`{}` names no EPSG code, so it cannot be put in EPSG:{target}",

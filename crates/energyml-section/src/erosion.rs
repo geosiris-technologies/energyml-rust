@@ -26,6 +26,7 @@
 //! catalogue; nothing is read.
 
 use crate::model::{Catalogue, Item, Note, ObjectId, Section, SectionKey, TraceItem, TraceRole};
+use energyml_geostat::polyline::sample_in_any;
 
 /// The note's code ([`Note::code`]).
 pub const CODE: &str = "erosion";
@@ -154,24 +155,6 @@ pub fn notes(catalogue: &Catalogue) -> Vec<Note> {
     notes_of(std::iter::once(&catalogue.long).chain(&catalogue.crosses))
 }
 
-/// The `z` of a polyline set at `s`, when one of its spans covers `s`.
-fn z_at(spans: &[Vec<[f64; 2]>], s: f64) -> Option<f64> {
-    spans.iter().find_map(|span| {
-        let (first, last) = (span.first()?, span.last()?);
-        if s < first[0] || s > last[0] {
-            return None;
-        }
-        span.windows(2).find(|w| s >= w[0][0] && s <= w[1][0]).map(|w| {
-            let run = w[1][0] - w[0][0];
-            if run <= 0.0 {
-                w[0][1]
-            } else {
-                w[0][1] + (w[1][1] - w[0][1]) * (s - w[0][0]) / run
-            }
-        })
-    })
-}
-
 /// The stretches of `s` where `lower` is below `upper` - both exist there, and
 /// `z_lower < z_upper` by more than the tolerance. Between two breakpoints (a
 /// vertex of either) the difference is linear, so its sign change is exact.
@@ -186,18 +169,22 @@ fn below(upper: &[Vec<[f64; 2]>], lower: &[Vec<[f64; 2]>]) -> Vec<(f64, f64)> {
     at.sort_by(f64::total_cmp);
     at.dedup();
     let mut found: Vec<(f64, f64)> = Vec::new();
-    for pair in at.windows(2) {
+    // Both lines must run across the whole segment: probe the middle too, so a
+    // gap between two spans is not bridged. The breakpoints and the middles
+    // ascend, so each curve is read in one pass at all of them, not rescanned
+    // from its start for six probes per segment ([section S3]).
+    let middles: Vec<f64> = at.windows(2).map(|pair| 0.5 * (pair[0] + pair[1])).collect();
+    let (upper_at, lower_at) = (sample_in_any(upper, &at), sample_in_any(lower, &at));
+    let (upper_mid, lower_mid) = (sample_in_any(upper, &middles), sample_in_any(lower, &middles));
+    for (i, pair) in at.windows(2).enumerate() {
         let (a, b) = (pair[0], pair[1]);
-        let mid = 0.5 * (a + b);
-        // Both lines must run across the whole segment: probe the middle too,
-        // so a gap between two spans is not bridged.
         let (Some(ua), Some(ub), Some(la), Some(lb), Some(_), Some(_)) = (
-            z_at(upper, a),
-            z_at(upper, b),
-            z_at(lower, a),
-            z_at(lower, b),
-            z_at(upper, mid),
-            z_at(lower, mid),
+            upper_at[i],
+            upper_at[i + 1],
+            lower_at[i],
+            lower_at[i + 1],
+            upper_mid[i],
+            lower_mid[i],
         ) else {
             continue;
         };

@@ -18,6 +18,7 @@
 use energyml_build::operation::{AnyOperation, Choices, Fitness, Identity, Registry, When};
 use energyml_build::pieces::{Pieces, Source};
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
+use std::sync::Arc;
 
 fn when() -> When {
     When {
@@ -35,7 +36,7 @@ fn operation(name: &'static str) -> &'static dyn AnyOperation {
 /// A cloud: four corners at z = 1, and a point to the east at z = 100.
 fn cloud() -> Source {
     Source::Shape {
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind: "cloud",
             patches: vec![Patch {
                 index: 0,
@@ -50,7 +51,7 @@ fn cloud() -> Source {
                 topology: Topology::Points,
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     }
 }
@@ -58,7 +59,7 @@ fn cloud() -> Source {
 /// A vertical fault at x = 5, between the cloud and the point at 100.
 fn wall() -> Source {
     Source::Shape {
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind: "fault",
             patches: vec![Patch {
                 index: 0,
@@ -67,7 +68,7 @@ fn wall() -> Source {
                 topology: Topology::Polylines(vec![2]),
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     }
 }
@@ -193,11 +194,7 @@ fn kriging_takes_a_radius_and_a_ceiling() {
             &when(),
         )
         .expect("the plan succeeds");
-    let named = |title: &str| {
-        plan.activity.parameters.iter().any(
-            |p| matches!(p, energyml_domain::provenance::Parameter::Double { title: t, .. } if t == title),
-        )
-    };
+    let named = |title: &str| plan.activity.parameters.iter().any(|p| p.title() == title);
     assert!(named("radius") && named("neighbours"));
     // A radius of 3 leaves nodes without a sample: holes, counted.
     assert!(
@@ -213,7 +210,7 @@ fn a_fault_is_not_counted_among_the_samples() {
     let op = operation("interpolate");
     // Only two points: unfit - and the fault does not make a third.
     let two = Source::Shape {
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind: "cloud",
             patches: vec![Patch {
                 index: 0,
@@ -222,7 +219,7 @@ fn a_fault_is_not_counted_among_the_samples() {
                 topology: Topology::Points,
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     };
     let pieces = Pieces::empty().with("shape", two).with("faults", wall());
@@ -283,7 +280,7 @@ fn a_fault_constrains_the_triangulation_and_its_nodes_are_said() {
 fn a_fault_is_not_one_more_cloud() {
     let op = operation("triangulate");
     let two = Source::Shape {
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind: "cloud",
             patches: vec![Patch {
                 index: 0,
@@ -292,7 +289,7 @@ fn a_fault_is_not_one_more_cloud() {
                 topology: Topology::Points,
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     };
     let pieces = Pieces::empty().with("shape", two).with("faults", wall());
@@ -316,7 +313,7 @@ fn the_buffer_sets_aside_close_points_and_the_step_regularises_the_trace() {
     // Four corners far from the fault, and two noisy measurements stuck to it
     // - those that one does not want to keep “because they were there”.
     let noisy = Source::Shape {
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind: "cloud",
             patches: vec![Patch {
                 index: 0,
@@ -332,7 +329,7 @@ fn the_buffer_sets_aside_close_points_and_the_step_regularises_the_trace() {
                 topology: Topology::Points,
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     };
     let pieces = Pieces::empty().with("shape", noisy).with("faults", wall());
@@ -345,9 +342,7 @@ fn the_buffer_sets_aside_close_points_and_the_step_regularises_the_trace() {
         )
         .expect("the plan succeeds");
     let buffered = plan.activity.parameters.iter().find_map(|p| match p {
-        energyml_domain::provenance::Parameter::Double { title, value, .. } if title == "nodesBuffered" => {
-            Some(*value)
-        }
+        other if other.title() == "nodesBuffered" => other.number(),
         _ => None,
     });
     assert_eq!(buffered, Some(2.0), "the two points within 0.8 of the fault");
@@ -389,7 +384,7 @@ fn without_a_fault_the_buffer_and_the_step_have_no_effect() {
 #[test]
 fn only_the_traces_at_the_depth_of_the_horizon_act() {
     let two_traces = Source::Shape {
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind: "fault",
             patches: vec![Patch {
                 index: 0,
@@ -405,12 +400,12 @@ fn only_the_traces_at_the_depth_of_the_horizon_act() {
                 topology: Topology::Polylines(vec![2, 2]),
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     };
     // A cloud all at z = 1, so that the depth range is clear.
     let flat = Source::Shape {
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind: "cloud",
             patches: vec![Patch {
                 index: 0,
@@ -425,7 +420,7 @@ fn only_the_traces_at_the_depth_of_the_horizon_act() {
                 topology: Topology::Points,
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     };
     let op = operation("triangulate");
@@ -444,7 +439,7 @@ fn only_the_traces_at_the_depth_of_the_horizon_act() {
 
     // And if no trace is at this depth, it is a named refusal.
     let deep = Source::Shape {
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind: "fault",
             patches: vec![Patch {
                 index: 0,
@@ -453,7 +448,7 @@ fn only_the_traces_at_the_depth_of_the_horizon_act() {
                 topology: Topology::Polylines(vec![2]),
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     };
     let pieces = Pieces::empty().with("shape", flat).with("faults", deep);
@@ -471,7 +466,7 @@ fn only_the_traces_at_the_depth_of_the_horizon_act() {
 #[test]
 fn remesh_redoes_the_mesh_from_the_nodes() {
     let poor = Source::Shape {
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind: "horizon",
             patches: vec![Patch {
                 index: 0,
@@ -486,7 +481,7 @@ fn remesh_redoes_the_mesh_from_the_nodes() {
                 topology: Topology::Triangles(vec![[0, 1, 2]]),
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     };
     let pieces = Pieces::empty().with("shape", poor.clone());

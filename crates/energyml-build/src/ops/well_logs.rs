@@ -119,6 +119,7 @@ use crate::operation::{
 };
 use crate::pieces::{Known, Ref};
 
+use super::blocks::digest;
 use super::property::PropertyParams;
 use super::support;
 
@@ -461,26 +462,6 @@ fn hole_of(shape: &Shape) -> Result<Hole<'_>, String> {
     })
 }
 
-/// The title the object behind a shape carries, or the shape's name.
-fn title_of(shape: &Shape) -> String {
-    shape
-        .known
-        .as_ref()
-        .and_then(|known| known.reference.as_ref())
-        .map(|reference| reference.title.clone())
-        .filter(|title| !title.is_empty())
-        .unwrap_or_else(|| shape.name.clone())
-}
-
-/// Values as the seed carries them - exactly, NaN included.
-fn digest(values: &[f64]) -> String {
-    values
-        .iter()
-        .map(|value| format!("{value:?}"))
-        .collect::<Vec<_>>()
-        .join(",")
-}
-
 /// A count, as the activity records it.
 fn count(title: &str, value: usize) -> Parameter {
     Parameter::Double {
@@ -552,7 +533,7 @@ impl Operation for WellLogs {
                     "datumHeight",
                     format!(
                         "`datumHeight` and `ground` (`{}`) are two answers to where the ground is: give one",
-                        title_of(surface)
+                        surface.title()
                     ),
                 ));
             }
@@ -573,21 +554,7 @@ impl Operation for WellLogs {
         // -- the kind: the dictionary's, by title --------------------------------
         let kind = match params.property_kind {
             Some(given) => given.0,
-            None => {
-                let found = energyml_domain::property_kind::with_default(|dictionary| {
-                    dictionary
-                        .by_title(told.kind())
-                        .first()
-                        .map(|kind| (kind.uuid.clone(), kind.title.clone()))
-                });
-                let (uuid, title) = found.ok_or_else(|| {
-                    Refusal::on(
-                        "propertyKind",
-                        format!("the dictionary in use holds no kind called `{}`: name a `propertyKind` of the package", told.kind()),
-                    )
-                })?;
-                json!({ "$type": "eml23.DataObjectReference", "Uuid": uuid, "QualifiedType": "eml23.PropertyKind", "Title": title })
-            }
+            None => super::blocks::standard_kind_dor(told.kind(), "propertyKind")?,
         };
         let kind_uuid = kind
             .get("Uuid")
@@ -607,7 +574,7 @@ impl Operation for WellLogs {
             ),
             None => None,
         };
-        let ground_title = ground.as_ref().map(title_of).unwrap_or_default();
+        let ground_title = ground.as_ref().map(Shape::title).unwrap_or_default();
 
         // -- each frame ------------------------------------------------------------
         let mut objects = Vec::new();
@@ -810,24 +777,14 @@ impl Operation for WellLogs {
             );
             // `Citation/Description` holds 2000 characters: refused rather than
             // cut short, since a source cut short cites nothing.
-            if description.chars().count() > 2000 {
-                return Err(Refusal::on(
-                    "source",
-                    format!(
-                        "makes a description of {} characters, and a Citation/Description holds 2000 - cite the document shorter",
-                        description.chars().count()
-                    ),
-                ));
-            }
+            super::blocks::checked_description(&description)?;
             for object in drawn.objects.iter_mut() {
                 object.json["Citation"]["Description"] = json!(description);
                 // The mark of an invented value.
-                object.json["ExtensionNameValue"] = json!([{
-                    "$type": "eml23.ExtensionNameValue",
-                    "Name": "synthetic",
-                    "Value": { "$type": "eml23.StringMeasure", "_": "true" },
-                    "Description": format!("laid by `well-logs` by a law of depth ({}), not measured", told.word()),
-                }]);
+                object.json["ExtensionNameValue"] = super::blocks::synthetic_extension(format!(
+                    "laid by `well-logs` by a law of depth ({}), not measured",
+                    told.word()
+                ));
             }
             objects.append(&mut drawn.objects);
             datasets.append(&mut drawn.datasets);

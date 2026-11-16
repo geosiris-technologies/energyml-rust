@@ -64,7 +64,7 @@ fn frame(bag: Pieces, at: usize, title: &str, units: Vec<Option<Ref>>) -> Pieces
     bag.with(
         name.clone(),
         Source::Shape {
-            geometry,
+            geometry: std::sync::Arc::new(geometry),
             closed: None,
         },
     )
@@ -173,7 +173,7 @@ fn frames_that_map_no_unit_are_refused_towards_the_import() {
     let pieces = Pieces::empty().with(
         "frames",
         Source::Shape {
-            geometry: Geometry {
+            geometry: std::sync::Arc::new(Geometry {
                 kind: "resqml22.WellboreFrameRepresentation",
                 patches: vec![Patch {
                     index: 0,
@@ -182,7 +182,7 @@ fn frames_that_map_no_unit_are_refused_towards_the_import() {
                     topology: Topology::Points,
                     closed: Vec::new(),
                 }],
-            },
+            }),
             closed: None,
         },
     );

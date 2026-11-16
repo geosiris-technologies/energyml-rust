@@ -1,8 +1,14 @@
 //! Energistics identifiers: UUID, content type, qualified type and ETP URI.
 //!
-//! See `doc/Energistics_Identifier_Specification_v4.0_Doc_v1.2.pdf`. These are
-//! parsed with regexes because the same strings appear in `[Content_Types].xml`,
-//! in `.rels`, in DORs and in ETP messages, and all of them must agree.
+//! See `doc/Energistics_Identifier_Specification_v4.0_Doc_v1.2.pdf`.
+//!
+//! The same strings appear in `[Content_Types].xml`, in `.rels`, in DORs and in
+//! ETP messages, and all of them must agree. There is one grammar for each: the
+//! content type and the qualified type are read by the borrowed parsers of
+//! [`crate::identity`] (`parse_content_type`, `parse_qualified_type`) and
+//! [`ContentType`] and [`QualifiedType`] are their owned shapes; the ETP URI is
+//! read here by [`EtpUri::parse`], the one door every other reading of a uri
+//! (`ObjectId::from_etp_uri` included) goes through.
 
 use std::fmt;
 use std::sync::OnceLock;
@@ -16,30 +22,6 @@ const UUID_PATTERN: &str = r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-
 fn uuid_re() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
     RE.get_or_init(|| Regex::new(&format!("^{UUID_PATTERN}$")).expect("valid uuid regex"))
-}
-
-fn content_type_re() -> &'static Regex {
-    static RE: OnceLock<Regex> = OnceLock::new();
-    RE.get_or_init(|| {
-        Regex::new(
-            r"(?x)
-            ^\s*
-            application/
-            (?:x-(?<domain>[\w]+)\+xml|(?<mime>[\w.+-]+))
-            \s*;\s*version=(?<version>[^;\s]+)
-            (?:\s*;\s*type=(?<type>[\w]+))?
-            \s*$",
-        )
-        .expect("valid content type regex")
-    })
-}
-
-fn qualified_type_re() -> &'static Regex {
-    static RE: OnceLock<Regex> = OnceLock::new();
-    RE.get_or_init(|| {
-        Regex::new(r"^\s*(?<domain>[a-zA-Z]+)(?<version>[\d]+)\.(?<type>[\w]+)\s*$")
-            .expect("valid qualified type regex")
-    })
 }
 
 /// A quoted value of an ETP URI - a dataspace path, an object version - where
@@ -143,17 +125,12 @@ pub struct ContentType {
 impl ContentType {
     /// Parse a content type string.
     pub fn parse(value: &str) -> Result<Self> {
-        let caps = content_type_re()
-            .captures(value)
-            .ok_or_else(|| Error::parse(value, "contentType", "does not match the Energistics form"))?;
+        let split = crate::identity::split_content_type(value)?;
         Ok(ContentType {
-            domain: caps
-                .name("domain")
-                .map(|m| m.as_str().to_string())
-                .unwrap_or_default(),
-            version: caps["version"].to_string(),
-            object_type: caps.name("type").map(|m| m.as_str().to_string()),
-            raw_mime: caps.name("mime").map(|m| m.as_str().to_string()),
+            domain: split.domain.unwrap_or_default().to_string(),
+            version: split.version.to_string(),
+            object_type: split.object_type.map(str::to_string),
+            raw_mime: split.mime.map(str::to_string),
         })
     }
 
@@ -199,13 +176,11 @@ pub struct QualifiedType {
 impl QualifiedType {
     /// Parse a qualified type string.
     pub fn parse(value: &str) -> Result<Self> {
-        let caps = qualified_type_re()
-            .captures(value)
-            .ok_or_else(|| Error::parse(value, "qualifiedType", "expected `<domain><version>.<Type>`"))?;
+        let parts = crate::identity::parse_qualified_type(value)?;
         Ok(QualifiedType {
-            domain: caps["domain"].to_string(),
-            version: caps["version"].to_string(),
-            object_type: caps["type"].to_string(),
+            domain: parts.domain.to_string(),
+            version: parts.version.to_string(),
+            object_type: parts.object_type.to_string(),
         })
     }
 
@@ -219,11 +194,7 @@ impl QualifiedType {
     /// Energistics writes versions without separators in qualified types but
     /// with them in content types, and the two have to be matched up.
     pub fn dotted_version(&self) -> String {
-        self.version
-            .chars()
-            .map(|c| c.to_string())
-            .collect::<Vec<_>>()
-            .join(".")
+        crate::naming::dotted_version(&self.version)
     }
 }
 
@@ -268,7 +239,9 @@ impl EtpUri {
             .captures(value)
             .ok_or_else(|| Error::parse(value, "ETP URI", "does not match the ETP 1.2 grammar"))?;
         Ok(EtpUri {
-            dataspace: caps.name("dataspace").map(|m| m.as_str().to_string()),
+            // A quote is written twice inside a quoted dataspace as well
+            // (ETP v1.2 §25.3.10): `it's` travels as `it''s`.
+            dataspace: caps.name("dataspace").map(|m| m.as_str().replace("''", "'")),
             domain: caps.name("domain").map(|m| m.as_str().to_string()),
             version: caps.name("version").map(|m| m.as_str().to_string()),
             object_type: caps.name("type").map(|m| m.as_str().to_string()),
@@ -305,12 +278,40 @@ impl EtpUri {
         })
     }
 
+    /// The dataspace name a uri names (unescaped), `None` for the default
+    /// dataspace or for text that is no ETP URI. Whoever needs the dataspace of
+    /// a uri asks here, not a second reading of the text.
+    pub fn dataspace_of(uri: &str) -> Option<String> {
+        Self::parse(uri).ok().and_then(|parsed| parsed.dataspace)
+    }
+
+    /// The URI of the dataspace a uri lives in: `eml:///dataspace('name')`, or
+    /// `eml:///` for the default dataspace, and for text that is no ETP URI.
+    pub fn dataspace_uri_of(uri: &str) -> String {
+        Self::dataspace_uri(Self::dataspace_of(uri).as_deref())
+    }
+
+    /// The uuid (lowercase) a uri names, `None` when it names no object or is no
+    /// ETP URI.
+    pub fn uuid_of(uri: &str) -> Option<String> {
+        Self::parse(uri).ok().and_then(|parsed| parsed.uuid)
+    }
+
+    /// The qualified type (`resqml22.Grid2dRepresentation`) a uri names, `None`
+    /// when it names no object or is no ETP URI.
+    pub fn qualified_type_of(uri: &str) -> Option<String> {
+        Self::parse(uri)
+            .ok()
+            .and_then(|parsed| parsed.qualified_type())
+            .map(|qualified| qualified.to_string())
+    }
+
     /// Build a dataspace URI: `eml:///dataspace('{path}')`, or `eml:///` for
     /// the default dataspace (`None`) - ETP v1.2 §25.3.6 (p. 488), the same spelling as
     /// the dataspace segment of [`EtpUri::object_versioned`].
     pub fn dataspace_uri(dataspace: Option<&str>) -> String {
         match dataspace {
-            Some(ds) => format!("eml:///dataspace('{ds}')"),
+            Some(ds) => format!("eml:///dataspace('{}')", ds.replace('\'', "''")),
             None => "eml:///".to_string(),
         }
     }
@@ -341,7 +342,7 @@ impl EtpUri {
             None => format!("{qualified_type}({uuid})"),
         };
         match dataspace {
-            Some(ds) => format!("eml:///dataspace('{ds}')/{name}"),
+            Some(ds) => format!("eml:///dataspace('{}')/{name}", ds.replace('\'', "''")),
             None => format!("eml:///{name}"),
         }
     }
@@ -351,7 +352,7 @@ impl fmt::Display for EtpUri {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "eml:///")?;
         if let Some(ds) = &self.dataspace {
-            write!(f, "dataspace('{ds}')")?;
+            write!(f, "dataspace('{}')", ds.replace('\'', "''"))?;
             if self.uuid.is_some() {
                 write!(f, "/")?;
             }
@@ -481,5 +482,54 @@ mod tests {
             "eml:///resqml20.obj_HorizonInterpretation(uuid=421a7a05-033a-450d-bcef-051352023578)";
         assert!(EtpUri::parse(alternate).is_ok());
         assert!(!EtpUri::is_canonical(alternate));
+    }
+
+    /// ETP v1.2 section 25.3.10 (p. 492, the regular expressions of a canonical
+    /// uri, `[^']*?(?:''[^']*?)*`): a quote inside a quoted value is written
+    /// twice, so the dataspace `it's` travels as `dataspace('it''s')`. Built,
+    /// read back and displayed, the name makes the round trip and is the plain
+    /// name on the way in.
+    #[test]
+    fn a_dataspace_with_an_apostrophe_makes_the_round_trip() {
+        let uuid = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+        assert_eq!(EtpUri::dataspace_uri(Some("it's")), "eml:///dataspace('it''s')");
+        let object = EtpUri::object(Some("it's"), "resqml22.Foo", uuid);
+        assert_eq!(object, format!("eml:///dataspace('it''s')/resqml22.Foo({uuid})"));
+        let parsed = EtpUri::parse(&object).unwrap();
+        assert_eq!(
+            parsed.dataspace.as_deref(),
+            Some("it's"),
+            "the name, not its escaped spelling"
+        );
+        assert_eq!(parsed.to_string(), object);
+        assert_eq!(EtpUri::dataspace_of(&object).as_deref(), Some("it's"));
+        assert_eq!(EtpUri::dataspace_uri_of(&object), "eml:///dataspace('it''s')");
+        let versioned = EtpUri::object_versioned(Some("it's"), "resqml22.Foo", uuid, Some("O'Neil"));
+        assert_eq!(
+            EtpUri::parse(&versioned).unwrap().dataspace.as_deref(),
+            Some("it's")
+        );
+        assert!(EtpUri::is_canonical(&versioned));
+        // Break it: write the dataspace into `dataspace_uri` without doubling its quotes.
+    }
+
+    /// The accessors are the door's answer, and nothing else: no uri, no answer.
+    #[test]
+    fn the_accessors_answer_from_the_door_alone() {
+        let uuid = "A1B2C3D4-E5F6-7890-ABCD-EF1234567890";
+        let uri = format!("eml:///dataspace('demo')/resqml22.Foo({uuid})");
+        assert_eq!(
+            EtpUri::uuid_of(&uri).as_deref(),
+            Some("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
+        );
+        assert_eq!(EtpUri::qualified_type_of(&uri).as_deref(), Some("resqml22.Foo"));
+        assert_eq!(
+            EtpUri::dataspace_of("eml:///resqml22.Foo(a1b2c3d4-e5f6-7890-abcd-ef1234567890)"),
+            None
+        );
+        assert_eq!(EtpUri::dataspace_uri_of("not a uri"), "eml:///");
+        assert_eq!(EtpUri::uuid_of("not a uri"), None);
+        assert_eq!(EtpUri::qualified_type_of("eml:///dataspace('demo')"), None);
+        // Break it: read the uuid by hand in `uuid_of` and keep its case.
     }
 }

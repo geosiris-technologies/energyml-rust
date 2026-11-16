@@ -34,8 +34,8 @@
 use energyml_analysis::fake::{self, vertical_polylines};
 use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
+use std::sync::Arc;
 
-use crate::crs::FrameKind;
 use crate::declare::{Inputs, Params, Shape, Suggestions};
 use crate::operation::{About, Category, Context, Need, Note, Operation, Plan, Refusal, Slot};
 use crate::pieces::Pieces;
@@ -158,14 +158,29 @@ pub struct FakeInputs {
     pub shape: Vec<Shape>,
 }
 
-fn cuts_of(cuts: &Cuts) -> fake::Cuts {
-    match cuts {
-        Cuts::Fixed(one) => fake::Cuts::Fixed(one.count.max(0) as u32),
+/// A count of cuts as the generator takes it. A negative or oversized count is
+/// refused by name - it used to be brought back to 0 without a word, which reads
+/// as a request that was met.
+fn count_of(slot: &str, value: i64) -> Result<u32, Refusal> {
+    u32::try_from(value).map_err(|_| {
+        Refusal::on(
+            slot,
+            format!(
+                "{value} is not a number of cuts (a whole number from 1 to {})",
+                u32::MAX
+            ),
+        )
+    })
+}
+
+fn cuts_of(cuts: &Cuts) -> Result<fake::Cuts, Refusal> {
+    Ok(match cuts {
+        Cuts::Fixed(one) => fake::Cuts::Fixed(count_of("count", one.count)?),
         Cuts::Random(range) => fake::Cuts::Random {
-            min: range.cuts_min.max(0) as u32,
-            max: range.cuts_max.max(0) as u32,
+            min: count_of("cuts_min", range.cuts_min)?,
+            max: count_of("cuts_max", range.cuts_max)?,
         },
-    }
+    })
 }
 
 fn length_of(length: &Length) -> fake::Length {
@@ -255,24 +270,12 @@ impl Operation for PolylinesFromCloud {
         if heads.is_empty() {
             return Err(Refusal::on("shape", "the input has no point at all"));
         }
-        if frame.kind == Some(FrameKind::Geographic) {
-            let (slot, what) = match params.written.frame.crs.as_ref() {
-                Some(_) => (
-                    "crs",
-                    format!(
-                        "the frame `{}` named",
-                        frame.crs["Title"].as_str().unwrap_or_default()
-                    ),
-                ),
-                None => ("project", "the frame created without `project`".to_string()),
-            };
-            return Err(Refusal::on(
-                slot,
-                format!(
-                    "a vertical polyline is a vertical extent, and {what} measures its horizontal axes in degrees while its length is linear: every polyline would be written between a hundred and ten thousand times longer than the model is wide - name a projected system in `project` (EPSG:2154 for mainland France), or a LocalEngineeringCompoundCrs as `crs`"
-                ),
-            ));
-        }
+        super::blocks::refuse_degrees(
+            &frame,
+            params.written.frame.crs.is_some(),
+            "a vertical polyline",
+            "polyline",
+        )?;
         let vertical_up = if frame.objects.is_empty() {
             known.first().and_then(|k| k.vertical_up)
         } else {
@@ -285,10 +288,11 @@ impl Operation for PolylinesFromCloud {
             ));
         };
 
-        let seed_value = params.seed.max(0) as u64;
+        let seed_value = u64::try_from(params.seed)
+            .map_err(|_| Refusal::on("seed", format!("{} is not a seed (0 or more)", params.seed)))?;
         let made = vertical_polylines(
             &heads,
-            &cuts_of(&params.cuts),
+            &cuts_of(&params.cuts)?,
             &length_of(&params.length),
             &spacing_of(&params.spacing),
             up,
@@ -306,7 +310,7 @@ impl Operation for PolylinesFromCloud {
         let shape = Shape {
             name: format!("{title} - cloud"),
             known: None,
-            geometry: Geometry {
+            geometry: Arc::new(Geometry {
                 kind: "polylines-from-cloud",
                 patches: vec![Patch {
                     index: 0,
@@ -315,7 +319,7 @@ impl Operation for PolylinesFromCloud {
                     topology: Topology::Polylines(runs),
                     closed: Vec::new(),
                 }],
-            },
+            }),
             closed: None,
         };
         let seed = cx.seed(&title);
@@ -366,5 +370,33 @@ impl Operation for PolylinesFromCloud {
             "cloud points turned into polylines",
         ));
         slots
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// [fin-F2] A negative count of cuts is refused by name, whichever form it
+    /// is given in, instead of becoming 0; a good count is kept as it is.
+    #[test]
+    fn a_negative_count_of_cuts_is_refused() {
+        let fixed = |count| Cuts::Fixed(FixedCuts { count });
+        assert!(matches!(cuts_of(&fixed(3)), Ok(fake::Cuts::Fixed(3))));
+        let Err(refusal) = cuts_of(&fixed(-2)) else {
+            panic!("refused")
+        };
+        assert_eq!(refusal.slot.as_deref(), Some("count"), "{refusal:?}");
+        let random = |cuts_min, cuts_max| Cuts::Random(RandomCuts { cuts_min, cuts_max });
+        assert!(cuts_of(&random(1, 4)).is_ok());
+        let Err(low) = cuts_of(&random(-1, 4)) else {
+            panic!("refused")
+        };
+        assert_eq!(low.slot.as_deref(), Some("cuts_min"));
+        let Err(high) = cuts_of(&random(1, -4)) else {
+            panic!("refused")
+        };
+        assert_eq!(high.slot.as_deref(), Some("cuts_max"));
+        // Break it: put `.max(0) as u32` back in `count_of`, and -2 is read as 0 cuts.
     }
 }

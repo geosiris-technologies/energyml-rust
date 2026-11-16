@@ -16,6 +16,7 @@ use energyml_build::operation::{
 };
 use energyml_build::pieces::{Known, Pieces, Ref, Source};
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
+use std::sync::Arc;
 
 // ---------------------------------------------------------------- a block of parameters
 
@@ -299,7 +300,7 @@ struct Samples {
 
 fn shape(z: f64) -> Source {
     Source::Shape {
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind: "x",
             patches: vec![Patch {
                 index: 0,
@@ -308,7 +309,7 @@ fn shape(z: f64) -> Source {
                 topology: Topology::Points,
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     }
 }
@@ -492,4 +493,78 @@ fn the_adapter_returns_the_typed_operation_through_the_erased_interface() {
 fn a_suggestion_on_an_unknown_slot_fails_a_test() {
     let op = typed(Probe { suggest_for: "wrod" });
     let _ = op.needs(&Pieces::empty());
+}
+
+// ---------------------------------------------------------------- sharing
+
+/// Foreign features and a table, each taken by a slot of its own.
+#[derive(Debug, Inputs)]
+struct Foreign {
+    /// the features
+    features: energyml_build::declare::Features,
+    /// the table
+    table: energyml_build::declare::TableIn,
+}
+
+/// **Binding an entry shares it, it does not copy it.** One geometry given to
+/// two slots - or bound again, as `fitness` and `plan` each do - is one
+/// allocation: the same `Arc`, never a deep clone of the points.
+#[test]
+fn a_geometry_bound_twice_is_not_copied() {
+    let one = shape(1.0);
+    let bag = Pieces::empty().with("top", one.clone()).with("base", one);
+    let first = TwoRoles::bind(&bag).unwrap();
+    let second = TwoRoles::bind(&bag).unwrap();
+    assert!(
+        Arc::ptr_eq(&first.top.geometry, &first.base.geometry),
+        "two slots, one entry: one geometry"
+    );
+    assert!(
+        Arc::ptr_eq(&first.top.geometry, &second.top.geometry),
+        "a second binding of the bag: the same geometry"
+    );
+    let Some(Source::Shape { geometry, .. }) = bag.get("top") else {
+        panic!("a shape")
+    };
+    assert!(Arc::ptr_eq(geometry, &first.top.geometry), "and the bag's own");
+    // Break it: make `Shape::from_piece` build `Arc::new((**geometry).clone())`.
+}
+
+/// The same for the features and the table of an entry.
+#[test]
+fn features_and_a_table_bound_twice_are_not_copied() {
+    let Ok(collection) = energyml_build::geojson::read(
+        r#"{"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[1.0,2.0]}}]}"#,
+    ) else {
+        panic!("a collection")
+    };
+    let text = "A;B
+1;2
+";
+    let Ok(table) =
+        energyml_build::tabular::read("t.csv", text, energyml_build::tabular::Dialect::sniff(text))
+    else {
+        panic!("a table")
+    };
+    let bag = Pieces::empty()
+        .with(
+            "features",
+            Source::Features {
+                name: "x.geojson".into(),
+                features: Arc::new(collection.features),
+            },
+        )
+        .with(
+            "table",
+            Source::Table {
+                name: "t.csv".into(),
+                table: Arc::new(table),
+                template: Default::default(),
+            },
+        );
+    let first = Foreign::bind(&bag).unwrap();
+    let second = Foreign::bind(&bag).unwrap();
+    assert!(Arc::ptr_eq(&first.features.features, &second.features.features));
+    assert!(Arc::ptr_eq(&first.table.table, &second.table.table));
+    // Break it: make `Features::from_piece` or `TableIn::from_piece` clone the value under the `Arc`.
 }

@@ -838,12 +838,7 @@ fn local_of(name: &str) -> &str {
     name.rsplit_once(':').map_or(name, |(_, local)| local)
 }
 
-fn unescape_attribute(raw: &[u8]) -> String {
-    let text = String::from_utf8_lossy(raw);
-    quick_xml::escape::unescape(&text)
-        .map(|unescaped| unescaped.into_owned())
-        .unwrap_or_else(|_| text.into_owned())
-}
+use super::raw_xml::unescape_attr as unescape_attribute;
 
 /// Whether the index holds no contained object. Tests only.
 #[cfg(test)]

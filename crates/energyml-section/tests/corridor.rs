@@ -237,6 +237,7 @@ fn package() -> Package {
             abstract_vertical_crs: Some(eml23::AbstractVerticalCrs::VerticalEpsgCrs(
                 eml23::VerticalEpsgCrs { epsg_code: 5714 },
             )),
+            uom: eml23::LengthUomExt::M,
             ..Default::default()
         }),
         Box::new(eml23::ProjectedCrs {

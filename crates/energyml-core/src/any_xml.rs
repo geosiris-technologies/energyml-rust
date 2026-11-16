@@ -14,7 +14,7 @@ use quick_xml::events::{BytesEnd, BytesStart};
 use crate::error::Result;
 use crate::reflect::{EnergymlType, Roles, TypeInfo, TypeKind};
 use crate::value::{AsFieldValue, FieldValue, FromOwnedValue, OwnedValue, Reflect, downcast_owned};
-use crate::xml::{XmlDeserialize, XmlEvent, XmlReader, XmlSerialize, XmlWriter};
+use crate::xml::{XmlDeserialize, XmlEvent, XmlReader, XmlSerialize, XmlWriter, escape_attr, escape_text};
 
 /// An XML subtree carried verbatim.
 ///
@@ -69,7 +69,9 @@ impl XmlSerialize for AnyXml {
         }
         // Re-declare what the content needs, unless the element already says it.
         for (prefix, uri) in &self.namespaces {
-            let declaration = format!("xmlns:{prefix}");
+            // An empty prefix is the default namespace of the unprefixed
+            // elements of the content: `xmlns`, not `xmlns:`.
+            let declaration = declaration_of(prefix);
             if !self.attributes.iter().any(|(name, _)| name == &declaration) {
                 tag.push_attribute((declaration.as_str(), uri.as_str()));
             }
@@ -127,13 +129,32 @@ pub fn capture_into(
 ///
 /// The declaration lived on an ancestor and does not travel with the subtree;
 /// without this, the re-written XML binds `foo:` to nothing.
+///
+/// An **unprefixed** element bound to a namespace (the subtree, or an ancestor,
+/// declared a default `xmlns`) is recorded under the empty prefix, and written
+/// back as `xmlns="..."`. Dropping it moved the element into no namespace, or
+/// into the surrounding document's default.
 fn remember_prefix(into: &mut AnyXml, name: &[u8], uri: Option<String>) {
     let Some(uri) = uri else { return };
-    let name = String::from_utf8_lossy(name);
-    if let Some((prefix, _)) = name.split_once(':')
-        && !into.namespaces.iter().any(|(p, _)| p == prefix)
-    {
-        into.namespaces.push((prefix.to_string(), uri));
+    bind(&mut into.namespaces, &String::from_utf8_lossy(name), uri);
+}
+
+/// Record the binding an element name was resolved under: its prefix, or the
+/// empty prefix for an unprefixed name. The first binding of a prefix wins.
+fn bind(namespaces: &mut Vec<(String, String)>, name: &str, uri: String) {
+    let prefix = name.split_once(':').map_or("", |(prefix, _)| prefix);
+    if !namespaces.iter().any(|(p, _)| p == prefix) {
+        namespaces.push((prefix.to_string(), uri));
+    }
+}
+
+/// The attribute that declares a prefix: `xmlns:prefix`, or `xmlns` for the
+/// default namespace (the empty prefix).
+fn declaration_of(prefix: &str) -> String {
+    if prefix.is_empty() {
+        "xmlns".to_string()
+    } else {
+        format!("xmlns:{prefix}")
     }
 }
 
@@ -172,11 +193,7 @@ impl XmlDeserialize for AnyXml {
                     // the subtree can be written somewhere else and still parse.
                     if let Some(uri) = uri {
                         let name = String::from_utf8_lossy(e.name().as_ref()).into_owned();
-                        if let Some((prefix, _)) = name.split_once(':')
-                            && !namespaces.iter().any(|(p, _)| p == prefix)
-                        {
-                            namespaces.push((prefix.to_string(), uri));
-                        }
+                        bind(&mut namespaces, &name, uri);
                     }
                     write_start(&mut content, &e)?;
                 }
@@ -196,7 +213,10 @@ impl XmlDeserialize for AnyXml {
         // surrounding document already made - and two `xmlns:eml` on one tag is
         // not valid XML.
         namespaces.retain(|(prefix, _)| {
-            content.contains(&format!("<{prefix}:"))
+            // The default namespace was recorded because an unprefixed element
+            // of the content was bound to it: it is used by construction.
+            prefix.is_empty()
+                || content.contains(&format!("<{prefix}:"))
                 || content.contains(&format!(" {prefix}:"))
                 || attributes.iter().any(|(name, value)| {
                     name.starts_with(&format!("{prefix}:")) || value.starts_with(&format!("{prefix}:"))
@@ -231,16 +251,6 @@ fn write_end(out: &mut String, e: &BytesEnd<'_>) {
     out.push_str("</");
     out.push_str(&String::from_utf8_lossy(e.name().as_ref()));
     out.push('>');
-}
-
-fn escape_text(text: &str) -> String {
-    text.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-}
-
-fn escape_attr(value: &str) -> String {
-    escape_text(value).replace('"', "&quot;")
 }
 
 // ---------------------------------------------------------------------------
@@ -384,7 +394,7 @@ impl AnyXml {
         candidates.sort_by_key(|info| {
             (
                 crate::naming::is_prerelease(info.version),
-                std::cmp::Reverse(version_rank(info.version)),
+                std::cmp::Reverse(crate::naming::version_rank(info.version)),
             )
         });
         candidates.into_iter().next()
@@ -405,7 +415,7 @@ impl AnyXml {
         let declarations: String = self
             .namespaces
             .iter()
-            .map(|(prefix, uri)| format!(" xmlns:{prefix}=\"{uri}\""))
+            .map(|(prefix, uri)| format!(" {}=\"{uri}\"", declaration_of(prefix)))
             .collect();
         // Wrapped in an element named after the **type**, not after the field:
         // the reader matches on the type it was asked for, and the field's own
@@ -499,12 +509,63 @@ fn inner_of(xml: &str) -> String {
     xml[open + 1..close].to_string()
 }
 
-/// A dotted version as numbers, so `2.2` sorts after `2.0` and `2.10` after
-/// `2.9`. A segment that is not a number ends the comparison there, which is
-/// what keeps a development drop from sorting as a release.
-fn version_rank(version: &str) -> Vec<u32> {
-    version
-        .split('.')
-        .map(|part| part.parse::<u32>().unwrap_or(0))
-        .collect()
+#[cfg(test)]
+mod default_namespace_tests {
+    use super::AnyXml;
+    use crate::ns::EML;
+    use crate::xml::{XmlWriteOptions, from_xml_str, to_xml_string};
+
+    fn written(any: &AnyXml) -> String {
+        to_xml_string(
+            any,
+            EML,
+            "Crs",
+            &[],
+            XmlWriteOptions {
+                declaration: false,
+                ..Default::default()
+            },
+        )
+        .expect("the subtree writes")
+    }
+
+    /// `[core-derive-schemas S10]`: a subtree whose unprefixed elements are
+    /// bound by a default `xmlns` keeps that binding on a round trip, so the
+    /// elements stay in their namespace instead of moving into no namespace.
+    ///
+    /// Break it: skip the unprefixed case in `bind` (take the prefix from
+    /// `split_once(':')` only); the `xmlns="..."` assertion fails.
+    #[test]
+    fn a_default_namespace_survives_a_round_trip() {
+        let source = r#"<Crs xmlns="http://example.org/crs"><Child>1</Child></Crs>"#;
+        let any: AnyXml = from_xml_str(source).expect("the subtree reads");
+        assert_eq!(
+            any.namespace(""),
+            Some("http://example.org/crs"),
+            "the default namespace is recorded: {any:?}"
+        );
+
+        let text = written(&any);
+        assert!(
+            text.contains("xmlns=\"http://example.org/crs\""),
+            "the default namespace is written back: {text}"
+        );
+
+        // And it reads back to the same subtree: the child is still in the
+        // namespace it was read in.
+        let again: AnyXml = from_xml_str(&text).expect("the written subtree reads");
+        assert_eq!(again.namespace(""), Some("http://example.org/crs"));
+        assert_eq!(again.content, any.content);
+    }
+
+    /// A subtree with no default namespace does not invent one: only a bound
+    /// unprefixed element records the empty prefix.
+    ///
+    /// Break it: record the empty prefix whatever the event resolved to.
+    #[test]
+    fn no_default_namespace_is_invented() {
+        let any: AnyXml = from_xml_str("<Crs><Child>1</Child></Crs>").expect("the subtree reads");
+        assert_eq!(any.namespace(""), None, "{any:?}");
+        assert!(!written(&any).contains("xmlns=\""), "{}", written(&any));
+    }
 }

@@ -47,7 +47,7 @@
 
 use energyml_core::identity;
 use energyml_core::reflect::TypeKind;
-use energyml_core::value::{FieldValue, Reflect, Scalar};
+use energyml_core::value::{FieldValue, Reflect};
 
 /// Where one array - or one slice of one - actually lives.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -331,11 +331,43 @@ fn walk_value(
     match value {
         FieldValue::Object(child) => walk(*child, path, resolver, out, depth + 1),
         FieldValue::List(items) => {
+            let first = out.len();
             for (i, item) in items.iter().enumerate() {
                 walk_value(item, format!("{path}[{i}]"), resolver, out, depth);
             }
+            mark_split_parts(items, &mut out[first..]);
         }
         _ => {}
+    }
+}
+
+/// An array **split across parts**: `ExternalFileProxy` repeats, each
+/// `ExternalDatasetPart` carrying the flat `StartIndex` and `Count` of its
+/// share of one array.
+///
+/// With one part, empty `start`/`count` ("the whole dataset") is right. With
+/// several, it was **wrong and silent**: every part came back naming the whole
+/// dataset, so reading them gave the same values several times over
+/// (`[storage-1 S12]`). Here each part carries its own flat range, as one
+/// dimension. A reader that can take it reads the slice of a one-dimensional
+/// dataset exactly; over a multi-dimensional dataset the range does not fit the
+/// rank and the read is **refused by name** ("the object asks for 1
+/// dimension(s) but the dataset has N") - never the whole dataset N times.
+fn mark_split_parts(items: &[FieldValue<'_>], found: &mut [ArrayLocation]) {
+    if items.len() < 2 || found.len() != items.len() {
+        return;
+    }
+    let mut parts: Vec<&dyn Reflect> = Vec::with_capacity(items.len());
+    for item in items {
+        match item {
+            FieldValue::Object(part) if part.type_info().name == MID_FORM => parts.push(*part),
+            // A list of anything else is not a list of parts of one array.
+            _ => return,
+        }
+    }
+    for (part, location) in parts.into_iter().zip(found.iter_mut()) {
+        location.start = int_list(part, "start_index");
+        location.count = int_list(part, "count");
     }
 }
 
@@ -413,10 +445,11 @@ fn from_mid_form(object: &dyn Reflect, path: &str, resolver: &dyn ProxyResolver)
         // which is what the old form has always done and what a single part
         // means anyway.
         //
-        // A genuinely *split* array would need flat-range reading, which no
-        // backend here offers; it would come back as one location per part,
-        // each naming the whole dataset. No package in the corpus splits one,
-        // so that is a gap named rather than a guess made.
+        // A genuinely *split* array (several parts in one list) is marked by
+        // `mark_split_parts`, which gives each part its own flat range: no
+        // backend reads a flat range of a multi-dimensional dataset, so that
+        // read is refused by name rather than answered with the whole dataset
+        // once per part.
         start: Vec::new(),
         count: Vec::new(),
         proxy_uuid,
@@ -454,27 +487,9 @@ fn from_old_form(object: &dyn Reflect, path: &str, resolver: &dyn ProxyResolver)
     }
 }
 
-fn string_field(object: &dyn Reflect, name: &str) -> Option<String> {
-    match object.field(name)? {
-        FieldValue::Scalar(Scalar::Str(s)) if !s.is_empty() => Some(s.to_string()),
-        _ => None,
-    }
-}
-
-fn int_list(object: &dyn Reflect, name: &str) -> Vec<i64> {
-    let Some(value) = object.field(name) else {
-        return Vec::new();
-    };
-    let one = |v: &FieldValue<'_>| match v {
-        FieldValue::Scalar(Scalar::Int(i)) => Some(*i),
-        FieldValue::Scalar(Scalar::UInt(u)) => i64::try_from(*u).ok(),
-        _ => None,
-    };
-    match value {
-        FieldValue::List(items) => items.iter().filter_map(one).collect(),
-        other => one(&other).into_iter().collect(),
-    }
-}
+// The readers of a field are the door's (ADR 0046), under the names this file
+// already uses.
+use energyml_core::reflect::fields::{integers as int_list, text as string_field};
 
 /// Which end of a multi-byte number the file writes first.
 ///
@@ -546,7 +561,7 @@ impl ArrayMetadata {
     }
 }
 
-/// A block of numbers, in the type the file holds them.
+/// A block of numbers - or of strings - in the type the file holds them.
 ///
 /// **Typed, not converted.** A dataset of doubles comes back as `Vec<f64>`,
 /// integers as `Vec<i32>`, and so on - because the point of reading a million
@@ -575,6 +590,16 @@ pub enum ArrayValues {
     U16(Vec<u16>),
     /// Unsigned 8-bit, and booleans, which HDF5 stores as bytes.
     U8(Vec<u8>),
+    /// Strings, decoded from a string dataset (fixed or variable length,
+    /// ASCII or UTF-8): *"The datatype of the values will be identified by
+    /// means of the HDF5 API"* (EML TRG 2.3 §6.63 p. 149, RESQML TRG 2.0.1
+    /// §6.39 p. 78).
+    ///
+    /// Not a block of numbers: [`ArrayValues::as_bytes`] has no single run of
+    /// memory to lend and answers an empty slice, and [`ArrayValues::to_f64`]
+    /// answers `NaN` for each string - no numeric reading, the count kept.
+    /// [`ArrayValues::text`] is how to read them.
+    Text(Vec<String>),
 }
 
 impl ArrayValues {
@@ -591,6 +616,7 @@ impl ArrayValues {
             Self::U32(v) => v.len(),
             Self::U16(v) => v.len(),
             Self::U8(v) => v.len(),
+            Self::Text(v) => v.len(),
         }
     }
 
@@ -599,9 +625,28 @@ impl ArrayValues {
         self.len() == 0
     }
 
-    /// The element type, named the way [`ArrayMetadata`] names it.
+    /// Every element widened to `f64`, or `None` for **text**, which has no
+    /// numeric reading. **This copies.**
+    ///
+    /// The refusing form, and the one a caller should use: `NaN` is the "no
+    /// data" value downstream (a `NullValue`), so [`ArrayValues::to_f64`]'s
+    /// column of `NaN` for strings reads as a column of missing values
+    /// (`[cross-duplication C3]`). The same answer as `Values::to_f64` of the
+    /// domain crate.
+    pub fn try_to_f64(&self) -> Option<Vec<f64>> {
+        match self {
+            ArrayValues::Text(_) => None,
+            numbers => Some(numbers.to_f64()),
+        }
+    }
+
     /// Every element widened to `f64` - see [`ArrayData::to_f64`], which is
     /// this with the shape beside it. **This copies.**
+    ///
+    /// **Text becomes a `NaN` per string**, which cannot refuse (it returns a
+    /// `Vec`) and which a caller can take for missing data: prefer
+    /// [`ArrayValues::try_to_f64`], which answers `None` for text. Kept as it
+    /// is because it is published and its callers count on the length.
     pub fn to_f64(&self) -> Vec<f64> {
         match self {
             ArrayValues::F64(v) => v.clone(),
@@ -614,6 +659,7 @@ impl ArrayValues {
             ArrayValues::U32(v) => v.iter().map(|x| *x as f64).collect(),
             ArrayValues::U16(v) => v.iter().map(|x| *x as f64).collect(),
             ArrayValues::U8(v) => v.iter().map(|x| *x as f64).collect(),
+            ArrayValues::Text(v) => vec![f64::NAN; v.len()],
         }
     }
 
@@ -630,6 +676,7 @@ impl ArrayValues {
             Self::U32(_) => "uint32",
             Self::U16(_) => "uint16",
             Self::U8(_) => "uint8",
+            Self::Text(_) => "string",
         }
     }
 
@@ -647,6 +694,15 @@ impl ArrayValues {
             Self::U32(v) => bytemuck::cast_slice(v),
             Self::U16(v) => bytemuck::cast_slice(v),
             Self::U8(v) => v,
+            Self::Text(_) => &[],
+        }
+    }
+
+    /// The strings, borrowed, when that is what the file holds.
+    pub fn text(&self) -> Option<&[String]> {
+        match self {
+            Self::Text(v) => Some(v),
+            _ => None,
         }
     }
 }
@@ -666,6 +722,7 @@ impl ArrayValues {
 /// | [`ArrayValues::as_bytes`] | a borrow of that same memory. **Zero** |
 /// | [`ArrayData::f64`] and friends | a borrow when the type already matches. **Zero** |
 /// | [`ArrayData::to_f64`] | widens every element. One more copy, and you asked for it |
+/// | [`ArrayValues::Text`] | owned strings, one allocation each; `as_bytes` lends nothing |
 ///
 /// And [`crate::ArrayBackend::read_into`] removes even the first allocation:
 /// the caller supplies the buffer - a vertex buffer, a memory-mapped region -
@@ -725,6 +782,11 @@ impl ArrayData {
         }
     }
 
+    /// The strings, borrowed, when that is what the file holds.
+    pub fn text(&self) -> Option<&[String]> {
+        self.values.text()
+    }
+
     /// Every element widened to `f64`.
     ///
     /// **This copies**, and it is the only method here that does. Use
@@ -732,6 +794,12 @@ impl ArrayData {
     /// coordinates it does.
     pub fn to_f64(&self) -> Vec<f64> {
         self.values.to_f64()
+    }
+
+    /// [`ArrayData::to_f64`] that **refuses text**: `None` for a string array,
+    /// where `to_f64` answers a `NaN` per string. See [`ArrayValues::try_to_f64`].
+    pub fn try_to_f64(&self) -> Option<Vec<f64>> {
+        self.values.try_to_f64()
     }
 }
 
@@ -792,12 +860,18 @@ impl ArrayBuffer<'_> {
     }
 }
 
-/// Whether a type is one of the two array pointers.
+/// Whether a type is one of the three array pointers [`locate`] reads from a
+/// type alone: `ExternalDataArrayPart` (eml 2.3), `ExternalDatasetPart` (eml
+/// 2.1 and 2.2) and `Hdf5Dataset` (eml 2.0).
 ///
 /// Useful to a UI that wants to show "this field holds data elsewhere" without
-/// walking into it.
+/// walking into it. **Not `ChannelData`**: it points at a dataset only when its
+/// `FileUri` and `Data` say so ([`is_channel_data_in_file`]), which a type alone
+/// cannot tell - a `ChannelData` with its rows inline holds its data right there.
+/// The function used to miss the middle form, so a UI relying on it missed every
+/// eml 2.1/2.2 array.
 pub fn is_array_pointer(info: &energyml_core::reflect::TypeInfo) -> bool {
-    info.kind == TypeKind::Struct && (info.name == NEW_FORM || info.name == OLD_FORM)
+    info.kind == TypeKind::Struct && (info.name == NEW_FORM || info.name == MID_FORM || info.name == OLD_FORM)
 }
 
 /// Where an array's numbers were actually found, and why there.

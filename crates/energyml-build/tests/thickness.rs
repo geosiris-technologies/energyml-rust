@@ -9,6 +9,7 @@
 //! difference of time; forgetting the kind of the dictionary.
 
 use serde_json::json;
+use std::sync::Arc;
 
 use energyml_build::operation::{Choices, Fitness, Identity, Numbers, Plan, Registry, When};
 use energyml_build::pieces::{Known, Pieces, Ref, Source};
@@ -93,7 +94,7 @@ fn pair(slope: f64, uom: &str) -> Pieces {
         .with(
             "top",
             Source::Shape {
-                geometry: top_grid(|x, _| 1000.0 + slope * x),
+                geometry: Arc::new(top_grid(|x, _| 1000.0 + slope * x)),
                 closed: None,
             },
         )
@@ -101,7 +102,7 @@ fn pair(slope: f64, uom: &str) -> Pieces {
         .with(
             "base",
             Source::Shape {
-                geometry: plate(|x, _| 1020.0 + slope * x),
+                geometry: Arc::new(plate(|x, _| 1020.0 + slope * x)),
                 closed: None,
             },
         )
@@ -186,7 +187,7 @@ fn roles_are_read_by_name_and_a_reversed_bag_still_crosses() {
     let alone = Pieces::empty().with(
         "top",
         Source::Shape {
-            geometry: top_grid(|_, _| 0.0),
+            geometry: Arc::new(top_grid(|_, _| 0.0)),
             closed: None,
         },
     );
@@ -346,14 +347,14 @@ fn a_grid_base_is_read_and_an_overflowing_top_is_counted() {
         .with(
             "top",
             Source::Shape {
-                geometry: top,
+                geometry: Arc::new(top),
                 closed: None,
             },
         )
         .with(
             "base",
             Source::Shape {
-                geometry: grid,
+                geometry: Arc::new(grid),
                 closed: None,
             },
         );
@@ -411,14 +412,14 @@ fn a_lattice_base_is_read_like_its_cells() {
         .with(
             "top",
             Source::Shape {
-                geometry: top,
+                geometry: Arc::new(top),
                 closed: None,
             },
         )
         .with(
             "base",
             Source::Shape {
-                geometry: lattice,
+                geometry: Arc::new(lattice),
                 closed: None,
             },
         );

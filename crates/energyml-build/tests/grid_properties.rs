@@ -26,10 +26,10 @@
 //! is not an IJK grid.
 
 use serde_json::json;
+use std::sync::Arc;
 
 use energyml_build::operation::{Choices, Identity, Numbers, Plan, Registry, When};
 use energyml_build::pieces::{Known, Pieces, Ref, Source};
-use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 
 fn when() -> When {
@@ -156,7 +156,7 @@ fn bag(undefined: Option<u32>, with_ground: bool) -> Pieces {
         .with(
             "grid",
             Source::Shape {
-                geometry: grid_geometry(undefined),
+                geometry: Arc::new(grid_geometry(undefined)),
                 closed: None,
             },
         )
@@ -166,7 +166,7 @@ fn bag(undefined: Option<u32>, with_ground: bool) -> Pieces {
             .with(
                 "ground",
                 Source::Shape {
-                    geometry: ground_geometry(),
+                    geometry: Arc::new(ground_geometry()),
                     closed: None,
                 },
             )
@@ -200,7 +200,7 @@ fn recorded_double(plan: &Plan, title: &str) -> f64 {
         .parameters
         .iter()
         .find_map(|one| match one {
-            Parameter::Double { title: t, value, .. } if t == title => Some(*value),
+            other if other.title() == title => other.number(),
             _ => None,
         })
         .unwrap_or_else(|| panic!("`{title}` is not recorded in the activity"))
@@ -414,7 +414,7 @@ fn a_shape_that_is_no_ijk_grid_is_refused_by_name() {
         .with(
             "grid",
             Source::Shape {
-                geometry: ground_geometry(),
+                geometry: Arc::new(ground_geometry()),
                 closed: None,
             },
         )

@@ -120,13 +120,13 @@ fn text_any(object: &dyn Reflect, names: &[&str]) -> Option<String> {
     }
 }
 
-/// An integer from a named field, or `None` - an absent field is not zero.
-fn integer(object: &dyn Reflect, name: &str) -> Option<i64> {
-    match object.field(name)? {
-        FieldValue::Scalar(scalar) => scalar.to_string().trim().parse().ok(),
-        _ => None,
-    }
-}
+// The readers of a field are the door's (ADR 0046), under the names this file
+// already uses.
+// An integer from a named field, or `None` - an absent field is not zero. The
+// releases keep these as text, so the lexical reader.
+use energyml_core::reflect::fields::{
+    flag_lexical as flag, integer_lexical as integer, text, texts as scalars,
+};
 
 /// Read the order a package's structural organisations state.
 ///
@@ -297,21 +297,6 @@ impl Statements {
     ///
     pub fn contacts(&self) -> &[Contact] {
         &self.contacts
-    }
-}
-
-/// A field's lexical value, whatever its scalar type.
-fn scalars(object: &dyn Reflect, name: &str) -> Vec<String> {
-    match object.field(name) {
-        Some(FieldValue::Scalar(scalar)) => vec![scalar.to_string()],
-        Some(FieldValue::List(items)) => items
-            .iter()
-            .filter_map(|item| match item {
-                FieldValue::Scalar(scalar) => Some(scalar.to_string()),
-                _ => None,
-            })
-            .collect(),
-        _ => Vec::new(),
     }
 }
 
@@ -616,22 +601,14 @@ pub struct Columns {
     pub notes: Vec<String>,
 }
 
-/// The first non-empty scalar of a field, or `None`.
-fn text(object: &dyn Reflect, name: &str) -> Option<String> {
-    match object.field(name)? {
-        FieldValue::Scalar(scalar) => Some(scalar.to_string()).filter(|s| !s.is_empty()),
-        _ => None,
-    }
-}
-
 /// The objects of a package, by uuid - and **every version of a uuid** the
 /// package holds, so that a reference finds the one it names
 /// ([`Held::of`]) instead of whichever came last.
 #[derive(Default)]
 struct Held<'a> {
-    /// What a bare uuid names: the last object held with it.
-    by_uuid: HashMap<String, &'a dyn Reflect>,
-    /// Every object of a uuid, in the order held.
+    /// Every object of a uuid, in the order held. There is no "the object of a
+    /// uuid": an object is reached through a reference ([`Held::of`]) or an
+    /// address ([`Held::at`]), which name the version.
     versions: HashMap<String, Vec<&'a dyn Reflect>>,
 }
 
@@ -639,7 +616,6 @@ impl<'a> FromIterator<(String, &'a dyn Reflect)> for Held<'a> {
     fn from_iter<T: IntoIterator<Item = (String, &'a dyn Reflect)>>(pairs: T) -> Self {
         let mut held = Held::default();
         for (uuid, object) in pairs {
-            held.by_uuid.insert(uuid.clone(), object);
             held.versions.entry(uuid).or_default().push(object);
         }
         held
@@ -647,11 +623,6 @@ impl<'a> FromIterator<(String, &'a dyn Reflect)> for Held<'a> {
 }
 
 impl<'a> Held<'a> {
-    /// The object a bare uuid names.
-    fn get(&self, uuid: &str) -> Option<&&'a dyn Reflect> {
-        self.by_uuid.get(uuid)
-    }
-
     /// **The object a reference names**: of the objects held under its uuid,
     /// the one at the version it names (`identity::version_fit`, the one rule -
     /// the exact version, then one that contradicts nothing). A uuid held once
@@ -660,12 +631,24 @@ impl<'a> Held<'a> {
     /// a uuid held twice whose versions the reference contradicts answers
     /// `None`: guessing would show the wrong version under the right name.
     fn of(&self, reference: &dyn Reflect) -> Option<&'a dyn Reflect> {
-        let uuid = identity::uuid_of_reflect(reference)?.to_ascii_lowercase();
-        let all = self.versions.get(&uuid)?;
+        let uuid = identity::uuid_of_reflect(reference)?;
+        self.pick(uuid, identity::object_version_of_reflect(reference))
+    }
+
+    /// The object a [`Named`] names: its uuid as it stands, and the version
+    /// its uri carries (a uri names one, a bare uuid none): [`Held::of`]'s
+    /// rule, for the sites that hold a `Named` and no longer the reference it
+    /// was made from.
+    fn at(&self, named: &Named) -> Option<&'a dyn Reflect> {
+        let (_, version) = identity::parse_address(&named.uri);
+        self.pick(&named.uuid, version.as_deref())
+    }
+
+    fn pick(&self, uuid: &str, wanted: Option<&str>) -> Option<&'a dyn Reflect> {
+        let all = self.versions.get(&uuid.to_ascii_lowercase())?;
         if let [only] = all.as_slice() {
             return Some(*only);
         }
-        let wanted = identity::object_version_of_reflect(reference);
         let mut best: Option<(identity::VersionFit, &'a dyn Reflect)> = None;
         for object in all {
             let fit = identity::version_fit(wanted, identity::object_version_of_reflect(*object));
@@ -792,7 +775,7 @@ fn read_unconformities(
         let horizon = contact
             .part_of
             .as_ref()
-            .and_then(|part| held.get(&part.uuid).map(|object| (part, *object)));
+            .and_then(|part| held.at(part).map(|object| (part, object)));
         if let (Some((part, horizon)), Some(position)) = (horizon, position) {
             let at = |named: &Named| position.get(&named.uuid).copied();
             if let (Some(a), Some(b)) = (at(&contact.subject), at(&contact.object)) {
@@ -1025,8 +1008,8 @@ pub fn columns<'a>(objects: impl Iterator<Item = &'a dyn Reflect>) -> Columns {
                 .unwrap_or_default()
                 .to_ascii_lowercase();
             listed.push(uuid.clone());
-            match held.get(&uuid) {
-                Some(target) => ranks.push(read_rank(*target, &held, &represents)),
+            match held.of(*reference) {
+                Some(target) => ranks.push(read_rank(target, &held, &represents)),
                 None => out.notes.push(format!(
                     "column {} lists rank {uuid}, which is not in the package",
                     column.uuid
@@ -1509,22 +1492,10 @@ fn measure(object: &dyn Reflect, name: &str) -> Option<String> {
     })
 }
 
-/// A boolean field, or `None`: absent is not false.
-fn flag(object: &dyn Reflect, name: &str) -> Option<bool> {
-    match object.field(name)? {
-        FieldValue::Scalar(scalar) => match scalar.to_string().as_str() {
-            "true" | "1" => Some(true),
-            "false" | "0" => Some(false),
-            _ => None,
-        },
-        _ => None,
-    }
-}
-
 /// Read a fault interpretation - the object when the package holds it, the
 /// reference alone otherwise.
 fn read_fault(reference: Named, held: &Held<'_>) -> Fault {
-    let object = held.get(&reference.uuid).copied();
+    let object = held.at(&reference);
     let mut throws: Vec<String> = Vec::new();
     let mut active = None;
     if let Some(object) = object {
@@ -1594,7 +1565,7 @@ fn read_organisation(object: &dyn Reflect, held: &Held<'_>) -> Organisation {
             }
             continue;
         }
-        let target = held.get(&surface.uuid).copied();
+        let target = held.of(reference);
         horizons.push((
             integer(*entry, INDEX).unwrap_or(position as i64),
             Surface {

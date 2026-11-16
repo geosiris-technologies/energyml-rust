@@ -20,3 +20,23 @@ title = "Tables and categories"
 [[theme]]
 id = "series"
 title = "Time series"
+
+[[theme]]
+id = "stats"
+title = "Statistics, scales and gaps"
+
+[[theme]]
+id = "well"
+title = "Around the well"
+
+[[theme]]
+id = "survey"
+title = "Directional surveys"
+
+[[theme]]
+id = "property"
+title = "Properties"
+
+[[theme]]
+id = "provenance"
+title = "Provenance"

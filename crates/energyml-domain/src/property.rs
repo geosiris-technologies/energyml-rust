@@ -57,6 +57,25 @@ use crate::error::{Error, Result};
 use crate::source::ArraySource;
 use crate::values::{self, Values};
 
+// A property read slab by slab, for the statistics.
+pub mod chunks;
+// Whether two properties are kin: the same quantity along other directions or
+// times.
+pub mod kinship;
+/// The one reading of the link a column or a property makes to a table
+/// (convention B).
+pub mod link;
+/// What the file says of a property, as typed findings.
+pub mod observe;
+// The shape of a property's values: components, elements, time, realizations.
+pub mod shape;
+
+/// The one reading of convention B on a list of facets (see [`link`]).
+pub use link::{QualifierRefusal, qualifier_link};
+/// The one rule "does the count read fit the shape?", kept here under its
+/// first path (`property::count_fit`); it lives in [`shape`].
+pub use shape::{CountFit, count_fit};
+
 /// What the values of a property hang on.
 ///
 /// The eml 2.3 list, which is the RESQML 2.0.1 list of 27 plus `triangles` and
@@ -238,13 +257,63 @@ pub struct TimeRef {
     pub use_interval: bool,
 }
 
-/// One qualifier on a property - `eml:Facet` (`what`, `direction`, …).
+/// When a 2.2 property applies, as its `Time` (eml `GeologicTime`) states it.
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
+pub struct Instant {
+    /// `DateTime`, as written (`xsd:dateTime`).
+    pub date_time: String,
+    /// `AgeOffsetAttribute`, when present: a geologic offset in years.
+    pub age_offset: Option<i64>,
+}
+
+/// One qualifier on a property or on a table column - `PropertyKindFacet`.
+///
+/// The two releases swap the element names, which is why a reader that knows
+/// only one of them reads nothing in the other: RESQML 2.0.1 writes the kind
+/// in `Facet` and the value in `Value` (RESQML TRG 2.0.1 §6.36 p. 77); EML 2.3
+/// writes the value in `Facet` and the kind in `Kind` (EML TRG 2.3 §11.11
+/// p. 294).
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Facet {
-    /// The facet kind, lexically (`what`, `side`, `direction`, …).
+    /// The facet kind, lexically: `conditions`, `side`, `direction`,
+    /// `netgross`, `qualifier`, `statistics`, `what`.
     pub kind: String,
-    /// The facet value.
-    pub value: String,
+    /// The facet value, and whether the schema lists it.
+    pub value: FacetValue,
+}
+
+/// A facet value: one of the schema's own, or a producer's extension.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum FacetValue {
+    /// A value of the schema's list (EML 2.3 `Facet`: `I`, `K+`, `net`,
+    /// `maximum`, ...), or, in RESQML 2.0.1 whose `Value` is free text, a value
+    /// with no namespace prefix.
+    Standard(String),
+    /// A value outside the list: the `Other` hole of the open `FacetExt`
+    /// (EML TRG 2.3 §11.2 p. 284, `EnumExtensionPattern` §6.28 p. 104,
+    /// pattern `.*:.*`), or, in RESQML 2.0.1, a value with a namespace prefix
+    /// (`nwdf:vertical`). What it means is the producer's, not the standard's.
+    Extension(String),
+}
+
+impl FacetValue {
+    /// The value as written.
+    pub fn as_str(&self) -> &str {
+        match self {
+            FacetValue::Standard(value) | FacetValue::Extension(value) => value,
+        }
+    }
+
+    /// Whether the standard's list leaves its meaning to the producer.
+    pub fn is_extension(&self) -> bool {
+        matches!(self, FacetValue::Extension(_))
+    }
+}
+
+impl std::fmt::Display for FacetValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
 }
 
 /// One array of values, and the patch of the representation it belongs to.
@@ -327,6 +396,13 @@ pub struct Property<'a> {
     pub has_realization_indices: bool,
     /// Qualifiers.
     pub facets: Vec<Facet>,
+    /// `LabelPerComponent`, linearised like the values (RESQML TRG 2.2 §7.1
+    /// p. 222): empty when the file gives none (always, in 2.0.1, which has no
+    /// such field).
+    pub label_per_component: Vec<String>,
+    /// 2.2 `Time/DateTime`, verbatim: the instant of a property dated on its own
+    /// (not a series). `None` in 2.0.1, which dates by `TimeIndex` (see `time`).
+    pub instant: Option<Instant>,
     /// The value arrays, one per patch.
     pub patches: Vec<Patch<'a>>,
 }
@@ -370,7 +446,7 @@ impl Property<'_> {
         };
         if let Some(actual) = actual {
             let expected = self.expected_value_count(count);
-            if expected != actual {
+            if count_fit(count, self.values_per_element(), actual) != CountFit::Fits {
                 out.push(Discrepancy::ValueCount {
                     element_count: count,
                     per_element: self.values_per_element(),
@@ -476,6 +552,8 @@ pub fn read(object: &dyn Reflect) -> Result<Property<'_>> {
         realization: integer(object, "RealizationIndex"),
         has_realization_indices: object.field("RealizationIndices").is_some_and(|f| !f.is_empty()),
         facets: read_facets(object),
+        label_per_component: strings(object, "LabelPerComponent"),
+        instant: read_instant(object),
         patches,
     })
 }
@@ -534,7 +612,7 @@ fn read_kind(object: &dyn Reflect) -> Option<PropertyKindRef> {
 
     // 2.2, and any version that references the kind directly: the field *is*
     // the reference.
-    if let Some(uuid) = uuid_of_reference(inner) {
+    if let Some(uuid) = energyml_core::identity::non_empty_uuid_of_reflect(inner) {
         return Some(PropertyKindRef::Object {
             uuid,
             title: text(inner, "Title"),
@@ -548,7 +626,7 @@ fn read_kind(object: &dyn Reflect) -> Option<PropertyKindRef> {
     }
     for field in ["LocalPropertyKind", "PropertyKind"] {
         if let Some(target) = inner.field(field).and_then(|f| f.as_object())
-            && let Some(uuid) = uuid_of_reference(target)
+            && let Some(uuid) = energyml_core::identity::non_empty_uuid_of_reflect(target)
         {
             return Some(PropertyKindRef::Object {
                 uuid,
@@ -563,13 +641,13 @@ fn read_kind(object: &dyn Reflect) -> Option<PropertyKindRef> {
 /// [`read_kind`] reads.
 fn read_kind_uri(object: &dyn Reflect) -> Option<String> {
     let inner = object.field("PropertyKind")?.as_object()?;
-    if uuid_of_reference(inner).is_some() {
+    if energyml_core::identity::non_empty_uuid_of_reflect(inner).is_some() {
         return identity::uri_of_reflect(inner);
     }
     ["LocalPropertyKind", "PropertyKind"]
         .into_iter()
         .filter_map(|field| inner.field(field).and_then(|f| f.as_object()))
-        .find(|target| uuid_of_reference(*target).is_some())
+        .find(|target| energyml_core::identity::non_empty_uuid_of_reflect(*target).is_some())
         .and_then(identity::uri_of_reflect)
 }
 
@@ -595,7 +673,26 @@ fn read_time(object: &dyn Reflect) -> Option<TimeRef> {
     })
 }
 
-fn read_facets(object: &dyn Reflect) -> Vec<Facet> {
+/// The 2.2 `Time` of a property, which is an instant and not an index into a
+/// series; `read_time` does not read it.
+fn read_instant(object: &dyn Reflect) -> Option<Instant> {
+    let inner = object.field("Time")?.as_object()?;
+    let date_time = text(inner, "DateTime")?;
+    Some(Instant {
+        date_time,
+        age_offset: signed(inner, "AgeOffsetAttribute"),
+    })
+}
+
+/// The facets of an object - a property (`AbstractValuesProperty.Facet`) or a
+/// table column (`Column.Facet`) - in document order.
+///
+/// The one reader, for both releases: EML 2.3 and RESQML 2.2 carry the kind in
+/// `Kind` and the value in `Facet`; RESQML 2.0.1 carries the kind in `Facet`
+/// and the value in `Value`. Nothing is invented or sorted, and the rule that a
+/// property carries one facet of a kind (EML TRG 2.3 §11.11 p. 294) is not
+/// checked here: this is a reading.
+pub(crate) fn read_facets(object: &dyn Reflect) -> Vec<Facet> {
     let Some(value) = object.field("Facet") else {
         return Vec::new();
     };
@@ -603,10 +700,41 @@ fn read_facets(object: &dyn Reflect) -> Vec<Facet> {
         .into_iter()
         .filter_map(|item| {
             let inner = item.as_object()?;
-            Some(Facet {
-                kind: text(inner, "Facet")?,
-                value: text(inner, "FacetValue")?,
-            })
+            if inner.field("Kind").is_some() {
+                // EML 2.3, RESQML 2.2: `Kind` is the kind, `Facet` the value.
+                let kind = text(inner, "Kind")?;
+                let raw = text(inner, "Facet")?;
+                let standard = inner
+                    .type_info()
+                    .field("Facet")
+                    .map(|field| {
+                        field
+                            .ty
+                            .allowed_values()
+                            .iter()
+                            .any(|variant| !variant.is_other && variant.value == raw)
+                    })
+                    // An untyped object: the rule of the pattern.
+                    .unwrap_or(!raw.contains(':'));
+                let value = if standard {
+                    FacetValue::Standard(raw)
+                } else {
+                    FacetValue::Extension(raw)
+                };
+                Some(Facet { kind, value })
+            } else if inner.field("Value").is_some() {
+                // RESQML 2.0.1: `Facet` is the kind, `Value` free text.
+                let kind = text(inner, "Facet")?;
+                let raw = text(inner, "Value")?;
+                let value = if raw.contains(':') {
+                    FacetValue::Extension(raw)
+                } else {
+                    FacetValue::Standard(raw)
+                };
+                Some(Facet { kind, value })
+            } else {
+                None
+            }
         })
         .collect()
 }
@@ -1009,9 +1137,15 @@ pub fn element_count(representation: &dyn Reflect, element: IndexableElement) ->
                 // compute rather than refuse; it is not enough to stop
                 // reporting a property whose own data disagrees, which
                 // `Property::check` still does.
-                Intervals | Interval | IntervalEdges | IntervalsFromDatum => {
+                Intervals | Interval | IntervalsFromDatum => {
                     Ok(required(representation, "NodeCount")?.saturating_sub(1))
                 }
+                // `interval edges` is **refused** on a frame. RESQML Technical
+                // Usage Guide v2.2, section 4.2.1, Table 1 (printed page 38,
+                // "RESQML Indexable Elements and Applicable Representations"),
+                // lists `intervals` for "wellbore frames, column-layer grids"
+                // and `interval edges` for "column-layer grids" only. The pair
+                // is not defined, so no count is invented for it.
                 _ => refuse(),
             }
         }
@@ -1180,38 +1314,14 @@ fn flatten(value: FieldValue<'_>) -> Vec<FieldValue<'_>> {
     }
 }
 
-fn text(object: &dyn Reflect, field: &str) -> Option<String> {
-    match object.field(field)?.as_scalar()? {
-        Scalar::Str(s) => Some(s.to_string()),
-        other => Some(other.to_string()),
-    }
-}
+// The readers of a field are the door's (ADR 0046), under the names this file
+// already uses.
+use energyml_core::reflect::fields::{
+    integer as signed, text, texts as strings, unsigned as integer, unsigneds as integers,
+};
 
 fn text_at(object: &dyn Reflect, field: &str, inner: &str) -> Option<String> {
     text(object.field(field)?.as_object()?, inner)
-}
-
-fn integer(object: &dyn Reflect, field: &str) -> Option<u64> {
-    match object.field(field)?.as_scalar()? {
-        Scalar::UInt(v) => Some(v),
-        Scalar::Int(v) if v >= 0 => Some(v as u64),
-        Scalar::Double(v) if v >= 0.0 => Some(v as u64),
-        _ => None,
-    }
-}
-
-fn integers(object: &dyn Reflect, field: &str) -> Vec<u64> {
-    let Some(value) = object.field(field) else {
-        return Vec::new();
-    };
-    flatten(value)
-        .into_iter()
-        .filter_map(|item| match item.as_scalar()? {
-            Scalar::UInt(v) => Some(v),
-            Scalar::Int(v) if v >= 0 => Some(v as u64),
-            _ => None,
-        })
-        .collect()
 }
 
 /// A count the object declares, or that its `Geometry` does.
@@ -1245,22 +1355,13 @@ fn required(object: &dyn Reflect, field: &str) -> Result<u64> {
     })
 }
 
-/// The uuid a `DataObjectReference` carries, under either spelling.
-/// The uuid a reference names - the identity layer's reading, so every
-/// spelling of the field is one answer.
-fn uuid_of_reference(object: &dyn Reflect) -> Option<String> {
-    energyml_core::identity::uuid_of_reflect(object)
-        .filter(|uuid| !uuid.is_empty())
-        .map(str::to_string)
-}
-
 /// The uri of the object a field names, version included.
 fn reference_uri(object: &dyn Reflect, field: &str) -> Option<String> {
     identity::uri_of_reflect(object.field(field)?.as_object()?)
 }
 
 fn reference_uuid(object: &dyn Reflect, field: &str) -> Option<String> {
-    uuid_of_reference(object.field(field)?.as_object()?)
+    identity::reference_uuid(object, field)
 }
 
 #[cfg(test)]

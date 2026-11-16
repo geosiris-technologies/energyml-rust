@@ -20,6 +20,7 @@
 
 use std::fmt::Write as _;
 
+use energyml_core::calendar::{civil_from_days, days_from_civil};
 use quick_xml::events::Event;
 
 /// The EPC specification version this writer targets. There has been one.
@@ -170,17 +171,9 @@ impl CoreProperties {
     }
 }
 
-fn escape(value: &str) -> String {
-    value
-        .replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-}
-
-fn local_name(raw: &[u8]) -> String {
-    String::from_utf8_lossy(raw.rsplit(|b| *b == b':').next().unwrap_or_default()).into_owned()
-}
+// Element text: the one door, `energyml_core::xml::escape_text`.
+use super::raw_xml::local_name;
+use energyml_core::xml::escape_text as escape;
 
 // ---------------------------------------------------------------------------
 // Time
@@ -191,7 +184,7 @@ fn local_name(raw: &[u8]) -> String {
 /// Computed here rather than pulled from a date library: one timestamp in one
 /// format is not worth a dependency, and the civil-date arithmetic below is
 /// Howard Hinnant's `civil_from_days`, which is exact for every date this will
-/// ever see.
+/// ever see (`energyml_core::calendar`, the one copy).
 pub fn now_w3cdtf() -> String {
     let seconds = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -234,32 +227,6 @@ pub fn unix_seconds(w3cdtf: &str) -> Option<i64> {
         return None;
     }
     Some(days_from_civil(year, month, day) * 86_400 + hour * 3600 + minute * 60 + second)
-}
-
-/// A civil date to days since 1970-01-01 - the inverse of
-/// [`civil_from_days`], Hinnant's algorithm.
-fn days_from_civil(year: i64, month: i64, day: i64) -> i64 {
-    let y = if month <= 2 { year - 1 } else { year };
-    let era = y.div_euclid(400);
-    let yoe = y.rem_euclid(400);
-    let mp = if month > 2 { month - 3 } else { month + 9 };
-    let doy = (153 * mp + 2) / 5 + day - 1;
-    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
-    era * 146_097 + doe - 719_468
-}
-
-/// Days since 1970-01-01 to a civil date. Hinnant's algorithm, unchanged.
-fn civil_from_days(days: i64) -> (i64, u32, u32) {
-    let z = days + 719_468;
-    let era = z.div_euclid(146_097);
-    let doe = z.rem_euclid(146_097);
-    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
-    let y = yoe + era * 400;
-    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
-    let mp = (5 * doy + 2) / 153;
-    let d = (doy - (153 * mp + 2) / 5 + 1) as u32;
-    let m = if mp < 10 { mp + 3 } else { mp - 9 } as u32;
-    (if m <= 2 { y + 1 } else { y }, m, d)
 }
 
 #[cfg(test)]

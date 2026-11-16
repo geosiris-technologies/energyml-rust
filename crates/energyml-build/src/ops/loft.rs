@@ -16,6 +16,7 @@
 use energyml_analysis::loft::{LoftLine, loft};
 use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
+use std::sync::Arc;
 
 use crate::declare::{Inputs, Params, Shape, Suggestions};
 use crate::operation::{About, Category, Context, Need, Note, Operation, Plan, Refusal, Slot};
@@ -139,7 +140,7 @@ impl Operation for Loft {
         let triangles = made.triangles.len();
         let result = Shape {
             name: "loft".to_string(),
-            geometry: Geometry {
+            geometry: Arc::new(Geometry {
                 kind: "loft",
                 patches: vec![Patch {
                     index: 0,
@@ -148,7 +149,7 @@ impl Operation for Loft {
                     topology: Topology::Triangles(made.triangles),
                     closed: Vec::new(),
                 }],
-            },
+            }),
             closed: None,
             known: inputs.lines[0].known.clone(),
         };

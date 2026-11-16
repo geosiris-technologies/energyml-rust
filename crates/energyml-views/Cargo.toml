@@ -1,0 +1,59 @@
+[package]
+name = "energyml-views"
+description = "The views of an EnergyML package as pictures: one registry of views, each drawing a display list, written as SVG (and PNG on demand), drawn again from its own metadata."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["energyml", "resqml", "witsml", "svg", "visualization"]
+categories = ["science::geo", "visualization", "graphics"]
+readme = "README.md"
+homepage = "https://www.geosiris.com"
+documentation = "https://docs.rs/energyml-views"
+include = ["src/**", "Cargo.toml", "README.md", "LICENSE*", "NOTICE*"]
+autotests = false
+
+[dependencies]
+energyml-core = { workspace = true }
+energyml-storage = { path = "../energyml-storage", version = "0.3.0" }
+# Reading: properties, tables, units, palettes, the package index - the computing a view only lays out.
+energyml-domain = { path = "../energyml-domain", version = "0.3.0" }
+# Placing: a well's path, its frame, its projections.
+energyml-geometry = { path = "../energyml-geometry", version = "0.3.0" }
+# The display list, its SVG writer and reader, its PNG: the one drawing every view shares.
+energyml-sheet = { path = "../energyml-sheet", version = "0.3.0" }
+# What is computed above geometry: the quality control of a survey.
+energyml-analysis = { path = "../energyml-analysis", version = "0.3.0" }
+# The geosteering section, wrapped as a view: its computing and its layout stay there.
+energyml-section = { path = "../energyml-section", version = "0.3.0" }
+# The colour of an object: the one door to colours.
+energyml-cache = { path = "../energyml-cache", version = "0.3.0" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+
+[dev-dependencies]
+# Packages fabricated in memory: every schema release registered, the generated types to build objects with.
+energyml-schemas = { path = "../energyml-schemas", features = ["all"] }
+energyml-eml-2-0 = { path = "../generated/energyml-eml-2-0" }
+energyml-eml-2-3 = { path = "../generated/energyml-eml-2-3" }
+energyml-resqml-2-0-1 = { path = "../generated/energyml-resqml-2-0-1" }
+energyml-resqml-2-2 = { path = "../generated/energyml-resqml-2-2" }
+energyml-witsml-2-1 = { path = "../generated/energyml-witsml-2-1" }
+
+[features]
+default = []
+# `draw::png`: a picture rasterised from its SVG. Off by default: without it the PNG refuses by name.
+png = ["energyml-sheet/png"]
+# Read the arrays of an HDF5 file, not only locate them.
+hdf5 = ["energyml-storage/hdf5", "energyml-geometry/hdf5", "energyml-domain/hdf5"]
+
+[[test]]
+name = "views"
+path = "tests/main.rs"
+
+# docs.rs builds on Linux with no native HDF5: `png` builds there, `hdf5` would not.
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+features = ["png"]

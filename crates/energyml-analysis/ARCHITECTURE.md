@@ -16,6 +16,7 @@ It sits above `energyml-geometry` and below `energyml-build` and the faces. It r
 - **Refusals are named.** No samples, mismatched lengths, a non-positive power: each says what is wrong, because an interpolated `NaN` and "the call was malformed" are different news.
 - **A calculation lives here, never in an operation.** An operation in `energyml-build` is the seam (read the bag, call the algorithm here, write through the shared writer). That keeps what can be wrong testable without a file.
 - **A grid is measured as a lattice**: slope and azimuth by central differences on node positions (Zevenbergen and Thorne, 1987), never by cutting each cell along a diagonal the file did not choose. A hole node, and the nodes whose differences reach it, are `NaN` and counted.
+- **Two properties combine value by value, in a registry.** `combine` (ratio, difference, log-ratio, the caller's own entries tried first) converts the second unit to the first when they are of one family and refuses otherwise; an absent input and an undefined result (a division by zero, the log of a value <= 0) are counted apart and never become an infinity. Writing the result is the `combine` operation of `energyml-build`, not this module.
 - **Directions are read, not guessed.** Anything that depends on the sense of the vertical takes it as an argument.
 
 ## References

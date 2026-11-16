@@ -95,6 +95,7 @@ use crate::operation::{
 };
 use crate::pieces::{Known, KnownProperty, Ref};
 
+use super::blocks::digest;
 use super::property::{PropertyParams, Timing};
 
 /// The operation.
@@ -233,15 +234,6 @@ fn facts_of<'a>(base: &'a Ref, known: &'a Known) -> Result<(&'a KnownProperty, V
         return Err(Refusal::on("base", format!("`{title}` holds no value")));
     }
     Ok((facts, values))
-}
-
-/// Values as the seed carries them - exactly, NaN included.
-fn digest(values: &[f64]) -> String {
-    values
-        .iter()
-        .map(|value| format!("{value:?}"))
-        .collect::<Vec<_>>()
-        .join(",")
 }
 
 /// A count, as the activity records it.
@@ -430,24 +422,13 @@ impl Operation for PropertyTimeSeries {
         let marked = |drawn: &mut Plan, description: String, form: &str| -> Result<(), Refusal> {
             // `Citation/Description` holds 2000 characters: refused rather than
             // cut short, since a source cut short cites nothing.
-            if description.chars().count() > 2000 {
-                return Err(Refusal::on(
-                    "source",
-                    format!(
-                        "makes a description of {} characters, and a Citation/Description holds 2000 - cite the document shorter",
-                        description.chars().count()
-                    ),
-                ));
-            }
+            super::blocks::checked_description(&description)?;
             for object in drawn.objects.iter_mut() {
                 object.json["Citation"]["Description"] = json!(description);
                 // The mark of an invented value.
-                object.json["ExtensionNameValue"] = json!([{
-                    "$type": "eml23.ExtensionNameValue",
-                    "Name": "synthetic",
-                    "Value": { "$type": "eml23.StringMeasure", "_": "true" },
-                    "Description": format!("laid by `property-time-series` ({form}) by a drift in time, not measured"),
-                }]);
+                object.json["ExtensionNameValue"] = super::blocks::synthetic_extension(format!(
+                    "laid by `property-time-series` ({form}) by a drift in time, not measured"
+                ));
             }
             Ok(())
         };

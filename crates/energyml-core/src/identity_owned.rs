@@ -23,8 +23,10 @@
 //! [`identity::collect_refs`]: crate::identity::collect_refs
 //! [`identity::nested_objects`]: crate::identity::nested_objects
 
-use crate::identity::{NestedObject, RefEdge, key_of_reflect, refs_in_source};
-use crate::value::{FieldValue, Reflect};
+use crate::any_xml::AnyXml;
+use crate::identity::{NestedObject, RefEdge, Visitor, key_of_reflect, refs_in_source, walk};
+use crate::reflect::TypeInfo;
+use crate::value::Reflect;
 
 /// The references one data object writes.
 #[derive(Clone, Debug)]
@@ -61,101 +63,82 @@ pub fn collect_refs_owned(root: &dyn Reflect) -> Vec<RefEdge<'_>> {
 ///
 /// [`identity::collect_refs`]: crate::identity::collect_refs
 pub fn collect_refs_by_owner(root: &dyn Reflect) -> Vec<OwnedRefs<'_>> {
-    let mut groups = vec![OwnedRefs {
-        owner: None,
-        refs: Vec::new(),
-    }];
-    walk(root, String::new(), String::new(), 0, &mut groups);
-    groups
+    let mut by_owner = ByOwner {
+        groups: vec![OwnedRefs {
+            owner: None,
+            refs: Vec::new(),
+        }],
+        owners: vec![(0, 0)],
+    };
+    walk(root, &mut by_owner);
+    by_owner.groups
 }
 
-/// `a.b`, or `b` when `prefix` is empty.
-fn join(prefix: &str, name: &str) -> String {
-    if prefix.is_empty() {
-        name.to_string()
-    } else {
-        format!("{prefix}.{name}")
+/// The visitor behind [`collect_refs_by_owner`], on the one reflection walk of
+/// `crate::identity`.
+///
+/// `owners` is the stack of the data objects being walked: for each, the index
+/// of its group and the length of its path from the root, so a path relative to
+/// the owner is the tail of the walk's path past that length.
+struct ByOwner<'a> {
+    groups: Vec<OwnedRefs<'a>>,
+    owners: Vec<(usize, usize)>,
+}
+
+impl ByOwner<'_> {
+    /// The group of the current owner, and `path` relative to it.
+    fn current<'p>(&self, path: &'p str) -> (usize, &'p str) {
+        let (group, owner_len) = *self.owners.last().expect("the root owner is never popped");
+        let rest = &path[owner_len..];
+        (group, rest.strip_prefix('.').unwrap_or(rest))
     }
 }
 
-/// `full` is the path from the root, `relative` the path from the owner
-/// `groups[owner]`.
-fn walk<'a>(
-    object: &'a dyn Reflect,
-    full: String,
-    relative: String,
-    owner: usize,
-    groups: &mut Vec<OwnedRefs<'a>>,
-) {
-    for field in object.type_info().fields {
-        let Some(value) = object.field(field.name) else {
-            continue;
-        };
-        visit(
-            value,
-            join(&full, field.xml_name),
-            join(&relative, field.xml_name),
-            field.ty.type_info(),
-            owner,
-            groups,
-        );
+impl<'a> Visitor<'a> for ByOwner<'a> {
+    fn reference(&mut self, path: &str, child: &'a dyn Reflect, expected: Option<&'static TypeInfo>) {
+        let (group, relative) = self.current(path);
+        if let Some(target) = key_of_reflect(child) {
+            let relative = relative.to_string();
+            self.groups[group].refs.push(RefEdge {
+                path: relative,
+                target,
+                expected,
+            });
+        }
     }
-}
 
-fn visit<'a>(
-    value: FieldValue<'a>,
-    full: String,
-    relative: String,
-    expected: Option<&'static crate::reflect::TypeInfo>,
-    owner: usize,
-    groups: &mut Vec<OwnedRefs<'a>>,
-) {
-    match value {
-        FieldValue::Object(child) => {
-            let info = child.type_info();
-            if info.is_object_ref {
-                if let Some(target) = key_of_reflect(child) {
-                    groups[owner].refs.push(RefEdge {
-                        path: relative,
-                        target,
-                        expected,
-                    });
-                }
-            } else if let Some(any) = child.as_any().downcast_ref::<crate::any_xml::AnyXml>() {
-                // The model could not type this subtree, so its references are
-                // in the text; they are the owner's, as the subtree is.
-                refs_in_source(&any.content, &relative, &mut groups[owner].refs);
-            } else if info.is_top_level
-                && let Some(key) = key_of_reflect(child)
-                && !key.uuid.trim().is_empty()
-            {
-                // The test `nested_objects` applies: a data object of its own.
-                groups.push(OwnedRefs {
-                    owner: Some(NestedObject {
-                        path: full.clone(),
-                        key,
-                    }),
-                    refs: Vec::new(),
-                });
-                let nested = groups.len() - 1;
-                walk(child, full, String::new(), nested, groups);
-            } else {
-                walk(child, full, relative, owner, groups);
-            }
+    fn untyped(&mut self, path: &str, any: &'a AnyXml) {
+        // The model could not type this subtree, so its references are in the
+        // text; they are the owner's, as the subtree is.
+        let (group, relative) = self.current(path);
+        let relative = relative.to_string();
+        // The fault, if any, is reported by `identity::unreadable_subtrees`.
+        let _ = refs_in_source(&any.content, &relative, &mut self.groups[group].refs);
+    }
+
+    fn enter(&mut self, path: &str, child: &'a dyn Reflect) {
+        // The test `nested_objects` applies: a data object of its own opens a
+        // new owner; anything else stays with the current one.
+        if child.type_info().is_top_level
+            && let Some(key) = key_of_reflect(child)
+            && !key.uuid.trim().is_empty()
+        {
+            self.groups.push(OwnedRefs {
+                owner: Some(NestedObject {
+                    path: path.to_string(),
+                    key,
+                }),
+                refs: Vec::new(),
+            });
+            self.owners.push((self.groups.len() - 1, path.len()));
+        } else {
+            let current = *self.owners.last().expect("the root owner is never popped");
+            self.owners.push(current);
         }
-        FieldValue::List(items) => {
-            for (i, item) in items.into_iter().enumerate() {
-                visit(
-                    item,
-                    format!("{full}[{i}]"),
-                    format!("{relative}[{i}]"),
-                    expected,
-                    owner,
-                    groups,
-                );
-            }
-        }
-        _ => {}
+    }
+
+    fn leave(&mut self) {
+        self.owners.pop();
     }
 }
 

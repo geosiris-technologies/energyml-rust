@@ -9,25 +9,38 @@
 //! that installs a process-wide default (a `set_default`, a global allocator)
 //! keeps a binary of its own, as a `[[test]]` in `Cargo.toml`.
 
+mod around_well;
+mod attribute_counts;
 mod build;
 mod connection;
 mod corpus;
+mod crs_unreadable;
 mod cut_many;
 mod cut_sources;
+mod cut_weld;
 mod declared;
 mod defined;
 mod derived;
+mod deviation_survey;
+mod direction_at;
 mod drawable;
+mod faces;
 mod fixtures;
+mod head_portion;
 mod heads;
 mod package_scene;
+mod placed_path;
 mod plane;
 mod properties_of;
 mod reference_versions;
+mod survey_units;
+mod tube_attributes;
 mod unstructured;
+mod vector;
 mod well;
 mod well_compound;
 mod well_drop;
+mod well_projection;
 mod wells_versions;
 mod wireframe;
 mod witsml_trajectory;

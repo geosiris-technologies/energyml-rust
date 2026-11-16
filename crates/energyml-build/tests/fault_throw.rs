@@ -21,12 +21,12 @@
 //! uuid that the surface has taken.
 
 use std::collections::{BTreeSet, HashMap};
+use std::sync::Arc;
 
 use serde_json::json;
 
 use energyml_build::operation::{Choices, Fitness, Identity, NewObject, Numbers, Plan, Registry, When};
 use energyml_build::pieces::{Known, Pieces, Ref, Source};
-use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 
 const X0: f64 = 651_000.0;
@@ -86,7 +86,7 @@ fn horizon() -> Source {
         }
     }
     Source::Shape {
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind: "grid",
             patches: vec![Patch {
                 index: 0,
@@ -98,7 +98,7 @@ fn horizon() -> Source {
                 },
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     }
 }
@@ -114,7 +114,7 @@ fn fault(dip: f64) -> Source {
         [at(-100.0), Y0 + 155.0, -100.0],
     ];
     Source::Shape {
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind: "fault",
             patches: vec![Patch {
                 index: 0,
@@ -123,7 +123,7 @@ fn fault(dip: f64) -> Source {
                 topology: Topology::Triangles(vec![[0, 1, 2], [1, 3, 2]]),
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     }
 }
@@ -252,7 +252,7 @@ fn number(plan: &Plan, title: &str) -> f64 {
         .parameters
         .iter()
         .filter_map(|p| match p {
-            Parameter::Double { title: t, value, .. } if t == title => Some(*value),
+            other if other.title() == title => other.number(),
             _ => None,
         })
         .collect();
@@ -481,7 +481,7 @@ fn what_the_computation_cannot_tear_is_refused_on_the_faults() {
 #[test]
 fn a_triangulated_horizon_is_not_torn_again() {
     let triangulated = Source::Shape {
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind: "triangles",
             patches: vec![Patch {
                 index: 0,
@@ -490,7 +490,7 @@ fn a_triangulated_horizon_is_not_torn_again() {
                 topology: Topology::Triangles(vec![[0, 1, 2]]),
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     };
     let pieces = Pieces::empty()

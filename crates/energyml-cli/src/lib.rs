@@ -44,7 +44,9 @@ mod rules;
 mod select;
 mod series;
 mod sources;
+mod target;
 mod terrain;
+mod view;
 
 #[derive(Parser)]
 #[command(name = "energyml", about, version)]
@@ -89,7 +91,9 @@ struct Cli {
     /// - `--h5 path/to/data.h5` offers the file without naming it. Offers are
     ///   opened in the order given and the first that holds the dataset wins.
     /// - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the
-    ///   document uses, for when you know which name is wrong.
+    ///   document uses, for when you know which name is wrong. The text before
+    ///   the first `=` is a name only when it is a bare file name: a path that
+    ///   contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
     ///
     /// The name is optional because the whole point is not having to open a
     /// `.rels` in a text editor to find out what your file used to be called.
@@ -97,8 +101,13 @@ struct Cli {
     ///
     /// What is offered is tried **before** what the package names, since
     /// offering one is an explicit instruction and people offer them precisely
-    /// when the package is wrong. Anything read from somewhere the document did
-    /// not point at is reported.
+    /// when the package is wrong.
+    ///
+    /// A file you offered or pinned is used as you said, without a word. When
+    /// the package's own name holds nothing, the search looks beside the package
+    /// (the file with its name, then any other file in its folder), and a file
+    /// found that way is reported on stderr, with how many datasets came from
+    /// it. A path given here that is not on disk is reported and ignored.
     #[arg(long = "h5", value_name = "[NAME=]PATH", global = true)]
     h5: Vec<String>,
 
@@ -180,6 +189,8 @@ enum Command {
     /// A digital elevation model from a catalogue source, written as a 2D grid -
     /// the quote without `--out`.
     Terrain(terrain::TerrainArgs),
+    /// The views of a package as pictures: what each view can show, what it takes, its SVG, and its PNG on demand.
+    View(view::ViewArgs),
     /// Write the reference of every command, `cli-reference.md`, from
     /// their definitions - or check it (`--check`). A tool of the repository,
     /// run by a script of each repository; hidden from the help.
@@ -776,6 +787,7 @@ fn try_run() -> Result<ExitCode> {
         Command::Import(args) => import::run(args),
         Command::Create(args) => create::run(args),
         Command::Terrain(args) => terrain::run(args),
+        Command::View(args) => view::run(args, modes.clone()).map(|()| ExitCode::SUCCESS),
         Command::CliReference(args) => cli_reference::run::<Cli>(args),
         Command::GalaxyTool(args) => galaxy::run(args),
         Command::External(words) => external::run(&words),
@@ -784,25 +796,136 @@ fn try_run() -> Result<ExitCode> {
 
 /// Open an EPC with the reading switches of `modes`, every schema release
 /// registered.
-pub fn open(file: &PathBuf, modes: &Modes) -> Result<EpcStore> {
+pub fn open(file: &PathBuf, modes: &Modes) -> Result<Opened> {
     let mut store = EpcStore::open(file, Arc::new(registry::all()))
         .with_context(|| format!("opening {}", file.display()))?;
     store.set_lenient(modes.lenient);
     store.set_strict(modes.strict);
     for spec in &modes.h5 {
-        // `name=path`, or just `path`. Split on the **first** `=` so a path
-        // containing one still works on the right-hand side; a Windows drive
-        // letter uses `:` and is unaffected either way.
-        match spec.split_once('=') {
-            Some((name, path)) if !name.is_empty() && !path.is_empty() => {
-                store.external_files_mut().set(name, path);
-            }
-            _ => {
-                store.external_files_mut().offer(spec.trim_start_matches('='));
-            }
+        // `NAME=PATH` or `PATH`: the one reading is the library's.
+        store.external_files_mut().apply_spec(spec);
+    }
+    // A path given to `--h5` that is not on disk takes no part in the search,
+    // and used to be dropped without a word: a typo looked like a package that
+    // had no data file. Said once, here, before anything is read.
+    for path in store.external_files_ref().missing_offers() {
+        eprintln!("warning: --h5 `{}` does not exist and is ignored", path.display());
+    }
+    Ok(Opened { store, tell: true })
+}
+
+/// A package a command has open. It is an [`EpcStore`] in every way (it derefs
+/// to one), and when the command is done it says, on stderr, where the arrays
+/// it read came from if that was not the file the package names.
+///
+/// The telling is here, in one place, rather than in each command: a command
+/// that reads arrays cannot forget it, and the library is told nothing about
+/// the terminal. The facts are the library's (`EpcStore::array_departures`);
+/// this only prints them.
+pub struct Opened {
+    store: EpcStore,
+    /// Whether to tell, at the end, where the arrays were read from.
+    tell: bool,
+}
+
+impl Opened {
+    /// For a command that answers "where are the arrays" itself, as `h5` does
+    /// on stdout: telling it again on stderr would be saying it twice, and
+    /// counting differently.
+    fn answers_itself(&mut self) {
+        self.tell = false;
+    }
+}
+
+impl std::ops::Deref for Opened {
+    type Target = EpcStore;
+
+    fn deref(&self) -> &EpcStore {
+        &self.store
+    }
+}
+
+impl std::ops::DerefMut for Opened {
+    fn deref_mut(&mut self) -> &mut EpcStore {
+        &mut self.store
+    }
+}
+
+impl Drop for Opened {
+    fn drop(&mut self) {
+        if !self.tell {
+            return;
+        }
+        for line in departure_lines(&self.store) {
+            eprintln!("{line}");
         }
     }
-    Ok(store)
+}
+
+/// One line per fallback the reading took: how many datasets, which file the
+/// package names for them, which file was read, and why that one. Datasets,
+/// not array pointers: two objects can point at the same one (an object held
+/// in two versions does), and it is counted once.
+///
+/// A file the caller pinned or offered is a `note` (they asked for it); any
+/// other is a `warning`, because the package was not where the numbers were.
+fn departure_lines(store: &EpcStore) -> Vec<String> {
+    store.array_departures().iter().map(departure_line).collect()
+}
+
+/// The line for one fallback, see [`departure_lines`].
+fn departure_line(departure: &energyml_storage::ArrayDeparture) -> String {
+    use energyml_storage::Origin;
+    let level = match departure.origin {
+        Origin::Pinned | Origin::Offered(_) => "note",
+        _ => "warning",
+    };
+    let named = if departure.declared.is_empty() {
+        "no file is named for them in the package".to_string()
+    } else {
+        format!("the package names `{}`", departure.declared)
+    };
+    format!(
+        "{level}: {} dataset(s) read from `{}` instead of the file they point at ({named}): {}",
+        departure.arrays,
+        departure.path.display(),
+        departure.origin.describe()
+    )
+}
+
+#[cfg(test)]
+mod departure_tests {
+    use super::departure_line;
+    use energyml_storage::{ArrayDeparture, Origin};
+
+    fn one(declared: &str, origin: Origin) -> String {
+        departure_line(&ArrayDeparture {
+            declared: declared.to_string(),
+            path: "folder/export.h5".into(),
+            origin,
+            arrays: 736,
+        })
+    }
+
+    /// What would make this fail: a fallback found by the search that is said
+    /// quietly, or one the person asked for that is said as a warning.
+    #[test]
+    fn a_file_found_by_the_search_is_a_warning_and_one_the_caller_gave_is_a_note() {
+        let found = one("model.h5", Origin::Neighbour);
+        assert_eq!(
+            found,
+            "warning: 736 dataset(s) read from `folder/export.h5` instead of the file they point at \
+             (the package names `model.h5`): another file in the package's folder"
+        );
+        assert!(one("model.h5", Origin::Companion).starts_with("warning: "));
+        assert!(one("model.h5", Origin::Offered(0)).starts_with("note: "));
+        assert!(one("model.h5", Origin::Pinned).starts_with("note: "));
+    }
+
+    #[test]
+    fn a_package_that_names_no_file_is_said_so() {
+        assert!(one("", Origin::Neighbour).contains("(no file is named for them in the package)"));
+    }
 }
 
 /// The two reading switches, carried together so a command cannot honour one
@@ -1300,7 +1423,7 @@ fn properties(args: PropertiesArgs, modes: Modes) -> Result<()> {
             "note: {dictionary_label} - kinds that are not objects of this package cannot be resolved; pass `--dictionary <file>` to load one"
         );
     }
-    let resolver = Resolver::new(&store);
+    let resolver = Resolver::new(&*store);
 
     let wanted = args.representation.as_deref().map(str::to_ascii_lowercase);
 
@@ -1433,7 +1556,7 @@ fn properties(args: PropertiesArgs, modes: Modes) -> Result<()> {
             let mut total = 0u64;
             let mut failed = None;
             for patch in &property.patches {
-                match patch.read(&store) {
+                match patch.read(&*store) {
                     Ok(values) => total += values.len() as u64,
                     Err(e) => failed = Some(e),
                 }
@@ -1515,8 +1638,9 @@ fn colors(args: ColorsArgs, modes: Modes) -> Result<()> {
     )?;
     if report.sets == 0 {
         println!(
-            "no `GraphicalInformationSet` in this package, so nothing states a colour.
-             (RESQML 2.0.1 has no notion of colour at all - for a 2.0.1 model this is the              standard, not a gap.)"
+            "no `GraphicalInformationSet` in this package, so nothing states a colour.\n\
+             (RESQML 2.0.1 has no notion of colour at all - for a 2.0.1 model this is the \
+             standard, not a gap.)"
         );
         return Ok(());
     }
@@ -1640,7 +1764,7 @@ fn wells(args: WellsArgs, modes: Modes) -> Result<()> {
     // what surrounds each frame, the headers decided for the file.
     // The front end and Python call the same function.
     let store = open(&args.file, &modes)?;
-    let export = energyml_geometry::wells::of_store(&store.resources(), &store, &args.wells);
+    let export = energyml_geometry::wells::of_store(&store.resources(), &*store, &args.wells);
     for note in &export.notes {
         eprintln!("  [left out] {note}");
     }
@@ -1764,7 +1888,7 @@ fn tables(args: TablesArgs, modes: Modes) -> Result<()> {
         }
 
         // The values, which for a column-based table means reading the file.
-        match Lookup::read(object.as_reflect(), &store) {
+        match Lookup::read(object.as_reflect(), &*store) {
             Ok(lookup) => {
                 println!("    {} row(s)", lookup.rows.rows);
                 for note in &lookup.notes {
@@ -1781,9 +1905,21 @@ fn tables(args: TablesArgs, modes: Modes) -> Result<()> {
                 for row in 0..lookup.rows.rows.min(args.rows) {
                     let cells: Vec<String> = lookup
                         .rows
-                        .row(row)
+                        .row_values(row)
                         .into_iter()
-                        .map(|cell| cell.map(|c| c.to_string()).unwrap_or_else(|| "-".to_string()))
+                        .map(|cell| match cell {
+                            None => "-".to_string(),
+                            // A column of several values per row: `[a, b]`.
+                            Some(values) if values.len() != 1 => format!(
+                                "[{}]",
+                                values
+                                    .iter()
+                                    .map(|c| c.to_string())
+                                    .collect::<Vec<_>>()
+                                    .join(", ")
+                            ),
+                            Some(values) => values[0].to_string(),
+                        })
                         .collect();
                     println!("      {}", cells.join("  "));
                 }
@@ -1822,7 +1958,7 @@ fn geometry(args: GeometryArgs, modes: Modes) -> Result<()> {
     };
     let read = scene::of_package(
         &resources,
-        &store,
+        &*store,
         &scene::Request {
             of_type: args.filter.as_deref(),
             colours: Some(&colouring),
@@ -2014,7 +2150,7 @@ fn export(args: ExportArgs, modes: Modes) -> Result<()> {
     };
     let read = scene::of_package(
         &resources,
-        &store,
+        &*store,
         &scene::Request {
             of_type: args.filter.as_deref(),
             colours: Some(&colouring),
@@ -2052,19 +2188,16 @@ fn export(args: ExportArgs, modes: Modes) -> Result<()> {
     if let Some(radius) = args.tube {
         let tube = energyml_geometry::tube::Tube::checked(radius, args.tube_sides)
             .map_err(|e| anyhow::anyhow!("{e}"))?;
-        let mut swept = 0usize;
-        for object in &mut objects {
-            // An object with no polylines is left as it is: `--tube` on a scene
-            // of wells and horizons must sweep the wells, not refuse the export.
-            if let Ok(solid) = energyml_geometry::tube::sweep_object(object, &tube) {
-                *object = solid;
-                swept += 1;
-            }
-        }
+        let (swept, failed) = sweep_into_tubes(&mut objects, &tube);
         eprintln!(
             "{swept} object(s) swept into a tube of radius {radius} with {} sides",
             args.tube_sides
         );
+        // Named, never counted as untouched: these have polylines, were asked
+        // for as tubes, and are exported as lines.
+        for why in &failed {
+            eprintln!("  not swept, exported as lines: {why}");
+        }
     }
 
     let mut options = Options::new().with_reprojector(&backend);
@@ -2089,6 +2222,8 @@ fn export(args: ExportArgs, modes: Modes) -> Result<()> {
     // the two things a person needs to know are opposite sides of the same
     // fact: without the flag those objects are silently absent from the file,
     // and with it their Z is a number somebody chose.
+    let stdout = std::io::stdout();
+    let mut stdout_lock = stdout.lock();
     let in_time = objects
         .iter()
         .filter(|o| o.crs.as_ref().is_some_and(|crs| crs.is_time()))
@@ -2120,75 +2255,34 @@ fn export(args: ExportArgs, modes: Modes) -> Result<()> {
         }
     }
 
-    let writable: Vec<_> = objects
-        .iter()
-        .filter(|o| exporter.handles_with(o, &options))
-        .cloned()
-        .collect();
-    let skipped = objects.len() - writable.len();
-
-    let mut written = 0usize;
+    // **The writing is the library's** (`energyml_export::run`), the same call
+    // the Python bridge makes. This face only chooses to skip what the exporter
+    // cannot write, and shows it below.
+    let sink = match &args.out {
+        // A directory: one file per representation, `qualifiedType_uuid.ext`.
+        Some(path) if path.is_dir() || path.extension().is_none() => {
+            energyml_export::run::Sink::Directory(path)
+        }
+        Some(path) => energyml_export::run::Sink::File(path),
+        None => energyml_export::run::Sink::Stream(&mut stdout_lock),
+    };
+    let report = energyml_export::run::run(
+        &objects,
+        exporter,
+        &options,
+        energyml_export::run::OnUnhandled::Skip,
+        sink,
+    )?;
+    let written = report.written;
+    let skipped = report.skipped.len();
     // Objects the exporter itself refused, one line each. Separate from
     // `refused` - that one is the geometry saying it cannot evaluate; this is
     // the writing saying it cannot place, convert or encode what was evaluated.
-    let mut unwritable: Vec<String> = Vec::new();
-    match &args.out {
-        // A directory: one file per representation, named
-        // `qualifiedType_uuid.ext`.
-        //
-        // The uuid is what makes it unique - two objects share a title far more
-        // often than anyone expects, and a folder of `Horizon.vtu` overwriting
-        // itself is a silent loss. The qualified type in front is what makes it
-        // *readable*: a folder of thirty uuids says nothing, and the one thing a
-        // person wants to know before opening a file is what kind of thing it
-        // is. It carries the release too (`resqml20.` against `resqml22.`),
-        // which matters because a package may hold both - this one does.
-        Some(path) if path.is_dir() || path.extension().is_none() => {
-            std::fs::create_dir_all(path)?;
-            for object in &writable {
-                let name = format!(
-                    "{}_{}.{}",
-                    file_safe(&qualified_type_of(object)),
-                    object.uuid,
-                    exporter.extension()
-                );
-                let target = path.join(&name);
-                let file = std::fs::File::create(&target)?;
-                let mut out = std::io::BufWriter::new(file);
-                // **One object failing is not the run failing.** A directory
-                // export is a batch, and a batch that stops at the first
-                // refusal leaves the caller with a folder that looks like a
-                // finished export and holds a fraction of one - which is the
-                // failure this whole workspace is arranged against. A time-based
-                // CRS reaching a metre conversion is exactly that case: one
-                // object of thirty-three, and it used to take the other
-                // thirty-two with it.
-                match exporter.write(object, &mut out, &options) {
-                    Ok(()) => written += 1,
-                    Err(e) => {
-                        // And take the stub with it. A zero-byte `.vtk` sitting
-                        // in the output is worse than no file: it reads as a
-                        // representation with nothing in it.
-                        drop(out);
-                        let _ = std::fs::remove_file(&target);
-                        unwritable.push(format!("{}  {}  {e}", object.uuid, object.qualified_type));
-                    }
-                }
-            }
-        }
-        Some(path) => {
-            let file = std::fs::File::create(path)?;
-            let mut out = std::io::BufWriter::new(file);
-            exporter.write_all(&writable, &mut out, &options)?;
-            written = writable.len();
-        }
-        None => {
-            let stdout = std::io::stdout();
-            let mut out = stdout.lock();
-            exporter.write_all(&writable, &mut out, &options)?;
-            written = writable.len();
-        }
-    }
+    let unwritable = report.failed;
+    let writable: Vec<&energyml_geometry::SceneObject> = objects
+        .iter()
+        .filter(|o| !report.skipped.iter().any(|s| s.uri == o.uri))
+        .collect();
 
     eprintln!();
     eprintln!("{written} representation(s) written as {}", exporter.name());
@@ -2233,6 +2327,17 @@ fn export(args: ExportArgs, modes: Modes) -> Result<()> {
     // against.
     if skipped > 0 {
         eprintln!("{skipped} skipped: `{}` cannot write them", exporter.name());
+        // Named, one per line, with the library's reason: the Python bridge
+        // refuses the same objects by name, and this face shows them and goes on.
+        for one in report.skipped.iter().take(10) {
+            eprintln!(
+                "  skipped: {} {} ({}): {}",
+                one.uuid, one.qualified_type, one.title, one.reason
+            );
+        }
+        if skipped > 10 {
+            eprintln!("  … and {} more", skipped - 10);
+        }
         if exporter.name() == "geojson" && !args.native_crs {
             // The most common reason, and it has an exit: no usable EPSG code.
             eprintln!(
@@ -2245,15 +2350,7 @@ fn export(args: ExportArgs, modes: Modes) -> Result<()> {
             // objects, and the code lives in the third: a compound CRS whose
             // `LocalEngineering2dCrs` is not in the package resolves to a CRS
             // that says "unknown system", and nothing else complains.
-            let mut named: Vec<String> = objects
-                .iter()
-                .filter(|o| !exporter.handles_with(o, &options))
-                .filter_map(|o| o.crs.as_ref())
-                .filter(|crs| crs.projected.epsg().is_none())
-                .map(|crs| format!("{} ({})", crs.uuid, crs.kind))
-                .collect();
-            named.sort();
-            named.dedup();
+            let named = energyml_export::run::crs_without_epsg(&objects, exporter, &options);
             if !named.is_empty() {
                 eprintln!("  the CRS they name gives no EPSG code:");
                 for line in named.iter().take(5) {
@@ -2317,15 +2414,32 @@ fn preview(data: &energyml_storage::ArrayData, limit: usize) -> String {
         .map(|d| d.to_string())
         .collect::<Vec<_>>()
         .join("×");
-    let values = data.to_f64();
-    let shown = values
-        .iter()
-        .take(limit)
-        .map(|v| format!("{v}"))
-        .collect::<Vec<_>>()
-        .join(", ");
-    let head = if values.len() > limit {
-        format!("[{shown}, … {} more]", values.len() - limit)
+    // The strings of a text array are shown as they are: `to_f64` would print a `NaN` per string, which reads
+    // as missing data.
+    let (shown, count) = match data.try_to_f64() {
+        Some(values) => (
+            values
+                .iter()
+                .take(limit)
+                .map(|v| format!("{v}"))
+                .collect::<Vec<_>>()
+                .join(", "),
+            values.len(),
+        ),
+        None => {
+            let text = data.text().unwrap_or(&[]);
+            (
+                text.iter()
+                    .take(limit)
+                    .map(|v| format!("{v:?}"))
+                    .collect::<Vec<_>>()
+                    .join(", "),
+                text.len(),
+            )
+        }
+    };
+    let head = if count > limit {
+        format!("[{shown}, … {} more]", count - limit)
     } else {
         format!("[{shown}]")
     };
@@ -2796,10 +2910,7 @@ fn graph_command(args: GraphArgs, modes: Modes) -> Result<()> {
         .resources()
         .into_iter()
         .filter(|summary| match &args.filter {
-            Some(needle) => summary
-                .qualified_type
-                .to_ascii_lowercase()
-                .contains(&needle.to_ascii_lowercase()),
+            Some(needle) => energyml_storage::resource::type_matches(&summary.qualified_type, needle),
             None => true,
         })
         .collect();
@@ -2870,36 +2981,11 @@ fn graph_command(args: GraphArgs, modes: Modes) -> Result<()> {
 /// question a permissive reader has a duty to be able to answer plainly.
 fn h5_command(args: H5Args, modes: Modes) -> Result<ExitCode> {
     let mut store = open(&args.file, &modes)?;
+    store.answers_itself();
 
-    // One row per *declared name*, not per array pointer: a package has
-    // thousands of pointers and two or three files, and a person wants the
-    // files.
-    #[derive(Default)]
-    struct Row {
-        pointers: usize,
-        found: Option<energyml_storage::Resolution>,
-        proxies: std::collections::BTreeSet<String>,
-        example: String,
-    }
-    let mut rows: std::collections::BTreeMap<String, Row> = std::collections::BTreeMap::new();
-
-    for summary in store.resources() {
-        let Ok(object) = store.get_object(&summary.uri) else {
-            continue;
-        };
-        for location in store.arrays_of(object.as_reflect()) {
-            let declared = location.file.clone();
-            let row = rows.entry(declared).or_default();
-            row.pointers += 1;
-            if let Some(proxy) = &location.proxy_uuid {
-                row.proxies.insert(proxy.to_ascii_lowercase());
-            }
-            if row.found.is_none() {
-                row.example = location.path_in_file.clone();
-                row.found = store.resolve_array(&location).ok();
-            }
-        }
-    }
+    // The survey, the rewrite and the verdict are the library's
+    // (`energyml_storage::repair`); this face asks, prints and chooses the exit code.
+    let mut rows = energyml_storage::repair::survey(&store);
 
     if rows.is_empty() {
         println!("no external array in this package");
@@ -2958,21 +3044,7 @@ fn h5_command(args: H5Args, modes: Modes) -> Result<ExitCode> {
             store.external_files_mut().set(declared.clone(), path);
         }
         // Ask again, now that the caller has said where things are.
-        for (declared, row) in rows.iter_mut() {
-            if row.found.is_some() {
-                continue;
-            }
-            for summary in store.resources() {
-                let Ok(object) = store.get_object(&summary.uri) else {
-                    continue;
-                };
-                for location in store.arrays_of(object.as_reflect()) {
-                    if &location.file == declared && row.found.is_none() {
-                        row.found = store.resolve_array(&location).ok();
-                    }
-                }
-            }
-        }
+        energyml_storage::repair::resolve_again(&store, &mut rows);
     }
 
     let Some(out) = args.fix else {
@@ -2983,188 +3055,37 @@ fn h5_command(args: H5Args, modes: Modes) -> Result<ExitCode> {
         });
     };
 
-    // Writing the answer down. Two places carry a file name and both are
-    // rewritten, because a package may use either - and a package that has
-    // been through several tools may use both.
-    let mut fixed = 0usize;
-    for (declared, row) in &rows {
-        let Some(found) = &row.found else { continue };
-        if found.agrees() {
-            continue;
-        }
-        let name = found.name();
-
-        // The older form: the name lives in the `.rels` of an
-        // `EpcExternalPartReference`, and `save` regenerates those from what
-        // the store knows.
-        for proxy in &row.proxies {
-            store.register_external_file(proxy, name.clone());
-            fixed += 1;
-        }
-
-        // The eml 2.3 form: the name is in the object, in every
-        // `ExternalDataArrayPart.URI` that carries it.
-        let users: Vec<String> = store
-            .resources()
-            .iter()
-            .filter(|summary| {
-                store
-                    .get_object(&summary.uri)
-                    .map(|object| {
-                        store
-                            .arrays_of(object.as_reflect())
-                            .iter()
-                            .any(|location| &location.file == declared)
-                    })
-                    .unwrap_or(false)
-            })
-            .map(|summary| summary.uri.clone())
-            .collect();
-        for uri in users {
-            let object = store.edit(&uri)?;
-            if rename_uris(object, declared, &name) > 0 {
-                fixed += 1;
-            }
-        }
-        println!("`{declared}` → `{name}`");
-    }
-
-    if fixed == 0 {
+    // Writing the answer down: the library rewrites both places a file name
+    // lives in, saves, reopens the result and counts.
+    let Some(fixed) = energyml_storage::repair::fix(&mut store, &rows, &out)? else {
         println!("nothing to fix: every array names the file it is in");
         return Ok(ExitCode::SUCCESS);
+    };
+    for (declared, name) in &fixed.renamed {
+        println!("`{declared}` → `{name}`");
     }
-
-    // Carry over every file name the package *had*. A save regenerates the
-    // `.rels` from what the store knows, and what it knows about external files
-    // is `declared_files` - so a name that was only ever read out of a `.rels`
-    // is dropped unless it is put back first. Repairing a package by losing
-    // half its pointers would be a poor repair.
-    let found: Vec<(String, String)> = store.external_file_map().into_iter().collect();
-    for (uuid, file) in found {
-        store.register_external_file(&uuid, file);
-    }
-
-    let before = unresolved_pointers(&store);
-    let diagnostics = store.save_as(&out, &energyml_storage::SaveOptions::default())?;
-    for diagnostic in &diagnostics {
+    for diagnostic in &fixed.diagnostics {
         eprintln!("  [{:?}] {}", diagnostic.severity, diagnostic.message);
     }
-    println!("{fixed} declaration(s) rewritten → {}", out.display());
-
-    // Did the repair repair? Reopening and counting is the only answer that
-    // does not take the writer's word for it - and the failure it guards
-    // against is real: an `externalResource` relationship on a part that is not
-    // a proxy has no counterpart in the writer, so a package that used one
-    // comes back with fewer pointers than it went in with.
+    println!(
+        "{} declaration(s) rewritten → {}",
+        fixed.declarations,
+        out.display()
+    );
     let written = open(&out, &modes)?;
-    let after = unresolved_pointers(&written);
-    if after > before {
+    let lost = fixed.lost(&written);
+    if lost > 0 {
         eprintln!(
-            "warning: {} array pointer(s) named a file before and name none now (was {before}). \
+            "warning: {} array pointer(s) named a file before and name none now (was {}). \
              The package used an `externalResource` relationship the writer does not reproduce; \
              `{}` still reads, because the search finds the file, but another tool may not.",
-            after - before,
+            lost,
+            fixed.before,
             out.display()
         );
         return Ok(ExitCode::from(1));
     }
     Ok(ExitCode::SUCCESS)
-}
-
-/// How many array pointers name no file at all.
-fn unresolved_pointers(store: &EpcStore) -> usize {
-    store
-        .resources()
-        .iter()
-        .filter_map(|summary| store.get_object(&summary.uri).ok())
-        .flat_map(|object| store.arrays_of(object.as_reflect()))
-        .filter(|location| location.file.is_empty())
-        .count()
-}
-
-/// Replace a file name wherever an object writes one, and say how many times.
-///
-/// Reflection rather than a typed walk, for the reason the whole workspace is
-/// arranged around: the field is `URI` on an eml 2.3 `ExternalDataArrayPart`
-/// and `PathInHdfFile` has no name at all in 2.0, and a version this build
-/// learns tomorrow will be handled by the same code.
-fn rename_uris(object: &mut dyn energyml_core::value::Reflect, from: &str, to: &str) -> usize {
-    use energyml_core::value::{FieldValue, OwnedValue};
-
-    let mut changed = 0usize;
-    let fields: Vec<(&'static str, usize)> = object
-        .type_info()
-        .fields
-        .iter()
-        .map(|f| {
-            let occurrences = object.field(f.name).map(|v| v.occurrences()).unwrap_or(0);
-            (f.name, occurrences)
-        })
-        .collect();
-
-    for (name, occurrences) in fields {
-        // The scalar that carries a file name, whatever the release calls the
-        // element around it.
-        if name.eq_ignore_ascii_case("URI")
-            && let Some(FieldValue::Scalar(scalar)) = object.field(name)
-        {
-            let text = scalar.to_string();
-            let bare = text.rsplit(['/', '\\']).next().unwrap_or(&text);
-            if text == from || bare == from {
-                if object.set_field(name, OwnedValue::Str(to.to_string())).is_ok() {
-                    changed += 1;
-                }
-                continue;
-            }
-        }
-        // Descend. `field_object_mut` is the only mutable way in, so a list is
-        // walked by index rather than by iterator.
-        match occurrences {
-            0 => {
-                if let Some(child) = object.field_object_mut(name, None) {
-                    changed += rename_uris(child, from, to);
-                }
-            }
-            n => {
-                for index in 0..n {
-                    if let Some(child) = object.field_object_mut(name, Some(index)) {
-                        changed += rename_uris(child, from, to);
-                    }
-                }
-            }
-        }
-    }
-    changed
-}
-
-/// The qualified type of a scene object, `resqml22.TriangulatedSetRepresentation`.
-///
-/// Read out of the ETP URI rather than from `SceneObject::qualified_type`,
-/// which - despite its name and its doc comment - carries only the bare type
-/// name. Left alone deliberately: that field is written into every export's
-/// metadata (`type` in VTK field data, in GeoJSON properties, in an OBJ
-/// comment), and changing what it holds would change files people already read.
-fn qualified_type_of(object: &energyml_geometry::SceneObject) -> String {
-    // The one reading of a uri into an identity - which also knows a dataspace
-    // segment and a version qualifier.
-    energyml_core::identity::ObjectId::parse(&object.uri)
-        .map(|(_, id)| id.qualified_type())
-        .unwrap_or_else(|_| object.qualified_type.clone())
-}
-
-/// The same string, with anything a file system objects to replaced.
-///
-/// A qualified type holds none of these today. It is here because the cost of
-/// being wrong is a run that dies halfway through a batch on one object's name,
-/// and the cost of being right is six characters in a match.
-fn file_safe(name: &str) -> String {
-    name.chars()
-        .map(|c| match c {
-            '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|' => '_',
-            c if c.is_control() => '_',
-            c => c,
-        })
-        .collect()
 }
 
 // ---------------------------------------------------------------------------
@@ -3353,6 +3274,98 @@ fn relabel(args: RelabelArgs, modes: Modes) -> Result<ExitCode> {
     })
 }
 
+/// `--tube`: sweep every object that has polylines into a tube, in place.
+///
+/// Returns how many were swept and, for the others that **do** hold polylines
+/// but could not be swept (every run degenerate), their uuid and the reason. An
+/// object with no polylines at all is left as it is and is not a failure:
+/// `--tube` on a scene of wells and horizons must sweep the wells, not refuse
+/// the export. Counting a real failure as "nothing to sweep" would export the
+/// object as lines while the person asked for tubes, and say nothing.
+fn sweep_into_tubes(
+    objects: &mut [energyml_geometry::scene::SceneObject],
+    tube: &energyml_geometry::tube::Tube,
+) -> (usize, Vec<String>) {
+    use energyml_geometry::geometry::Topology;
+    let mut swept = 0usize;
+    let mut failed = Vec::new();
+    for object in objects {
+        match energyml_geometry::tube::sweep_object(object, tube) {
+            Ok(solid) => {
+                *object = solid;
+                swept += 1;
+            }
+            Err(why) => {
+                let has_polylines = object
+                    .geometry
+                    .patches
+                    .iter()
+                    .any(|patch| matches!(patch.topology, Topology::Polylines(_)));
+                if has_polylines {
+                    failed.push(format!("{}: {why}", object.uuid));
+                }
+            }
+        }
+    }
+    (swept, failed)
+}
+
+#[cfg(test)]
+mod tube_tests {
+    use super::sweep_into_tubes;
+    use energyml_geometry::geometry::{Geometry, Patch, Topology};
+    use energyml_geometry::scene::SceneObject;
+    use energyml_geometry::tube::Tube;
+
+    fn lines(uuid: &str, points: Vec<[f64; 3]>) -> SceneObject {
+        let count = points.len() as u32;
+        SceneObject {
+            uuid: uuid.to_string(),
+            uri: String::new(),
+            title: uuid.to_string(),
+            qualified_type: "resqml22.PolylineSetRepresentation".to_string(),
+            geometry: Geometry {
+                kind: "PolylineSet",
+                patches: vec![Patch {
+                    index: 0,
+                    node_offset: 0,
+                    points,
+                    topology: Topology::Polylines(vec![count]),
+                    closed: Vec::new(),
+                }],
+            },
+            crs: None,
+            interpretation: None,
+            feature: None,
+            metadata: Default::default(),
+            attributes: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn a_degenerate_polyline_is_named_and_a_scene_without_lines_is_not() {
+        let tube = Tube::default();
+        let mut surface = lines("surface", Vec::new());
+        surface.geometry.patches[0].topology = Topology::Triangles(Vec::new());
+        let mut objects = vec![
+            lines("good", vec![[0.0, 0.0, 0.0], [0.0, 0.0, -10.0]]),
+            // Three identical points: a run with no direction, never sweepable.
+            lines("degenerate", vec![[1.0, 1.0, 1.0]; 3]),
+            surface,
+        ];
+        let (swept, failed) = sweep_into_tubes(&mut objects, &tube);
+        assert_eq!(swept, 1);
+        // Before the fix `failed` did not exist: the degenerate object was
+        // exported as lines and counted as if it had no polylines.
+        assert_eq!(failed.len(), 1, "{failed:?}");
+        assert!(failed[0].starts_with("degenerate:"), "{failed:?}");
+    }
+
+    // Break it: make the `Err` arm `{}` (the old `if let Ok`): `failed` is
+    // empty and the test fails. Drop the `has_polylines` test: the surface is
+    // named as a failure too (two entries) and the test fails.
+}
+
 /// Cut a package down to a chosen set of objects.
 ///
 /// The command is argument parsing over `energyml_storage::extract`, as every
@@ -3367,13 +3380,30 @@ fn extract_command(args: ExtractArgs, modes: Modes) -> Result<ExitCode> {
 
     let resources = store.resources();
     let mut objects = Vec::new();
+    let mut unreadable = Vec::new();
     for summary in &resources {
-        if let Ok(object) = store.get_object(&summary.uri) {
-            objects.push((summary, object));
+        match store.get_object(&summary.uri) {
+            Ok(object) => objects.push((summary, object)),
+            Err(why) => unreadable.push(format!("{}: {why}", summary.uri)),
         }
     }
     let graph = energyml_storage::graph::build(objects.iter().map(|(s, o)| (*s, o.as_reflect())));
     let plan = energyml_storage::extract::plan(&resources, &graph, &wanted);
+
+    // Said before the plan: what these objects point at is not in the graph, so
+    // the plan below cannot see a reference they hold into the cut.
+    if !unreadable.is_empty() {
+        println!(
+            "{} object(s) could not be read; the references they hold are not in this plan:",
+            unreadable.len()
+        );
+        for one in unreadable.iter().take(20) {
+            println!("  {one}");
+        }
+        if unreadable.len() > 20 {
+            println!("  … and {} more", unreadable.len() - 20);
+        }
+    }
 
     // The report before the file, always - and before the *decision* to write,
     // when it is a dry run. A curated package that lost something in silence is
@@ -3490,4 +3520,30 @@ fn read_manifest(text: &str) -> Result<Vec<String>> {
         }
     }
     Ok(out)
+}
+
+#[cfg(test)]
+mod preview_tests {
+    use super::preview;
+    use energyml_storage::{ArrayData, ArrayMetadata, ArrayValues};
+
+    fn data(values: ArrayValues, element_type: &str) -> ArrayData {
+        ArrayData {
+            metadata: ArrayMetadata::new(vec![values.len() as i64], element_type),
+            values,
+        }
+    }
+
+    /// A text array is previewed as its strings, never as a row of `NaN`.
+    ///
+    /// Break it: go back to `data.to_f64()` in `preview`; the line then reads `NaN, NaN`.
+    #[test]
+    fn a_text_array_previews_its_strings_not_nan() {
+        let text = data(ArrayValues::Text(vec!["sand".into(), "shale".into()]), "string");
+        let line = preview(&text, 10);
+        assert!(!line.contains("NaN"), "{line}");
+        assert!(line.contains("\"sand\"") && line.contains("\"shale\""), "{line}");
+        let numbers = data(ArrayValues::F64(vec![1.5, 2.0]), "double");
+        assert_eq!(preview(&numbers, 10), "2 double [1.5, 2]");
+    }
 }

@@ -7,6 +7,7 @@
 //! at coordinates near the reference model's own (x ≈ 651 000, y ≈ 6 861 000).
 
 use serde_json::{Value, json};
+use std::sync::Arc;
 
 use energyml_build::operation::{Choices, Identity, Numbers, Plan, Registry, When};
 use energyml_build::pieces::{Known, Pieces, Ref, Source};
@@ -44,6 +45,18 @@ fn vertical_frame_full(
     with_interpretation: bool,
     with_wellhead: bool,
 ) -> Pieces {
+    frame_in_unit("m", title, mds, with_datum, with_interpretation, with_wellhead)
+}
+
+/// The same frame, its vertical axis counted in `uom`.
+fn frame_in_unit(
+    uom: &str,
+    title: &str,
+    mds: &[f64],
+    with_datum: bool,
+    with_interpretation: bool,
+    with_wellhead: bool,
+) -> Pieces {
     let points: Vec<[f64; 3]> = mds.iter().map(|md| [X, Y, GROUND - md]).collect();
     let n = points.len() as u32;
     let geometry = Geometry {
@@ -67,7 +80,7 @@ fn vertical_frame_full(
             "eml23.LocalEngineeringCompoundCrs",
             "The frame",
         )),
-        vertical_uom: Some("m".to_string()),
+        vertical_uom: Some(uom.to_string()),
         vertical_up: Some(true),
         node_mds: Some(mds.to_vec()),
         trajectory: Some(Ref::new(
@@ -96,7 +109,7 @@ fn vertical_frame_full(
         .with(
             "frames",
             Source::Shape {
-                geometry,
+                geometry: Arc::new(geometry),
                 closed: None,
             },
         )
@@ -392,4 +405,38 @@ fn a_non_positive_step_is_refused() {
 fn no_frames_is_refused() {
     let why = plan(&Pieces::empty(), settings(50.0, 10.0, "test")).expect_err("nothing to extend");
     assert!(why.contains("frames"), "{why}");
+}
+
+/// `[build-ops-1 S1]`: `maxDepth` and `step` are metres. A frame whose depths
+/// are in feet gets them converted through `energyml_domain::units`, not
+/// compared raw with feet.
+#[test]
+fn a_frame_in_feet_is_extended_to_the_limit_stated_in_metres() {
+    // 100 ft is 30.48 m: below a 50 m limit, so there is something to extend.
+    // Raw, 100 >= 50 would have refused it.
+    let mds = [0.0, 100.0];
+    let bag = frame_in_unit("ft", "F20", &mds, true, true, true);
+    let made = plan(&bag, settings(50.0, 10.0, "test")).expect("a plan");
+    let written = node_mds_of(&made);
+    let limit_in_feet = 50.0 / 0.3048;
+    let last = *written.last().expect("nodes");
+    assert!(
+        (last - limit_in_feet).abs() < 1e-9,
+        "the deepest node is at 50 m = {limit_in_feet} ft, got {last}"
+    );
+    let step_in_feet = 10.0 / 0.3048;
+    assert!(
+        (written[2] - (100.0 + step_in_feet)).abs() < 1e-9,
+        "the step is 10 m = {step_in_feet} ft: {written:?}"
+    );
+    // Break it: use `params.max_depth` and `params.step` unconverted in
+    // `extend_one`; the frame is then refused as already past a 50 ft limit.
+}
+
+#[test]
+fn a_frame_whose_depths_are_in_no_length_unit_is_refused_by_name() {
+    let bag = frame_in_unit("ms", "F21", &[0.0, 5.0], true, true, true);
+    let why = plan(&bag, settings(50.0, 10.0, "test")).expect_err("no length");
+    assert!(why.contains("F21") && why.contains("ms"), "{why}");
+    // Break it: skip the conversion (`to_frame`); `ms` is then compared raw.
 }

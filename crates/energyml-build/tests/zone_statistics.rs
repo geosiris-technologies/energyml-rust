@@ -15,7 +15,6 @@
 
 use energyml_build::operation::{Choices, Identity, Plan, Registry, When};
 use energyml_build::pieces::{Known, KnownProperty, Pieces, Ref, Source};
-use energyml_domain::provenance::Parameter;
 use energyml_domain::values::Values;
 use energyml_eml_2_3 as eml;
 
@@ -114,7 +113,7 @@ fn reported(plan: &Plan, title: &str) -> f64 {
         .parameters
         .iter()
         .find_map(|p| match p {
-            Parameter::Double { title: t, value, .. } if t == title => Some(*value),
+            other if other.title() == title => other.number(),
             _ => None,
         })
         .unwrap_or_else(|| panic!("`{title}` is not reported"))

@@ -68,6 +68,8 @@
 
 use std::collections::HashMap;
 
+use energyml_geostat::vector::plan::{add, cross, dot, norm, scale, sub};
+
 /// A well, by its head in plan.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Head {
@@ -182,25 +184,6 @@ pub enum ProfileError {
 const MAX_CELLS_PER_SEGMENT: u64 = 4_000_000;
 
 type V = [f64; 2];
-
-fn sub(a: V, b: V) -> V {
-    [a[0] - b[0], a[1] - b[1]]
-}
-fn add(a: V, b: V) -> V {
-    [a[0] + b[0], a[1] + b[1]]
-}
-fn scale(a: V, k: f64) -> V {
-    [a[0] * k, a[1] * k]
-}
-fn dot(a: V, b: V) -> f64 {
-    a[0] * b[0] + a[1] * b[1]
-}
-fn cross(a: V, b: V) -> f64 {
-    a[0] * b[1] - a[1] * b[0]
-}
-fn norm(a: V) -> f64 {
-    a[0].hypot(a[1])
-}
 
 /// A validated track with its two widths and the grid over its segments: build
 /// it once, ask it for the band and for as many projections as needed.

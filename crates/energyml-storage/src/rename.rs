@@ -41,7 +41,7 @@
 use std::path::PathBuf;
 
 use energyml_core::path;
-use energyml_core::value::OwnedValue;
+use energyml_core::value::{OwnedValue, Reflect};
 
 use crate::error::{Error, Result};
 
@@ -186,6 +186,12 @@ pub fn plan(store: &EpcStore, from: &str, to: &str) -> Rename {
         }
     }
 
+    // The disk, last: a file already named `to` that the package does not name
+    // is somebody else's, and `fs::rename` would replace it.
+    if let Some(refusal) = disk_refusal(store, from, to) {
+        out.refusals.push(refusal);
+    }
+
     if out.touches() == 0 && out.is_allowed() {
         // Renaming nothing is not a rename, and a caller whose button did
         // nothing would have no way to learn why.
@@ -210,25 +216,26 @@ pub fn apply(store: &mut EpcStore, plan: &Rename) -> Result<Applied> {
         )));
     }
 
+    // 0 - **nothing is written before everything is known to work.** The plan
+    // may be stale (an object that became unreadable, a path that no longer
+    // resolves) and `plan` may have been built by hand; so the whole of step 1
+    // is played first on copies of the objects, and a fault leaves the store
+    // exactly as it was, instead of half-rewritten with the `.rels` still
+    // naming the old file. The disk guard is checked again for the same reason:
+    // the quote is not the bill.
+    if let Some(refusal) = disk_refusal(store, &plan.from, &plan.to) {
+        return Err(Error::Package(format!("this rename was refused: {refusal}")));
+    }
+    for uri in &plan.objects {
+        let mut copy = store.get_object(uri)?;
+        rewrite_fields(copy.as_reflect_mut(), &plan.from, &plan.to)?;
+    }
+
     // 1 - the fields the objects carry themselves.
     let mut fields = 0;
     for uri in &plan.objects {
         let object = store.edit(uri)?;
-        // Read the paths out first: the walk borrows the object, and writing
-        // through it needs the borrow back.
-        let targets: Vec<(String, String)> = locate(&*object)
-            .iter()
-            .filter(|found| found.proxy_uuid.is_none() && names_file(&found.file, &plan.from))
-            .map(|found| (found.field_path.clone(), renamed(&found.file, &plan.to)))
-            .collect();
-        for (at, value) in targets {
-            let part = path::object_mut(&mut *object, &at)?;
-            // `uri` for an eml 2.3 part, `file_uri` for a WITSML channel
-            // data in HDF5 - the extension `crate::array` locates.
-            let field = crate::array::file_field(part.type_info().name);
-            part.set_field(field, OwnedValue::Str(value))?;
-            fields += 1;
-        }
+        fields += rewrite_fields(object, &plan.from, &plan.to)?;
     }
 
     // 2 - the names the relationships carry. Both populations, and they are
@@ -252,6 +259,52 @@ pub fn apply(store: &mut EpcStore, plan: &Rename) -> Result<Applied> {
         fields,
         relationships,
         file,
+    })
+}
+
+/// Rewrite, in one object, every field that names `from`; how many it changed.
+///
+/// The one body of step 1, so that the trial on a copy and the real edit cannot
+/// differ.
+fn rewrite_fields(object: &mut dyn Reflect, from: &str, to: &str) -> Result<usize> {
+    // Read the paths out first: the walk borrows the object, and writing
+    // through it needs the borrow back.
+    let targets: Vec<(String, String)> = locate(&*object)
+        .iter()
+        .filter(|found| found.proxy_uuid.is_none() && names_file(&found.file, from))
+        .map(|found| (found.field_path.clone(), renamed(&found.file, to)))
+        .collect();
+    let mut fields = 0;
+    for (at, value) in targets {
+        let part = path::object_mut(&mut *object, &at)?;
+        // `uri` for an eml 2.3 part, `file_uri` for a WITSML channel
+        // data in HDF5 - the extension `crate::array` locates.
+        let field = crate::array::file_field(part.type_info().name);
+        part.set_field(field, OwnedValue::Str(value))?;
+        fields += 1;
+    }
+    Ok(fields)
+}
+
+/// Why the file cannot be moved to `to` on the disk, when it cannot.
+///
+/// `std::fs::rename` **replaces** an existing destination, on Unix and on
+/// Windows alike, and what it replaces is gone. The package names `to` nowhere
+/// (`plan` refuses that already), so a file of that name beside the package is
+/// not this package's: a stale copy, a sibling package's data. Refused unless
+/// nothing would be moved (no source on the disk, or a store with no disk).
+fn disk_refusal(store: &EpcStore, from: &str, to: &str) -> Option<String> {
+    let files = store.external_files_ref();
+    if files.is_virtual() {
+        return None;
+    }
+    let source = files.resolve(from).ok().filter(|source| source.exists())?;
+    let destination = files.destination_for(to).ok()?;
+    (destination != source && destination.exists()).then(|| {
+        format!(
+            "a file already exists at {}, and moving `{from}` onto it would destroy it",
+            destination.display()
+        )
     })
 }
 
@@ -302,22 +355,15 @@ fn move_file(store: &mut EpcStore, plan: &Rename) -> Result<FileMove> {
 /// would rename a file the package did not mean, and a zip entry is
 /// case-sensitive.
 fn names_file(declared: &str, wanted: &str) -> bool {
-    !declared.is_empty() && (declared == wanted || last_segment(declared) == wanted)
+    !declared.is_empty() && (declared == wanted || crate::backend::bare_name(declared) == wanted)
 }
 
 /// The same location with its file name replaced, **keeping whatever led to
 /// it**: `./data/model.h5` renamed to `new.h5` is `./data/new.h5`, not a bare
 /// name in a package that was pointing into a subdirectory.
-fn renamed(declared: &str, to: &str) -> String {
+pub(crate) fn renamed(declared: &str, to: &str) -> String {
     match declared.rfind(['/', '\\']) {
         Some(at) => format!("{}{to}", &declared[..=at]),
         None => to.to_string(),
-    }
-}
-
-fn last_segment(declared: &str) -> &str {
-    match declared.rfind(['/', '\\']) {
-        Some(at) => &declared[at + 1..],
-        None => declared,
     }
 }

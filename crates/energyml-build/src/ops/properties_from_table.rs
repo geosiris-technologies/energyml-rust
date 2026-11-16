@@ -120,6 +120,12 @@ const UNKNOWN_KIND: (&str, &str) = ("73f28137-03ef-45b4-8e85-31869c7d36fd", "unk
 /// context is the table its `CategoryLookup` names.
 const POINTER_KIND: (&str, &str) = ("47a4319d-c8a4-45dc-8600-f96d4b289138", "multi use property");
 
+/// Two depths closer than this are one depth: the duplicate check and the
+/// match with a frame node use the same tolerance, so a row can never be
+/// merged onto another one unseen. A millionth of a metre - the match is made
+/// on numbers that took two paths (the file, the HDF5), not on identity.
+const SAME_DEPTH: f64 = 1e-6;
+
 /// What it takes: tables, and the frames to enrich.
 #[derive(Debug, Inputs)]
 pub struct PropertiesInputs {
@@ -1030,7 +1036,7 @@ fn rows_by_depth(
     }
     found.sort_by(|a, b| a.0.total_cmp(&b.0));
     for pair in found.windows(2) {
-        if (pair[0].0 - pair[1].0).abs() <= f64::EPSILON {
+        if (pair[0].0 - pair[1].0).abs() <= SAME_DEPTH {
             return Err(Refusal::on(
                 "table",
                 format!(
@@ -1069,7 +1075,7 @@ fn places_of(rows: &[(f64, usize)], mds: &[f64], subdivide: bool) -> Places {
     // millionth of a metre. Comparing two floats for identity would make
     // the matching depend on the path each number took - the file
     // for one, the HDF5 for the other.
-    let same = |a: f64, b: f64| (a - b).abs() <= 1e-6;
+    let same = |a: f64, b: f64| (a - b).abs() <= SAME_DEPTH;
     let mut nodes: Vec<f64> = mds.to_vec();
     let mut added = Vec::new();
     if subdivide {
@@ -1106,7 +1112,7 @@ fn places_of(rows: &[(f64, usize)], mds: &[f64], subdivide: bool) -> Places {
 /// it is what a pass says, *from here to there*. A pass one of whose limits is not
 /// a node is set aside and counted, except with `subdivide`, which adds its limits.
 fn places_of_passes(passes: &[(f64, f64, usize)], mds: &[f64], subdivide: bool) -> Places {
-    let same = |a: f64, b: f64| (a - b).abs() <= 1e-6;
+    let same = |a: f64, b: f64| (a - b).abs() <= SAME_DEPTH;
     let mut nodes: Vec<f64> = mds.to_vec();
     let mut added = Vec::new();
     if subdivide {

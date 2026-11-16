@@ -23,6 +23,7 @@
 use energyml_analysis::{Along, Placement, densify};
 use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
+use std::sync::Arc;
 
 use crate::declare::{Choice, Inputs, Params, Shape, Suggestions};
 use crate::operation::{About, Category, Context, Need, Note, Operation, Plan, Refusal, Slot};
@@ -211,10 +212,10 @@ impl Operation for Densify {
         }
         let result = Shape {
             name: shape.name.clone(),
-            geometry: Geometry {
+            geometry: Arc::new(Geometry {
                 kind: "densify",
                 patches,
-            },
+            }),
             closed: shape.closed.clone(),
             known: shape.known.clone(),
         };

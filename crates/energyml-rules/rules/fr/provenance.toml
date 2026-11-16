@@ -1,0 +1,26 @@
+# Traduction française du thème provenance : titres et textes. Pas encore
+# relue par un relecteur francophone ; ce qui manque se lit en anglais, et le dit.
+
+[[rule]]
+id = "house/provenance/activity-follows-its-template"
+title = "Une activité s'accorde avec son gabarit, et un écart est un avertissement"
+text = """
+Chaque paramètre d'une activité a un paramètre de même titre dans le gabarit que nomme son `ActivityDescriptor`, d'un genre que le gabarit permet, en nombre qu'il permet (`MinOccurs`, `MaxOccurs`, -1 voulant dire sans limite). Un gabarit qui ne liste aucun genre permis les permet tous, et un paramètre objet qui nomme une activité se lit comme une sous-activité. Un écart est un avertissement : l'activité est lue et dessinée quand même."""
+
+[[rule]]
+id = "house/provenance/role-from-template-or-named-rule"
+title = "Le rôle d'un paramètre vient de son gabarit, puis d'une règle nommée, jamais de son titre"
+text = """
+Qu'un paramètre soit une entrée, une sortie, les deux, ni l'un ni l'autre ou une sous-activité se lit dans le gabarit (`IsInput`, `IsOutput`, `AllowedKind`). Sans entrée du gabarit, une règle nommée peut le donner (`energyml-build:input-output`, pour les activités écrites par cette bibliothèque), et la règle est montrée à côté du rôle ; sinon le rôle est non déclaré. Un rôle n'est jamais deviné d'après un titre."""
+
+[[rule]]
+id = "house/provenance/kinds-without-a-class"
+title = "Un objet qui nomme une activité est une sous-activité, un index de temps est un instant"
+text = """
+Aucune classe de paramètre ne porte les genres `subActivity` et `timestamp` : un `DataObjectParameter` dont l'objet est une `Activity` se lit comme `subActivity`, et un `TimeIndexParameter` comme `timestamp`."""
+
+[[rule]]
+id = "house/provenance/writers-declare-what-they-write"
+title = "Cette bibliothèque déclare dans ses gabarits chaque paramètre qu'elle écrit, fichiers lus compris"
+text = """
+Chaque gabarit canonique de cette bibliothèque déclare `input` et `inputFile` ; un entier s'écrit en `IntegerQuantityParameter` ; le fichier qu'une étape de recette a lu s'écrit en `StringParameter` titré `inputFile`, de valeur `<slot>: <path>`. Un paquet que cette bibliothèque écrit s'accorde donc avec ses propres gabarits."""

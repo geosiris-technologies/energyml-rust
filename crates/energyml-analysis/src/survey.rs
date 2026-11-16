@@ -69,6 +69,7 @@
 use std::f64::consts::FRAC_PI_2;
 
 use crate::well_plan::{RATE_LENGTH, dogleg};
+use energyml_geostat::vector::{dot, norm, scale as mul, sub};
 
 /// How close to its hole a chord must be for the interval to be **straight**,
 /// and how close to the arc's a chord must be for the stations to be **on**
@@ -208,22 +209,6 @@ pub enum SurveyError {
 
 type Vector = [f64; 3];
 
-fn sub(a: Vector, b: Vector) -> Vector {
-    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
-}
-
-fn mul(a: Vector, k: f64) -> Vector {
-    [a[0] * k, a[1] * k, a[2] * k]
-}
-
-fn dot(a: Vector, b: Vector) -> f64 {
-    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-}
-
-fn norm(a: Vector) -> f64 {
-    dot(a, a).sqrt()
-}
-
 /// What a chord of `hole` may be off by - see [`SLACK`] and [`FLOOR`].
 fn allowed(hole: f64) -> f64 {
     SLACK * hole + FLOOR
@@ -241,12 +226,18 @@ fn sinc(x: f64) -> f64 {
 /// A direction in the horizontal plane, in degrees clockwise from north, in
 /// [0, 360) - a remainder of −1e-15 is 360 once rounded, and 360 is north.
 fn bearing(north: f64, east: f64) -> f64 {
-    let degrees = east.atan2(north).to_degrees().rem_euclid(360.0);
-    if degrees >= 360.0 {
-        degrees - 360.0
-    } else {
-        degrees
-    }
+    normalise_bearing(east.atan2(north).to_degrees())
+}
+
+/// An angle in degrees brought into `[0, 360)`, the one place it is done.
+///
+/// `rem_euclid(360.0)` of a tiny negative angle (`-1e-17`) rounds to exactly
+/// `360.0`, which is outside the half-open range: that value is north, so it is
+/// returned as `0.0`. A non-finite angle comes back unchanged (the caller
+/// refuses it by name).
+pub(crate) fn normalise_bearing(degrees: f64) -> f64 {
+    let turned = degrees.rem_euclid(360.0);
+    if turned >= 360.0 { 0.0 } else { turned }
 }
 
 /// One interval: its two depths and its chord.
@@ -428,6 +419,19 @@ pub fn offsets(points: &[Point], datum: [f64; 3]) -> Vec<Offset> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// [analysis C2] a tiny negative angle is 360.0 once rounded by
+    /// `rem_euclid`; the shared normalisation keeps the range half-open.
+    #[test]
+    fn a_normalised_bearing_is_never_360() {
+        assert_eq!(normalise_bearing(-1e-17), 0.0);
+        assert_eq!(normalise_bearing(-1e-300), 0.0);
+        assert_eq!(normalise_bearing(360.0), 0.0);
+        assert_eq!(normalise_bearing(-90.0), 270.0);
+        assert_eq!(normalise_bearing(725.0), 5.0);
+        assert!(normalise_bearing(f64::NAN).is_nan());
+        // Break it: return `degrees.rem_euclid(360.0)` without the `>= 360.0` test.
+    }
     use crate::well_plan::{self, Section, Station, Tie, Turn};
 
     fn near(a: f64, b: f64, tolerance: f64) -> bool {

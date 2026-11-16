@@ -12,7 +12,7 @@ use std::collections::HashMap;
 
 use energyml_analysis::profile::{Corridor, Head, Kept, Profile, Reason};
 
-use crate::crosses::{meet, traces};
+use crate::crosses::{cross_meetings, traces};
 use crate::inputs::{InputsError, validate};
 use crate::model::{
     Catalogue, Contribution, CutShape, EnvelopeItem, FORMAT, Inputs, Item, Mark, ObjectId, ObjectRow,
@@ -30,8 +30,20 @@ pub const BAND_ARC_STEP: f64 = std::f64::consts::PI / 12.0;
 /// The catalogue: wells projected on every section, one line per wellbore,
 /// surfaces placed, the plan, every object's fate, the notes.
 pub fn assemble(inputs: &Inputs, contributions: &[Contribution]) -> Result<Catalogue, InputsError> {
+    let (sections, notes) = traces(inputs)?;
+    assemble_with(inputs, sections, notes, contributions)
+}
+
+/// [`assemble`], for a caller that already holds the sections' traces and their
+/// notes ([`traces`]): the whole calculation computes them once, to hand them
+/// to the readers, and passes them here rather than computing them again.
+pub fn assemble_with(
+    inputs: &Inputs,
+    sections: Vec<SectionTrace>,
+    mut notes: Vec<crate::model::Note>,
+    contributions: &[Contribution],
+) -> Result<Catalogue, InputsError> {
     validate(inputs)?;
-    let (sections, mut notes) = traces(inputs)?;
 
     // One line per wellbore ------------------------------------------
     let all: Vec<&WellRead> = contributions.iter().flat_map(|c| c.wells.iter()).collect();
@@ -59,14 +71,10 @@ pub fn assemble(inputs: &Inputs, contributions: &[Contribution]) -> Result<Catal
 
     // The sections ------------------------------------------------------------
     // Where the cross sections meet each other, for the marks.
-    let mut cross_meets: Vec<(SectionKey, SectionKey, [f64; 2])> = Vec::new();
-    for i in 1..sections.len() {
-        for j in i + 1..sections.len() {
-            if let Some(at) = meet(&sections[i].trace, &sections[j].trace) {
-                cross_meets.push((sections[i].key, sections[j].key, at));
-            }
-        }
-    }
+    let cross_meets: Vec<(SectionKey, SectionKey, [f64; 2])> = cross_meetings(&sections)
+        .into_iter()
+        .map(|(i, j, at)| (sections[i].key, sections[j].key, at))
+        .collect();
 
     let mut out_sections: Vec<Section> = Vec::with_capacity(sections.len());
     for (st, b) in sections.iter().zip(&built) {

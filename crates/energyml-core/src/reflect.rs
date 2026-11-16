@@ -12,6 +12,8 @@
 
 use crate::ns::Namespace;
 
+pub mod fields;
+
 /// Indirection used for every type-to-type link, so cyclic models can still be
 /// described with `static` data.
 pub type TypeInfoFn = fn() -> &'static TypeInfo;

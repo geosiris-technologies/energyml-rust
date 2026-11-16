@@ -722,6 +722,100 @@ impl<'a> XmlReader<'a> {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Escaping text written by hand (the one door)
+// ---------------------------------------------------------------------------
+
+/// Whether XML 1.0 (section 2.2, production `Char`) can carry `c` at all, as a
+/// literal or as a character reference.
+fn is_xml_char(c: char) -> bool {
+    matches!(c, '\t' | '\n' | '\r')
+        || ('\u{20}'..='\u{D7FF}').contains(&c)
+        || ('\u{E000}'..='\u{FFFD}').contains(&c)
+        || ('\u{10000}'..='\u{10FFFF}').contains(&c)
+}
+
+fn escape_into(text: &str, quotes: bool) -> String {
+    let mut out = String::with_capacity(text.len());
+    for c in text.chars() {
+        match c {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' if quotes => out.push_str("&quot;"),
+            '\'' if quotes => out.push_str("&apos;"),
+            c if !is_xml_char(c) => {}
+            c => out.push(c),
+        }
+    }
+    out
+}
+
+/// `text` as XML 1.0 element content: `&`, `<` and `>` are replaced by their
+/// predefined entities.
+///
+/// A character XML 1.0 cannot carry at all (the control characters other than
+/// tab, line feed and carriage return, U+FFFE, U+FFFF) is **dropped**: a title
+/// that comes from a file may hold anything, and a document that no parser
+/// reads is worse than a missing control character.
+///
+/// This is the one door for text written by hand (SVG, VTK, Galaxy tool XML,
+/// `core.xml`, `AnyXml`); the generated types go through [`XmlWriter`].
+pub fn escape_text(text: &str) -> String {
+    escape_into(text, false)
+}
+
+/// `text` as an XML 1.0 attribute value, written between double *or* single
+/// quotes: [`escape_text`] plus `"` and `'`.
+pub fn escape_attr(text: &str) -> String {
+    escape_into(text, true)
+}
+
+/// XML 1.0 text, unescaped: the five predefined entities and `&#...;` /
+/// `&#x...;`.
+///
+/// Refused, by name, with the reason: an `&` with no `;`, an entity XML 1.0
+/// does not predefine, and a character reference to a character XML 1.0 cannot
+/// carry (`&#0;`).
+pub fn unescape(text: &str) -> std::result::Result<String, String> {
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(at) = rest.find('&') {
+        out.push_str(&rest[..at]);
+        let after = &rest[at + 1..];
+        let end = after.find(';').ok_or_else(|| {
+            format!(
+                "an `&` with no `;` near `{}`",
+                rest[at..].chars().take(12).collect::<String>()
+            )
+        })?;
+        let name = &after[..end];
+        let ch = match name {
+            "amp" => '&',
+            "lt" => '<',
+            "gt" => '>',
+            "quot" => '"',
+            "apos" => '\'',
+            _ => {
+                let code = if let Some(hex) = name.strip_prefix("#x").or_else(|| name.strip_prefix("#X")) {
+                    u32::from_str_radix(hex, 16).ok()
+                } else if let Some(decimal) = name.strip_prefix('#') {
+                    decimal.parse().ok()
+                } else {
+                    None
+                };
+                code.and_then(char::from_u32)
+                    .filter(|c| is_xml_char(*c))
+                    .ok_or_else(|| format!("`&{name};` is not an entity XML 1.0 knows"))?
+            }
+        };
+        out.push(ch);
+        rest = &after[end + 1..];
+    }
+    out.push_str(rest);
+    Ok(out)
+}
+
 /// Local name of an element, without its namespace prefix.
 pub fn local_name(start: &BytesStart<'_>) -> String {
     String::from_utf8_lossy(start.local_name().as_ref()).into_owned()
@@ -904,11 +998,27 @@ pub fn split_list<T: XmlText>(text: &str) -> Result<Vec<T>> {
 // Scalars
 // ---------------------------------------------------------------------------
 
+/// The `xsd:double` lexical form of a value Rust spells otherwise: `NaN`,
+/// `INF` and `-INF` (XML Schema Part 2, 3.3.5). Rust prints `inf` and `-inf`,
+/// which a strict validator refuses. The one writer, shared with the JSON form.
+pub(crate) fn xsd_double(value: f64) -> String {
+    if value.is_nan() {
+        "NaN".to_string()
+    } else if value.is_sign_positive() {
+        "INF".to_string()
+    } else {
+        "-INF".to_string()
+    }
+}
+
 macro_rules! impl_xml_scalar {
     ($ty:ty, $name:literal) => {
+        impl_xml_scalar!($ty, $name, |v: &$ty| v.to_string());
+    };
+    ($ty:ty, $name:literal, $render:expr) => {
         impl XmlText for $ty {
             fn to_xml_text(&self) -> Cow<'_, str> {
-                Cow::Owned(self.to_string())
+                Cow::Owned(($render)(self))
             }
             fn from_xml_text(s: &str) -> Result<Self> {
                 s.trim()
@@ -938,8 +1048,18 @@ impl_xml_scalar!(u8, "unsignedByte");
 impl_xml_scalar!(u16, "unsignedShort");
 impl_xml_scalar!(u32, "unsignedInt");
 impl_xml_scalar!(u64, "unsignedLong");
-impl_xml_scalar!(f32, "float");
-impl_xml_scalar!(f64, "double");
+// A finite float keeps Rust's shortest round-trip form; a non-finite one is
+// written as `xsd:double` spells it (`[core-derive-schemas S11]`).
+impl_xml_scalar!(f32, "float", |v: &f32| if v.is_finite() {
+    v.to_string()
+} else {
+    xsd_double(f64::from(*v))
+});
+impl_xml_scalar!(f64, "double", |v: &f64| if v.is_finite() {
+    v.to_string()
+} else {
+    xsd_double(*v)
+});
 
 impl XmlText for bool {
     fn to_xml_text(&self) -> Cow<'_, str> {
@@ -1004,5 +1124,93 @@ impl<T: XmlSerialize> XmlSerialize for Box<T> {
 impl<T: XmlDeserialize> XmlDeserialize for Box<T> {
     fn xml_read(r: &mut XmlReader<'_>, start: &BytesStart<'_>) -> Result<Self> {
         Ok(Box::new(T::xml_read(r, start)?))
+    }
+}
+
+#[cfg(test)]
+mod escape_tests {
+    use super::{escape_attr, escape_text, unescape};
+
+    /// XML 1.0 section 2.4 (character data) and 3.1 (attribute values): text
+    /// escapes `&`, `<`, `>`; an attribute value also its quote characters.
+    ///
+    /// Break it: stop escaping `>` in `escape_text`, or `'` in `escape_attr`.
+    #[test]
+    fn text_and_attribute_escape_what_xml_1_0_says() {
+        assert_eq!(
+            escape_text(r#"a & b < c > d "e" 'f'"#),
+            r#"a &amp; b &lt; c &gt; d "e" 'f'"#
+        );
+        assert_eq!(
+            escape_attr(r#"a & b < c > d "e" 'f'"#),
+            "a &amp; b &lt; c &gt; d &quot;e&quot; &apos;f&apos;"
+        );
+    }
+
+    /// Section 2.2, production `Char`: a control character is dropped, tab,
+    /// line feed and carriage return stay.
+    ///
+    /// Break it: let the control characters through in `escape_into`.
+    #[test]
+    fn a_character_xml_cannot_carry_is_dropped() {
+        assert_eq!(escape_text("a\u{1}b\u{0}c\u{FFFE}d\u{FFFF}e"), "abcde");
+        assert_eq!(escape_attr("x\ty\nz\r"), "x\ty\nz\r");
+    }
+
+    /// What `escape_attr` writes, `unescape` reads back.
+    ///
+    /// Break it: remove an arm of `unescape`.
+    #[test]
+    fn unescape_reverses_escape_attr() {
+        let text = "Fault & Horizon <1> \"A\" 'B' \u{e9}";
+        assert_eq!(unescape(&escape_attr(text)).unwrap(), text);
+        assert_eq!(unescape("&#233;&#xE9;&#XE9;").unwrap(), "\u{e9}\u{e9}\u{e9}");
+    }
+
+    /// A malformed reference is refused by name, never passed through.
+    ///
+    /// Break it: drop the `is_xml_char` filter in `unescape`.
+    #[test]
+    fn unescape_refuses_what_xml_1_0_does_not_know() {
+        assert!(unescape("a & b").unwrap_err().contains("no `;`"));
+        assert!(unescape("&bogus;").unwrap_err().contains("bogus"));
+        assert!(unescape("&#0;").is_err(), "U+0000 is not an XML 1.0 character");
+        assert!(unescape("&#x1;").is_err());
+    }
+}
+
+#[cfg(test)]
+mod float_text_tests {
+    use super::XmlText;
+
+    /// `[core-derive-schemas S11]`, XML Schema Part 2 section 3.3.5 (`double`):
+    /// the lexical forms of the special values are `INF`, `-INF` and `NaN`.
+    /// Rust prints `inf` and `-inf`, which a strict validator refuses.
+    ///
+    /// Break it: render every float with `to_string()` again; `inf` fails the
+    /// first assertion.
+    #[test]
+    fn a_non_finite_float_is_written_as_xsd_spells_it() {
+        assert_eq!(f64::INFINITY.to_xml_text(), "INF");
+        assert_eq!(f64::NEG_INFINITY.to_xml_text(), "-INF");
+        assert_eq!(f64::NAN.to_xml_text(), "NaN");
+        assert_eq!(f32::INFINITY.to_xml_text(), "INF");
+        assert_eq!(f32::NEG_INFINITY.to_xml_text(), "-INF");
+
+        // And what is written reads back.
+        assert_eq!(f64::from_xml_text("INF").unwrap(), f64::INFINITY);
+        assert_eq!(f64::from_xml_text("-INF").unwrap(), f64::NEG_INFINITY);
+        assert!(f32::from_xml_text("NaN").unwrap().is_nan());
+    }
+
+    /// A finite float keeps its shortest round-trip form, f32 included (it is
+    /// not widened to f64 first: `0.1f32` is not `0.10000000149`).
+    ///
+    /// Break it: widen the f32 to f64 before `to_string`.
+    #[test]
+    fn a_finite_float_is_unchanged() {
+        assert_eq!(0.1f32.to_xml_text(), "0.1");
+        assert_eq!(2.5f64.to_xml_text(), "2.5");
+        assert_eq!((-0.0f64).to_xml_text(), "-0");
     }
 }

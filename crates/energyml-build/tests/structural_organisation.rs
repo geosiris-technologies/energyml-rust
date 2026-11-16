@@ -576,7 +576,7 @@ fn the_activity_records_the_lists_it_was_told_and_what_it_counted() {
     assert_eq!(texts("contacts"), vec!["F3 {east} crosses F1 {west}".to_string()]);
     let count = |title: &str| {
         plan.activity.parameters.iter().find_map(|one| match one {
-            Parameter::Double { title: t, value, .. } if t == title => Some(*value),
+            other if other.title() == title => other.number(),
             _ => None,
         })
     };

@@ -58,9 +58,9 @@ use energyml_core::value::{FieldValue, Reflect};
 use energyml_domain::color::GraphicalSet;
 use energyml_domain::property::{self, IndexableElement};
 use energyml_domain::property_kind::Resolver;
-use energyml_domain::source::{ArraySource, ObjectSource};
+use energyml_domain::source::ArraySource;
 use energyml_domain::values::{self, Values};
-use energyml_domain::well_strata::{self, Known, Wanted};
+use energyml_domain::well_strata::{self, Known, StrataCache, Wanted};
 use energyml_storage::ObjectSummary;
 
 use crate::layout::{Board, Interval, IntervalTrack, MdTrack, Track};
@@ -71,19 +71,6 @@ use crate::layout::{Board, Interval, IntervalTrack, MdTrack, Track};
 /// through - rather than through `well_strata`, so a board can still be built
 /// for a frame with properties and no stratigraphy at all.
 const NODE_MD: &str = "NodeMd";
-
-/// The frame's own stratigraphic mappings - the two spellings
-/// `energyml_domain::well_strata`'s own (private) `MAPPINGS` constant reads;
-/// duplicated as literal strings rather than imported, because listing
-/// *which ranks a frame names* is not reading what they say - the indices,
-/// the units and the colours stay `well_strata`'s alone (see the module doc).
-const MAPPINGS: &[&str] = &["IntervalStratigraphicUnits", "IntervalStratigraphiUnits"];
-/// And what a mapping names as the rank its indices count in -
-/// `well_strata`'s own (private) `ORGANISATION`.
-const ORGANISATION: &[&str] = &[
-    "StratigraphicOrganizationInterpretation",
-    "StratigraphicOrganization",
-];
 
 // ---------------------------------------------------------------------------
 // What is asked
@@ -218,36 +205,6 @@ pub enum Refusal {
 }
 
 // ---------------------------------------------------------------------------
-// `&dyn ArraySource` as an `ObjectSource`
-// ---------------------------------------------------------------------------
-
-/// The same workaround `energyml_domain::well_strata`'s own (private)
-/// `Objects` type exists for: trait upcasting needs Rust 1.86, and this
-/// workspace's `rust-version` is 1.85.
-struct AsObjects<'a>(&'a dyn ArraySource);
-
-impl ObjectSource for AsObjects<'_> {
-    fn object(&self, uuid: &str) -> Option<Box<dyn DynObject>> {
-        self.0.object(uuid)
-    }
-
-    fn read_object(&self, uuid: &str) -> Result<Box<dyn DynObject>, String> {
-        self.0.read_object(uuid)
-    }
-
-    // The uri doors are forwarded too: left to the defaults they would ask the
-    // wrapped source by uuid, and a reference followed through this wrapper
-    // would lose the version it names.
-    fn object_at(&self, uri: &str) -> Option<Box<dyn DynObject>> {
-        self.0.object_at(uri)
-    }
-
-    fn read_object_at(&self, uri: &str) -> Result<Box<dyn DynObject>, String> {
-        self.0.read_object_at(uri)
-    }
-}
-
-// ---------------------------------------------------------------------------
 // Reading the frame
 // ---------------------------------------------------------------------------
 
@@ -340,11 +297,20 @@ pub fn board_of_frame(
         graphics: &graphics,
         units: &unit_titles,
     };
+    // One cache for the whole sheet: the ranks, the merged colours and the frame's own depths are read once, not
+    // once per rank and per category property.
+    let strata_cache = StrataCache::new();
 
     // -- one track per stratigraphic rank the frame carries -----
-    let ranks = stratigraphy_ranks(frame);
+    let ranks = well_strata::ranks_of_frame(frame);
     if !ranks.is_empty() {
-        match well_strata::of_frame(frame, &Wanted::IntervalUnits { rank: None }, source, &known) {
+        match well_strata::of_frame_cached(
+            frame,
+            &Wanted::IntervalUnits { rank: None },
+            source,
+            &known,
+            &strata_cache,
+        ) {
             Ok(strata) => {
                 let header = if ranks.len() == 1 {
                     rank_header(&ranks[0].1, source)
@@ -365,13 +331,14 @@ pub fn board_of_frame(
                      as separate tracks, one per rank, never merged"
                 ));
                 for (rank_uuid, rank_uri) in &ranks {
-                    match well_strata::of_frame(
+                    match well_strata::of_frame_cached(
                         frame,
                         &Wanted::IntervalUnits {
                             rank: Some(rank_uuid),
                         },
                         source,
                         &known,
+                        &strata_cache,
                     ) {
                         Ok(strata) => {
                             notes.extend(strata.notes.clone());
@@ -395,7 +362,10 @@ pub fn board_of_frame(
     }
 
     // -- one track per interval property, none for a per-node one -----
-    let mut candidates: Vec<&ObjectSummary> = Vec::new();
+    //
+    // Each property is read **once**: the object read to test its frame is kept
+    // for the candidates, and is the one the track is built from.
+    let mut candidates: Vec<(&ObjectSummary, Box<dyn DynObject>)> = Vec::new();
     let mut node_property_count = 0usize;
     for summary in resources {
         if !summary.qualified_type.ends_with("Property") {
@@ -437,7 +407,9 @@ pub fn board_of_frame(
         }
         match read.indexable {
             IndexableElement::Nodes => node_property_count += 1,
-            IndexableElement::Intervals | IndexableElement::IntervalsFromDatum => candidates.push(summary),
+            IndexableElement::Intervals | IndexableElement::IntervalsFromDatum => {
+                candidates.push((summary, object));
+            }
             // Neither this frame's nodes nor its intervals - out of scope
             // for a per-frame sheet whatever it is (e.g. a property hanging
             // on `patches` or `representation`); not drawn, not counted as a
@@ -446,31 +418,26 @@ pub fn board_of_frame(
         }
     }
 
-    let ordered: Vec<&ObjectSummary> = match &options.tracks {
+    // `Only` keeps the caller's order; a uuid named twice is drawn twice, from a copy of the one object read.
+    let objects: Vec<(&ObjectSummary, Box<dyn DynObject>)> = match &options.tracks {
         TrackSelection::All => candidates,
         TrackSelection::Only(wanted) => wanted
             .iter()
             .filter_map(|uuid| {
                 candidates
                     .iter()
-                    .find(|summary| summary.uuid.eq_ignore_ascii_case(uuid))
-                    .copied()
+                    .find(|(summary, _)| summary.uuid.eq_ignore_ascii_case(uuid))
+                    .map(|(summary, object)| (*summary, object.clone_box()))
             })
             .collect(),
     };
-
-    let mut objects: Vec<(&ObjectSummary, Box<dyn DynObject>)> = Vec::with_capacity(ordered.len());
-    for summary in ordered {
-        match source.read_object_at(&summary.uri) {
-            Ok(object) => objects.push((summary, object)),
-            Err(why) => notes.push(format!("property {}: {why}", summary.uuid)),
-        }
-    }
+    // One resolver for the whole sheet: a kind shared by several properties is read once.
+    let resolver = Resolver::new(source);
     let mut labelled: Vec<(property::Property<'_>, &dyn Reflect, String)> = Vec::with_capacity(objects.len());
     for (summary, object) in &objects {
         match property::read(object.as_reflect()) {
             Ok(read) => {
-                let label = column_label(&read, source, options);
+                let label = column_label(&read, &resolver, options);
                 labelled.push((read, object.as_reflect(), label));
             }
             Err(why) => notes.push(format!("property {}: {why}", summary.uuid)),
@@ -487,6 +454,7 @@ pub fn board_of_frame(
             &mds,
             source,
             &known,
+            &strata_cache,
             options,
             &header,
             &uri_of,
@@ -509,40 +477,6 @@ pub fn board_of_frame(
         board: Board { title: None, tracks },
         notes,
     })
-}
-
-/// Distinct stratigraphic ranks the frame's mapping names - read on the
-/// document alone, the same two field-name pairs `well_strata` reads under
-/// its own private `MAPPINGS`/`ORGANISATION` (see the module doc): *which*
-/// ranks are named, never their indices, their units or their colours.
-///
-/// Each rank as `(uuid, uri)`: the uuid is what `well_strata::Wanted` asks by
-/// and what tells two ranks apart, the uri is what the header is read by.
-fn stratigraphy_ranks(frame: &dyn Reflect) -> Vec<(String, String)> {
-    let maps: Vec<&dyn Reflect> = match MAPPINGS.iter().find_map(|name| frame.field(name)) {
-        Some(FieldValue::List(items)) => items.into_iter().filter_map(|item| item.as_object()).collect(),
-        Some(FieldValue::Object(one)) => vec![one],
-        _ => Vec::new(),
-    };
-    let mut ranks: Vec<(String, String)> = Vec::new();
-    for map in maps {
-        let Some(reference) = ORGANISATION.iter().find_map(|name| match map.field(name) {
-            Some(FieldValue::Object(reference)) => Some(reference),
-            _ => None,
-        }) else {
-            continue;
-        };
-        let Some(uuid) = identity::uuid_of_reflect(reference) else {
-            continue;
-        };
-        // A reference that names no type has no uri: its uuid is then its address.
-        let uri = identity::uri_of_reflect(reference).unwrap_or_else(|| uuid.to_string());
-        let uuid = uuid.to_ascii_lowercase();
-        if !uuid.is_empty() && !ranks.iter().any(|(known, _)| *known == uuid) {
-            ranks.push((uuid, uri));
-        }
-    }
-    ranks
 }
 
 /// A rank's own title, for a track header - "Stratigraphy" (the sheet design's own
@@ -591,13 +525,13 @@ fn track_from_strata(
 /// A property column's label: the chosen [`PropertyLabel`],
 /// before its unit - [`with_unit`] appends that, once [`disambiguate`] has
 /// had its say.
-fn column_label(read: &property::Property<'_>, source: &dyn ArraySource, options: &Options) -> String {
+fn column_label(read: &property::Property<'_>, resolver: &Resolver<'_>, options: &Options) -> String {
     match options.label {
         PropertyLabel::Title => read.title.clone().unwrap_or_else(|| read.uuid.clone()),
         PropertyLabel::Kind => read
             .kind
             .as_ref()
-            .and_then(|kind_ref| Resolver::new(&AsObjects(source)).resolve(kind_ref).ok())
+            .and_then(|kind_ref| resolver.resolve(kind_ref).ok())
             .map(|resolution| resolution.kind().title.clone())
             .filter(|title| !title.is_empty())
             .or_else(|| read.title.clone())
@@ -704,6 +638,7 @@ fn build_property_track(
     mds: &[f64],
     source: &dyn ArraySource,
     known: &Known<'_>,
+    strata_cache: &StrataCache,
     options: &Options,
     header: &str,
     uri_of: &HashMap<String, String>,
@@ -720,13 +655,14 @@ fn build_property_track(
     }
 
     if read.lookup.is_some() {
-        return match well_strata::of_frame(
+        return match well_strata::of_frame_cached(
             frame,
             &Wanted::Category {
                 property: property_object,
             },
             source,
             known,
+            strata_cache,
         ) {
             Ok(strata) => {
                 notes.extend(strata.notes.clone());
@@ -815,8 +751,12 @@ fn build_property_track(
 /// [`crate::layout`]'s own (private) `format_md` uses, kept separate because
 /// a property value is not a measured depth and does not need to share code
 /// with it to agree on what "no useless zeros" means.
+///
+/// A value within 1e-9 of an integer is written as that integer, but only
+/// below 1e15 in magnitude: beyond it the cast to `i64` saturates (1e20 would
+/// print as `i64::MAX`, a number nobody wrote).
 fn format_number(value: f64) -> String {
-    if (value - value.round()).abs() < 1e-9 {
+    if value.abs() < 1e15 && (value - value.round()).abs() < 1e-9 {
         format!("{}", value.round() as i64)
     } else {
         format!("{value}")
@@ -830,5 +770,24 @@ fn format_value(value: f64, uom: Option<&str>) -> String {
     match uom {
         Some(unit) if !unit.is_empty() => format!("{} {unit}", format_number(value)),
         _ => format_number(value),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::format_number;
+
+    /// A value above `i64::MAX` is written as itself, not saturated; the rule
+    /// for near-integers below 1e15 is unchanged.
+    ///
+    /// Break it: remove the `value.abs() < 1e15` guard of `format_number` (1e20
+    /// then prints 9223372036854775807).
+    #[test]
+    fn format_number_does_not_saturate() {
+        assert_eq!(format_number(1e20), "100000000000000000000");
+        assert_eq!(format_number(-1e20), "-100000000000000000000");
+        assert_eq!(format_number(10.0), "10");
+        assert_eq!(format_number(2.9999999999), "3");
+        assert_eq!(format_number(0.25), "0.25");
     }
 }

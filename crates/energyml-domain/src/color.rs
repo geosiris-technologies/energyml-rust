@@ -57,7 +57,7 @@ use std::collections::HashMap;
 
 use energyml_core::any_xml::AnyXml;
 use energyml_core::identity;
-use energyml_core::value::{FieldValue, Reflect, Scalar};
+use energyml_core::value::{Reflect, Scalar};
 
 use crate::error::{Error, Result};
 use crate::inherit::uuid_of_identity;
@@ -108,33 +108,67 @@ impl Rgba {
         [byte(self.r), byte(self.g), byte(self.b), byte(self.a)]
     }
 
-    /// `#rrggbbaa`.
+    /// The colour of four bytes, the inverse of [`Rgba::to_bytes`]: `from_bytes(c.to_bytes())`
+    /// gives back the same four bytes.
+    pub fn from_bytes(bytes: [u8; 4]) -> Rgba {
+        let channel = |value: u8| f64::from(value) / 255.0;
+        Rgba {
+            r: channel(bytes[0]),
+            g: channel(bytes[1]),
+            b: channel(bytes[2]),
+            a: channel(bytes[3]),
+        }
+    }
+
+    /// `#rrggbbaa`, lower case. One of the three writers of a colour's text -
+    /// with [`Rgba::to_hex_rgb`] and [`Rgba::to_hex_compact`] - and the only
+    /// ones: none of them is written by hand elsewhere (decision D3 of the review
+    /// of 15/11/2026).
     pub fn to_hex(self) -> String {
         let [r, g, b, a] = self.to_bytes();
         format!("#{r:02x}{g:02x}{b:02x}{a:02x}")
     }
 
-    /// `#rrggbb` or `#rrggbbaa` - six digits are opaque - the inverse of
-    /// [`Rgba::to_hex`].
+    /// `#rrggbb`, lower case: the alpha is not part of it. What an SVG
+    /// attribute that has a separate opacity wants.
+    pub fn to_hex_rgb(self) -> String {
+        let [r, g, b, _] = self.to_bytes();
+        format!("#{r:02x}{g:02x}{b:02x}")
+    }
+
+    /// `#rrggbb` when the colour is opaque, `#rrggbbaa` otherwise.
+    pub fn to_hex_compact(self) -> String {
+        let [_, _, _, a] = self.to_bytes();
+        if a == 255 {
+            self.to_hex_rgb()
+        } else {
+            self.to_hex()
+        }
+    }
+
+    /// `#rgb`, `#rrggbb` or `#rrggbbaa` - three and six digits are opaque -
+    /// the inverse of [`Rgba::to_hex`]. `#rgb` is the CSS shorthand: each digit
+    /// stands for itself twice (`#f80` is `#ff8800`).
     ///
     /// Everything else is refused, with the text it was given: a colour that
     /// silently becomes another is the failure a web front end's colour module
     /// was written about. Stricter than `u8::from_str_radix` alone, which takes
     /// a sign - `#+f+f+f` read as a dark grey in the front end's bridge until
     /// 24/09/2026, whose own doc promised *nothing else is accepted* - and the
-    /// `#` is required. The one reader of a colour's text: the front end's bridge
+    /// `#` is required. The one reader of a colour's text (decision D3 of the
+    /// review of 15/11/2026): the front end's bridge, the section and the sheet,
     /// and the `graphical-information` operation call it.
     pub fn parse(text: &str) -> std::result::Result<Rgba, String> {
         let text = text.trim();
         let refused = || {
             format!(
-                "`{text}` is not a colour written `#rrggbb` or `#rrggbbaa` - red, green, blue and, with eight digits, alpha, two hexadecimal digits each"
+                "`{text}` is not a colour written `#rgb`, `#rrggbb` or `#rrggbbaa` - red, green, blue and, with eight digits, alpha, one or two hexadecimal digits each"
             )
         };
         let Some(digits) = text.strip_prefix('#') else {
             return Err(refused());
         };
-        if !matches!(digits.len(), 6 | 8) || !digits.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        if !matches!(digits.len(), 3 | 6 | 8) || !digits.bytes().all(|byte| byte.is_ascii_hexdigit()) {
             return Err(refused());
         }
         let channel = |at: usize| -> std::result::Result<f64, String> {
@@ -142,6 +176,19 @@ impl Rgba {
                 .map(|value| f64::from(value) / 255.0)
                 .map_err(|_| refused())
         };
+        if digits.len() == 3 {
+            let nibble = |at: usize| -> std::result::Result<f64, String> {
+                u8::from_str_radix(&digits[at..at + 1], 16)
+                    .map(|value| f64::from(value * 17) / 255.0)
+                    .map_err(|_| refused())
+            };
+            return Ok(Rgba {
+                r: nibble(0)?,
+                g: nibble(1)?,
+                b: nibble(2)?,
+                a: 1.0,
+            });
+        }
         Ok(Rgba {
             r: channel(0)?,
             g: channel(2)?,
@@ -328,7 +375,8 @@ pub enum Domain {
     Rgb,
 }
 
-/// Linear or logarithmic spacing between stops.
+/// Linear or logarithmic spacing **between two stops** (`InterpolationMethod`);
+/// not `UseLogarithmicMapping`, which is the log of the value.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Interpolation {
     /// Even spacing.
@@ -357,7 +405,8 @@ pub struct ColorMap {
     pub title: Option<String>,
     /// Continuous maps interpolate; discrete ones do not.
     pub continuous: Option<(Domain, Interpolation)>,
-    /// Stops, sorted by index.
+    /// Stops, sorted by index. Sampling relies on it (it bisects): [`ColorMap::read`] sorts them, and a map built
+    /// by hand keeps them in ascending order.
     pub stops: Vec<Stop>,
     /// Colour for a null value.
     pub null_color: Option<Hsv>,
@@ -481,23 +530,72 @@ impl ColorMap {
     ///    colour from this range"*, so they are clamped - and that clamping is
     ///    what makes `AboveMaxColor`/`BelowMinColor` unreachable, which is why
     ///    they only apply when `MinMax` is absent;
-    /// 3. the value is placed in the map's own index range;
-    /// 4. a discrete map takes **the nearest lower entry that exists** - the
+    /// 3. under `UseLogarithmicMapping`, the log of the value is what is
+    ///    placed (RESQML TRG 2.2 §4.5 p. 56): between the logs of `MinMax`, or
+    ///    else of the map's own range;
+    /// 4. the value is placed in the map's own index range;
+    /// 5. a discrete map takes **the nearest lower entry that exists** - the
     ///    schema's own example: stops at 10, 20, 30 and a value of 16.5 give
     ///    the colour of 10.
+    ///
+    /// `None` also covers a refusal of [`ColorMap::check_scaling`]: call that
+    /// once to say why.
     pub fn sample(&self, value: Option<f64>, scaling: &Scaling) -> Option<Rgba> {
+        self.try_sample(value, scaling).unwrap_or(None)
+    }
+
+    /// Whether this map can place values under this scaling at all - a refusal
+    /// is the same for every value, so a caller asks once and says why.
+    pub fn check_scaling(&self, scaling: &Scaling) -> Result<()> {
+        if !scaling.logarithmic {
+            return Ok(());
+        }
+        if let Some((min, max)) = scaling.min_max {
+            let low = min.min(max);
+            if low <= 0.0 {
+                return Err(Error::malformed(
+                    &self.uuid,
+                    format!(
+                        "`UseLogarithmicMapping` over a `MinMax` that reaches {low}: a value of zero or less has no logarithm to place on the map"
+                    ),
+                ));
+            }
+        } else {
+            let (map_low, _) = self.range();
+            if map_low <= 0.0 {
+                return Err(Error::malformed(
+                    &self.uuid,
+                    format!(
+                        "`UseLogarithmicMapping` with no `MinMax`: the map's own range, from {map_low}, stands for the values' range, and zero or less has no logarithm"
+                    ),
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    /// The colour for one value, or why the map cannot place it.
+    ///
+    /// A null value takes its `NullColor` (or `None`) before any refusal: a
+    /// null has its colour whatever the scale.
+    pub fn try_sample(&self, value: Option<f64>, scaling: &Scaling) -> Result<Option<Rgba>> {
         let Some(value) = value.filter(|v| !v.is_nan()) else {
-            return self.null_color.as_ref().map(Hsv::to_rgba);
+            return Ok(self.null_color.as_ref().map(Hsv::to_rgba));
         };
+        self.check_scaling(scaling)?;
 
         let (map_low, map_high) = self.range();
         let mut position = value;
 
         if let Some((min, max)) = scaling.min_max {
-            // Clamp to the property's range, then rescale onto the map's.
+            // Clamp to the property's range (before the log: a value of zero
+            // or less takes the extreme colour, never a NaN), then rescale
+            // onto the map's.
             let clamped = value.clamp(min.min(max), min.max(max));
             position = if (max - min).abs() < f64::EPSILON {
                 map_low
+            } else if scaling.logarithmic {
+                map_low + (clamped.ln() - min.ln()) / (max.ln() - min.ln()) * (map_high - map_low)
             } else {
                 map_low + (clamped - min) / (max - min) * (map_high - map_low)
             };
@@ -505,12 +603,24 @@ impl ColorMap {
             if value < map_low
                 && let Some(color) = &self.below_min
             {
-                return Some(color.to_rgba());
+                return Ok(Some(color.to_rgba()));
             }
             if value > map_high
                 && let Some(color) = &self.above_max
             {
-                return Some(color.to_rgba());
+                return Ok(Some(color.to_rgba()));
+            }
+            if scaling.logarithmic {
+                // Without `MinMax` the map's range stands for the property's,
+                // as in the linear case (ADR 0025).
+                let clamped = value.clamp(map_low, map_high);
+                position = if (map_high - map_low).abs() < f64::EPSILON {
+                    map_low
+                } else {
+                    map_low
+                        + (clamped.ln() - map_low.ln()) / (map_high.ln() - map_low.ln())
+                            * (map_high - map_low)
+                };
             }
         }
 
@@ -519,21 +629,17 @@ impl ColorMap {
         }
 
         match self.continuous {
-            None => Some(self.discrete_at(position)),
-            Some((domain, method)) => Some(self.continuous_at(position, domain, method, scaling)),
+            None => Ok(Some(self.discrete_at(position))),
+            Some((domain, method)) => Ok(Some(self.continuous_at(position, domain, method))),
         }
     }
 
     /// The schema's business rule: the nearest **existing** lower entry.
     fn discrete_at(&self, position: f64) -> Rgba {
-        let mut chosen = &self.stops[0];
-        for stop in &self.stops {
-            if stop.index <= position {
-                chosen = stop;
-            } else {
-                break;
-            }
-        }
+        // The stops are sorted by index (`ColorMap::stops`): the last one at or below the position is found by
+        // bisection, not by a walk from the first. A NaN position is below every stop: the first one.
+        let below = self.stops.partition_point(|stop| stop.index <= position);
+        let chosen = &self.stops[below.saturating_sub(1)];
         // Below every stop: the first one, unless the map says otherwise.
         if position < self.stops[0].index
             && let Some(color) = &self.below_min
@@ -543,7 +649,7 @@ impl ColorMap {
         chosen.color.to_rgba()
     }
 
-    fn continuous_at(&self, position: f64, domain: Domain, method: Interpolation, scaling: &Scaling) -> Rgba {
+    fn continuous_at(&self, position: f64, domain: Domain, method: Interpolation) -> Rgba {
         let first = &self.stops[0];
         let last = &self.stops[self.stops.len() - 1];
         if position <= first.index {
@@ -552,11 +658,14 @@ impl ColorMap {
         if position >= last.index {
             return last.color.to_rgba();
         }
-        let window = self
-            .stops
-            .windows(2)
-            .find(|pair| position >= pair[0].index && position <= pair[1].index)
-            .unwrap_or(&self.stops[..2]);
+        // The first window holding the position, by bisection: the first stop at or above it closes the window.
+        // (A NaN position matches no window and takes the first two stops, as before.)
+        let closing = self.stops.partition_point(|stop| stop.index < position);
+        let window = if (1..self.stops.len()).contains(&closing) {
+            &self.stops[closing - 1..=closing]
+        } else {
+            &self.stops[..2]
+        };
         let (low, high) = (&window[0], &window[1]);
         let span = high.index - low.index;
         let mut t = if span.abs() < f64::EPSILON {
@@ -565,10 +674,10 @@ impl ColorMap {
             (position - low.index) / span
         };
 
-        // Logarithmic spacing, from the map; `UseLogarithmicMapping`, from the
-        // colour information. Both mean the same thing here, and either one
-        // turns it on.
-        if matches!(method, Interpolation::Logarithmic) || scaling.logarithmic {
+        // Logarithmic spacing between two stops, from the map's
+        // `InterpolationMethod` - not `UseLogarithmicMapping`, which is the log
+        // of the value and is applied before (TRG 2.2 §4.5 p. 56, §4.7 p. 58).
+        if matches!(method, Interpolation::Logarithmic) {
             let (a, b) = (
                 low.index.max(f64::MIN_POSITIVE),
                 high.index.max(f64::MIN_POSITIVE),
@@ -828,6 +937,24 @@ pub struct ElementInfo {
     pub active_color: Option<usize>,
 }
 
+impl ElementInfo {
+    /// `color` as drawn under this element's alpha - **the rule, written once**,
+    /// stated in the annotation of `OverwriteColorAlpha`: a constant alpha
+    /// replaces the colour's own when the element says so, and multiplies it
+    /// otherwise.
+    fn rgba(&self, color: &Hsv) -> Rgba {
+        let mut rgba = color.to_rgba();
+        if let Some(alpha) = self.constant_alpha {
+            rgba.a = if self.overwrite_color_alpha {
+                alpha
+            } else {
+                rgba.a * alpha
+            };
+        }
+        rgba
+    }
+}
+
 /// What one `GraphicalInformation` says.
 #[derive(Clone, PartialEq, Debug)]
 pub enum Information {
@@ -990,7 +1117,10 @@ impl GraphicalSet {
                 .into_iter()
                 .filter_map(|target| {
                     let target = target.as_object()?;
-                    Some((uuid_of_reference(target)?, identity::address_of_reflect(target)?))
+                    Some((
+                        energyml_core::identity::non_empty_uuid_of_reflect(target)?,
+                        identity::address_of_reflect(target)?,
+                    ))
                 })
                 .unzip();
             if targets.is_empty() {
@@ -1066,7 +1196,7 @@ impl GraphicalSet {
                     map: entry
                         .field("ColorMap")
                         .and_then(|f| f.as_object())
-                        .and_then(uuid_of_reference),
+                        .and_then(energyml_core::identity::non_empty_uuid_of_reflect),
                     value_vector_index: scalar_u64(entry, "ValueVectorIndex"),
                 }
             } else {
@@ -1093,20 +1223,12 @@ impl GraphicalSet {
     /// `address` is the uri of the object (its identity): an entry that names
     /// another version of it does not decorate it. A bare uuid, the library's
     /// entry adapter, names no version and takes the entries of every one.
+    ///
+    /// The one matcher is `Cascade::targeting`'s (a map of the set's entries by
+    /// target); this builds it for one question. A walk that asks many keeps its
+    /// [`Cascade`].
     pub fn targeting(&self, address: &str) -> Vec<&Entry> {
-        let (wanted, version) = identity::parse_address(address);
-        let mut found: Vec<&Entry> = self
-            .entries
-            .iter()
-            .filter(|entry| {
-                entry.addresses().iter().any(|named| {
-                    let (uuid, named_version) = identity::parse_address(named);
-                    uuid == wanted && identity::versions_agree(version.as_deref(), named_version.as_deref())
-                })
-            })
-            .collect();
-        found.reverse();
-        found
+        Cascade::new(self).targeting(address)
     }
 
     /// The entry at a positional index, as `Active*InformationIndex` means it.
@@ -1290,6 +1412,22 @@ pub struct Cascade<'a> {
     /// The set's entries by target, built the first time an object is asked
     /// about - see [`Cascade::targeting`].
     targets: RefCell<Option<TargetMap>>,
+    /// The colour maps this cascade has read, by what named them - a map shared by thousands of properties is
+    /// read and validated once. See [`MapMemory`].
+    maps: RefCell<MapMemory>,
+}
+
+/// The colour maps one cascade has read.
+///
+/// Valid for the life of the cascade and for the one source it was filled from (the address of the source is
+/// kept; asking another source empties it). Like the target map above, it is never invalidated otherwise: a
+/// caller whose package changed builds a new cascade.
+#[derive(Clone, Debug, Default)]
+struct MapMemory {
+    /// The data address of the source the maps were read from.
+    source: usize,
+    /// `u:<uri>` or `i:<uuid>`, as the entry names the map.
+    by_address: HashMap<String, ColorMap>,
 }
 
 /// Which entries of a set target each object: lowercase uuid → positions, in
@@ -1319,7 +1457,16 @@ impl<'a> Cascade<'a> {
             viewer_kind: Some("3d".to_string()),
             inherit: true,
             targets: RefCell::new(None),
+            maps: RefCell::new(MapMemory::default()),
         }
+    }
+
+    /// `Some((theirs, wanted))` when an entry meant for the `theirs` viewer must
+    /// not paint this cascade's `wanted` one - the rule written once: an entry
+    /// that names no viewer, or a cascade that asks for none, skips nothing.
+    fn other_viewer<'x>(&'x self, theirs: &'x Option<String>) -> Option<(&'x str, &'x str)> {
+        let (wanted, theirs) = (self.viewer_kind.as_ref()?, theirs.as_ref()?);
+        (!theirs.eq_ignore_ascii_case(wanted)).then_some((theirs.as_str(), wanted.as_str()))
     }
 
     /// The entries of the set that target this object, **latest first** - what
@@ -1543,19 +1690,39 @@ impl<'a> Cascade<'a> {
             };
             // By the uri the entry names, so the version it names is the one
             // read; the uuid only when the entry carries no uri.
-            let found = match &entry.map_uri {
-                Some(uri) => objects.object_at(uri),
-                None => objects.object(map_uuid),
+            let address = match &entry.map_uri {
+                Some(uri) => format!("u:{uri}"),
+                None => format!("i:{map_uuid}"),
             };
-            let Some(object) = found else {
-                notes.push(format!(
-                    "entry {} points at colour map {map_uuid}, which is not in this package; \
-                     looking further",
-                    entry.position
-                ));
-                continue;
+            let source_at = objects as *const dyn ObjectSource as *const () as usize;
+            let remembered = {
+                let mut memory = self.maps.borrow_mut();
+                if memory.source != source_at {
+                    memory.source = source_at;
+                    memory.by_address.clear();
+                }
+                memory.by_address.get(&address).cloned()
             };
-            let map = ColorMap::read(object.as_reflect())?;
+            let map = match remembered {
+                Some(map) => map,
+                None => {
+                    let found = match &entry.map_uri {
+                        Some(uri) => objects.object_at(uri),
+                        None => objects.object(map_uuid),
+                    };
+                    let Some(object) = found else {
+                        notes.push(format!(
+                            "entry {} points at colour map {map_uuid}, which is not in this package; \
+                             looking further",
+                            entry.position
+                        ));
+                        continue;
+                    };
+                    let map = ColorMap::read(object.as_reflect())?;
+                    self.maps.borrow_mut().by_address.insert(address, map.clone());
+                    map
+                }
+            };
             return Ok(Some(Decision {
                 paint: Paint::Mapped {
                     map: Box::new(map),
@@ -1595,9 +1762,7 @@ impl<'a> Cascade<'a> {
             else {
                 continue;
             };
-            if let (Some(wanted), Some(theirs)) = (&self.viewer_kind, viewer_kind)
-                && !theirs.eq_ignore_ascii_case(wanted)
-            {
+            if let Some((theirs, wanted)) = self.other_viewer(viewer_kind) {
                 skips.push(format!(
                     "entry {} on {uuid} is for the `{theirs}` viewer, not `{wanted}`; skipped",
                     entry.position
@@ -1614,14 +1779,7 @@ impl<'a> Cascade<'a> {
                 let Some(color) = &info.constant_color else {
                     continue;
                 };
-                let mut rgba = color.to_rgba();
-                if let Some(alpha) = info.constant_alpha {
-                    rgba.a = if info.overwrite_color_alpha {
-                        alpha
-                    } else {
-                        rgba.a * alpha
-                    };
-                }
+                let rgba = info.rgba(color);
                 out.slots[scope.index()] = Some(Decision {
                     paint: Paint::Constant(rgba),
                     level,
@@ -1659,9 +1817,7 @@ impl<'a> Cascade<'a> {
                 continue;
             };
             // An entry meant for another viewer must not paint this one.
-            if let (Some(wanted), Some(theirs)) = (&self.viewer_kind, viewer_kind)
-                && !theirs.eq_ignore_ascii_case(wanted)
-            {
+            if let Some((theirs, wanted)) = self.other_viewer(viewer_kind) {
                 notes.push(format!(
                     "entry {} on {uuid} is for the `{theirs}` viewer, not `{wanted}`; skipped",
                     entry.position
@@ -1691,16 +1847,7 @@ impl<'a> Cascade<'a> {
     ) -> Option<Decision> {
         let (entry, info) = self.constant_on(uuid, element, notes)?;
         let color = info.constant_color.as_ref()?;
-        let mut rgba = color.to_rgba();
-        if let Some(alpha) = info.constant_alpha {
-            // The schema's rule, stated in the annotation of
-            // `OverwriteColorAlpha`: replace, or multiply.
-            rgba.a = if info.overwrite_color_alpha {
-                alpha
-            } else {
-                rgba.a * alpha
-            };
-        }
+        let rgba = info.rgba(color);
         if info.scope != element {
             notes.push(format!(
                 "nothing for {element} on {uuid}; used what it says for the whole object"
@@ -1741,9 +1888,7 @@ impl<'a> Cascade<'a> {
             else {
                 continue;
             };
-            if let (Some(wanted), Some(theirs)) = (&self.viewer_kind, viewer_kind)
-                && !theirs.eq_ignore_ascii_case(wanted)
-            {
+            if self.other_viewer(viewer_kind).is_some() {
                 continue;
             }
             if let Some(info) = elements.iter().find(|info| info.scope == scope)
@@ -1999,62 +2144,66 @@ fn level_of_reference(reference: &dyn Reflect) -> Option<Level> {
 // Reflection helpers
 // ---------------------------------------------------------------------------
 
-fn list<'a>(object: &'a dyn Reflect, field: &str) -> Vec<FieldValue<'a>> {
-    match object.field(field) {
-        Some(FieldValue::List(items)) => items,
-        Some(FieldValue::Null) | None => Vec::new(),
-        Some(other) => vec![other],
-    }
-}
-
-fn text(object: &dyn Reflect, field: &str) -> Option<String> {
-    match object.field(field)?.as_scalar()? {
-        Scalar::Str(s) if !s.is_empty() => Some(s.to_string()),
-        Scalar::Str(_) => None,
-        other => Some(other.to_string()),
-    }
-}
-
-fn scalar_f64(object: &dyn Reflect, field: &str) -> Option<f64> {
-    object.field(field)?.as_scalar()?.as_f64()
-}
-
-fn scalar_u64(object: &dyn Reflect, field: &str) -> Option<u64> {
-    match object.field(field)?.as_scalar()? {
-        Scalar::UInt(v) => Some(v),
-        Scalar::Int(v) if v >= 0 => Some(v as u64),
-        _ => None,
-    }
-}
-
-/// The uuid a reference names - the identity layer's reading, so every
-/// spelling of the field is one answer.
-fn uuid_of_reference(object: &dyn Reflect) -> Option<String> {
-    energyml_core::identity::uuid_of_reflect(object)
-        .filter(|uuid| !uuid.is_empty())
-        .map(str::to_string)
-}
+// The readers of a field are the door's (ADR 0046), under the names this file
+// already uses.
+use energyml_core::reflect::fields::{items as list, number as scalar_f64, text, unsigned as scalar_u64};
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    /// The two forms, and nothing else: a sign, a missing `#`, three digits
-    /// or a stray character are refused by name - never read as some colour.
+    /// D3 of the review of 15/11/2026: `#rgb`, `#rrggbb` and `#rrggbbaa`, and
+    /// nothing else - a sign, a missing `#`, a wrong length or a stray
+    /// character are refused by name, never read as some colour.
     #[test]
     fn a_colour_reads_back_from_its_hex_and_nothing_else_reads() {
         let red = Rgba::parse("#ff0000").expect("six digits");
         assert_eq!(red.to_bytes(), [255, 0, 0, 255]);
         let clear = Rgba::parse("#00ff0080").expect("eight digits");
         assert_eq!(clear.to_bytes(), [0, 255, 0, 128]);
+        let short = Rgba::parse("#f80").expect("three digits");
+        assert_eq!(short.to_bytes(), [255, 136, 0, 255]);
+        assert_eq!(Rgba::parse(" #F80 ").map(Rgba::to_bytes), Ok(short.to_bytes()));
         assert_eq!(
             Rgba::parse(&clear.to_hex()).map(Rgba::to_bytes),
             Ok(clear.to_bytes())
         );
-        for wrong in ["ff0000", "#+f+f+f", "#fff", "#ff00zz", "#ff00000", ""] {
+        for wrong in [
+            "ff0000", "f80", "#+f+f+f", "#+f0", "#-f0", "#ffff", "#ff00zz", "#ff00000", "#", "",
+        ] {
             let why = Rgba::parse(wrong).expect_err(wrong);
             assert!(why.contains(&format!("`{wrong}`")), "{why}");
         }
+        // Break it: drop the `is_ascii_hexdigit` check in `Rgba::parse` (`#+f0` then reads) or
+        // remove the 3 from `matches!(digits.len(), 3 | 6 | 8)` (`#f80` is then refused).
+    }
+
+    /// The three writers say the same colour three ways, lower case, and each reads back
+    /// through the one reader (D3).
+    #[test]
+    fn the_three_writers_of_a_hex_colour_agree_with_the_reader() {
+        let solid = Rgba::from_bytes([18, 171, 255, 255]);
+        assert_eq!(solid.to_hex(), "#12abffff");
+        assert_eq!(solid.to_hex_rgb(), "#12abff");
+        assert_eq!(solid.to_hex_compact(), "#12abff");
+        let faint = Rgba::from_bytes([18, 171, 255, 128]);
+        assert_eq!(faint.to_hex_rgb(), "#12abff");
+        assert_eq!(faint.to_hex_compact(), "#12abff80");
+        for bytes in [
+            [0u8, 0, 0, 0],
+            [255, 255, 255, 255],
+            [1, 2, 3, 4],
+            [254, 127, 128, 200],
+        ] {
+            let colour = Rgba::from_bytes(bytes);
+            assert_eq!(colour.to_bytes(), bytes);
+            assert_eq!(Rgba::parse(&colour.to_hex()).map(Rgba::to_bytes), Ok(bytes));
+            assert_eq!(
+                Rgba::parse(&colour.to_hex_compact()).map(Rgba::to_bytes),
+                Ok(bytes)
+            );
+        }
+        // Break it: make `to_hex_compact` always write `to_hex_rgb` (the faint colour loses its alpha).
     }
 
     /// The rank an element carries is **the file's**, even past one this build
@@ -2330,12 +2479,7 @@ pub fn constant_colour_entry(
     let hsv = Hsv::from_rgba(colour);
     let title = match name {
         Some(name) if !name.trim().is_empty() => name.trim().to_string(),
-        _ => format!(
-            "#{:02x}{:02x}{:02x}",
-            (colour.r.clamp(0.0, 1.0) * 255.0).round() as u8,
-            (colour.g.clamp(0.0, 1.0) * 255.0).round() as u8,
-            (colour.b.clamp(0.0, 1.0) * 255.0).round() as u8
-        ),
+        _ => colour.to_hex_rgb(),
     };
     // The targets first and in the order given: the schema puts `TargetObject`
     // before the rest of the sequence, and a document that reorders it is one no
@@ -2479,21 +2623,9 @@ fn number(value: f64) -> String {
     }
 }
 
-/// The five characters XML text cannot carry as they are.
-fn escape(text: &str) -> String {
-    let mut out = String::with_capacity(text.len());
-    for c in text.chars() {
-        match c {
-            '&' => out.push_str("&amp;"),
-            '<' => out.push_str("&lt;"),
-            '>' => out.push_str("&gt;"),
-            '"' => out.push_str("&quot;"),
-            '\'' => out.push_str("&apos;"),
-            _ => out.push(c),
-        }
-    }
-    out
-}
+// The five characters XML text cannot carry as they are: the one door,
+// `energyml_core::xml::escape_attr`.
+use energyml_core::xml::escape_attr as escape;
 
 /// Where a constant colour is stated - [`Cascade::constant_written`].
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -2832,6 +2964,11 @@ pub fn derived_colour(seed: &str) -> String {
         4 => (second, 0.0, chroma),
         _ => (chroma, 0.0, second),
     };
-    let byte = |value: f64| ((value + shift) * 255.0).round() as u8;
-    format!("#{:02x}{:02x}{:02x}", byte(r), byte(g), byte(b))
+    Rgba {
+        r: r + shift,
+        g: g + shift,
+        b: b + shift,
+        a: 1.0,
+    }
+    .to_hex_rgb()
 }

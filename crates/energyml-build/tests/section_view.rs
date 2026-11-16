@@ -212,7 +212,7 @@ fn the_lines_written_are_the_lines_the_drawing_states() {
         ("left", json!(100.0)),
         ("right", json!(100.0)),
         ("crosses", json!("count")),
-        ("crossCount", json!(3.0)),
+        ("crossCount", json!(3)),
         ("crossBefore", json!(150.0)),
         ("crossAfter", json!(50.0)),
         ("crossLeft", json!(20.0)),
@@ -255,6 +255,7 @@ fn recorded(plan: &Plan) -> Vec<(String, Value)> {
         .iter()
         .map(|p| match p {
             Parameter::Double { title, value, .. } => (title.clone(), json!(value)),
+            Parameter::Integer { title, value } => (title.clone(), json!(value)),
             Parameter::Text { title, value } => (title.clone(), json!(value)),
             Parameter::Object { title, reference } => (title.clone(), reference["Uuid"].clone()),
         })
@@ -659,6 +660,7 @@ fn frame(uuid: &str, kind: &str, down: bool) -> Known {
         time_uom: None,
         projected: CrsKind::Epsg(2154),
         vertical: CrsKind::Epsg(5720),
+        axes: energyml_domain::crs::AxisReading::NotStated,
     };
     let reference = Ref::new(uuid, kind, format!("frame {uuid}"));
     Known {

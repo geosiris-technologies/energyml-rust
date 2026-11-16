@@ -91,7 +91,7 @@ pub(crate) fn read(representation: &dyn Reflect, _source: &dyn ValueSource) -> R
             // a `Plane` element is drawn by this reader without being listed,
             // and one without them is refused rather than silently dropped.
             return Err(Error::unbounded(
-                crate::geometry::leak(form),
+                form,
                 at,
                 "a depth, and nothing about how far the plane extends",
             ));

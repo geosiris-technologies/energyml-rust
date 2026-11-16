@@ -657,3 +657,26 @@ fn lutetias_attach_steps_are_valid_against_the_operation_and_the_project_gathers
         assert_eq!(&bytes[..8], b"\x89PNG\r\n\x1a\n", "{file} is a PNG");
     }
 }
+
+/// `[build-ops-1 S14]`: the part form is `media`'s plan, which has no file
+/// name and no attachment title; a setting that applies to nothing is refused.
+#[test]
+fn a_setting_the_form_does_not_use_is_refused_not_dropped() {
+    let file = bag(well_ref(), Some((PICTURE, Some("image/png"))));
+    assert!(
+        said(
+            &refused(&file, Choices::new().set("fileName", "tete.png")),
+            "fileName"
+        )
+        .contains("part form")
+    );
+    assert!(said(&refused(&file, Choices::new().set("title", "A head")), "title").contains("part form"));
+    // `path` is read by the part form, not by the inline one.
+    let inline = refused(
+        &file,
+        Choices::new().set("form", "inline").set("path", "media/x.png"),
+    );
+    assert!(said(&inline, "path").contains("inline"), "{inline:?}");
+    // Break it: remove the new checks in `attach.rs`; the part form then
+    // accepts both settings and writes neither.
+}

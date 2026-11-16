@@ -131,7 +131,7 @@ fn the_grid() -> (Geometry, Known) {
             .with(
                 name.clone(),
                 Source::Shape {
-                    geometry,
+                    geometry: std::sync::Arc::new(geometry),
                     closed: None,
                 },
             )
@@ -233,7 +233,7 @@ fn bag_with(points: Vec<[f64; 3]>, known: Known, grids: Vec<(Geometry, Known)>) 
         .with(
             "frame",
             Source::Shape {
-                geometry: Geometry {
+                geometry: std::sync::Arc::new(Geometry {
                     kind: "frame",
                     patches: vec![Patch {
                         index: 0,
@@ -242,7 +242,7 @@ fn bag_with(points: Vec<[f64; 3]>, known: Known, grids: Vec<(Geometry, Known)>) 
                         topology: Topology::Polylines(vec![n]),
                         closed: Vec::new(),
                     }],
-                },
+                }),
                 closed: None,
             },
         )
@@ -257,7 +257,7 @@ fn bag_with(points: Vec<[f64; 3]>, known: Known, grids: Vec<(Geometry, Known)>) 
             .with(
                 name.clone(),
                 Source::Shape {
-                    geometry,
+                    geometry: std::sync::Arc::new(geometry),
                     closed: None,
                 },
             )
@@ -664,7 +664,7 @@ fn blocked_subrepresentation_and_set_are_written_reread_and_checked() {
             .with(
                 name.clone(),
                 Source::Shape {
-                    geometry,
+                    geometry: std::sync::Arc::new(geometry),
                     closed: None,
                 },
             )
@@ -698,7 +698,7 @@ fn blocked_subrepresentation_and_set_are_written_reread_and_checked() {
         .with(
             "path",
             Source::Shape {
-                geometry: Geometry {
+                geometry: std::sync::Arc::new(Geometry {
                     kind: "polyline",
                     patches: vec![Patch {
                         index: 0,
@@ -707,7 +707,7 @@ fn blocked_subrepresentation_and_set_are_written_reread_and_checked() {
                         topology: Topology::Polylines(vec![n]),
                         closed: Vec::new(),
                     }],
-                },
+                }),
                 closed: None,
             },
         )

@@ -47,6 +47,7 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+pub mod around_well;
 pub mod clip;
 pub mod connection;
 pub mod defined;
@@ -72,6 +73,7 @@ pub mod transfer;
 pub mod tube;
 pub mod unstructured;
 pub mod values;
+pub mod vector;
 pub mod well;
 pub mod wells;
 

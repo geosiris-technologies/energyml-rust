@@ -7,9 +7,10 @@
 //! every module, so existing `energyml_analysis::…` paths keep resolving.
 //!
 //! Contents: interpolation (`idw`, `kriging`, `variogram`, `rbf`, `mba`,
-//! `mba_frame`), meshing (`triangulate`, `isocontour`, `resample`, `densify`,
-//! `loft`, `outline`, `cells`, `nodes`, `extend`) and tools (`measure`,
-//! `barrier`, the private `solve`).
+//! `mba_frame`), meshing (`triangulate`, `isocontour`, `isosurface`, `resample`, `densify`,
+//! `loft`, `outline`, `cells`, `nodes`, `extend`) and tools (`measure`, `polyline`,
+//! `barrier`, `vector`, `buckets` - the one grid of buckets that finds what lies near a position
+//! without a sweep of everything - and the private `solve`).
 //!
 //! House rules, applied:
 //! - **A `NaN` sample is set aside, never averaged** - it is how the data
@@ -26,11 +27,13 @@
 //! no published source carry a `TODO(reference): verify` line.
 
 pub mod barrier;
+pub mod buckets;
 pub mod cells;
 pub mod densify;
 pub mod extend;
 pub mod idw;
 pub mod isocontour;
+pub mod isosurface;
 pub mod kriging;
 pub mod loft;
 pub mod mba;
@@ -38,11 +41,14 @@ pub mod mba_frame;
 pub mod measure;
 pub mod nodes;
 pub mod outline;
+pub mod polyline;
 pub mod rbf;
 pub mod resample;
+mod samples;
 mod solve;
 pub mod triangulate;
 pub mod variogram;
+pub mod vector;
 
 pub use barrier::Barriers;
 pub use densify::{Along, Densified, Placement, densify};
@@ -116,6 +122,24 @@ pub enum Error {
     #[error("a triangle names node {at} where the surface has {nodes}")]
     NodeOutOfRange { at: usize, nodes: usize },
 
+    // -- Iso-surfaces -----------------------------------------------------
+    #[error("a lattice of {dims:?} nodes has no cell: each of its three dimensions needs at least two nodes")]
+    NotAVolume { dims: [usize; 3] },
+    #[error("{nodes} nodes - a lattice is indexed in 32 bits, {most} at most")]
+    TooManyNodes { nodes: usize, most: usize },
+    #[error(
+        "{values} value(s) for a lattice of {nodes} node(s) - one value per node, the slowest dimension first"
+    )]
+    LatticeValues { values: usize, nodes: usize },
+    #[error("slice {slice} gives {given} position(s) where the lattice has {expected} nodes per slice")]
+    SliceLength {
+        slice: usize,
+        given: usize,
+        expected: usize,
+    },
+    #[error("a level of {given} has no logarithm - a log10 spacing needs a level > 0")]
+    LevelNotPositive { given: f64 },
+
     // -- Thickness --------------------------------------------------------
     #[error("{given} index(es) - quadrilaterals are four node indices each")]
     NotQuads { given: usize },
@@ -154,6 +178,8 @@ pub enum Error {
     BadCuts { given: f64 },
     #[error("a range of cuts must be at least 1..1, and increasing - not {min}..{max}")]
     BadCutsRange { min: f64, max: f64 },
+    #[error("{given} cut(s) asked where {most} is the most a polyline may be divided into")]
+    TooManyCuts { given: u32, most: u32 },
     #[error("the length must be a finite number >= 0, not {given}")]
     BadLength { given: f64 },
     #[error("a length range must be two finite numbers >= 0, increasing - not {min}..{max}")]

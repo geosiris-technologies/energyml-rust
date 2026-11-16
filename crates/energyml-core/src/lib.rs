@@ -21,6 +21,10 @@
 //! - [`relations`] - where a type holds other data objects by value, and where it
 //!   writes references: tables written by the generator, read by byte-level scanners.
 //! - [`identifiers`] - UUID, content type, qualified type and ETP URI parsing.
+//! - [`xml::escape_text`], [`xml::escape_attr`], [`xml::unescape`] - the one door
+//!   for XML text written by hand; [`base64`], [`calendar`] and [`text`] hold the
+//!   one copy of the base 64 codec, the civil-date arithmetic and the plain
+//!   number formatting.
 //!
 //! Generated code is written by `energyml-codegen`; the `energyml-derive` macros
 //! turn the annotated structs it emits into implementations of the traits above.
@@ -32,6 +36,8 @@
 extern crate self as energyml_core;
 
 pub mod any_xml;
+pub mod base64;
+pub mod calendar;
 #[cfg(feature = "json")]
 pub mod docs;
 pub mod error;
@@ -48,6 +54,7 @@ pub mod path;
 pub mod reflect;
 pub mod registry;
 pub mod relations;
+pub mod text;
 #[cfg(feature = "json")]
 pub mod truncate;
 pub mod validate;

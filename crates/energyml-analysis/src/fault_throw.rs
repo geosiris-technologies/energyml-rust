@@ -75,6 +75,8 @@ use std::collections::{HashMap, HashSet};
 use crate::fault_sticks::{self, Orientation};
 use crate::intersect::intersect;
 use crate::triangulate::{triangulate_xy, triangulate_xy_constrained};
+use energyml_geostat::buckets::{Bounds, Grid};
+use energyml_geostat::vector::plan::{self as vplan, cross as cross2, norm as length2};
 
 /// Two positions this close in plan are one - a millionth of a metre, a length
 /// no survey states and far above the rounding of coordinates taken relative
@@ -320,16 +322,8 @@ pub enum TearError {
 
 type Point = [f64; 3];
 
-pub(crate) fn cross2(u: [f64; 2], v: [f64; 2]) -> f64 {
-    u[0] * v[1] - u[1] * v[0]
-}
-
 pub(crate) fn plan(a: &Point, b: &Point) -> [f64; 2] {
     [b[0] - a[0], b[1] - a[1]]
-}
-
-pub(crate) fn length2(v: [f64; 2]) -> f64 {
-    (v[0] * v[0] + v[1] * v[1]).sqrt()
 }
 
 /// The nearest point of a polyline to `p`, in plan: its abscissa along the
@@ -341,21 +335,71 @@ pub(crate) fn project(line: &[Point], p: &Point) -> Option<(f64, f64, f64)> {
     for pair in line.windows(2) {
         let v = plan(&pair[0], &pair[1]);
         let w = plan(&pair[0], p);
-        let long = v[0] * v[0] + v[1] * v[1];
-        let len = long.sqrt();
-        let t = if long > 0.0 {
-            ((w[0] * v[0] + w[1] * v[1]) / long).clamp(0.0, 1.0)
-        } else {
-            0.0
-        };
-        let q = [pair[0][0] + t * v[0], pair[0][1] + t * v[1]];
-        let d = ((p[0] - q[0]).powi(2) + (p[1] - q[1]).powi(2)).sqrt();
+        let len = length2(v);
+        let (d, t) =
+            vplan::segment_distance([p[0], p[1]], [pair[0][0], pair[0][1]], [pair[1][0], pair[1][1]]);
         if best.is_none_or(|(_, bd, _)| d < bd) {
             best = Some((run + t * len, d, cross2(v, w)));
         }
         run += len;
     }
     best
+}
+
+/// A polyline with its segments filed in a grid of buckets
+/// ([`energyml_geostat::buckets`]), to project many positions on it without
+/// sweeping every segment for each: [`Trace::project`] is [`project`], the
+/// answer of the linear scan, bit for bit (the same segment distance, the same
+/// running abscissa, the first segment winning a tie), found by opening the
+/// buckets around the position only.
+pub(crate) struct Trace<'a> {
+    line: &'a [Point],
+    /// The abscissa at which each segment starts, summed in the order
+    /// [`project`] sums it.
+    runs: Vec<f64>,
+    grid: Grid,
+}
+
+impl<'a> Trace<'a> {
+    pub(crate) fn new(line: &'a [Point]) -> Self {
+        let mut runs = Vec::with_capacity(line.len().saturating_sub(1));
+        let mut run = 0.0f64;
+        let boxes: Vec<Bounds> = line
+            .windows(2)
+            .map(|pair| {
+                runs.push(run);
+                run += length2(plan(&pair[0], &pair[1]));
+                (
+                    [pair[0][0].min(pair[1][0]), pair[0][1].min(pair[1][1])],
+                    [pair[0][0].max(pair[1][0]), pair[0][1].max(pair[1][1])],
+                )
+            })
+            .collect();
+        Trace {
+            line,
+            runs,
+            grid: Grid::new(&boxes),
+        }
+    }
+
+    /// [`project`] of `p` on the line, when `p` is within `limit` of it (pass
+    /// `f64::INFINITY` for the nearest at any distance).
+    pub(crate) fn project_within(&self, p: &Point, limit: f64) -> Option<(f64, f64, f64)> {
+        let at = [p[0], p[1]];
+        let (segment, d) = self.grid.nearest(at, limit, |at_segment| {
+            let (a, b) = (&self.line[at_segment], &self.line[at_segment + 1]);
+            vplan::segment_distance(at, [a[0], a[1]], [b[0], b[1]]).0
+        })?;
+        let (a, b) = (&self.line[segment], &self.line[segment + 1]);
+        let v = plan(a, b);
+        let (_, t) = vplan::segment_distance(at, [a[0], a[1]], [b[0], b[1]]);
+        Some((self.runs[segment] + t * length2(v), d, cross2(v, plan(a, p))))
+    }
+
+    /// [`project`] of `p` on the line, at any distance.
+    pub(crate) fn project(&self, p: &Point) -> Option<(f64, f64, f64)> {
+        self.project_within(p, f64::INFINITY)
+    }
 }
 
 /// Plan-view length of a polyline.
@@ -365,7 +409,11 @@ pub(crate) fn plan_length(line: &[Point]) -> f64 {
         .sum()
 }
 
-/// Whether two segments meet in plan, ends included, within [`TOLERANCE`].
+/// Whether two segments meet in plan, ends included, within [`TOLERANCE`]: an end
+/// within the tolerance of the other segment, or the exact test of
+/// `energyml_geostat::vector::plan::segments_meet` (a proper crossing, or an
+/// exact touch). The tolerance is this module's, because two patches of one
+/// fault round their shared corners their own way.
 fn segments_meet(a: &Point, b: &Point, c: &Point, d: &Point) -> bool {
     let distance =
         |p: &Point, s: &Point, e: &Point| project(&[*s, *e], p).map_or(f64::INFINITY, |(_, d, _)| d);
@@ -376,11 +424,8 @@ fn segments_meet(a: &Point, b: &Point, c: &Point, d: &Point) -> bool {
     {
         return true;
     }
-    let (ab, ac, ad) = (plan(a, b), plan(a, c), plan(a, d));
-    let (cd, ca, cb) = (plan(c, d), plan(c, a), plan(c, b));
-    let (s1, s2) = (cross2(ab, ac), cross2(ab, ad));
-    let (s3, s4) = (cross2(cd, ca), cross2(cd, cb));
-    s1 * s2 < 0.0 && s3 * s4 < 0.0
+    let xy = |p: &Point| [p[0], p[1]];
+    vplan::segments_meet(xy(a), xy(b), xy(c), xy(d))
 }
 
 fn lines_meet(first: &[Point], second: &[Point]) -> bool {
@@ -461,16 +506,31 @@ pub(crate) fn weld(mut lines: Vec<Vec<Point>>) -> Vec<(Vec<Point>, bool)> {
 /// A trace vertex that falls on a node of the horizon, to [`TOLERANCE`] in
 /// plan, takes the node's position: the constrained triangulation then finds
 /// the node rather than inserting a second vertex beside it.
-fn snap(line: Vec<Point>, cloud: &[Point]) -> Vec<Point> {
+///
+/// `index` is the grid of the cloud's nodes ([`node_grid`]), built once for every
+/// trace: the first node within the tolerance, in the cloud's order, is the one a
+/// scan of the cloud finds, and only the buckets around the vertex are opened.
+fn snap(line: Vec<Point>, cloud: &[Point], index: &Grid) -> Vec<Point> {
     line.into_iter()
         .map(|p| {
-            cloud
-                .iter()
+            // The window is a hair wider than the tolerance: the exact test below
+            // is the scan's own, so the rounding of the window decides nothing.
+            let reach = TOLERANCE * 1.000_001;
+            index
+                .query([p[0] - reach, p[1] - reach], [p[0] + reach, p[1] + reach])
+                .into_iter()
+                .map(|at| &cloud[at])
                 .find(|q| (q[0] - p[0]).abs() <= TOLERANCE && (q[1] - p[1]).abs() <= TOLERANCE)
                 .copied()
                 .unwrap_or(p)
         })
         .collect()
+}
+
+/// The nodes of a cloud as boxes of no extent, in a grid of buckets.
+fn node_grid(cloud: &[Point]) -> Grid {
+    let boxes: Vec<Bounds> = cloud.iter().map(|p| ([p[0], p[1]], [p[0], p[1]])).collect();
+    Grid::new(&boxes)
 }
 
 fn key(a: u32, b: u32) -> (u32, u32) {
@@ -504,6 +564,7 @@ fn chain_along(
         }
     }
     let mut on: Vec<(f64, u32)> = Vec::new();
+    let index = Trace::new(trace);
     for (at, p) in points.iter().enumerate() {
         if p[0] < lo[0] - TOLERANCE
             || p[0] > hi[0] + TOLERANCE
@@ -512,7 +573,7 @@ fn chain_along(
         {
             continue;
         }
-        if let Some((abscissa, d, _)) = project(trace, p)
+        if let Some((abscissa, d, _)) = index.project_within(p, TOLERANCE)
             && d <= TOLERANCE
         {
             on.push((abscissa, at as u32));
@@ -536,25 +597,105 @@ fn chain_along(
     Ok(on.into_iter().map(|(_, node)| node).collect())
 }
 
-/// The sign of the hanging-wall side of a chain walked forward: the side the
-/// dip direction points to, on average over its edges.
-fn hanging_wall_side(
-    points: &[Point],
-    chain: &[u32],
+/// Why the trace of a fault on a surface could not be read - the refusals
+/// [`orient`], [`read_trace`] and [`hanging_wall_side`] share, before a caller
+/// names the fault (and, for a grid, the level) in its own error.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum TraceFault {
+    /// The fault has no area to measure a dip on.
+    NoSurface,
+    /// The fault is vertical.
+    Vertical {
+        /// Its measured dip.
+        dip: f64,
+    },
+    /// The surfaces do not meet.
+    NoTrace,
+    /// The surfaces meet in several separate pieces.
+    Pieces {
+        /// How many.
+        count: usize,
+    },
+    /// The trace closes on itself.
+    Ring,
+    /// The trace runs along the dip direction.
+    AlongDip {
+        /// The mean angle, in degrees.
+        angle: f64,
+    },
+}
+
+impl TraceFault {
+    fn tear(self, fault: &str) -> TearError {
+        let fault = fault.to_string();
+        match self {
+            TraceFault::NoSurface => TearError::NoSurface { fault },
+            TraceFault::Vertical { dip } => TearError::Vertical { fault, dip },
+            TraceFault::NoTrace => TearError::NoTrace { fault },
+            TraceFault::Pieces { count } => TearError::Pieces { fault, count },
+            TraceFault::Ring => TearError::Ring { fault },
+            TraceFault::AlongDip { angle } => TearError::AlongDip { fault, angle },
+        }
+    }
+}
+
+/// The orientation of a fault surface, refusing one with no area and one that is
+/// vertical (above [`VERTICAL`]). The one reading of a fault's dip, for the
+/// torn horizon and the cut grid alike.
+pub(crate) fn orient(surface: &[Point], triangles: &[[u32; 3]], up: bool) -> Result<Orientation, TraceFault> {
+    let orientation = fault_sticks::orientation(surface, triangles, up).ok_or(TraceFault::NoSurface)?;
+    if orientation.dip > VERTICAL {
+        return Err(TraceFault::Vertical { dip: orientation.dip });
+    }
+    Ok(orientation)
+}
+
+/// The one trace of a fault surface on another (a horizon, or a horizontal
+/// plate): intersected, welded, and refused when it is nothing, several pieces
+/// or a ring. The one reading of a trace, shared by the torn horizon and the
+/// cut grid, so they cannot disagree on what a trace is.
+pub(crate) fn read_trace(
+    surface: &[Point],
+    triangles: &[[u32; 3]],
+    other_points: &[Point],
+    other_triangles: &[[u32; 3]],
+) -> Result<Vec<Point>, TraceFault> {
+    let cut = intersect(surface, triangles, other_points, other_triangles);
+    let mut pieces = weld(
+        cut.traces
+            .into_iter()
+            .map(|trace| trace.points)
+            .filter(|line| line.len() >= 2)
+            .collect(),
+    );
+    let (line, closed) = match pieces.len() {
+        0 => return Err(TraceFault::NoTrace),
+        1 => pieces.remove(0),
+        count => return Err(TraceFault::Pieces { count }),
+    };
+    if closed {
+        return Err(TraceFault::Ring);
+    }
+    Ok(line)
+}
+
+/// The sign of the hanging-wall side of a trace walked forward: the side the
+/// dip direction points to, on average over its edges, given as plan vectors.
+/// The one rule, for the torn horizon (a chain of nodes) and the cut grid (a
+/// polyline).
+pub(crate) fn hanging_wall_side(
+    vectors: impl IntoIterator<Item = [f64; 2]>,
     dip_azimuth: f64,
-    fault: &str,
-) -> Result<f64, TearError> {
+) -> Result<f64, TraceFault> {
     let direction = [dip_azimuth.to_radians().sin(), dip_azimuth.to_radians().cos()];
     let (mut sum, mut total) = (0.0f64, 0.0f64);
-    for pair in chain.windows(2) {
-        let v = plan(&points[pair[0] as usize], &points[pair[1] as usize]);
+    for v in vectors {
         sum += cross2(v, direction);
         total += length2(v);
     }
     let mean = if total > 0.0 { sum / total } else { 0.0 };
     if mean.abs() < ACROSS {
-        return Err(TearError::AlongDip {
-            fault: fault.to_string(),
+        return Err(TraceFault::AlongDip {
             angle: mean.abs().clamp(0.0, 1.0).asin().to_degrees(),
         });
     }
@@ -760,48 +901,14 @@ pub fn throw(cloud: &[Point], faults: &[Fault<'_>], settings: &Settings) -> Resu
     // -- each fault: its dip, and its trace on this horizon ----------------------
     let mut orientations: Vec<Orientation> = Vec::with_capacity(faults.len());
     let mut traces: Vec<Vec<Point>> = Vec::with_capacity(faults.len());
+    let node_index = node_grid(&nodes);
     for fault in faults {
         let surface: Vec<Point> = fault.points.iter().map(local).collect();
         let orientation =
-            fault_sticks::orientation(&surface, fault.triangles, settings.up).ok_or_else(|| {
-                TearError::NoSurface {
-                    fault: fault.name.to_string(),
-                }
-            })?;
-        if orientation.dip > VERTICAL {
-            return Err(TearError::Vertical {
-                fault: fault.name.to_string(),
-                dip: orientation.dip,
-            });
-        }
-        let cut = intersect(&surface, fault.triangles, &nodes, &first);
-        let mut pieces = weld(
-            cut.traces
-                .into_iter()
-                .map(|trace| trace.points)
-                .filter(|line| line.len() >= 2)
-                .collect(),
-        );
-        let (line, closed) = match pieces.len() {
-            0 => {
-                return Err(TearError::NoTrace {
-                    fault: fault.name.to_string(),
-                });
-            }
-            1 => pieces.remove(0),
-            count => {
-                return Err(TearError::Pieces {
-                    fault: fault.name.to_string(),
-                    count,
-                });
-            }
-        };
-        if closed {
-            return Err(TearError::Ring {
-                fault: fault.name.to_string(),
-            });
-        }
-        traces.push(snap(line, &nodes));
+            orient(&surface, fault.triangles, settings.up).map_err(|why| why.tear(fault.name))?;
+        let line =
+            read_trace(&surface, fault.triangles, &nodes, &first).map_err(|why| why.tear(fault.name))?;
+        traces.push(snap(line, &nodes, &node_index));
         orientations.push(orientation);
     }
     for i in 0..traces.len() {
@@ -836,7 +943,13 @@ pub fn throw(cloud: &[Point], faults: &[Fault<'_>], settings: &Settings) -> Resu
     let mut sigmas: Vec<f64> = Vec::with_capacity(faults.len());
     let mut copies: Vec<Vec<u32>> = Vec::with_capacity(faults.len());
     for ((chain, fault), orientation) in chains.iter().zip(faults).zip(&orientations) {
-        let sigma = hanging_wall_side(&points, chain, orientation.dip_azimuth, fault.name)?;
+        let sigma = hanging_wall_side(
+            chain
+                .windows(2)
+                .map(|pair| plan(&points[pair[0] as usize], &points[pair[1] as usize])),
+            orientation.dip_azimuth,
+        )
+        .map_err(|why| why.tear(fault.name))?;
         copies.push(tear(&mut points, &mut triangles, chain, sigma, fault.name)?);
         sigmas.push(sigma);
     }
@@ -886,6 +999,7 @@ pub fn throw(cloud: &[Point], faults: &[Fault<'_>], settings: &Settings) -> Resu
         }
         let mut largest = 0.0f64;
         let mut moved = 0usize;
+        let index = Trace::new(&line);
         for (node, p) in before.iter().enumerate() {
             let node32 = node as u32;
             let amount = if let Some(&rank) = copy_at.get(&node32) {
@@ -898,7 +1012,7 @@ pub fn throw(cloud: &[Point], faults: &[Fault<'_>], settings: &Settings) -> Resu
                 if p[0] < lo[0] || p[0] > hi[0] || p[1] < lo[1] || p[1] > hi[1] {
                     continue;
                 }
-                match project(&line, p) {
+                match index.project_within(p, settings.reach) {
                     Some((at, d, s)) if s * sigmas[k] > 0.0 && d < settings.reach => {
                         fault.maximum_throw * settings.profile.at(at / total) * (1.0 - d / settings.reach)
                     }
@@ -958,6 +1072,43 @@ mod tests {
     /// only showed far from the origin.
     const X0: f64 = 651_000.0;
     const Y0: f64 = 6_861_000.0;
+
+    /// [analysis E1] `Trace::project` is `project`, the linear scan: the same
+    /// abscissa, distance and side for positions on the line, beside it, far
+    /// outside its box and on a vertex, at map coordinates.
+    #[test]
+    fn a_projection_by_buckets_is_the_scans_answer() {
+        let mut state = 17u64;
+        let mut next = move || {
+            state = state
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            (state >> 11) as f64 / (1u64 << 53) as f64
+        };
+        // A wandering line of 400 segments, never doubling back on its x.
+        let mut line: Vec<Point> = Vec::new();
+        let (mut x, mut y) = (X0, Y0);
+        for _ in 0..401 {
+            line.push([x, y, 0.0]);
+            x += 1.0 + next() * 9.0;
+            y += (next() - 0.5) * 12.0;
+        }
+        let index = Trace::new(&line);
+        let mut probes: Vec<Point> = line.iter().step_by(37).copied().collect();
+        for _ in 0..400 {
+            probes.push([X0 - 200.0 + next() * 2600.0, Y0 - 300.0 + next() * 600.0, 0.0]);
+        }
+        probes.push([X0 + 1e6, Y0 - 1e6, 0.0]);
+        for p in &probes {
+            assert_eq!(index.project(p), project(&line, p), "at {p:?}");
+            let want = project(&line, p).filter(|(_, d, _)| *d <= 15.0);
+            assert_eq!(index.project_within(p, 15.0), want, "within 15 of {p:?}");
+        }
+        assert_eq!(Trace::new(&line[..1]).project(&line[0]), None);
+        // Break it: take the first bucket that holds a segment instead of the
+        // nearest (drop the ring loop in `Grid::nearest`) and a position near a
+        // bucket border reads another segment.
+    }
 
     /// A flat horizon at elevation `z`, a lattice of `n × n` nodes `step`
     /// apart, its corner at the origin.

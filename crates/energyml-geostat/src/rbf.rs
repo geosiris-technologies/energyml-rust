@@ -127,13 +127,7 @@ impl Rbf {
                 values: values.len(),
             });
         }
-        let usable: Vec<([f64; N], f64)> = samples
-            .iter()
-            .zip(values)
-            .filter(|(point, value)| value.is_finite() && point.iter().all(|c| c.is_finite()))
-            .map(|(point, value)| (*point, *value))
-            .collect();
-        let set_aside = samples.len() - usable.len();
+        let (usable, set_aside) = crate::samples::usable(samples, values);
         let terms = self.kernel.polynomial_terms(N);
         if usable.len() < terms.max(1) {
             return Err(Error::TooFewSamples {
@@ -142,23 +136,8 @@ impl Rbf {
             });
         }
 
-        let distance = |a: &[f64; N], b: &[f64; N]| -> f64 {
-            a.iter()
-                .zip(b)
-                .map(|(x, y)| (x - y) * (x - y))
-                .sum::<f64>()
-                .sqrt()
-        };
-        for (at, (a, _)) in usable.iter().enumerate() {
-            for (offset, (b, _)) in usable[at + 1..].iter().enumerate() {
-                if distance(a, b) <= self.exact_within {
-                    return Err(Error::DuplicateSamplePositions {
-                        first: at,
-                        second: at + 1 + offset,
-                    });
-                }
-            }
-        }
+        let distance = crate::samples::distance::<N>;
+        crate::samples::refuse_coincident(&usable, self.exact_within)?;
 
         // [Φ P; Pᵀ 0] [λ; c] = [z; 0], with P the polynomial columns.
         let n = usable.len();

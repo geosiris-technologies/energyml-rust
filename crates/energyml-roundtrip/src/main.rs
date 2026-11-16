@@ -120,8 +120,20 @@ impl PartResult {
         self.diffs
             .iter()
             .filter(|d| {
-                !d.kind.is_loss() && d.kind != DiffKind::XsiTypeDropped && d.kind != DiffKind::RootRenamed
+                !d.kind.is_loss()
+                    && d.kind != DiffKind::XsiTypeDropped
+                    && d.kind != DiffKind::LexicalFormChanged
+                    && d.kind != DiffKind::RootRenamed
             })
+            .count()
+    }
+    /// Values that came back in another lexical form (`2.0` as `2`). Counted
+    /// apart: not a loss, but said, since the comparison cannot tell a double
+    /// from a string.
+    fn lexical(&self) -> usize {
+        self.diffs
+            .iter()
+            .filter(|d| d.kind == DiffKind::LexicalFormChanged)
             .count()
     }
     /// Redundant `xsi:type` attributes the writer did not repeat. Counted
@@ -178,9 +190,13 @@ fn main() -> Result<()> {
 /// Walk one input, whatever it is.
 fn collect(path: &Path, reg: &Registry, out: &mut Vec<PartResult>, cli: &Cli) -> Result<()> {
     if path.is_dir() {
-        let mut entries: Vec<PathBuf> = fs::read_dir(path)?
-            .filter_map(|e| e.ok().map(|e| e.path()))
-            .collect();
+        // An entry that cannot be read is an error, not a part that is
+        // quietly absent from the run.
+        let mut entries: Vec<PathBuf> = fs::read_dir(path)
+            .with_context(|| format!("listing {}", path.display()))?
+            .map(|entry| entry.map(|e| e.path()))
+            .collect::<std::io::Result<_>>()
+            .with_context(|| format!("listing {}", path.display()))?;
         entries.sort();
         for entry in entries {
             collect(&entry, reg, out, cli)?;
@@ -210,11 +226,30 @@ fn collect_epc(path: &Path, reg: &Registry, out: &mut Vec<PartResult>, cli: &Cli
     let file = fs::File::open(path).with_context(|| format!("opening {}", path.display()))?;
     let mut zip = zip::ZipArchive::new(file).with_context(|| format!("reading {}", path.display()))?;
 
+    // What [Content_Types].xml could not give is said on every part of the
+    // package: each of them is then typed by its root element, which changes
+    // which reader the round trip exercises and so what it reports.
     let mut content_types = String::new();
-    if let Ok(mut entry) = zip.by_name("[Content_Types].xml") {
-        entry.read_to_string(&mut content_types).ok();
+    let mut package_note: Option<String> = None;
+    match zip.by_name("[Content_Types].xml") {
+        Ok(mut entry) => {
+            if let Err(error) = entry.read_to_string(&mut content_types) {
+                package_note = Some(format!(
+                    "[Content_Types].xml could not be read ({error}) - parts typed by their root element"
+                ));
+                content_types.clear();
+            }
+        }
+        Err(error) => {
+            package_note = Some(format!(
+                "no readable [Content_Types].xml ({error}) - parts typed by their root element"
+            ));
+        }
     }
-    let overrides = parse_content_types(&content_types);
+    let (overrides, problem) = parse_content_types(&content_types);
+    if package_note.is_none() {
+        package_note = problem;
+    }
 
     let names: Vec<String> = zip
         .file_names()
@@ -235,14 +270,24 @@ fn collect_epc(path: &Path, reg: &Registry, out: &mut Vec<PartResult>, cli: &Cli
         zip.by_name(&name)?.read_to_end(&mut bytes)?;
         let declared = overrides.get(&format!("/{name}")).cloned();
         let origin = format!("{}!{name}", path.display());
-        out.push(check_part(&origin, &bytes, declared, reg, cli));
+        let mut result = check_part(&origin, &bytes, declared, reg, cli);
+        if let Some(why) = &package_note {
+            result.note = Some(match result.note.take() {
+                Some(own) => format!("{why}; {own}"),
+                None => why.clone(),
+            });
+        }
+        out.push(result);
     }
     Ok(())
 }
 
-/// `<Override PartName="/x.xml" ContentType="…"/>` → a map.
-fn parse_content_types(xml: &str) -> BTreeMap<String, String> {
+/// `<Override PartName="/x.xml" ContentType="…"/>` → a map, and what went
+/// wrong when the document is not well formed: the overrides read before the
+/// error are kept, and the problem is returned to be said.
+fn parse_content_types(xml: &str) -> (BTreeMap<String, String>, Option<String>) {
     let mut out = BTreeMap::new();
+    let mut problem = None;
     let mut reader = quick_xml::Reader::from_str(xml);
     let mut buf = Vec::new();
     loop {
@@ -270,12 +315,20 @@ fn parse_content_types(xml: &str) -> BTreeMap<String, String> {
                     }
                 }
             }
-            Ok(quick_xml::events::Event::Eof) | Err(_) => break,
+            Ok(quick_xml::events::Event::Eof) => break,
+            Err(error) => {
+                problem = Some(format!(
+                    "[Content_Types].xml is not well formed ({error}) - only the {} override(s) before the error were read, \
+                     the other parts typed by their root element",
+                    out.len()
+                ));
+                break;
+            }
             _ => {}
         }
         buf.clear();
     }
-    out
+    (out, problem)
 }
 
 /// Read one part, write it back, compare.
@@ -385,14 +438,9 @@ fn check_part(
     result
 }
 
-/// A dotted version as numbers, so `2.0.1` sorts after `2.0` and before `2.2`.
-/// A segment that is not a number counts as zero rather than making the whole
-/// version incomparable.
+/// A dotted version as numbers - the core's one ordering of versions.
 fn version_parts(version: &str) -> Vec<u32> {
-    version
-        .split('.')
-        .map(|part| part.parse::<u32>().unwrap_or(0))
-        .collect()
+    energyml_core::naming::version_rank(version)
 }
 
 /// How good a candidate this release is for a document declaring `declared`,
@@ -497,10 +545,12 @@ fn summary(results: &[PartResult]) -> String {
         .filter(|r| r.failure.is_none() && r.losses() == 0 && r.additions() == 0 && !r.accepted.is_empty())
         .count();
     let redundant: usize = results.iter().map(|r| r.redundant()).sum();
+    let lexical: usize = results.iter().map(|r| r.lexical()).sum();
     let accepted: usize = results.iter().map(|r| r.accepted.len()).sum();
     let mut out = format!(
         "{total} part(s): {equivalent} equivalent, {noisy} with additions, \
-         {lossy} with losses, {failed} unreadable - {redundant} redundant xsi:type not rewritten"
+         {lossy} with losses, {failed} unreadable - {redundant} redundant xsi:type not rewritten, \
+         {lexical} value(s) in another lexical form"
     );
     if accepted > 0 {
         let _ = write!(out, ", {accepted} accepted loss(es) on {tolerated} part(s)");
@@ -638,10 +688,11 @@ fn render_report(results: &[PartResult], max_findings: usize) -> String {
         }
         let _ = writeln!(
             out,
-            "- differences: {} loss(es), {} addition(s), {} redundant xsi:type\n",
+            "- differences: {} loss(es), {} addition(s), {} redundant xsi:type, {} other lexical form(s)\n",
             result.losses(),
             result.additions(),
-            result.redundant()
+            result.redundant(),
+            result.lexical()
         );
         for diff in result.diffs.iter().take(max_findings) {
             out.push_str(&format!(
@@ -689,6 +740,25 @@ fn short(origin: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// [geostat-proj-roundtrip S13] A [Content_Types].xml that is not well
+    /// formed is *said* (it was a silent partial map: every other part then fell
+    /// back to root-element typing with no note).
+    #[test]
+    fn a_malformed_content_types_part_is_reported_not_swallowed() {
+        let good = r#"<Types xmlns="x"><Override PartName="/a.xml" ContentType="t"/></Types>"#;
+        let (map, problem) = parse_content_types(good);
+        assert_eq!(map.get("/a.xml").map(String::as_str), Some("t"));
+        assert_eq!(problem, None);
+
+        let broken = r#"<Types xmlns="x"><Override PartName="/a.xml" ContentType="t"/></Wrong>"#;
+        let (map, problem) = parse_content_types(broken);
+        assert_eq!(map.len(), 1, "what was read before the error is kept");
+        let problem = problem.expect("the error is returned");
+        assert!(problem.contains("not well formed"), "{problem}");
+        assert!(problem.contains("root element"), "{problem}");
+        // Break it: `Err(_) => break` again, dropping the error.
+    }
 
     /// The registry entry a RESQML 2.2 document should be read as, and the one
     /// it used to be read as instead.

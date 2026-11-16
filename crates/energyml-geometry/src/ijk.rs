@@ -67,7 +67,7 @@ use energyml_core::value::{FieldValue, Reflect};
 use energyml_domain::values;
 
 use crate::error::{Error, Result};
-use crate::geometry::{Patch, Topology};
+use crate::geometry::{Patch, Topology, field_object};
 use crate::points::{self, Point};
 use crate::source::ValueSource;
 use crate::values::scalar_i64;
@@ -146,8 +146,8 @@ pub fn read(representation: &dyn Reflect, source: &dyn ValueSource) -> Result<Ve
     // NaN. A writer may mark a cell undefined and still leave finite numbers on
     // its pillars, and until these were read such a grid came out whole. The
     // NaN check below stays - it catches the writers that mark nothing.
-    let pillar_defined = flags(geometry, source, "PillarGeometryIsDefined");
-    let cell_defined = flags(geometry, source, "CellGeometryIsDefined");
+    let pillar_defined = flags(geometry, source, "PillarGeometryIsDefined", at)?;
+    let cell_defined = flags(geometry, source, "CellGeometryIsDefined", at)?;
 
     let mut cells: Vec<[u32; 8]> = Vec::with_capacity(ni * nj * nk);
 
@@ -288,14 +288,6 @@ pub(crate) fn oriented(node: [u32; 8], points: &[Point]) -> [u32; 8] {
 fn signed_volume(node: [u32; 8], points: &[Point]) -> f64 {
     // Each face wound so its right-hand normal points *out* of the cell when
     // the corners are in VTK's order.
-    const FACES: [[usize; 4]; 6] = [
-        [0, 3, 2, 1],
-        [4, 5, 6, 7],
-        [0, 1, 5, 4],
-        [1, 2, 6, 5],
-        [2, 3, 7, 6],
-        [3, 0, 4, 7],
-    ];
     let mut origin = [0.0f64; 3];
     for index in node {
         let point = points[index as usize];
@@ -309,7 +301,7 @@ fn signed_volume(node: [u32; 8], points: &[Point]) -> f64 {
     };
 
     let mut volume = 0.0;
-    for face in FACES {
+    for face in crate::shape::HEXAHEDRON_FACES {
         let mut middle = [0.0f64; 3];
         for corner in face {
             let point = at(corner);
@@ -323,11 +315,7 @@ fn signed_volume(node: [u32; 8], points: &[Point]) -> f64 {
             let (a, b) = (at(face[index]), at(face[(index + 1) % 4]));
             let u = [a[0] - middle[0], a[1] - middle[1], a[2] - middle[2]];
             let w = [b[0] - middle[0], b[1] - middle[1], b[2] - middle[2]];
-            let normal = [
-                u[1] * w[2] - u[2] * w[1],
-                u[2] * w[0] - u[0] * w[2],
-                u[0] * w[1] - u[1] * w[0],
-            ];
+            let normal = crate::vector::cross(u, w);
             volume += (normal[0] * middle[0] + normal[1] * middle[1] + normal[2] * middle[2]) / 6.0;
         }
     }
@@ -438,9 +426,19 @@ pub(crate) fn split_lines(
     // lines are appended after the regular pillars, so line `n` of the splits
     // is line `pillars + n` of the points array. Storing the relative index and
     // adding later is the same mistake in a place that is harder to see.
+    // A negative index is a corrupt file, refused by name: clamped to 0 it would
+    // silently split the first pillar instead (`[geometry G15]`).
+    let index = |value: i64, what: &str| {
+        usize::try_from(value)
+            .map_err(|_| Error::malformed(at, format!("{what} is {value}: an index cannot be negative")))
+    };
+    let mut of_pillar = Vec::with_capacity(split_of.len());
+    for (split, value) in split_of.iter().enumerate() {
+        of_pillar.push(index(*value, &format!("the pillar of split line {split}"))?);
+    }
     let mut lookup = HashMap::new();
     for (split, row) in rows.iter().enumerate() {
-        let pillar = split_of[split].max(0) as usize;
+        let pillar = of_pillar[split];
         let Some(columns) = row.integer() else {
             return Err(Error::malformed(
                 at,
@@ -448,13 +446,14 @@ pub(crate) fn split_lines(
             ));
         };
         for column in columns {
-            lookup.insert((pillar, (*column).max(0) as usize), pillars + split);
+            let column = index(*column, &format!("a column of split line {split}"))?;
+            lookup.insert((pillar, column), pillars + split);
         }
     }
     Ok(Splits {
         count,
         lookup,
-        of_pillar: split_of.iter().map(|pillar| (*pillar).max(0) as usize).collect(),
+        of_pillar,
     })
 }
 
@@ -532,13 +531,6 @@ fn dimension(object: &dyn Reflect, field: &str, at: &str) -> Result<usize> {
     }
 }
 
-fn field_object<'a>(object: &'a dyn Reflect, field: &str) -> Option<&'a dyn Reflect> {
-    match object.field(field)? {
-        FieldValue::Object(child) => Some(child),
-        _ => None,
-    }
-}
-
 /// One of the grid's `…IsDefined` boolean arrays, when it holds one.
 ///
 /// `None` covers three cases that are all the same answer - the field is
@@ -546,12 +538,33 @@ fn field_object<'a>(object: &'a dyn Reflect, field: &str) -> Option<&'a dyn Refl
 /// dataset is missing, say). In every one of them **nothing is known**, and the
 /// caller falls back to the coordinates. Treating an unreadable flag as `false`
 /// would delete a grid because a `.h5` was not at hand.
-fn flags(geometry: &dyn Reflect, source: &dyn ValueSource, field: &str) -> Option<Vec<bool>> {
-    let FieldValue::Object(array) = geometry.field(field)? else {
-        return None;
+///
+/// An array that **was read** and holds text is another matter
+/// (`[geometry G5]`): the file states flags in a form that is no flag, and
+/// "all defined" would be a guess, so it is refused by name. A numeric mask is
+/// taken as flags (non-zero is defined), as `values::read_flags` does.
+fn flags(
+    geometry: &dyn Reflect,
+    source: &dyn ValueSource,
+    field: &str,
+    at: &str,
+) -> Result<Option<Vec<bool>>> {
+    let Some(FieldValue::Object(array)) = geometry.field(field) else {
+        return Ok(None);
     };
-    let values = values::read(array, source, field).ok()?;
-    values.boolean().map(|flags| flags.to_vec())
+    let Ok(values) = values::read(array, source, field) else {
+        return Ok(None);
+    };
+    if let Some(flags) = values.boolean() {
+        return Ok(Some(flags.to_vec()));
+    }
+    match values.to_f64() {
+        Some(mask) => Ok(Some(mask.into_iter().map(|x| x != 0.0).collect())),
+        None => Err(Error::malformed(
+            at,
+            format!("`{field}` holds text, not a set of flags"),
+        )),
+    }
 }
 
 /// Whether a flag array says this element is **not** defined.

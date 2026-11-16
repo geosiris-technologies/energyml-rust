@@ -55,6 +55,7 @@ fn lambert93() -> Crs {
         time_uom: None,
         projected: CrsKind::Epsg(2154),
         vertical: CrsKind::Epsg(5720),
+        axes: energyml_domain::crs::AxisReading::NotStated,
     }
 }
 
@@ -82,7 +83,7 @@ fn bag(geometry: Geometry, known: Option<Known>) -> Pieces {
     let pieces = Pieces::empty().with(
         "shape",
         Source::Shape {
-            geometry,
+            geometry: std::sync::Arc::new(geometry),
             closed: None,
         },
     );
@@ -465,7 +466,7 @@ fn an_export_applied_and_saved_is_in_the_zip_with_both_relations() {
             &Pieces::empty().with(
                 "shape",
                 Source::Shape {
-                    geometry: two_triangles(),
+                    geometry: std::sync::Arc::new(two_triangles()),
                     closed: None,
                 },
             ),

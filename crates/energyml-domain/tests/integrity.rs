@@ -24,7 +24,7 @@ use energyml_witsml_2_1 as witsml21;
 
 /// Lends the objects it holds, and reads no array from any file: every array
 /// in these tests is inline XML, which `values::read` computes without one.
-struct Package(Vec<(String, Box<dyn DynObject>)>);
+pub(crate) struct Package(pub(crate) Vec<(String, Box<dyn DynObject>)>);
 
 impl ObjectSource for Package {
     fn object(&self, uuid: &str) -> Option<Box<dyn DynObject>> {
@@ -64,7 +64,7 @@ impl ArraySource for Package {
 }
 
 /// Run every check over these objects, the package lending them.
-fn judge(objects: Vec<(&str, Box<dyn DynObject>)>, arrays: bool) -> Vec<Finding> {
+pub(crate) fn judge(objects: Vec<(&str, Box<dyn DynObject>)>, arrays: bool) -> Vec<Finding> {
     let package = Package(
         objects
             .into_iter()
@@ -81,18 +81,18 @@ fn judge(objects: Vec<(&str, Box<dyn DynObject>)>, arrays: bool) -> Vec<Finding>
 }
 
 /// The findings of one rule.
-fn of<'a>(findings: &'a [Finding], rule: &str) -> Vec<&'a Finding> {
+pub(crate) fn of<'a>(findings: &'a [Finding], rule: &str) -> Vec<&'a Finding> {
     findings.iter().filter(|finding| finding.rule == rule).collect()
 }
 
-fn read_of(finding: &Finding) -> &str {
+pub(crate) fn read_of(finding: &Finding) -> &str {
     match &finding.outcome {
         Outcome::Violation { read } => read,
         other => panic!("expected a violation, got {other:?}"),
     }
 }
 
-fn reference(qualified_type: &str, uuid: &str) -> eml23::DataObjectReference {
+pub(crate) fn reference(qualified_type: &str, uuid: &str) -> eml23::DataObjectReference {
     eml23::DataObjectReference {
         uuid: uuid.to_string(),
         qualified_type: qualified_type.to_string(),
@@ -101,7 +101,7 @@ fn reference(qualified_type: &str, uuid: &str) -> eml23::DataObjectReference {
     }
 }
 
-fn citation(title: &str) -> eml23::Citation {
+pub(crate) fn citation(title: &str) -> eml23::Citation {
     eml23::Citation {
         title: title.to_string(),
         originator: "test".to_string(),
@@ -111,7 +111,7 @@ fn citation(title: &str) -> eml23::Citation {
     }
 }
 
-fn boxed<T: DynObject + 'static>(object: T) -> Box<dyn DynObject> {
+pub(crate) fn boxed<T: DynObject + 'static>(object: T) -> Box<dyn DynObject> {
     Box::new(object)
 }
 
@@ -119,9 +119,9 @@ fn boxed<T: DynObject + 'static>(object: T) -> Box<dyn DynObject> {
 // house/discrete-value-in-lookup
 // ---------------------------------------------------------------------------
 
-const TABLE: &str = "00000000-0000-0000-0000-00000000e301";
+pub(crate) const TABLE: &str = "00000000-0000-0000-0000-00000000e301";
 
-fn integers(values: &[i64], null: i64) -> eml23::IntegerXmlArray {
+pub(crate) fn integers(values: &[i64], null: i64) -> eml23::IntegerXmlArray {
     eml23::IntegerXmlArray {
         values: values.to_vec(),
         null_value: null,
@@ -132,7 +132,7 @@ fn integers(values: &[i64], null: i64) -> eml23::IntegerXmlArray {
 
 /// A category table keyed by 1, 2, 3 - the shape of a lithologies table, a
 /// `KeyColumn` and a value column, both inline.
-fn table() -> eml23::ColumnBasedTable {
+pub(crate) fn table() -> eml23::ColumnBasedTable {
     let column = |title: &str, values: &[i64]| eml23::Column {
         title: Some(title.to_string()),
         value_count_per_row: 1,
@@ -148,7 +148,7 @@ fn table() -> eml23::ColumnBasedTable {
     }
 }
 
-fn discrete(uuid: &str, values: &[i64]) -> resqml22::DiscreteProperty {
+pub(crate) fn discrete(uuid: &str, values: &[i64]) -> resqml22::DiscreteProperty {
     resqml22::DiscreteProperty {
         uuid: uuid.to_string(),
         citation: citation("lithology"),

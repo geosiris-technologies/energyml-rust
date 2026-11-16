@@ -105,7 +105,7 @@ impl Operation for SigeolUnits {
         let mut features = 0usize;
         let mut units = 0usize;
         for collection in &inputs.features {
-            for feature in &collection.features {
+            for feature in collection.features.iter() {
                 features += 1;
                 if crate::sigeol::unit_of(&feature.properties).is_some() {
                     units += 1;
@@ -263,7 +263,7 @@ pub fn plan_of(assembled: &assemble::Plan, options: &epc::Options) -> Result<Pla
     let mut objects = Vec::new();
     let mut datasets = Vec::new();
     let mut says = Vec::new();
-    let dropped: Vec<Dropped> = assembled
+    let mut dropped: Vec<Dropped> = assembled
         .skipped()
         .into_iter()
         .map(|why| {
@@ -306,7 +306,32 @@ pub fn plan_of(assembled: &assemble::Plan, options: &epc::Options) -> Result<Pla
     }
     objects.extend(crs.new_objects());
 
-    let rows = assemble::rows(assembled);
+    // **Every group is placed before anything is written for it**: a group
+    // whose reprojection fails gets no point set, so it must get no row in the
+    // table either (a unit listed and never written), and it is counted in
+    // `dropped`. Keys stay what they were: a property refers to a row by its
+    // key, not its position.
+    let all_rows = assemble::rows(assembled);
+    let placed_groups: Vec<Result<Vec<[f64; 3]>, String>> = assembled
+        .groups
+        .iter()
+        .map(|group| crate::crs::place(&group.points, &options.target, options.source_epsg))
+        .collect();
+    if let Some(Err(why)) = placed_groups.iter().find(|placed| placed.is_err())
+        && placed_groups.iter().all(Result::is_err)
+    {
+        return Err(Error::new(format!(
+            "no group could be placed in EPSG:{} from EPSG:{}, so nothing would be written: {why}",
+            options.target.epsg(),
+            options.source_epsg
+        )));
+    }
+    let rows: Vec<crate::table::Row> = all_rows
+        .iter()
+        .zip(&placed_groups)
+        .filter(|(_, placed)| placed.is_ok())
+        .map(|(row, _)| row.clone())
+        .collect();
     let table_uuid = crate::naming::table(&format!("{}:{}", options.source, options.stage));
     let table = crate::table::build(
         &table_uuid,
@@ -324,7 +349,7 @@ pub fn plan_of(assembled: &assemble::Plan, options: &epc::Options) -> Result<Pla
     });
 
     let mut points_written = 0usize;
-    for (group, row) in assembled.groups.iter().zip(&rows) {
+    for ((group, row), placed) in assembled.groups.iter().zip(&all_rows).zip(placed_groups) {
         let key = group.unit.key(group.side).0;
         let path = format!(
             "/resqml22/{}/points",
@@ -362,12 +387,16 @@ pub fn plan_of(assembled: &assemble::Plan, options: &epc::Options) -> Result<Pla
             options.citation(&format!("{title} - unit")),
         );
 
-        let placed = match crate::crs::place(&group.points, &options.target, options.source_epsg) {
+        let placed = match placed {
             Ok(placed) => placed,
             Err(why) => {
                 says.push(crate::operation::Note {
                     key: "not-placed",
                     detail: format!("{title}: {why}"),
+                });
+                dropped.push(Dropped {
+                    count: group.features,
+                    why: format!("{} feature(s) of {title} were not placed: {why}", group.features),
                 });
                 continue;
             }

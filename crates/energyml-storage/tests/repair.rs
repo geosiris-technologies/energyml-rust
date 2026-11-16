@@ -470,3 +470,86 @@ fn a_repaired_part_regains_its_proper_name() {
         "and the object is addressable at last"
     );
 }
+
+/// `[storage-2 S1]`: a repaired part whose object the store then refuses is not
+/// lost.
+///
+/// The bytes parse, but their uuid is not one a part can carry, so `put`
+/// refuses the object. The part used to have been let go (bytes cleared, part
+/// superseded) before that refusal, so the save skipped it and it vanished from
+/// the package while the doc promised *nothing is staged*.
+///
+/// Break it: in `stage_repaired_part`, drop the restore after a refused `put`
+/// (the `unsupersede` and the `set_raw`); the saved package then lacks `PART`.
+#[test]
+fn a_repair_the_store_refuses_does_not_lose_the_part() {
+    let path = package("lost", PART, &truncated(), true);
+    let mut store = EpcStore::open(&path, registry()).expect("opens");
+
+    let refusal = store
+        .stage_repaired_part(PART, object("not-a-uuid", None).into_bytes())
+        .expect_err("the put refuses an object whose uuid no part can carry");
+    assert!(refusal.to_string().contains("uuid"), "{refusal}");
+
+    assert!(!store.is_dirty(), "a refused repair leaves a clean store");
+    assert_eq!(
+        store.raw_part(PART).expect("still readable as bytes"),
+        truncated(),
+        "the bytes are the ones that were there"
+    );
+
+    let out = path.with_file_name("lost-saved.epc");
+    store.save_as(&out, &SaveOptions::default()).expect("it saves");
+    let file = std::fs::File::open(&out).unwrap();
+    let mut zip = zip::ZipArchive::new(file).unwrap();
+    let names: Vec<String> = (0..zip.len())
+        .map(|i| zip.by_index(i).unwrap().name().expect("a part name").into_owned())
+        .collect();
+    assert!(
+        names.contains(&PART.to_string()),
+        "the part is still in the saved package: {names:?}"
+    );
+}
+
+/// Reopen what `write_to` wrote into memory.
+fn written(store: &EpcStore) -> EpcStore {
+    let mut out = std::io::Cursor::new(Vec::new());
+    store
+        .write_to(&mut out, &SaveOptions::default())
+        .expect("bytes posed on an object's part are written once");
+    EpcStore::from_reader(
+        Box::new(std::io::Cursor::new(out.into_inner())),
+        "posed.epc",
+        registry(),
+    )
+    .expect("the package opens")
+}
+
+/// [fin-F2] Bytes posed on a part the store holds as an object **replace the
+/// object** in the save: one entry of that name, with the posed bytes. Both a
+/// part read from the archive and an object the session put under that name.
+///
+/// The second used to write the object and the bytes under one part name, and
+/// the archive refused the save (`Duplicate filename`).
+///
+/// Break it: in `write_package`, write every object whatever `carried` holds, and the
+/// second half fails to save.
+#[test]
+fn bytes_posed_on_an_object_part_replace_the_object() {
+    let posed = healthy().replace("Fault1 Interp1 TriRep", "Posed").into_bytes();
+
+    // A part read from the archive.
+    let path = package("posed-read", PART, healthy().as_bytes(), true);
+    let mut store = EpcStore::open(&path, registry()).expect("opens");
+    store.set_raw_part(PART, posed.clone());
+    assert_eq!(written(&store).raw_part(PART).unwrap(), posed);
+
+    // An object put in this session, under the name its type and uuid give it.
+    let path = package("posed-made", "Broken.xml", b"", false);
+    let mut store = EpcStore::open(&path, registry()).expect("opens");
+    store
+        .stage_repaired_part("Broken.xml", healthy().into_bytes())
+        .expect("the repaired bytes parse");
+    store.set_raw_part(PART, posed.clone());
+    assert_eq!(written(&store).raw_part(PART).unwrap(), posed);
+}

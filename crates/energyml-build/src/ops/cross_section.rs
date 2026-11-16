@@ -63,6 +63,7 @@
 use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 use energyml_geometry::{fence, section};
+use std::sync::Arc;
 
 use crate::declare::{Inputs, Params, Shape, Suggestions};
 use crate::operation::{About, Category, Context, Made, Need, Note, Operation, Plan, Refusal, Slot};
@@ -276,7 +277,7 @@ impl Operation for CrossSection {
             .iter()
             .map(|(name, geometry)| Shape {
                 name: name.clone(),
-                geometry: geometry.clone(),
+                geometry: Arc::new(geometry.clone()),
                 closed: None,
                 known: None,
             })

@@ -4,7 +4,7 @@ A drilling sheet: a well's 2D cross-section laid out in Rust and written as SVG.
 
 Depends on `energyml-core`, `energyml-domain` and `energyml-storage`; no native dependency.
 
-There are no feature flags.
+One feature: `png` (resvg with its raster images, pure Rust) renders an SVG to PNG - a display list through its SVG, so the PNG always shows what the SVG shows; without it, those calls refuse by name. The `draw` module is the drawing every view shares (a keyed display list, its SVG, graduations, label spreading, rasters, a layered graph layout, the hit test); it knows no EnergyML type.
 
 ## Documentation
 

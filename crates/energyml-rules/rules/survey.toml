@@ -1,0 +1,113 @@
+# Directional surveys: how a survey's stations are read and placed where the
+# standards leave it open. Source: ADR-0034. Code: crates/energyml-geometry/src/stations/.
+# Declared rules: `stations` applies them; a breach is a named refusal of the
+# reading, which `stations::diagnose` lists - no entry in `integrity::CHECKS`.
+
+[[rule]]
+id = "house/survey/declared-north"
+theme = "survey"
+status = "active"
+stance = "silent"
+level = 1
+since = "2026-11-14"
+title = "A survey that states no north is placed only with a north the caller declares"
+text = """
+A survey that leaves the vertical and states no north for its azimuths (`AziRef` absent) is refused by name (`NorthNotStated`) unless the caller declares grid or plant north. The declared north is carried in the result (`NorthSource::Declared`), is never written into the package, and never replaces a north the file states (`NorthAlreadyStated`)."""
+why = """
+`AziRef` is optional for legacy data and strongly recommended. Grid and true north differ by the convergence, several degrees in places: guessing would move the bottom of the hole by tens of metres and still draw a plausible well (ADR-0034)."""
+rulings = [
+  { by = "maintainer", on = "2026-11-14" },
+]
+refs = [
+  { kind = "spec", doc = "WITSML TRG 2.1", at = "§16.7 p. 352", note = "AziRef: optional because of legacy data, strongly recommended" },
+  { kind = "code", path = "crates/energyml-geometry/src/stations/north.rs", at = "north_of" },
+  { kind = "code", path = "crates/energyml-geometry/src/stations/mod.rs", at = "SurveyDeclarations" },
+  { kind = "code", path = "crates/energyml-geometry/tests/witsml_trajectory.rs", at = "a_declared_north_is_never_taken_over_a_stated_one" },
+  { kind = "design", path = "docs/adr/0034-survey-north-and-stations.md" },
+]
+at = [
+  { type = "type", key = "Trajectory" },
+  { type = "view", key = "scene.refusals" },
+  { type = "view", key = "scene.3d" },
+]
+
+[[rule]]
+id = "house/survey/north-corrections-applied"
+theme = "survey"
+status = "active"
+stance = "interpreted"
+level = 1
+since = "2026-11-14"
+title = "A true or magnetic north is turned to grid north by the corrections the file states"
+text = """
+A survey in true north is turned to grid north by subtracting the convergence; in magnetic north, by adding the declination and subtracting the convergence. A station's own value (`StnGridConUsed`, `StnMagDeclUsed`) comes before the trajectory's (`GridConUsed`, `MagDeclUsed`). A correction the file does not state is refused by name (`NorthNotApplied`); astronomic and compass north, which no field corrects, are refused."""
+why = """
+The file states the corrections its producer used, so applying them is reading the file, not guessing. Taking a convergence or a declination from elsewhere (a geodetic library, a magnetic model) would be a second source the file does not name (ADR-0034)."""
+rulings = [
+  { by = "maintainer", on = "2026-11-14" },
+]
+refs = [
+  { kind = "spec", doc = "WITSML TRG 2.1", at = "§16.7 p. 352", note = "GridConUsed: the convergence is subtracted from a true north azimuth to give a grid north one" },
+  { kind = "spec", doc = "WITSML TRG 2.1", at = "§16.7 p. 353", note = "MagDeclUsed: the declination is added to a magnetic azimuth to give a true north one" },
+  { kind = "spec", doc = "WITSML TRG 2.1", at = "§16.2 p. 345", note = "StnGridConUsed, StnMagDeclUsed: per station" },
+  { kind = "code", path = "crates/energyml-geometry/src/stations/north.rs", at = "north_of" },
+  { kind = "code", path = "crates/energyml-geometry/tests/witsml_trajectory.rs", at = "a_true_north_survey_with_its_convergence_lands_where_grid_north_does" },
+  { kind = "design", path = "docs/adr/0034-survey-north-and-stations.md" },
+]
+at = [
+  { type = "type", key = "Trajectory" },
+  { type = "view", key = "scene.3d" },
+  { type = "view", key = "scene.refusals" },
+]
+
+[[rule]]
+id = "house/survey/rejected-station-left-out-on-declaration"
+theme = "survey"
+status = "active"
+stance = "interpreted"
+level = 1
+since = "2026-11-14"
+title = "A rejected station is left out only when the caller declares so"
+text = """
+A survey holding a station whose status is `rejected` is refused by name (`RejectedStation`) unless the caller declares that rejected stations are left out. Left out, the positions run over the other stations, the result lists the stations kept, and a refusal still names a station by its number in the file."""
+why = """
+The guide says a rejected station does not influence the positions of the stations below it, but a drawing that silently drops measured stations shows a well the file does not quite describe: the caller chooses, and the result says what was kept (ADR-0034)."""
+rulings = [
+  { by = "maintainer", on = "2026-11-14" },
+]
+refs = [
+  { kind = "spec", doc = "WITSML TRG 2.1", at = "§16.12 p. 363", note = "rejected: the quality is not ok; does not influence position computation for stations below it" },
+  { kind = "code", path = "crates/energyml-geometry/src/stations/mod.rs", at = "SurveyStations::kept" },
+  { kind = "code", path = "crates/energyml-geometry/tests/witsml_trajectory.rs", at = "a_rejected_station_is_left_out_only_when_declared" },
+  { kind = "design", path = "docs/adr/0034-survey-north-and-stations.md" },
+]
+at = [
+  { type = "type", key = "Trajectory" },
+  { type = "view", key = "scene.refusals" },
+]
+
+[[rule]]
+id = "house/survey/deviation-survey-grid-north"
+theme = "survey"
+status = "active"
+stance = "interpreted"
+level = 2
+since = "2026-11-14"
+title = "A RESQML 2.0.1 deviation survey turns from grid north and is joined by minimum curvature"
+text = """
+The azimuths of a `DeviationSurveyRepresentation` are read from the north of the projected CRS and its inclinations from the vertical; no method is stated, so the stations are joined by minimum curvature. `FirstStationLocation` is read and shown, never used to place: the survey is placed from its `MdDatum`, and refused by name where that datum names no projected CRS to turn from."""
+why = """
+The schema says the azimuths stay relative to the projected CRS north even when the local CRS is rotated, and states neither a method nor the CRS of the first station's location. Reading them otherwise would place a well by a guess (ADR-0034)."""
+rulings = [
+  { by = "maintainer", on = "2026-11-14" },
+]
+refs = [
+  { kind = "spec", doc = "RESQML TRG 2.0.1", at = "§7.5.7 p. 139", note = "azimuths relative to the projected CRS north; inclination per station; FirstStationLocation with no CRS stated" },
+  { kind = "code", path = "crates/energyml-geometry/src/stations/deviation.rs", at = "read" },
+  { kind = "code", path = "crates/energyml-geometry/tests/deviation_survey.rs", at = "a_deviation_survey_states_grid_north_and_no_method" },
+  { kind = "design", path = "docs/adr/0034-survey-north-and-stations.md" },
+]
+at = [
+  { type = "type", key = "DeviationSurveyRepresentation" },
+  { type = "view", key = "scene.3d" },
+]

@@ -50,12 +50,54 @@
 //! serialized last in the XML and stored first in the file. Deriving the
 //! dataset order from the document order gets every value wrong while looking
 //! perfectly healthy.
+//!
+//! # Layout
+//!
+//! This file keeps the table itself (`Table`, `Column`, `Rows`, `Cell`,
+//! `Lookup`) and the reading of the two shapes. The rest is split by trade, and
+//! every public name is re-exported here, so `energyml_domain::table::X` is the
+//! path whichever file holds `X`:
+//!
+//! | file | what it holds |
+//! |---|---|
+//! | `cells` | a cell's four states, `ValueCountPerRow`, the row count |
+//! | `sheet` | a table without its values, kept by the package index |
+//! | `class` | the class of a column, the MD columns, the curve pairs |
+//! | `links` | the link a column declares, by convention |
+//! | `keys` | the key index, the one rule "by the key, else by the rank" |
+//! | `resolve` | a link cell resolved to a row |
+//! | `check` | the links of a table or a set, checked |
+//! | `window` | sort, filter and page a big table |
+
+pub mod cells;
+pub mod check;
+pub mod class;
+pub mod keys;
+pub mod links;
+pub mod resolve;
+pub mod sheet;
+pub mod window;
+
+pub use cells::{CellState, ColumnCells, TableRefusal, row_count};
+pub use check::{ColumnReport, LinkReport, TableToCheck, UriColumnReport, check_links, check_links_of_set};
+pub use class::{
+    ColumnClass, DESCRIPTION, DepthKind, EXPLICIT_INDEX, IDENTIFIER, IntervalColumns, MEASURED_DEPTH,
+    TRUE_VERTICAL_DEPTH, classify_column, curve_pairs, descends_from, md_columns, resolve_kinds,
+};
+pub use keys::{KeyIndex, NamingRefusal, RowMatch, row_named_by};
+pub use links::{
+    Convention, LinkDeclaration, LinkReader, LinkReaders, LinkRefusal, LinkTarget, LinkWarning, UriColumn,
+    uri_column,
+};
+pub use resolve::{DanglingWhy, Resolved, TableSet, TargetIndexes, TargetTable, resolve};
+pub use sheet::{ColumnSheet, TableSheet};
+pub use window::{ColumnAccess, RowFilter, SortKey, SortOrder, TableWindow, WindowRefusal};
 
 use energyml_core::identity;
-use energyml_core::value::{FieldValue, Reflect, Scalar};
+use energyml_core::value::{Reflect, Scalar};
 
 use crate::error::{Error, Result};
-use crate::property::{Facet, PropertyKindRef};
+use crate::property::{Facet, PropertyKindRef, read_facets};
 use crate::source::ArraySource;
 use crate::values::{self, Values};
 
@@ -143,7 +185,7 @@ impl<'a> Table<'a> {
 
         let columns = match kind {
             "ColumnBasedTable" => read_columns(object),
-            "StringTableLookup" | "DoubleTableLookup" => read_pairs(object, &uuid)?,
+            "StringTableLookup" | "DoubleTableLookup" => read_pairs(object, &uuid, kind)?,
             other => {
                 return Err(Error::unsupported(
                     format!("`{other}` as a lookup table"),
@@ -211,22 +253,53 @@ impl<'a> Table<'a> {
                 }
             }
         }
-        let lengths: Vec<usize> = columns.iter().flatten().map(Values::len).collect();
-        let rows = lengths.iter().copied().min().unwrap_or(0);
-        if lengths.iter().any(|length| *length != rows) {
+        let per_row: Vec<u64> = self.columns.iter().map(|c| c.values_per_row.max(1)).collect();
+        // Rows per column that read: a column of `ValueCountPerRow` values per
+        // row holds `len / n` rows (common TRG 2.3 §9.1 p. 190).
+        let mut row_counts: Vec<usize> = Vec::new();
+        for ((column, values), n) in self.columns.iter().zip(&columns).zip(&per_row) {
+            let Some(values) = values else { continue };
+            let n = *n as usize;
+            let len = values.len();
+            if len % n != 0 {
+                notes.push(format!(
+                    "column `{}` holds {len} value(s), which is not a whole number of rows of {n} \
+                     (`ValueCountPerRow`; common TRG 2.3 §9.1: \"the fastest dimension of the \
+                     column Values array must be this value\"); {} row(s) are read, the {} \
+                     value(s) left over are not",
+                    column.title.as_deref().unwrap_or("untitled"),
+                    len / n,
+                    len % n
+                ));
+            }
+            row_counts.push(len / n);
+        }
+        let rows = row_counts.iter().copied().min().unwrap_or(0);
+        if row_counts.iter().any(|count| *count != rows) {
             notes.push(format!(
-                "the columns do not have the same number of values ({}), and row identity is \
+                "the columns do not have the same number of rows ({}), and row identity is \
                  positional (common TRG §9.1: \"ordering matters since it will be the same in all \
                  columns\"); {rows} row(s) can be read across all of them, the rest of the longer \
                  columns is unmatched",
-                lengths
+                row_counts
                     .iter()
                     .map(usize::to_string)
                     .collect::<Vec<_>>()
                     .join(", ")
             ));
         }
-        Ok(Rows { columns, rows, notes })
+        let nulls: Vec<Option<i64>> = self
+            .columns
+            .iter()
+            .map(|column| column.array.and_then(values::null_value))
+            .collect();
+        Ok(Rows {
+            columns,
+            per_row,
+            nulls,
+            rows,
+            notes,
+        })
     }
 }
 
@@ -236,6 +309,13 @@ pub struct Rows {
     /// column that could not be read - named in the notes - and its cells
     /// answer `None`, which is not the same as a column of empty strings.
     pub columns: Vec<Option<Values>>,
+    /// Values per row of each column, in the same order - `ValueCountPerRow`,
+    /// 1 for a scalar column and for both columns of a 2.0.1 lookup.
+    pub per_row: Vec<u64>,
+    /// The `NullValue` each column's array declares, in the same order: `None`
+    /// for a column in line, a floating-point or text column, or one that did
+    /// not read. [`Rows::cells`] gives it to [`ColumnCells`].
+    pub nulls: Vec<Option<i64>>,
     /// How many rows can be read across every column **that read**.
     pub rows: usize,
     /// What did not line up, and what could not be read.
@@ -243,16 +323,64 @@ pub struct Rows {
 }
 
 impl Rows {
-    /// One cell, by row and column index.
-    pub fn cell(&self, row: usize, column: usize) -> Option<Cell> {
-        Cell::at(self.columns.get(column)?.as_ref()?, row)
+    /// One column as cells, borrowing its values: what [`ColumnCells`] cuts
+    /// into rows with `ValueCountPerRow` and the array's `NullValue`. `None` for
+    /// a column that could not be read and for one past the table.
+    pub fn cells(&self, column: usize) -> Option<ColumnCells<'_>> {
+        let values = self.columns.get(column)?.as_ref()?;
+        Some(ColumnCells {
+            values: std::borrow::Cow::Borrowed(values),
+            per_row: self.per_row_of(column),
+            null: self.nulls.get(column).copied().flatten(),
+        })
     }
 
-    /// The whole of one row, in column order.
+    /// Values per row of a column; 1 when the column is not known.
+    fn per_row_of(&self, column: usize) -> u64 {
+        self.per_row.get(column).copied().unwrap_or(1).max(1)
+    }
+
+    /// One cell of a **scalar** column, by row and column index; `None` for a
+    /// column of several values per row (read it with [`Rows::values_of`]),
+    /// for an unreadable column, and past its end.
+    ///
+    /// **An absent cell is `None`**, the one model of absence of
+    /// [`ColumnCells`]: an integer equal to the array's `NullValue` and a `NaN`
+    /// are no value, never the number `-999` or `NaN`. An empty text is a value.
+    pub fn cell(&self, row: usize, column: usize) -> Option<Cell> {
+        if self.per_row_of(column) != 1 {
+            return None;
+        }
+        match self.cells(column)?.cell(row)? {
+            CellState::Value(cell) => Some(cell),
+            CellState::Empty => Some(Cell::Text(String::new())),
+            CellState::Absent | CellState::Vector(_) | CellState::Unreadable => None,
+        }
+    }
+
+    /// The `n` values of one row of a column, in storage order. `None` when
+    /// unreadable, past the end, or when any of them is absent (`NullValue`,
+    /// `NaN`): a row with a hole is not handed back as a full one.
+    pub fn values_of(&self, row: usize, column: usize) -> Option<Vec<Cell>> {
+        match self.cells(column)?.cell(row)? {
+            CellState::Value(cell) => Some(vec![cell]),
+            CellState::Empty => Some(vec![Cell::Text(String::new())]),
+            CellState::Vector(components) => components.into_iter().collect(),
+            CellState::Absent | CellState::Unreadable => None,
+        }
+    }
+
+    /// The whole of one row, in column order, scalar cells (`cell` per column).
     pub fn row(&self, row: usize) -> Vec<Option<Cell>> {
-        self.columns
-            .iter()
-            .map(|column| column.as_ref().and_then(|values| Cell::at(values, row)))
+        (0..self.columns.len())
+            .map(|column| self.cell(row, column))
+            .collect()
+    }
+
+    /// The whole of one row, every column as its values.
+    pub fn row_values(&self, row: usize) -> Vec<Option<Vec<Cell>>> {
+        (0..self.columns.len())
+            .map(|column| self.values_of(row, column))
             .collect()
     }
 }
@@ -269,23 +397,17 @@ pub enum Cell {
 }
 
 impl Cell {
-    fn at(values: &Values, row: usize) -> Option<Cell> {
-        Some(match values {
-            Values::Floating(v) => Cell::Number(*v.get(row)?),
-            Values::Integer(v) => Cell::Number(*v.get(row)? as f64),
-            Values::Boolean(v) => Cell::Boolean(*v.get(row)?),
-            Values::Text(v) => Cell::Text(v.get(row)?.clone()),
-        })
-    }
-
     /// Whether two cells are the same key.
     ///
     /// Numbers are compared as numbers whatever they were stored as - a key
-    /// column of `int32` and a query of `3.0` are the same key - and text is
-    /// compared exactly, because a facies name is a name.
+    /// column of `int32` and a query of `3.0` are the same key - and **exactly**:
+    /// `-0.0` is `0.0` and a `NaN` is never a key. A hashed index needs an
+    /// equivalence relation, and a tolerance is not transitive (the former
+    /// `f64::EPSILON` window only ever applied under 1 in absolute value).
+    /// Text is compared exactly, because a facies name is a name.
     pub fn matches(&self, other: &Cell) -> bool {
         match (self, other) {
-            (Cell::Number(a), Cell::Number(b)) => a == b || (a - b).abs() < f64::EPSILON,
+            (Cell::Number(a), Cell::Number(b)) => a == b,
             (Cell::Boolean(a), Cell::Boolean(b)) => a == b,
             (Cell::Text(a), Cell::Text(b)) => a == b,
             // A number against text is not a mismatch of value but of column;
@@ -345,19 +467,14 @@ impl Lookup {
     /// anywhere requires keys to be unique. Anything after the first is a
     /// **duplicate key**, handed back rather than hidden, so a caller can say
     /// so instead of quietly using one of them.
+    ///
+    /// A key column of several values per row finds nothing: a key is one
+    /// value per row.
+    ///
+    /// A caller that looks up several keys builds the index once
+    /// ([`Lookup::key_index`]) and asks it.
     pub fn find(&self, key: &[Cell]) -> Vec<usize> {
-        if self.key_columns.is_empty() || key.len() != self.key_columns.len() {
-            return Vec::new();
-        }
-        (0..self.rows.rows)
-            .filter(|row| {
-                self.key_columns.iter().zip(key).all(|(column, wanted)| {
-                    self.rows
-                        .cell(*row, *column)
-                        .is_some_and(|cell| cell.matches(wanted))
-                })
-            })
-            .collect()
+        self.key_index().rows_of(key).to_vec()
     }
 
     /// What a single-key lookup maps a number to: the other columns of the
@@ -382,26 +499,7 @@ impl Lookup {
     /// answers arbitrarily, and an application that cares should be able to
     /// find out before it does.
     pub fn duplicate_keys(&self) -> Vec<(Vec<Cell>, Vec<usize>)> {
-        let mut seen: Vec<(Vec<Cell>, Vec<usize>)> = Vec::new();
-        for row in 0..self.rows.rows {
-            let key: Vec<Cell> = self
-                .key_columns
-                .iter()
-                .filter_map(|column| self.rows.cell(row, *column))
-                .collect();
-            if key.len() != self.key_columns.len() {
-                continue;
-            }
-            match seen
-                .iter_mut()
-                .find(|(known, _)| known.iter().zip(&key).all(|(a, b)| a.matches(b)))
-            {
-                Some((_, rows)) => rows.push(row),
-                None => seen.push((key, vec![row])),
-            }
-        }
-        seen.retain(|(_, rows)| rows.len() > 1);
-        seen
+        self.key_index().duplicates()
     }
 }
 
@@ -426,7 +524,7 @@ fn read_columns(object: &dyn Reflect) -> Vec<Column<'_>> {
                     .and_then(|f| f.as_object())
                     .and_then(|reference| {
                         Some(PropertyKindRef::Object {
-                            uuid: uuid_of_reference(reference)?,
+                            uuid: energyml_core::identity::non_empty_uuid_of_reflect(reference)?,
                             title: text(reference, "Title"),
                         })
                     }),
@@ -446,25 +544,57 @@ fn read_columns(object: &dyn Reflect) -> Vec<Column<'_>> {
 /// Key and value, in that order, so the shape a caller sees is the same as a
 /// column-based table's - which is the whole point of reading them into one
 /// type.
-fn read_pairs<'a>(object: &dyn Reflect, uuid: &str) -> Result<Vec<Column<'a>>> {
-    let mut keys_numeric = Vec::new();
+fn read_pairs<'a>(object: &dyn Reflect, uuid: &str, kind: &str) -> Result<Vec<Column<'a>>> {
+    let mut keys_float: Vec<f64> = Vec::new();
+    let mut keys_integer: Vec<i64> = Vec::new();
     let mut values_numeric = Vec::new();
     let mut values_text = Vec::new();
     let mut textual = false;
 
     for (at, item) in list(object, "Value").into_iter().enumerate() {
         let Some(pair) = item.as_object() else { continue };
-        let key = pair
-            .field("Key")
-            .and_then(|f| f.as_scalar())
-            .and_then(|s| s.as_f64());
+        let key = pair.field("Key").and_then(|f| f.as_scalar());
         let Some(key) = key else {
             return Err(Error::malformed(
                 uuid,
                 format!("pair {at} has no `Key`, so it maps nothing"),
             ));
         };
-        keys_numeric.push(key as i64);
+        if kind == "DoubleTableLookup" {
+            // `DoubleLookup.Key` is a double (RESQML TRG 2.0.1 §6.24 p. 72):
+            // its fraction is part of the key.
+            let Some(key) = key.as_f64() else {
+                return Err(Error::malformed(
+                    uuid,
+                    format!("pair {at} has a `Key` that is not a number, so it maps nothing"),
+                ));
+            };
+            keys_float.push(key);
+        } else {
+            // `StringLookup.Key` is an integer (§6.40 p. 79).
+            let integer = match &key {
+                Scalar::Int(v) => Some(*v),
+                Scalar::UInt(v) => i64::try_from(*v).ok(),
+                Scalar::Double(v)
+                    if v.is_finite()
+                        && v.fract() == 0.0
+                        && *v >= i64::MIN as f64
+                        && *v <= i64::MAX as f64 =>
+                {
+                    Some(*v as i64)
+                }
+                _ => None,
+            };
+            let Some(integer) = integer else {
+                return Err(Error::malformed(
+                    uuid,
+                    format!(
+                        "pair {at} has the key {key}, and a `StringTableLookup` key is an integer (`StringLookup.Key`)"
+                    ),
+                ));
+            };
+            keys_integer.push(integer);
+        }
 
         match pair.field("Value").and_then(|f| f.as_scalar()) {
             Some(Scalar::Str(text)) => {
@@ -491,7 +621,11 @@ fn read_pairs<'a>(object: &dyn Reflect, uuid: &str) -> Result<Vec<Column<'a>>> {
             facets: Vec::new(),
             key: true,
             array: None,
-            inline: Some(Values::Integer(keys_numeric)),
+            inline: Some(if kind == "DoubleTableLookup" {
+                Values::Floating(keys_float)
+            } else {
+                Values::Integer(keys_integer)
+            }),
         },
         Column {
             title: Some("Value".to_string()),
@@ -511,54 +645,13 @@ fn read_pairs<'a>(object: &dyn Reflect, uuid: &str) -> Result<Vec<Column<'a>>> {
     ])
 }
 
-fn read_facets(object: &dyn Reflect) -> Vec<Facet> {
-    list(object, "Facet")
-        .into_iter()
-        .filter_map(|item| {
-            let inner = item.as_object()?;
-            Some(Facet {
-                kind: text(inner, "Facet")?,
-                value: text(inner, "FacetValue")?,
-            })
-        })
-        .collect()
-}
-
 // ---------------------------------------------------------------------------
 // Reflection helpers
 // ---------------------------------------------------------------------------
 
-fn list<'a>(object: &'a dyn Reflect, field: &str) -> Vec<FieldValue<'a>> {
-    match object.field(field) {
-        Some(FieldValue::List(items)) => items,
-        Some(FieldValue::Null) | None => Vec::new(),
-        Some(other) => vec![other],
-    }
-}
-
-fn text(object: &dyn Reflect, field: &str) -> Option<String> {
-    match object.field(field)?.as_scalar()? {
-        Scalar::Str(s) if !s.is_empty() => Some(s.to_string()),
-        Scalar::Str(_) => None,
-        other => Some(other.to_string()),
-    }
-}
-
-fn scalar_u64(object: &dyn Reflect, field: &str) -> Option<u64> {
-    match object.field(field)?.as_scalar()? {
-        Scalar::UInt(v) => Some(v),
-        Scalar::Int(v) if v >= 0 => Some(v as u64),
-        _ => None,
-    }
-}
-
-/// The uuid a reference names - the identity layer's reading, so every
-/// spelling of the field is one answer.
-fn uuid_of_reference(object: &dyn Reflect) -> Option<String> {
-    energyml_core::identity::uuid_of_reflect(object)
-        .filter(|uuid| !uuid.is_empty())
-        .map(str::to_string)
-}
+// The readers of a field are the door's (ADR 0046), under the names this file
+// already uses.
+use energyml_core::reflect::fields::{items as list, text, unsigned as scalar_u64};
 
 #[cfg(test)]
 mod tests {
@@ -571,6 +664,8 @@ mod tests {
             rows: Rows {
                 rows: keys.len().min(values.len()),
                 columns: vec![Some(keys), Some(values)],
+                per_row: vec![1, 1],
+                nulls: vec![None, None],
                 notes: Vec::new(),
             },
             notes: Vec::new(),
@@ -677,6 +772,8 @@ mod tests {
                 Some(Values::Integer(vec![1, 2, 3])),
                 Some(Values::Floating(vec![0.1, 0.2])),
             ],
+            per_row: vec![1, 1],
+            nulls: vec![None, None],
             rows: 2,
             notes: Vec::new(),
         };

@@ -21,8 +21,10 @@ graph TD
   domain --> proj["energyml-proj: reprojection over proj4rs"]
   geometry --> build["energyml-build: creating objects"]
   geometry --> section["energyml-section / energyml-sheet: SVG drawings"]
+  section --> views["energyml-views: the views of a package as pictures"]
   build --> cli["energyml-cli, Python bridge"]
   export --> cli
+  views --> cli
 ```
 
 - **`energyml-core`** has no knowledge of any schema and no native dependency
@@ -87,6 +89,33 @@ let title = path::get_string(object.as_reflect(), "Citation.Title")?;
 // ...or downcast to the concrete one.
 let repr = object.as_reflect().downcast_ref::<resqml::TriangulatedSetRepresentation>();
 ```
+
+### Reading a field as a plain value: one door
+
+To read one field of a reflected object as a string, a number, a flag or a
+nested object, use `energyml_core::reflect::fields` rather than matching on
+`FieldValue` yourself. Its policy is the same for every reader:
+
+- an absent or unset field is `None` (an empty `Vec` for the plural readers),
+  never zero or `false`;
+- a blank string is absent for `text`, and the text is returned as written;
+- a field of the wrong shape is `None`; a string is never parsed as a number
+  unless you ask for the `_lexical` reader, and a double is an integer only when
+  it is whole;
+- `require_text`, `require_number`, `require_integer`, `require_unsigned` and
+  `require_flag` refuse by name (`MissingRequired`, `TypeMismatch`) when the
+  caller cannot go on without the value.
+
+```rust
+use energyml_core::reflect::fields;
+
+let title = fields::text(citation, "Title");           // Option<String>
+let count = fields::unsigned(array, "Count");          // Option<u64>
+let leaves = fields::objects(parent, "Patch");         // one or repeated
+let first = fields::require_text(object, "Uuid")?;     // a named refusal
+```
+
+See [ADR 0046](adr/0046-reading-a-field-through-one-door.md).
 
 ## Opening a package
 
@@ -163,6 +192,42 @@ Strict is the default. `ReadMode::Lenient` (CLI: `--lenient`) tolerates missing
 required elements and reports one diagnostic per invention. Parts no parser can
 read are listed by `energyml repair`. See [ADR 0004](adr/0004-reading-policy.md).
 
+### The members of a wellbore
+
+What does this well have? Its trajectories, the frames that sample along it, its marker
+frames (the tops), and the properties that hang on them. The question needs no array and no
+geometry, only the type, the uri and the title of each object and the references between
+them, so the answer is a pure function in `energyml_domain::well_members`, and a grid of
+wells and the depth coverage walk the same members.
+
+```rust
+use energyml_domain::well_members::well_members_of_index;
+
+for well in well_members_of_index(&index) {
+    println!("{}: {} trajectories, {} frames, {} properties",
+        well.title, well.trajectories.len(), well.frames.len(), well.properties.len());
+}
+```
+
+`well_members(objects, outgoing)` is the same walk over any inventory: `objects` are
+`ObjectFact`s (uri, qualified type, title) and `outgoing(uri)` gives the uris an object
+references, so a dataspace of a server can give its own edges. It is asked once per
+relevant object.
+
+- **A well is seeded from both ends.** A feature is a row even with nothing on it, and a
+  representation that reaches no well makes its own row. A representation reaches its well
+  by its interpretation and the interpretation's feature; a WITSML trajectory by its
+  wellbore and the feature that names that wellbore.
+- **The kinds are a table** (`MEMBER_KINDS`), read by the local name of the type without the
+  `obj_` of release 2.0.1, so one concept is the same in every release.
+- **A property is categorical** when it references a table of categories; the entry lists
+  those apart.
+- **The walk does not judge.** Whether a member can be drawn, the wording of a state and the
+  telling apart of two wells with one title are the business of the face. The result is
+  sorted by lower-case title, then by key.
+
+See [ADR 0040](adr/0040-the-members-of-a-wellbore.md).
+
 ## Editing and saving
 
 ```rust
@@ -182,6 +247,12 @@ Nothing touches the archive until the save, and the save **rebuilds** the
 package: `[Content_Types].xml`, every `.rels` file in both directions and
 `docProps/core.xml`. A description that no longer matches the contents is worse
 than none.
+
+A transaction (`start_transaction`, then `commit_transaction` or
+`rollback_transaction`) is a layer over everything the package holds that a
+save would write: the objects, the bytes staged for a part, the media links,
+the parts removed or superseded, the names of data files and the content types
+of attachments. A rollback restores all of them, not only the objects.
 
 ## Value arrays
 
@@ -234,6 +305,55 @@ values.boolean();
 `read` widens to one type per family; `read_native` keeps the file's own type;
 `read_into` allocates nothing.
 
+**What `read` refuses, by name.** A computed array that lacks what it computes
+from: a constant with no `Value` or no `Count` (a boolean constant is never
+`false` by default, a string constant never `""`), a lattice step or a range with
+no `Count`. A `Count` above 2^30 values, or a range that would pass `i64::MAX`:
+the file asked for an allocation the host cannot honour, so it is refused before
+anything is allocated. An inline `XmlArray` whose elements are not all of the
+array's type: no element is dropped, because dropping one shifts every value after
+it. An integer array reads **exactly**: 64-bit values are never widened through
+`f64`, and a `u64` above `i64::MAX` is refused. `values::count` agrees with
+`stored_dims` and `read` on an external part that designates a window
+(`StartIndex` and `Count`) of its dataset.
+
+**Strings.** A string dataset in HDF5 (fixed or variable length, ASCII or UTF-8)
+is read as `ArrayValues::Text`, and `values::read` widens it to `Values::Text`.
+An empty string is a value, not a gap. A backend that does not decode strings
+makes the column refuse by its name; it never answers an empty column or numbers
+in place of text (`ArrayValues::Text` has no bytes to lend, and `as_bytes` answers
+an empty slice). The HDF5 backend reads fixed-length strings up to 1024 bytes and
+refuses longer ones by name; it does not write strings.
+
+**Tables.** A table column that declares `ValueCountPerRow` greater than 1 reads
+its values per row: `Rows::per_row` says how many, `Rows::values_of(row, column)`
+gives the values of one row and `Rows::row_values(row)` those of a whole row.
+`Rows::cell` answers only for a scalar column, and says `None` for the others
+instead of a value that belongs to another row. It reads a cell as `ColumnCells`
+does: an integer equal to the array's `NullValue` and a `NaN` are `None`, never the
+number `-999` or `NaN` (`values_of` is `None` when any value of the row is absent).
+The keys of a `DoubleTableLookup`
+keep their fractional part (`Values::Floating`); those of a `StringTableLookup`
+stay integers.
+
+**Facets.** A property or a table column carries qualifiers, read by one function
+whatever the release: RESQML 2.0.1 writes the kind in `Facet` and the value in
+`Value`, EML 2.3 and RESQML 2.2 write the kind in `Kind` and the value in `Facet`.
+`Facet.value` is a `FacetValue`, `Standard` when the schema lists it and
+`Extension` when it is the producer's own
+([ADR 0024](adr/0024-facets-read-in-every-version.md)).
+
+**Reading a block.** `values::read_block` reads a block of an array by its
+**stored** dimensions (`start` and `count` per dimension) and not the rest; a
+source that hands back a different number of values than the block holds is
+refused by name. `values::element_block` and `values::slab_block` compute the
+block for elements, or for some slabs of the slowest free dimension (a time step
+of a series, one realization), from the shape of the property: they are the one
+block arithmetic, and the description of a property by slabs
+(`property::chunks::PropertyChunks`) reads through them. The page
+[The shape of a property](property-shape.md) gives the shape, the choice of a
+component and the description of a property.
+
 ## From a representation to something you can draw
 
 ```rust
@@ -261,6 +381,37 @@ Readers are a registry (`energyml_geometry::Readers`) keyed on the
 version-independent concept name, so a new release that keeps a concept needs no
 new reader.
 
+## Directional surveys
+
+A survey is read in `energyml_geometry::stations`, for a WITSML 2.1 `Trajectory` and for a RESQML 2.0.1
+`DeviationSurveyRepresentation`, in four steps that each answer on their own.
+
+- **Read**: `stations_of` lists the stations of the file, the values it declares at them (`Tvd`, `DispNs`, `DispEw`,
+  `VertSect`, `Dls`) and the vertical section it declares (`AziVertSect` and its origin), and places nothing.
+- **Judge**: `diagnose` runs ten checks in a written order and reports each as passed, failed with a typed `Finding`, or
+  not reached. `read` replays the same steps and stops at the first failure with the same sentences.
+- **Place**: `read_declaring` places the survey from its datum. A convention the file does not state is a parameter of
+  the call (`SurveyDeclarations`): the north when `AziRef` is absent, and whether rejected stations are left out. The
+  result carries where its north came from (`NorthSource`: stated, corrected from the file's convergence and
+  declination, declared, or not needed) and the stations it kept. `survey_path` gives the line between the stations as a
+  `PlacedPath`. The points are in the units of the CRS the object is in.
+- **Compare**: `energyml_analysis::survey_qc` works on a read survey. `SignificanceCriterion` says whether an azimuth
+  carries information, `SectionAzimuth` gives the azimuth of the vertical section, `compare` sets a survey against another
+  path, `rotation_fit` fits the rotation between two surveys of one well, `stated_against_computed` compares the values the
+  file declares with those recomputed, and `pairings` pairs the surveys of a well.
+
+```rust
+use energyml_geometry::stations;
+
+let diagnosis = stations::diagnose(&survey, &store, &declarations);
+for (check, finding) in diagnosis.failures() {
+    println!("{check:?}: {finding:?}");
+}
+```
+
+The choices the registry makes for a survey are in [House rules](house-rules.md) and
+[ADR 0034](adr/0034-survey-north-and-stations.md).
+
 ## One CRS, whichever version wrote it
 
 A coordinate system is one object in RESQML 2.0.1 and three joined by references
@@ -276,7 +427,17 @@ let placed = crs.to_metres(point)?;   // placed, and in metres
 flip). `to_metres` also normalises units. Units convert on the string the file
 contains, never on a generated Rust variant (`LengthUom::Mm` meant the megametre
 in one release and the millimetre in another). A unit outside the table is an
-error, not an assumption.
+error, not an assumption. Resistivity, conductivity and angle per length (dogleg
+severity) convert too; see
+[Statistics, scales and measured depth](statistics-and-depth.md).
+
+`crs.axes` says what the file states about the order of the two horizontal axes
+of the placed frame (`Stated`, `NotStated`, `Unusable` or `Contradictory`; it never
+guesses, and a missing statement never stops a point from being placed). Whether
+that frame is direct or indirect decides which side is right around a well.
+`direction_to_projected` is the door for vectors as `to_projected` is for points:
+the same rotation and vertical flip, without the offset. See
+[Around the well](around-the-well.md).
 
 Reprojection goes through the `reproject::Reprojector` trait; `energyml-proj`
 is the shipped implementation, pure Rust over `proj4rs` (so it builds for
@@ -329,6 +490,20 @@ The objects a part holds by value (a WITSML `Channel` in a `Log`) are data
 objects of their own: `resources()` lists the parts, `contents()` the contained
 objects with their edge to the container, and `references()` gives a reference
 written inside a contained object to that object ([ADR-0023](adr/0023-objects-held-by-value.md)).
+
+## Reading the package once per operation
+
+An operation that touches many objects reads each shared object once. The caches that do it live no longer than
+the operation, so none can serve a stale answer:
+
+- `property_kind::Resolver` keeps the `PropertyKind` objects it found (and those it did not) for its own life:
+  build one per operation, not one per property.
+- `well_strata::StrataCache` keeps the ranks, the merged colour sets and the measured depths of a package for
+  the frames passed to `well_strata::of_frame_cached` (and `strata_by_md::of_representation_cached`); `of_frame`
+  uses a fresh one per call.
+- `integrity::run` reads each table, and each link target, once for all the table checks of the run.
+- `energyml_cache::colours::decisions_of` answers the colour of several objects in one walk; the views ask it
+  through `ColourDoor::paint_all`.
 
 ## Further reading
 

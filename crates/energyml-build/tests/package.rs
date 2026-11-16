@@ -202,7 +202,7 @@ fn a_square() -> energyml_build::pieces::Pieces {
     energyml_build::pieces::Pieces::empty().with(
         "square",
         energyml_build::pieces::Source::Shape {
-            geometry: Geometry {
+            geometry: Arc::new(Geometry {
                 kind: "polylines",
                 patches: vec![Patch {
                     index: 0,
@@ -216,7 +216,7 @@ fn a_square() -> energyml_build::pieces::Pieces {
                     topology: Topology::Polylines(vec![4]),
                     closed: Vec::new(),
                 }],
-            },
+            }),
             closed: None,
         },
     )

@@ -95,8 +95,8 @@ pub fn template_uuid(recipe: &str) -> Result<&'static str, String> {
 
 /// A parameter to record, before it is typed.
 ///
-/// Three kinds and no more, because three are what the templates declare:
-/// `double` with a unit, `string`, and a reference to an object. A caller with
+/// Four kinds, because four are what the templates declare: `double` with a
+/// unit, `integer`, `string`, and a reference to an object. A caller with
 /// something else has a template to extend first, which is the right order -
 /// a parameter no template declares is a parameter no consumer will look for.
 #[derive(Debug, Clone)]
@@ -129,9 +129,37 @@ pub enum Parameter {
         /// The `DataObjectReference`, as JSON.
         reference: Value,
     },
+    /// A whole number - `eml23.IntegerQuantityParameter`, which has no unit
+    /// (common TRG 2.3 section 3.8, p. 47: `Value: long`).
+    Integer {
+        /// The parameter's name, matching a `ParameterTemplate` title.
+        title: String,
+        /// The value.
+        value: i64,
+    },
 }
 
 impl Parameter {
+    /// The parameter's title, whatever its kind.
+    pub fn title(&self) -> &str {
+        match self {
+            Parameter::Double { title, .. }
+            | Parameter::Text { title, .. }
+            | Parameter::Object { title, .. }
+            | Parameter::Integer { title, .. } => title,
+        }
+    }
+
+    /// The value as a number: a `Double`'s value, an `Integer`'s as `f64`;
+    /// `None` for text and objects.
+    pub fn number(&self) -> Option<f64> {
+        match self {
+            Parameter::Double { value, .. } => Some(*value),
+            Parameter::Integer { value, .. } => Some(*value as f64),
+            Parameter::Text { .. } | Parameter::Object { .. } => None,
+        }
+    }
+
     /// The typed eml 2.3 parameter this becomes.
     fn written(&self) -> Value {
         match self {
@@ -153,6 +181,12 @@ impl Parameter {
                 "Title": title,
                 "IsUncertain": false,
                 "DataObject": reference,
+            }),
+            Parameter::Integer { title, value } => json!({
+                "$type": "eml23.IntegerQuantityParameter",
+                "Title": title,
+                "IsUncertain": false,
+                "Value": value,
             }),
         }
     }
@@ -338,6 +372,95 @@ mod tests {
         assert_eq!(parameters[2]["$type"], "eml23.StringParameter");
         assert_eq!(parameters[3]["$type"], "eml23.DataObjectParameter");
         assert_eq!(parameters[3]["DataObject"]["Uuid"], "abc");
+    }
+
+    #[test]
+    fn an_integer_is_written_as_an_integer_quantity_parameter() {
+        // common TRG 2.3 section 3.8, p. 47: `IntegerQuantityParameter` has a `Value: long`
+        // and no unit. To break it: write `Integer` as a `DoubleQuantityParameter`.
+        let record = Record {
+            recipe: "offset",
+            uuid: "00000000-0000-4000-8000-000000000004",
+            creation: "2026-09-07T00:00:00Z",
+            title: None,
+            output_title: None,
+            descriptor: Value::Null,
+            parameters: vec![Parameter::Integer {
+                title: "count".into(),
+                value: 7,
+            }],
+        };
+        let made = activity(&record).expect("built");
+        let written = &made["Parameter"][0];
+        assert_eq!(written["$type"], "eml23.IntegerQuantityParameter");
+        assert_eq!(written["Title"], "count");
+        assert_eq!(written["Value"].as_i64(), Some(7), "a JSON integer, not 7.0");
+        assert!(written.get("Uom").is_none(), "the class has no unit");
+    }
+
+    #[test]
+    fn a_parameter_says_its_title_and_its_number() {
+        let parameters = [
+            Parameter::Double {
+                title: "a".into(),
+                value: 2.5,
+                uom: None,
+            },
+            Parameter::Integer {
+                title: "b".into(),
+                value: 3,
+            },
+            Parameter::Text {
+                title: "c".into(),
+                value: "x".into(),
+            },
+            Parameter::Object {
+                title: "d".into(),
+                reference: Value::Null,
+            },
+        ];
+        let titles: Vec<&str> = parameters.iter().map(Parameter::title).collect();
+        assert_eq!(titles, ["a", "b", "c", "d"]);
+        let numbers: Vec<Option<f64>> = parameters.iter().map(Parameter::number).collect();
+        assert_eq!(numbers, [Some(2.5), Some(3.0), None, None]);
+    }
+
+    /// The words `inputFile` declares as its constraint, written out here on purpose: the test
+    /// compares the data file with a text that does not come from the data file.
+    const INPUT_FILE_CONSTRAINT: &str = "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named";
+
+    #[test]
+    fn every_canonical_template_declares_input_and_input_file() {
+        // common TRG 2.3 section 3.1, p. 40: a parameter "must have an equivalent in the
+        // activity descriptor parameters". To break it: remove `inputFile` from an entry of
+        // `data/activityTemplates.json`.
+        let mut checked = 0;
+        for (recipe, template) in templates().as_object().unwrap() {
+            if recipe.starts_with("__") {
+                continue;
+            }
+            let parameters = template["Parameter"].as_array().expect("parameters");
+            for (title, kind, constraint) in [
+                ("input", "dataObject", None),
+                ("inputFile", "string", Some(INPUT_FILE_CONSTRAINT)),
+            ] {
+                let found: Vec<&Value> = parameters.iter().filter(|p| p["Title"] == title).collect();
+                assert_eq!(found.len(), 1, "{recipe}: exactly one `{title}`");
+                let declared = found[0];
+                assert_eq!(declared["AllowedKind"], json!([kind]), "{recipe}: `{title}` kind");
+                assert_eq!(declared["IsInput"], true, "{recipe}: `{title}` is an input");
+                assert_eq!(declared["IsOutput"], false, "{recipe}: `{title}` is no output");
+                assert_eq!(declared["MinOccurs"], 0, "{recipe}: `{title}` min");
+                assert_eq!(declared["MaxOccurs"], -1, "{recipe}: `{title}` max");
+                assert_eq!(
+                    declared["Constraint"].as_str(),
+                    constraint,
+                    "{recipe}: `{title}` constraint"
+                );
+            }
+            checked += 1;
+        }
+        assert!(checked >= 10, "the registry lost recipes: {checked}");
     }
 
     #[test]

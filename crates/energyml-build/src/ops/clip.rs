@@ -35,13 +35,13 @@
 //!   TODO(reference): verify - the point-in-polygon rule it implements (even-odd or winding) is not cited; add the original reference once checked.
 
 use energyml_analysis::ijk::{self, LatticeError};
-use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::Topology;
 
 use crate::declare::{Inputs, Params, Shape, Suggestions};
 use crate::operation::{About, Category, Context, Need, Note, Operation, Plan, Refusal, Slot};
 use crate::pieces::{Lattice, Pieces};
 
+use super::blocks::double;
 use super::delete_nodes::erase;
 use super::support;
 use super::transform::{kind_of, write_as};
@@ -71,24 +71,6 @@ pub struct ClipInputs {
     pub inner: Vec<Shape>,
 }
 
-fn double(title: &str, value: f64) -> Parameter {
-    Parameter::Double {
-        title: title.to_string(),
-        value,
-        uom: None,
-    }
-}
-
-/// The title of the object behind a shape, or the shape's name.
-fn title_of(shape: &Shape) -> String {
-    shape
-        .known
-        .as_ref()
-        .and_then(|known| known.reference.as_ref())
-        .map(|r| r.title.clone())
-        .unwrap_or_else(|| shape.name.clone())
-}
-
 /// The single 2D grid a shape is, if it is one.
 fn grid_counts(shape: &Shape) -> Option<[usize; 2]> {
     match shape.geometry.patches.as_slice() {
@@ -98,27 +80,6 @@ fn grid_counts(shape: &Shape) -> Option<[usize; 2]> {
         },
         _ => None,
     }
-}
-
-/// A ring's corners in plan, flat `[x, y, …]`.
-fn corners(slot: &str, ring: &Shape) -> Result<Vec<f64>, Refusal> {
-    let points: Vec<[f64; 3]> = ring
-        .geometry
-        .patches
-        .iter()
-        .flat_map(|p| p.points.iter().copied())
-        .collect();
-    if points.len() < 3 {
-        return Err(Refusal::on(
-            slot,
-            format!(
-                "`{}` holds {} point(s): a ring encloses something with at least 3",
-                title_of(ring),
-                points.len()
-            ),
-        ));
-    }
-    Ok(points.iter().flat_map(|p| [p[0], p[1]]).collect())
 }
 
 /// A ring in another frame than the shape is refused: the comparison is made
@@ -133,9 +94,9 @@ fn same_frame(slot: &str, shape: &Shape, ring: &Shape) -> Result<(), Refusal> {
             slot,
             format!(
                 "`{}` is in `{}` and `{}` in `{}`: a ring is compared to the nodes in their numbers, and two frames' numbers do not compare",
-                title_of(ring),
+                ring.title(),
                 of_ring.title,
-                title_of(shape),
+                shape.title(),
                 of_shape.title
             ),
         ));
@@ -155,16 +116,21 @@ fn cut_nodes(inputs: &ClipInputs) -> Result<Vec<bool>, Refusal> {
     let mut gone = vec![false; flat.len() / 3];
     if let Some(ring) = &inputs.outer {
         same_frame("outer", &inputs.shape, ring)?;
-        let outside = energyml_geometry::clip::nodes_in_ring(&flat, &corners("outer", ring)?, true)
-            .map_err(|why| Refusal::on("outer", why))?;
+        let outside =
+            energyml_geometry::clip::nodes_in_ring(&flat, &super::blocks::ring_corners("outer", ring)?, true)
+                .map_err(|why| Refusal::on("outer", why))?;
         for at in outside {
             gone[at as usize] = true;
         }
     }
     for ring in &inputs.inner {
         same_frame("inner", &inputs.shape, ring)?;
-        let inside = energyml_geometry::clip::nodes_in_ring(&flat, &corners("inner", ring)?, false)
-            .map_err(|why| Refusal::on("inner", why))?;
+        let inside = energyml_geometry::clip::nodes_in_ring(
+            &flat,
+            &super::blocks::ring_corners("inner", ring)?,
+            false,
+        )
+        .map_err(|why| Refusal::on("inner", why))?;
         for at in inside {
             gone[at as usize] = true;
         }
@@ -223,7 +189,7 @@ impl Operation for Clip {
                 "shape",
                 format!(
                     "every node of `{}` lies inside `outer` and outside every `inner`: nothing to cut - the result would be the shape itself",
-                    title_of(shape)
+                    shape.title()
                 ),
             ));
         }
@@ -232,7 +198,7 @@ impl Operation for Clip {
                 "shape",
                 format!(
                     "the rings cut all {total} node(s) of `{}`: nothing would be left to write",
-                    title_of(shape)
+                    shape.title()
                 ),
             ));
         }
@@ -248,13 +214,13 @@ impl Operation for Clip {
                     match why {
                         LatticeError::Turned { along_i, along_j } => format!(
                             "`{}` runs along ({}, {}) then ({}, {}) in its frame's numbers: a turned or reversed lattice is not written back here",
-                            title_of(shape),
+                            shape.title(),
                             along_i[0],
                             along_i[1],
                             along_j[0],
                             along_j[1]
                         ),
-                        other => format!("`{}` {other}", title_of(shape)),
+                        other => format!("`{}` {other}", shape.title()),
                     },
                 )
             })?;

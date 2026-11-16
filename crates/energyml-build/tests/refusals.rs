@@ -16,6 +16,7 @@
 use energyml_build::operation::{Choices, Fitness, Identity, Need, Purpose, Refusal, Registry, Slot, When};
 use energyml_build::pieces::{Pieces, Source};
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
+use std::sync::Arc;
 
 fn cloud() -> Pieces {
     let points: Vec<[f64; 3]> = (0..3)
@@ -24,7 +25,7 @@ fn cloud() -> Pieces {
     Pieces::empty().with(
         "shape",
         Source::Shape {
-            geometry: Geometry {
+            geometry: Arc::new(Geometry {
                 kind: "cloud",
                 patches: vec![Patch {
                     index: 0,
@@ -33,7 +34,7 @@ fn cloud() -> Pieces {
                     topology: Topology::Points,
                     closed: Vec::new(),
                 }],
-            },
+            }),
             closed: None,
         },
     )

@@ -58,11 +58,13 @@ use energyml_analysis::nodes::flipped;
 use energyml_domain::provenance::Parameter;
 use energyml_domain::units::Dimension;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
+use std::sync::Arc;
 
 use crate::declare::{Choice, Inputs, Params, Shape, Suggestions};
 use crate::operation::{About, Category, Context, Need, Note, Operation, Plan, Refusal, Slot};
 use crate::pieces::Pieces;
 
+use super::blocks::double;
 use super::pointset::{Pointset, PointsetInputs, PointsetParams};
 use super::polylines::PolylinesInputs;
 use super::support;
@@ -376,11 +378,26 @@ fn moved(
 /// never a second copy of a writer. `transform` and `project` both end here.
 pub(crate) fn write_as(
     kind: Kind,
-    result: Shape,
+    mut result: Shape,
     written: Written,
     seed: &str,
     cx: &Context<'_>,
 ) -> Result<Plan, Refusal> {
+    // **Every kind is placed the way a point set is** (`Pointset::plan` does it
+    // for `Kind::Points`): `polylines::write` and `triangles::write` do not,
+    // because they are also called with shapes an operation computed, already
+    // in the frame. Without it, a `sourceEpsg` and a `project` that differ would
+    // refuse or reproject a point set and write a surface or a line under
+    // the new CRS's label with its original numbers.
+    if !matches!(kind, Kind::Points) {
+        let frame = support::frame_in(&cx.known(), &written.frame, cx.identity, cx.when, &mut 0)?;
+        result.geometry = std::sync::Arc::new(support::geometry_placed(
+            &result.name,
+            &result.geometry,
+            result.known.as_ref(),
+            &frame,
+        )?);
+    }
     match kind {
         Kind::Points => Pointset.plan(
             PointsetInputs {
@@ -419,14 +436,6 @@ pub(crate) fn flipped_in(before: &Geometry, after: &Geometry) -> usize {
             _ => 0,
         })
         .sum()
-}
-
-fn double(title: &str, value: f64) -> Parameter {
-    Parameter::Double {
-        title: title.to_string(),
-        value,
-        uom: None,
-    }
 }
 
 impl Operation for Transform {
@@ -633,7 +642,7 @@ impl Operation for Transform {
         }
         let result = Shape {
             name: shape.name.clone(),
-            geometry,
+            geometry: Arc::new(geometry),
             closed: shape.closed.clone(),
             known: shape.known.clone(),
         };

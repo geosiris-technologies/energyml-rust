@@ -239,9 +239,8 @@ pub fn from_spec(
         ));
     }
     let colour = colour.ok_or("a marker needs `colour=` (#rrggbb or #rrggbbaa)")?;
-    let hex = colour.strip_prefix('#').unwrap_or("");
-    if !matches!(hex.len(), 6 | 8) || !hex.chars().all(|c| c.is_ascii_hexdigit()) {
-        return Err(format!("colour `{colour}`: expected #rrggbb or #rrggbbaa"));
+    if energyml_domain::color::Rgba::parse(&colour).is_err() {
+        return Err(format!("colour `{colour}`: expected #rrggbb, #rrggbbaa or #rgb"));
     }
     let at = match (at.as_deref(), md) {
         (Some("head"), None) => MarkerPlace::Head,

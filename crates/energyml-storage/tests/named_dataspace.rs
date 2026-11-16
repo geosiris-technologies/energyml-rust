@@ -303,22 +303,32 @@ fn an_object_put_in_a_named_dataspace_is_in_it() {
 #[test]
 fn a_name_the_uri_refuses_is_refused_by_name() {
     let bytes = model_bytes();
-    for name in ["", "it's", "a')/b", "x'"] {
+    // An empty name is no dataspace.
+    let opened =
+        EpcStore::from_reader_in_dataspace(Box::new(Cursor::new(bytes.clone())), "model.epc", registry(), "");
+    match opened.err() {
+        Some(Error::BadUri { reason, .. }) => {
+            assert!(reason.contains("not a usable dataspace name"), "{reason}")
+        }
+        other => panic!("an empty name should be a BadUri, got {other:?}"),
+    }
+    // A quote is written twice inside a quoted value (ETP v1.2 section 25.3.10),
+    // so a name with an apostrophe is a usable name, and its uri reads back as it.
+    for name in ["it's", "a')/b", "x'"] {
         let opened = EpcStore::from_reader_in_dataspace(
             Box::new(Cursor::new(bytes.clone())),
             "model.epc",
             registry(),
             name,
+        )
+        .unwrap_or_else(|error| panic!("{name:?} is a usable dataspace name: {error}"));
+        let uri = opened.dataspace().uri;
+        assert_eq!(uri, format!("eml:///dataspace('{}')", name.replace('\'', "''")));
+        assert_eq!(
+            energyml_core::identifiers::EtpUri::dataspace_of(&uri).as_deref(),
+            Some(name)
         );
-        match opened.err() {
-            Some(Error::BadUri { reason, .. }) => {
-                assert!(
-                    reason.contains("not a usable dataspace name"),
-                    "{name:?}: {reason}"
-                )
-            }
-            other => panic!("{name:?} should be a BadUri, got {other:?}"),
-        }
+        // Break it: unescape nothing in `EtpUri::parse` (the dataspace comes back doubled).
     }
     let dir = std::env::temp_dir().join(format!("energyml-named-dataspace-{}", std::process::id()));
     std::fs::create_dir_all(&dir).expect("a temporary folder");

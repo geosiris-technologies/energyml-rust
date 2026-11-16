@@ -86,6 +86,10 @@ Related decisions: [ADR-0005](../../docs/adr/0005-refuse-rather-than-draw.md), [
 
 Units are identified by URI: the identity of the object a reference names, or its address if absent from the package.
 
+## The members of a wellbore
+
+`well_members` answers what a well has (trajectories, frames, marker frames, properties) from the inventory and the references alone, with no array and no geometry. It is a pure function of facts (`ObjectFact`, and an `outgoing` function asked once per relevant object), so the same walk serves a package index and a dataspace. It lives in the domain and not in the cache because the depth coverage (`md_extent`) needs it and the domain does not depend on the cache ([ADR 0040](../../docs/adr/0040-the-members-of-a-wellbore.md)). A well is seeded from both ends, the kinds are a table (`MEMBER_KINDS`), and the walk does not judge: whether a member can be drawn is the face's business.
+
 ## Time scale chart
 
 The geologic time-scale concepts and bounds are embedded from `data/geolts/` and compacted at build time by the same reader a fresh export goes through. Ages carry a decimal comma, which read as a dotted number would vanish without noise; a division can name several broader concepts (its parent is the deepest level above its own); and a code is not an identity (one code names several divisions), so lookup takes the code and the label and several answers are a refusal.

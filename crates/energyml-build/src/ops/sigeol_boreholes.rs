@@ -95,8 +95,7 @@ use crate::borehole::{self, Borehole};
 use crate::declare::{Epsg, Features, Inputs, Params, Suggestions};
 use crate::geojson::{Position, Shape};
 use crate::operation::{
-    About, ActivityDraft, Category, Context, Dropped, Identity, Need, NewObject, Note, Operation, Plan,
-    Refusal, Slot,
+    About, ActivityDraft, Category, Context, Dropped, Identity, Need, Note, Operation, Plan, Refusal, Slot,
 };
 use crate::pieces::Pieces;
 
@@ -247,7 +246,7 @@ impl Operation for SigeolBoreholes {
         let mut features = 0usize;
         let mut boreholes = 0usize;
         for collection in &inputs.features {
-            for feature in &collection.features {
+            for feature in collection.features.iter() {
                 features += 1;
                 if borehole::is_borehole(&feature.properties) {
                     boreholes += 1;
@@ -322,12 +321,7 @@ impl Operation for SigeolBoreholes {
         // projecting on a guess is the repository's rule: an EPSG code chosen
         // here would move every coordinate by a decision nobody made.
         if let crate::crs::Target::Geographic(code) = &target {
-            return Err(Refusal::new(
-                "project",
-                format!(
-                    "a borehole is a vertical extent, and EPSG:{code} measures its horizontal axes in degrees while its depths are linear: every hole would be written between a hundred and ten thousand times longer than the model is wide, which no reader can reconcile - name a projected system in `project` (EPSG:2154 for mainland France)"
-                ),
-            ));
+            return Err(super::blocks::refuse_degrees_target(code));
         }
         // Created here, so metres pointing up - which is what lets a depth be
         // subtracted from an elevation below.
@@ -349,7 +343,7 @@ impl Operation for SigeolBoreholes {
             if source.is_empty() {
                 source = collection.file.clone();
             }
-            for feature in &collection.features {
+            for feature in collection.features.iter() {
                 if !borehole::is_borehole(&feature.properties) {
                     aside.add(
                         "not a `Borehole`: the feature is of another kind",
@@ -473,57 +467,30 @@ impl Operation for SigeolBoreholes {
                     Some(uuid) => uuid.to_string(),
                     None => support::next_uuid(identity, &format!("well-feature:{key}"), &mut rank)?,
                 };
-                objects.push(NewObject {
-                    uuid: feature_uuid.clone(),
-                    qualified_type: "resqml22.WellboreFeature".to_string(),
-                    role: "feature".to_string(),
-                    title: title.clone(),
-                    json: json!({
-                        "$type": "resqml22.WellboreFeature",
-                        "uuid": feature_uuid,
-                        "schemaVersion": "2.2",
-                        "Citation": cite(&title),
-                        // The BSS is a published national register, so a hole in
-                        // it *is* well known - the one place this can honestly
-                        // say true where `support::represented_in` says false.
-                        "IsWellKnown": true,
-                        "Aliases": aliases(&hole),
-                        "ExtensionNameValue": extensions(&hole),
-                    }),
-                });
-
-                // -- its interpretation ---------------------------------------
+                // The BSS is a published national register, so a hole in it *is*
+                // well known - the one place this can honestly say true where
+                // `support::represented_in` says false. The export states a
+                // drilled interval and a date of drilling: this hole exists in
+                // the ground.
                 let interpretation_uuid =
                     support::next_uuid(identity, &format!("well-interpretation:{key}"), &mut rank)?;
                 let interpretation_title = format!("{title} - interpretation");
-                objects.push(NewObject {
-                    uuid: interpretation_uuid.clone(),
-                    qualified_type: "resqml22.WellboreInterpretation".to_string(),
-                    role: "interpretation".to_string(),
-                    title: interpretation_title.clone(),
-                    json: json!({
-                        "$type": "resqml22.WellboreInterpretation",
-                        "uuid": interpretation_uuid,
-                        "schemaVersion": "2.2",
-                        "Citation": cite(&interpretation_title),
-                        "Domain": "depth",
-                        // The export states a drilled interval and a date of
-                        // drilling: this hole exists in the ground.
-                        "IsDrilled": true,
-                        "InterpretedFeature": {
-                            "$type": "eml23.DataObjectReference",
-                            "Uuid": feature_uuid,
-                            "QualifiedType": "resqml22.WellboreFeature",
-                            "Title": title,
-                        },
-                    }),
-                });
-                let interpretation = json!({
-                    "$type": "eml23.DataObjectReference",
-                    "Uuid": interpretation_uuid,
-                    "QualifiedType": "resqml22.WellboreInterpretation",
-                    "Title": interpretation_title,
-                });
+                let (pair, interpretation) = super::blocks::wellbore_pair(
+                    &feature_uuid,
+                    &title,
+                    &interpretation_uuid,
+                    &interpretation_title,
+                    cite,
+                    super::blocks::WellboreFlags {
+                        is_well_known: Some(true),
+                        is_drilled: Some(true),
+                        feature_extras: vec![
+                            ("Aliases", Value::from(aliases(&hole))),
+                            ("ExtensionNameValue", Value::from(extensions(&hole))),
+                        ],
+                    },
+                );
+                objects.extend(pair);
 
                 // -- the datum, the trajectory and the frame -------------------
                 let (datum, datum_objects) = super::well::datum_in(

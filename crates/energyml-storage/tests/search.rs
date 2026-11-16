@@ -385,3 +385,29 @@ fn the_type_narrows_a_uuid_held_under_two_types() {
     .unwrap();
     assert_eq!(uri, summary("resqml22.PointSetRepresentation", U1, None).uri);
 }
+
+/// The rule of `EpcStore::lookup_uuid` (Identifier Specification v5.0 section
+/// 3.4.2.1, p. 15): of several versions of one object, the one that declares no
+/// version stands for the uuid when exactly one does. `resolve_uuid` used to
+/// answer `Ambiguous` here, where the store itself answers.
+#[test]
+fn the_one_entry_without_a_version_stands_for_its_uuid() {
+    let held = Fake::new(vec![
+        (summary("resqml22.Grid2dRepresentation", U1, Some("1")), None),
+        (summary("resqml22.Grid2dRepresentation", U1, Some("2")), None),
+        (summary("resqml22.Grid2dRepresentation", U1, None), None),
+    ]);
+    let uri = block(resolve_uuid(&held, U1, None)).unwrap();
+    assert_eq!(uri, summary("resqml22.Grid2dRepresentation", U1, None).uri);
+
+    // Two unversioned entries are two candidates, not one.
+    let twice = Fake::new(vec![
+        (summary("resqml22.Grid2dRepresentation", U1, None), None),
+        (summary("resqml22.Grid2dRepresentation", U1, None), None),
+    ]);
+    assert!(matches!(
+        block(resolve_uuid(&twice, U1, None)).unwrap_err(),
+        Error::Ambiguous { .. }
+    ));
+    // Break it: drop the `bare` narrowing in `search::resolve_uuid`.
+}

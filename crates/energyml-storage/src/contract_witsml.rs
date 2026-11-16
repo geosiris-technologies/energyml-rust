@@ -74,12 +74,12 @@
 use std::collections::BTreeSet;
 use std::fmt::Display;
 
-use energyml_core::identifiers::EtpUri;
 use energyml_core::identity::{title_of_reflect, uuid_of_reflect};
 use energyml_core::registry::Registry;
 
 use crate::context::{Context, Found, Navigable, Scope};
 use crate::contract::{ModelObject, Rule};
+use crate::contract_support::{self as support, dataspace_of, pairs, set, uuid_of, uuids_of};
 use crate::error::{Error, Result};
 use crate::graph::{Edge, EdgeKind};
 use crate::kinds::KindBasis;
@@ -665,59 +665,11 @@ fn label(uuid: &str) -> String {
 }
 
 fn show(uuids: &BTreeSet<String>) -> String {
-    format!(
-        "{{{}}}",
-        uuids
-            .iter()
-            .map(|uuid| label(uuid))
-            .collect::<Vec<_>>()
-            .join(", ")
-    )
-}
-
-fn set(uuids: &[&str]) -> BTreeSet<String> {
-    uuids.iter().map(|uuid| uuid.to_ascii_lowercase()).collect()
+    support::show(uuids, label)
 }
 
 fn show_pairs(pairs: &BTreeSet<(String, String)>) -> String {
-    format!(
-        "{{{}}}",
-        pairs
-            .iter()
-            .map(|(from, to)| format!("{} -> {}", label(from), label(to)))
-            .collect::<Vec<_>>()
-            .join(", ")
-    )
-}
-
-fn dataspace_of(uri: &str) -> String {
-    match EtpUri::parse(uri).ok().and_then(|parsed| parsed.dataspace) {
-        Some(name) => format!("eml:///dataspace('{}')", name.replace('\'', "''")),
-        None => "eml:///".to_string(),
-    }
-}
-
-fn uuid_of(uri: &str) -> String {
-    EtpUri::parse(uri)
-        .ok()
-        .and_then(|parsed| parsed.uuid)
-        .unwrap_or_else(|| uri.to_string())
-        .to_ascii_lowercase()
-}
-
-fn pairs(edges: &[Edge]) -> BTreeSet<(String, String)> {
-    edges
-        .iter()
-        .map(|edge| (uuid_of(&edge.from), uuid_of(&edge.to)))
-        .collect()
-}
-
-fn uuids_of(found: &Found) -> BTreeSet<String> {
-    found
-        .resources
-        .iter()
-        .map(|summary| summary.uuid.to_ascii_lowercase())
-        .collect()
+    support::show_pairs(pairs, label)
 }
 
 /// A containment edge carries no field path: it is the inverse of the nesting

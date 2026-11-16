@@ -40,7 +40,7 @@ fn known(geometry: Geometry) -> Pieces {
         .with(
             "shape",
             Source::Shape {
-                geometry,
+                geometry: std::sync::Arc::new(geometry),
                 closed: None,
             },
         )
@@ -149,7 +149,7 @@ fn a_feature_collection_becomes_a_point_set_with_its_own_crs_created() {
         "lines.geojson",
         Source::Features {
             name: "lines.geojson".into(),
-            features: collection.features,
+            features: std::sync::Arc::new(collection.features),
         },
     );
     let registry = Registry::new();
@@ -221,7 +221,7 @@ fn a_feature_collection_against_a_crs_of_the_package_is_refused() {
         "lines.geojson",
         Source::Features {
             name: "lines.geojson".into(),
-            features: collection.features,
+            features: std::sync::Arc::new(collection.features),
         },
     );
     let why = Registry::new()
@@ -246,10 +246,10 @@ fn a_shape_without_a_frame_is_blocked_by_name_not_refused() {
     let pieces = Pieces::empty().with(
         "shape",
         Source::Shape {
-            geometry: Geometry {
+            geometry: std::sync::Arc::new(Geometry {
                 kind: "obj",
                 patches: vec![patch(0, square(), Topology::Points)],
-            },
+            }),
             closed: None,
         },
     );
@@ -388,7 +388,7 @@ fn a_frame_created_in_degrees_is_the_named_exception() {
         "lines.geojson",
         Source::Features {
             name: "lines.geojson".into(),
-            features: collection.features,
+            features: std::sync::Arc::new(collection.features),
         },
     );
     let plan = Registry::new()
@@ -525,7 +525,7 @@ fn polylines_said_closed_by_the_shape_are_written_closed_without_a_note() {
     pieces = pieces.with(
         "contours",
         Source::Shape {
-            geometry,
+            geometry: std::sync::Arc::new(geometry),
             closed: Some(vec![true, false]),
         },
     );
@@ -599,7 +599,7 @@ fn a_feature_collections_areas_are_rings_and_its_lines_are_open() {
         "lines.geojson",
         Source::Features {
             name: "lines.geojson".into(),
-            features: collection.features,
+            features: std::sync::Arc::new(collection.features),
         },
     );
     let plan = Registry::new()
@@ -1394,9 +1394,7 @@ fn a_margin_widens_the_grid_and_the_origin_it_wrote_is_reported() {
     assert_eq!(lattice["Origin"]["Coordinate1"], json!(-30.0));
     let reported = |name: &str| {
         plan.activity.parameters.iter().find_map(|p| match p {
-            energyml_domain::provenance::Parameter::Double { title, value, .. } if title == name => {
-                Some(*value)
-            }
+            other if other.title() == name => other.number(),
             _ => None,
         })
     };
@@ -1665,7 +1663,7 @@ fn surface(geometry: Geometry, up: Option<bool>) -> Pieces {
         .with(
             "shape",
             Source::Shape {
-                geometry,
+                geometry: std::sync::Arc::new(geometry),
                 closed: None,
             },
         )
@@ -2246,7 +2244,7 @@ fn the_shape_and_the_resqml_say_the_same_topology() {
         .with(
             "shape",
             Source::Shape {
-                geometry: Geometry {
+                geometry: std::sync::Arc::new(Geometry {
                     kind: "x",
                     patches: vec![Patch {
                         index: 0,
@@ -2255,7 +2253,7 @@ fn the_shape_and_the_resqml_say_the_same_topology() {
                         topology: Topology::Polylines(vec![3, 2]),
                         closed: vec![true, false],
                     }],
-                },
+                }),
                 closed: Some(vec![true, false]),
             },
         )

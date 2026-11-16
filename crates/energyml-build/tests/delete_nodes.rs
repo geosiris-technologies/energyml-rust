@@ -10,9 +10,9 @@
 
 use energyml_build::operation::{Choices, Identity, Plan, Purpose, Registry, When};
 use energyml_build::pieces::{Pieces, Source};
-use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 use serde_json::json;
+use std::sync::Arc;
 
 fn when() -> When {
     When {
@@ -25,10 +25,10 @@ fn bag(patches: Vec<Patch>, closed: Option<Vec<bool>>) -> Pieces {
     Pieces::empty().with(
         "shape",
         Source::Shape {
-            geometry: Geometry {
+            geometry: Arc::new(Geometry {
                 kind: "test",
                 patches,
-            },
+            }),
             closed,
         },
     )
@@ -47,7 +47,7 @@ fn plan(bag: &Pieces, nodes: serde_json::Value) -> Result<Plan, energyml_build::
 
 fn reported(plan: &Plan, title: &str) -> Option<f64> {
     plan.activity.parameters.iter().find_map(|p| match p {
-        Parameter::Double { title: t, value, .. } if t == title => Some(*value),
+        other if other.title() == title => other.number(),
         _ => None,
     })
 }

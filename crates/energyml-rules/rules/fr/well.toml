@@ -1,0 +1,26 @@
+# Traduction française du thème well : titres et textes. Pas encore relue par
+# un relecteur francophone ; ce qui manque se lit en anglais, et le dit.
+
+[[rule]]
+id = "house/well/tangent-at-a-knot"
+title = "À un nœud d'une trajectoire linéaire, la direction est celle de l'intervalle qui s'y termine"
+text = """
+Sur une trajectoire droite entre ses nœuds, la direction à un nœud est celle de l'intervalle qui s'y termine, celui où la ligne évalue ce paramètre. Au premier nœud, où aucun intervalle ne se termine, c'est la direction du premier intervalle."""
+
+[[rule]]
+id = "house/well/high-side-min-inclination"
+title = "Sous 1 degré d'inclinaison un trou n'a pas de high side, et son repère y est refusé"
+text = """
+Là où l'inclinaison du trou est sous 1 degré (ou au-dessus de 179 degrés), son high side n'est pas défini : le repère du trou est refusé à ce nœud seulement, par son nom (`HighSideUndefined`), jamais tourné vers le nord en silence. Une couche dessinée autour du trou l'est encore aux autres nœuds."""
+
+[[rule]]
+id = "house/well/tvd-below-md-datum"
+title = "Une profondeur verticale dessinée le long d'un puits se compte sous son datum MD"
+text = """
+Dans une projection ou un rideau le long d'un puits, la profondeur verticale se compte vers le bas depuis le datum MD, le point où la profondeur mesurée vaut 0, et non depuis le zéro du système vertical. Une ligne qui n'atteint pas son datum n'y a pas de TVD : la projection est refusée par son nom (`NoDatum`), jamais comptée depuis son premier nœud."""
+
+[[rule]]
+id = "house/well/conventions-are-declared"
+title = "Une convention que le fichier ne donne pas est déclarée par l'appelant, jamais devinée"
+text = """
+L'origine et le sens des angles polaires, l'axe lent d'une matrice par nœud et le signe de son axe latéral ne sont pas donnés par les fichiers : une couche qui en a besoin est refusée par son nom (`ConventionUndeclared`) tant que l'appelant ne les déclare pas. La déclaration est un paramètre de la lecture ; elle n'est jamais écrite dans le paquet."""

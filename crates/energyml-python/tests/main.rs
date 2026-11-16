@@ -20,5 +20,6 @@ mod model;
 mod naming;
 mod package;
 mod rename;
+mod repair;
 mod scope;
 mod versions;

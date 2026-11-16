@@ -22,7 +22,7 @@
 //!    through the two registries (track renderers and proportion modes).
 //! 2. [`text`] - measuring and wrapping against a real font's widths,
 //!    which [`layout`] uses to size a column and cut its text.
-//! 3. [`svg`] writes a [`layout::Layout`] out as an SVG string - a
+//! 3. [`picture`] translates a [`layout::Layout`] into a display list, and [`svg`] writes it out as an SVG string - a
 //!    layout untested against a real serialiser is a layout no one has
 //!    looked at.
 //! 4. [`read`] - [`read::board_of_frame`] turns a package's
@@ -30,10 +30,13 @@
 //!    one track per stratigraphic rank, one track per interval property -
 //!    reusing `energyml_domain::well_strata` and `energyml_domain::table`
 //!    rather than reading a frame or a lookup table a second time.
+//! 5. [`draw`] - the drawing every view shares: a keyed display list, its
+//!    SVG and PNG, graduations, label spreading, text measurement, rasters
+//!    painted through a caller's colour, a layered graph layout and the hit
+//!    test. It knows no EnergyML type, so that it can leave this crate later.
 //!
 //! Not here yet, on purpose: curves (decimated properties and WITSML
-//! channels), PNG/PDF export (behind features this crate does not
-//! declare), lithology patterns (still under a licensing review), the
+//! channels), PDF export, lithology patterns (still under a licensing review), the
 //! front end, and the CLI command.
 //!
 //! # No native dependency
@@ -42,8 +45,14 @@
 //! and `text` are pure computation, and `svg` writes a `String`. wasm is a
 //! hard requirement, and nothing here has a reason to
 //! break it.
+//! The `png` feature adds `resvg` with its raster images, pure Rust; the PNG is
+//! always the SVG rasterised.
 
+pub mod colour;
+pub mod draw;
 pub mod layout;
+pub mod picture;
 pub mod read;
+mod same_text;
 pub mod svg;
 pub mod text;

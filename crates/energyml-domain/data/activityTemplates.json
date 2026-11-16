@@ -192,6 +192,29 @@
         "AllowedKind": [
           "dataObject"
         ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
         "IsInput": false,
         "IsOutput": true,
         "MaxOccurs": -1,
@@ -386,6 +409,29 @@
         "MaxOccurs": 1,
         "MinOccurs": 0,
         "Title": "uncutSurfaces"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -650,6 +696,29 @@
         "AllowedKind": [
           "dataObject"
         ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
         "IsInput": false,
         "IsOutput": true,
         "MaxOccurs": -1,
@@ -687,9 +756,21 @@
         ],
         "IsInput": true,
         "IsOutput": false,
-        "Title": "input",
+        "MaxOccurs": -1,
         "MinOccurs": 0,
-        "MaxOccurs": -1
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -733,9 +814,21 @@
         ],
         "IsInput": true,
         "IsOutput": false,
-        "Title": "input",
+        "MaxOccurs": -1,
         "MinOccurs": 0,
-        "MaxOccurs": -1
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -801,9 +894,21 @@
         ],
         "IsInput": true,
         "IsOutput": false,
-        "Title": "input",
+        "MaxOccurs": -1,
         "MinOccurs": 0,
-        "MaxOccurs": -1
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -836,9 +941,21 @@
         ],
         "IsInput": true,
         "IsOutput": false,
-        "Title": "input",
+        "MaxOccurs": -1,
         "MinOccurs": 0,
-        "MaxOccurs": -1
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -915,9 +1032,21 @@
         ],
         "IsInput": true,
         "IsOutput": false,
-        "Title": "input",
+        "MaxOccurs": -1,
         "MinOccurs": 0,
-        "MaxOccurs": -1
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -972,9 +1101,21 @@
         ],
         "IsInput": true,
         "IsOutput": false,
-        "Title": "input",
+        "MaxOccurs": -1,
         "MinOccurs": 0,
-        "MaxOccurs": -1
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -1029,9 +1170,21 @@
         ],
         "IsInput": true,
         "IsOutput": false,
-        "Title": "input",
+        "MaxOccurs": -1,
         "MinOccurs": 0,
-        "MaxOccurs": -1
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -1075,9 +1228,21 @@
         ],
         "IsInput": true,
         "IsOutput": false,
-        "Title": "input",
+        "MaxOccurs": -1,
         "MinOccurs": 0,
-        "MaxOccurs": -1
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -1132,9 +1297,21 @@
         ],
         "IsInput": true,
         "IsOutput": false,
-        "Title": "input",
+        "MaxOccurs": -1,
         "MinOccurs": 0,
-        "MaxOccurs": -1
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -1178,9 +1355,21 @@
         ],
         "IsInput": true,
         "IsOutput": false,
-        "Title": "input",
+        "MaxOccurs": -1,
         "MinOccurs": 0,
-        "MaxOccurs": -1
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -1224,9 +1413,21 @@
         ],
         "IsInput": true,
         "IsOutput": false,
-        "Title": "input",
+        "MaxOccurs": -1,
         "MinOccurs": 0,
-        "MaxOccurs": -1
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -1382,6 +1583,29 @@
         "AllowedKind": [
           "dataObject"
         ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
         "IsInput": false,
         "IsOutput": true,
         "Title": "output",
@@ -1441,9 +1665,21 @@
         ],
         "IsInput": true,
         "IsOutput": false,
-        "Title": "input",
+        "MaxOccurs": -1,
         "MinOccurs": 0,
-        "MaxOccurs": -1
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -1531,9 +1767,21 @@
         ],
         "IsInput": true,
         "IsOutput": false,
-        "Title": "input",
+        "MaxOccurs": -1,
         "MinOccurs": 0,
-        "MaxOccurs": -1
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -1879,6 +2127,29 @@
         "AllowedKind": [
           "dataObject"
         ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
         "IsInput": false,
         "IsOutput": true,
         "Title": "output",
@@ -2016,6 +2287,29 @@
         "Title": "title",
         "MinOccurs": 0,
         "MaxOccurs": 1
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -2191,6 +2485,29 @@
         "Title": "featureKind",
         "MinOccurs": 0,
         "MaxOccurs": 1
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -2400,6 +2717,29 @@
         "Title": "featureKind",
         "MinOccurs": 0,
         "MaxOccurs": 1
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -2746,6 +3086,29 @@
         "AllowedKind": [
           "dataObject"
         ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
         "IsInput": false,
         "IsOutput": true,
         "MaxOccurs": -1,
@@ -2926,6 +3289,29 @@
         "Title": "featureKind",
         "MinOccurs": 0,
         "MaxOccurs": 1
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -3190,6 +3576,29 @@
         "AllowedKind": [
           "dataObject"
         ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
         "IsInput": false,
         "IsOutput": true,
         "MaxOccurs": -1,
@@ -3381,6 +3790,29 @@
         "Title": "featureKind",
         "MinOccurs": 0,
         "MaxOccurs": 1
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -3942,9 +4374,21 @@
         ],
         "IsInput": true,
         "IsOutput": false,
-        "Title": "input",
+        "MaxOccurs": -1,
         "MinOccurs": 0,
-        "MaxOccurs": -1
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       }
     ]
   },
@@ -4155,6 +4599,29 @@
         "Title": "featureKind",
         "MinOccurs": 0,
         "MaxOccurs": 1
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -4404,6 +4871,29 @@
         "AllowedKind": [
           "dataObject"
         ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
         "IsInput": false,
         "IsOutput": true,
         "Title": "output",
@@ -4590,6 +5080,29 @@
         "AllowedKind": [
           "dataObject"
         ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
         "IsInput": false,
         "IsOutput": true,
         "MaxOccurs": -1,
@@ -4764,6 +5277,29 @@
         "AllowedKind": [
           "dataObject"
         ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
         "IsInput": false,
         "IsOutput": true,
         "Title": "output",
@@ -4860,6 +5396,29 @@
         "Title": "valueCount",
         "MinOccurs": 1,
         "MaxOccurs": 1
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -5003,6 +5562,29 @@
         "AllowedKind": [
           "dataObject"
         ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
         "IsInput": false,
         "IsOutput": true,
         "Title": "output",
@@ -5087,6 +5669,29 @@
         "Title": "high",
         "MinOccurs": 1,
         "MaxOccurs": 1
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -5235,6 +5840,29 @@
         "MaxOccurs": 1,
         "MinOccurs": 1,
         "Title": "crossedCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -5421,6 +6049,29 @@
         "AllowedKind": [
           "dataObject"
         ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
         "IsInput": false,
         "IsOutput": true,
         "MaxOccurs": -1,
@@ -5529,6 +6180,29 @@
         "MaxOccurs": 1,
         "MinOccurs": 1,
         "Title": "ungroupedCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -5977,6 +6651,29 @@
         "AllowedKind": [
           "dataObject"
         ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
         "IsInput": false,
         "IsOutput": true,
         "MaxOccurs": -1,
@@ -6318,6 +7015,29 @@
         "AllowedKind": [
           "dataObject"
         ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
         "IsInput": false,
         "IsOutput": true,
         "MaxOccurs": -1,
@@ -6559,6 +7279,29 @@
         "MaxOccurs": 1,
         "MinOccurs": 1,
         "Title": "addedNodes"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -6809,6 +7552,29 @@
         "AllowedKind": [
           "dataObject"
         ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
         "IsInput": false,
         "IsOutput": true,
         "MaxOccurs": -1,
@@ -6978,6 +7744,29 @@
         "MaxOccurs": 1,
         "MinOccurs": 1,
         "Title": "bandTriangles"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -7204,6 +7993,29 @@
         "AllowedKind": [
           "dataObject"
         ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
         "IsInput": false,
         "IsOutput": true,
         "MaxOccurs": -1,
@@ -7406,6 +8218,29 @@
         "MaxOccurs": 1,
         "MinOccurs": 0,
         "Title": "orphanNodes"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -7730,6 +8565,29 @@
         "AllowedKind": [
           "dataObject"
         ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
         "IsInput": false,
         "IsOutput": true,
         "MaxOccurs": -1,
@@ -7917,6 +8775,29 @@
         "AllowedKind": [
           "dataObject"
         ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
         "IsInput": false,
         "IsOutput": true,
         "MaxOccurs": -1,
@@ -7992,9 +8873,21 @@
         ],
         "IsInput": true,
         "IsOutput": false,
-        "Title": "input",
+        "MaxOccurs": -1,
         "MinOccurs": 0,
-        "MaxOccurs": -1
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -8184,6 +9077,52 @@
       {
         "$type": "eml23.ParameterTemplate",
         "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "Title": "crsEpsg",
+        "MinOccurs": 0,
+        "MaxOccurs": 1,
+        "Constraint": "an EPSG code"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "Title": "verticalCrs",
+        "MinOccurs": 0,
+        "MaxOccurs": 1
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
           "dataObject"
         ],
         "IsInput": false,
@@ -8327,6 +9266,29 @@
         "AllowedKind": [
           "dataObject"
         ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
         "IsInput": false,
         "IsOutput": true,
         "MaxOccurs": -1,
@@ -8436,6 +9398,29 @@
         "MaxOccurs": 1,
         "MinOccurs": 0,
         "Title": "wellCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -8615,6 +9600,29 @@
       {
         "$type": "eml23.ParameterTemplate",
         "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "Title": "crsEpsg",
+        "MinOccurs": 0,
+        "MaxOccurs": 1,
+        "Constraint": "an EPSG code"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "Title": "verticalCrs",
+        "MinOccurs": 0,
+        "MaxOccurs": 1
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
           "string"
         ],
         "IsInput": false,
@@ -8644,6 +9652,29 @@
         "MaxOccurs": 1,
         "MinOccurs": 0,
         "Title": "wellCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -8749,6 +9780,29 @@
         "MaxOccurs": 1,
         "MinOccurs": 0,
         "Title": "unitCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -8953,6 +10007,29 @@
         "AllowedKind": [
           "dataObject"
         ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
         "IsInput": false,
         "IsOutput": true,
         "MaxOccurs": -1,
@@ -9032,6 +10109,40 @@
       {
         "$type": "eml23.ParameterTemplate",
         "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 1,
+        "Title": "instantCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
           "dataObject"
         ],
         "IsInput": false,
@@ -9074,6 +10185,40 @@
         "MaxOccurs": 1,
         "MinOccurs": 0,
         "Title": "interpretationTitle"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 1,
+        "Title": "references"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -9132,6 +10277,40 @@
         "MaxOccurs": 1,
         "MinOccurs": 0,
         "Title": "homogeneous"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 1,
+        "Title": "memberCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -9271,6 +10450,29 @@
         "MaxOccurs": 1,
         "MinOccurs": 0,
         "Title": "entryCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -9570,6 +10772,29 @@
         "Title": "groundRead",
         "MinOccurs": 0,
         "MaxOccurs": 1
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -9924,6 +11149,29 @@
         "AllowedKind": [
           "dataObject"
         ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
         "IsInput": false,
         "IsOutput": true,
         "MaxOccurs": -1,
@@ -10134,6 +11382,29 @@
         "AllowedKind": [
           "dataObject"
         ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
         "IsInput": false,
         "IsOutput": true,
         "MaxOccurs": -1,
@@ -10253,6 +11524,29 @@
         "MaxOccurs": 1,
         "MinOccurs": 1,
         "Title": "sidetrackCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -10634,6 +11928,29 @@
         "AllowedKind": [
           "dataObject"
         ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
         "IsInput": false,
         "IsOutput": true,
         "MaxOccurs": -1,
@@ -10741,6 +12058,29 @@
         "MaxOccurs": 1,
         "MinOccurs": 1,
         "Title": "contactCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -10982,6 +12322,29 @@
         "MaxOccurs": 1,
         "MinOccurs": 0,
         "Title": "triangleCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -11279,6 +12642,29 @@
         "AllowedKind": [
           "dataObject"
         ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
         "IsInput": false,
         "IsOutput": true,
         "MaxOccurs": -1,
@@ -11371,6 +12757,29 @@
         "AllowedKind": [
           "dataObject"
         ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
         "IsInput": false,
         "IsOutput": true,
         "Title": "output",
@@ -11446,6 +12855,29 @@
         "MaxOccurs": 1,
         "MinOccurs": 1,
         "Title": "channelCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -11560,6 +12992,29 @@
         "MaxOccurs": 1,
         "MinOccurs": 0,
         "Title": "description"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -11860,6 +13315,29 @@
         "MaxOccurs": 1,
         "MinOccurs": 1,
         "Title": "zeroThicknessCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -12294,6 +13772,29 @@
         "AllowedKind": [
           "dataObject"
         ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
         "IsInput": false,
         "IsOutput": true,
         "MaxOccurs": -1,
@@ -12382,12 +13883,24 @@
       {
         "$type": "eml23.ParameterTemplate",
         "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
           "dataObject"
         ],
         "IsInput": false,
         "IsOutput": true,
         "MaxOccurs": -1,
-        "MinOccurs": 1,
+        "MinOccurs": 0,
         "Title": "output"
       }
     ]
@@ -12465,9 +13978,21 @@
         ],
         "IsInput": true,
         "IsOutput": false,
-        "MaxOccurs": 1,
-        "MinOccurs": 1,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
         "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -12477,7 +14002,7 @@
         "IsInput": false,
         "IsOutput": true,
         "MaxOccurs": -1,
-        "MinOccurs": 1,
+        "MinOccurs": 0,
         "Title": "output"
       }
     ]
@@ -12571,6 +14096,29 @@
         "MaxOccurs": 1,
         "MinOccurs": 1,
         "Title": "boundaryCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -12713,6 +14261,29 @@
         "AllowedKind": [
           "dataObject"
         ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
         "IsInput": false,
         "IsOutput": true,
         "MaxOccurs": -1,
@@ -12775,6 +14346,29 @@
         "MaxOccurs": 1,
         "MinOccurs": 0,
         "Title": "referenceAt"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -13027,6 +14621,29 @@
         "AllowedKind": [
           "dataObject"
         ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
         "IsInput": false,
         "IsOutput": true,
         "MaxOccurs": -1,
@@ -13119,6 +14736,29 @@
         "AllowedKind": [
           "dataObject"
         ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
         "IsInput": false,
         "IsOutput": true,
         "MaxOccurs": -1,
@@ -13170,6 +14810,29 @@
         "MaxOccurs": 1,
         "MinOccurs": 1,
         "Title": "unitCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -13294,6 +14957,18 @@
         "MaxOccurs": -1,
         "MinOccurs": 0,
         "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -13588,6 +15263,29 @@
         "AllowedKind": [
           "dataObject"
         ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
         "IsInput": false,
         "IsOutput": true,
         "MaxOccurs": -1,
@@ -13679,6 +15377,29 @@
         "AllowedKind": [
           "dataObject"
         ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
         "IsInput": false,
         "IsOutput": true,
         "MaxOccurs": -1,
@@ -13755,6 +15476,29 @@
         "MaxOccurs": 1,
         "MinOccurs": 1,
         "Title": "isHomogeneous"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -13971,6 +15715,29 @@
         "AllowedKind": [
           "dataObject"
         ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
         "IsInput": false,
         "IsOutput": true,
         "MaxOccurs": -1,
@@ -14067,6 +15834,29 @@
         "MaxOccurs": 1,
         "MinOccurs": 1,
         "Title": "chordExcess"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -14289,6 +16079,29 @@
         "MaxOccurs": 1,
         "MinOccurs": 1,
         "Title": "sampleCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -14552,6 +16365,29 @@
         "AllowedKind": [
           "dataObject"
         ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
         "IsInput": false,
         "IsOutput": true,
         "MaxOccurs": -1,
@@ -14762,6 +16598,29 @@
         "AllowedKind": [
           "dataObject"
         ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
         "IsInput": false,
         "IsOutput": true,
         "MaxOccurs": -1,
@@ -14883,6 +16742,29 @@
         "MaxOccurs": 1,
         "MinOccurs": 1,
         "Title": "initialPressure"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -15124,9 +17006,21 @@
         ],
         "IsInput": true,
         "IsOutput": false,
-        "Title": "input",
+        "MaxOccurs": -1,
         "MinOccurs": 0,
-        "MaxOccurs": -1
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       }
     ],
     "schemaVersion": "2.3",
@@ -15347,9 +17241,21 @@
         ],
         "IsInput": true,
         "IsOutput": false,
-        "Title": "input",
+        "MaxOccurs": -1,
         "MinOccurs": 0,
-        "MaxOccurs": -1
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       }
     ],
     "schemaVersion": "2.3",
@@ -15509,6 +17415,18 @@
         "MaxOccurs": -1,
         "MinOccurs": 0,
         "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -16092,6 +18010,18 @@
       {
         "$type": "eml23.ParameterTemplate",
         "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
           "dataObject"
         ],
         "IsInput": false,
@@ -16138,6 +18068,18 @@
       {
         "$type": "eml23.ParameterTemplate",
         "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
           "dataObject"
         ],
         "IsInput": false,
@@ -16149,5 +18091,727 @@
     ],
     "schemaVersion": "2.3",
     "uuid": "73d0833a-4551-4baf-9906-1b728bbbb87e"
+  },
+  "isosurface": {
+    "$type": "eml23.ActivityTemplate",
+    "Citation": {
+      "$type": "eml23.Citation",
+      "Creation": "2026-11-15T00:00:00Z",
+      "Originator": "energyml-rust",
+      "Title": "fabricant:isosurface"
+    },
+    "Parameter": [
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "Title": "crs",
+        "MinOccurs": 0,
+        "MaxOccurs": 1,
+        "Constraint": "a local CRS"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "Title": "sourceEpsg",
+        "MinOccurs": 0,
+        "MaxOccurs": 1,
+        "Constraint": "an EPSG code"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "Title": "project",
+        "MinOccurs": 0,
+        "MaxOccurs": 1,
+        "Constraint": "an EPSG code"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "Title": "vertical",
+        "MinOccurs": 0,
+        "MaxOccurs": 1,
+        "Constraint": "an EPSG code"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "Title": "interpretation",
+        "MinOccurs": 0,
+        "MaxOccurs": 1,
+        "Constraint": "an interpretation"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "Title": "title",
+        "MinOccurs": 1,
+        "MaxOccurs": 1
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "Title": "dataFile",
+        "MinOccurs": 1,
+        "MaxOccurs": 1
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "Title": "featureType",
+        "MinOccurs": 0,
+        "MaxOccurs": 1,
+        "Constraint": "a qualified type, listed on `feature` by default, package resqml, version 2.2"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "Title": "interpretationType",
+        "MinOccurs": 0,
+        "MaxOccurs": 1,
+        "Constraint": "a qualified type, listed on `interpretation` by default, package resqml, version 2.2"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "Title": "featureKind",
+        "MinOccurs": 0,
+        "MaxOccurs": 1
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": 1,
+        "MinOccurs": 1,
+        "Title": "level"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "levelUom"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "one of: linear, log10",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": 1,
+        "MinOccurs": 1,
+        "Title": "spacing"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "integer"
+        ],
+        "Constraint": "in [0, ∞]",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "setAside"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "Title": "crsEpsg",
+        "MinOccurs": 0,
+        "MaxOccurs": 1,
+        "Constraint": "an EPSG code"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "Title": "verticalCrs",
+        "MinOccurs": 0,
+        "MaxOccurs": 1
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "Title": "pointCount",
+        "MinOccurs": 1,
+        "MaxOccurs": 1
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "Title": "triangleCount",
+        "MinOccurs": 1,
+        "MaxOccurs": 1
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "one of: marching-tetrahedra",
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 1,
+        "Title": "method"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": -1,
+        "MinOccurs": 1,
+        "Title": "output"
+      }
+    ],
+    "schemaVersion": "2.3",
+    "uuid": "6ade3094-931a-4eb2-89e9-07a6711185e9"
+  },
+  "combine": {
+    "$type": "eml23.ActivityTemplate",
+    "Citation": {
+      "$type": "eml23.Citation",
+      "Creation": "2026-11-15T00:00:00Z",
+      "Originator": "energyml-rust",
+      "Title": "fabricant:combine"
+    },
+    "Parameter": [
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "one of: ratio, difference, log-ratio",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": 1,
+        "MinOccurs": 1,
+        "Title": "operation"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "valuesPerElement"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "componentLabels"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "Title": "representation",
+        "MinOccurs": 1,
+        "MaxOccurs": 1
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "Title": "propertyKind",
+        "MinOccurs": 1,
+        "MaxOccurs": 1,
+        "Constraint": "a property kind"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "Title": "uom",
+        "MinOccurs": 1,
+        "MaxOccurs": 1
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "Title": "title",
+        "MinOccurs": 1,
+        "MaxOccurs": 1
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "Title": "dataFile",
+        "MinOccurs": 1,
+        "MaxOccurs": 1
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "Title": "indexable",
+        "MinOccurs": 1,
+        "MaxOccurs": 1
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "Title": "valueCount",
+        "MinOccurs": 1,
+        "MaxOccurs": 1
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "integer"
+        ],
+        "Constraint": "in [0, ∞]",
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 1,
+        "Title": "absent"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "integer"
+        ],
+        "Constraint": "in [0, ∞]",
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 1,
+        "Title": "undefined"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "convertedBy"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": -1,
+        "MinOccurs": 1,
+        "Title": "output"
+      }
+    ],
+    "schemaVersion": "2.3",
+    "uuid": "7d3f383e-fee3-4cd0-ac17-03d1b38e42ed"
+  },
+  "table-link": {
+    "$type": "eml23.ActivityTemplate",
+    "Citation": {
+      "$type": "eml23.Citation",
+      "Creation": "2026-11-15T00:00:00Z",
+      "Originator": "energyml-rust",
+      "Title": "fabricant:table-link"
+    },
+    "Parameter": [
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "column"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "one of: key, rank",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "by"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 1,
+        "Title": "targetUri"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": -1,
+        "MinOccurs": 1,
+        "Title": "output"
+      }
+    ],
+    "schemaVersion": "2.3",
+    "uuid": "519cec36-88e1-41b8-9f49-ca87d59e5a2b"
+  },
+  "along-well-view": {
+    "$type": "eml23.ActivityTemplate",
+    "Citation": {
+      "$type": "eml23.Citation",
+      "Creation": "2026-11-15T00:00:00Z",
+      "Originator": "energyml-rust",
+      "Title": "fabricant:along-well-view"
+    },
+    "Parameter": [
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "svgPath"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "pngPath"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "category"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": 1,
+        "MinOccurs": 1,
+        "Title": "projection"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "sectionAzimuth"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "lateralIndex"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "mdFrom"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "mdTo"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "step"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "true or false",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "computedTops"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 1,
+        "Title": "svgPart"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "pngPart"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "input"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "inputFile"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "dataObject"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": -1,
+        "MinOccurs": 1,
+        "Title": "output"
+      }
+    ],
+    "schemaVersion": "2.3",
+    "uuid": "9c17d763-81a9-4add-82df-3b5c3890f1fa"
   }
 }

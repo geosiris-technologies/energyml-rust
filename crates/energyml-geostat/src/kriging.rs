@@ -158,13 +158,7 @@ impl Ordinary {
         if self.neighbours == Some(0) {
             return Err(Error::NoNeighbours);
         }
-        let usable: Vec<([f64; N], f64)> = samples
-            .iter()
-            .zip(values)
-            .filter(|(point, value)| value.is_finite() && point.iter().all(|c| c.is_finite()))
-            .map(|(point, value)| (*point, *value))
-            .collect();
-        let set_aside = samples.len() - usable.len();
+        let (usable, set_aside) = crate::samples::usable(samples, values);
         if usable.is_empty() {
             return Err(Error::NoSample {
                 given: samples.len(),
@@ -172,26 +166,11 @@ impl Ordinary {
             });
         }
 
-        let distance = |a: &[f64; N], b: &[f64; N]| -> f64 {
-            a.iter()
-                .zip(b)
-                .map(|(x, y)| (x - y) * (x - y))
-                .sum::<f64>()
-                .sqrt()
-        };
+        let distance = crate::samples::distance::<N>;
         // Coincident samples make two identical rows - singular by
         // construction, and better refused with both names than found as
         // a mysterious zero pivot below.
-        for (at, (a, _)) in usable.iter().enumerate() {
-            for (offset, (b, _)) in usable[at + 1..].iter().enumerate() {
-                if distance(a, b) <= self.exact_within {
-                    return Err(Error::DuplicateSamplePositions {
-                        first: at,
-                        second: at + 1 + offset,
-                    });
-                }
-            }
-        }
+        crate::samples::refuse_coincident(&usable, self.exact_within)?;
 
         if self.is_local() {
             return self.local(&usable, queries, set_aside, distance);
@@ -311,7 +290,9 @@ impl Ordinary {
             }
             if let Some(value) = exact {
                 out.push(value);
-                variances.push(0.0);
+                if self.variance {
+                    variances.push(0.0);
+                }
                 continue;
             }
             // The fault after the radius (cheap first), the cap after the
@@ -331,7 +312,9 @@ impl Ordinary {
             }
             if near.is_empty() {
                 out.push(f64::NAN);
-                variances.push(f64::NAN);
+                if self.variance {
+                    variances.push(f64::NAN);
+                }
                 unreached += 1;
                 continue;
             }
@@ -388,6 +371,35 @@ mod tests {
 
     fn model() -> Model {
         Model::new(ModelKind::Spherical, 0.0, 1.0, 10.0).unwrap()
+    }
+
+    /// [geostat-proj-roundtrip S3] On the local path, `without_variance`
+    /// answers no variance at all, not one only for the exact and unreached
+    /// queries (which was shorter than `values` and shifted against it).
+    #[test]
+    fn the_local_path_without_variance_has_no_variance_for_any_query() {
+        let samples = [[0.0, 0.0], [100.0, 0.0]];
+        let values = [3.0, 9.0];
+        // An exact hit, an unreached query, and a reached one.
+        let queries = [[0.0, 0.0], [50.0, 0.0], [1.0, 0.0]];
+        let alone = Ordinary::new(model())
+            .without_variance()
+            .with_radius(5.0)
+            .interpolate(&samples, &values, &queries)
+            .unwrap();
+        assert_eq!(alone.values.len(), 3);
+        assert!(alone.variances.is_empty(), "{:?}", alone.variances);
+        assert_eq!(alone.values[0], 3.0);
+        assert!(alone.values[1].is_nan());
+        assert_eq!(alone.unreached, 1);
+        assert!(alone.values[2].is_finite());
+        // With the variance, there is exactly one per query.
+        let full = Ordinary::new(model())
+            .with_radius(5.0)
+            .interpolate(&samples, &values, &queries)
+            .unwrap();
+        assert_eq!(full.variances.len(), 3);
+        // Break it: push `0.0` / `f64::NAN` to `variances` without the `if self.variance` guard.
     }
 
     /// **The dual form gives the estimates of the primal one** - on scattered

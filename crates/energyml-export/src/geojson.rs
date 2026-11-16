@@ -37,6 +37,7 @@
 use std::io::Write;
 
 use energyml_domain::reproject::Wgs84;
+use energyml_geometry::shape::polyline_runs;
 use energyml_geometry::{Placement, SceneObject, Topology};
 
 use crate::error::{Error, Result};
@@ -143,8 +144,13 @@ impl GeoJsonExporter {
             // they are in, no geodesy involved. The collection's `crs` member
             // (or its absence) is what says so to the reader.
             let placement = options.placement.unwrap_or(Placement::Projected);
-            let coordinates = object.points_in(placement)?;
-            return self.feature_body(object, &coordinates, out);
+            //
+            // Through `Options::points_native`, so that a time axis with a
+            // stated equivalence is converted (and its note is written) like
+            // everywhere else, not written as raw milliseconds in the
+            // elevation slot.
+            let coordinates = options.points_native(object, placement)?;
+            return self.feature_body(object, options, &coordinates, out);
         }
         let Some(crs) = &object.crs else {
             return Err(Error::unsuitable(
@@ -176,13 +182,14 @@ impl GeoJsonExporter {
         // rotation, which is every package in the corpus, that is exactly zero
         // difference; on a real one it is not.
         let coordinates = options.points_in_epsg(object, Wgs84::EPSG)?;
-        self.feature_body(object, &coordinates, out)
+        self.feature_body(object, options, &coordinates, out)
     }
 
     /// One feature, from coordinates already in the system the document says.
     fn feature_body(
         &self,
         object: &SceneObject,
+        options: &Options<'_>,
         coordinates: &[[f64; 3]],
         out: &mut dyn Write,
     ) -> Result<()> {
@@ -190,11 +197,18 @@ impl GeoJsonExporter {
         // triangulated set is a MultiPolygon of three-cornered rings; a
         // polyline set is a MultiLineString; anything else is a MultiPoint,
         // which is honest rather than clever.
-        let geometry = match first_topology(object) {
-            Some(Topology::Triangles(_)) => triangles(object, coordinates),
-            Some(Topology::Quads(_)) | Some(Topology::Polygons(_)) => rings(object, coordinates),
-            Some(Topology::Polylines(_) | Topology::Segments(_)) => polylines(object, coordinates),
-            _ => multipoint(coordinates),
+        //
+        // One feature has one geometry type, so patches of different
+        // topologies are refused by name (the writer used to follow the first
+        // patch and silently drop the others), and so is an index that names no
+        // position (it used to be filtered out without a word).
+        let class = single_topology(object)?;
+        check_indices(object)?;
+        let geometry = match class {
+            Class::Triangles => triangles(object, coordinates),
+            Class::Rings => rings(object, coordinates),
+            Class::Lines => polylines(object, coordinates),
+            Class::Points => multipoint(coordinates),
         };
 
         write!(
@@ -209,6 +223,11 @@ impl GeoJsonExporter {
             pair("type", &object.qualified_type),
             pair("crs", &object.uuid_of_crs()),
         ];
+        // The equivalence beside the geometry it produced, as in OBJ and VTK:
+        // the elevation of a seismic object is a display equivalence, not a depth.
+        if let Some(note) = options.time_equivalence_note(object) {
+            properties.push(pair("vertical_axis", &note));
+        }
         if let Some(interpretation) = &object.interpretation {
             properties.push(pair("interpretation_uuid", &interpretation.uuid));
             properties.push(pair("interpretation_title", &interpretation.title));
@@ -321,8 +340,100 @@ impl CrsUuid for SceneObject {
     }
 }
 
-fn first_topology(object: &SceneObject) -> Option<&Topology> {
-    object.geometry.patches.first().map(|patch| &patch.topology)
+/// Which GeoJSON geometry a topology becomes.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Class {
+    /// A `MultiPolygon` of three-cornered rings.
+    Triangles,
+    /// A `Polygon` or `MultiPolygon` of rings of any size.
+    Rings,
+    /// A `MultiLineString`.
+    Lines,
+    /// A `MultiPoint`, or a `Point` when there is one.
+    Points,
+}
+
+impl Class {
+    fn of(topology: &Topology) -> Class {
+        match topology {
+            Topology::Triangles(_) => Class::Triangles,
+            Topology::Quads(_) | Topology::Polygons(_) => Class::Rings,
+            Topology::Polylines(_) | Topology::Segments(_) => Class::Lines,
+            _ => Class::Points,
+        }
+    }
+
+    fn name(self) -> &'static str {
+        match self {
+            Class::Triangles => "triangles",
+            Class::Rings => "polygons",
+            Class::Lines => "lines",
+            Class::Points => "points",
+        }
+    }
+}
+
+/// The one GeoJSON geometry the object's patches all become, or the refusal
+/// that says they do not.
+fn single_topology(object: &SceneObject) -> Result<Class> {
+    let mut classes = object
+        .geometry
+        .patches
+        .iter()
+        .map(|patch| Class::of(&patch.topology));
+    let Some(first) = classes.next() else {
+        return Ok(Class::Points);
+    };
+    match classes.find(|class| *class != first) {
+        None => Ok(first),
+        Some(other) => Err(Error::unsuitable(
+            "geojson",
+            format!(
+                "`{}`, whose patches are {} and {}: one feature holds one kind of geometry, and \
+                 writing the first would drop the others",
+                object.title,
+                first.name(),
+                other.name()
+            ),
+        )),
+    }
+}
+
+/// Refuses an index that names no position of its patch (a topology is indexed
+/// into its own patch's points), which the writers would otherwise leave out
+/// without a word.
+fn check_indices(object: &SceneObject) -> Result<()> {
+    for patch in &object.geometry.patches {
+        let nodes = patch.points.len();
+        let refuse = |what: &str, at: u32| {
+            Err(Error::unsuitable(
+                "geojson",
+                format!(
+                    "`{}`, where a {what} names node {at} and its patch has {nodes}",
+                    object.title
+                ),
+            ))
+        };
+        // `&mut dyn Iterator` is itself an iterator, sized: `find` is called on it.
+        let outside = |mut indices: &mut dyn Iterator<Item = u32>| {
+            Iterator::find(&mut indices, |i| *i as usize >= nodes)
+        };
+        let (what, found) = match &patch.topology {
+            Topology::Triangles(triangles) => ("triangle", outside(&mut triangles.iter().flatten().copied())),
+            Topology::Quads(quads) => ("quadrilateral", outside(&mut quads.iter().flatten().copied())),
+            Topology::Polygons(rings) => ("polygon", outside(&mut rings.iter().flatten().copied())),
+            Topology::Segments(pairs) => ("segment", outside(&mut pairs.iter().flatten().copied())),
+            Topology::Polylines(runs) => (
+                "polyline",
+                outside(&mut polyline_runs(runs, &patch.closed).into_iter().flatten()),
+            ),
+            _ => continue,
+        };
+        if let Some(at) = found {
+            return refuse(what, at);
+        }
+    }
+    Ok(())
 }
 
 fn triangles(object: &SceneObject, points: &[[f64; 3]]) -> String {
@@ -415,21 +526,20 @@ fn polylines(object: &SceneObject, points: &[[f64; 3]]) -> String {
             }
         }
         if let Topology::Polylines(runs) = &patch.topology {
-            let mut at = start;
-            for (rank, run) in runs.iter().enumerate() {
-                let end = (at + *run as usize).min(points.len());
-                if end > at + 1 {
-                    let mut line: Vec<String> = points[at..end].iter().map(|p| position(*p)).collect();
-                    // A ring the file calls closed repeats its first position,
-                    // the only way a LineString says so (RFC 7946 §3.1.4 has
-                    // no flag). Only when stated: an absent `ClosedPolylines`
-                    // is not a ring.
-                    if patch.closed.get(rank) == Some(&true) {
-                        line.push(position(points[at]));
-                    }
+            // A ring the file calls closed repeats its first position, the
+            // only way a LineString says so (RFC 7946 §3.1.4 has no flag). Only
+            // when stated: an absent `ClosedPolylines` is not a ring. A run
+            // that reaches past the points is cut at the last one.
+            for run in polyline_runs(runs, &patch.closed) {
+                let line: Vec<String> = run
+                    .iter()
+                    .map(|i| start + *i as usize)
+                    .filter(|at| *at < points.len())
+                    .map(|at| position(points[at]))
+                    .collect();
+                if line.len() > 1 {
                     lines.push(format!("[{}]", line.join(",")));
                 }
-                at = end;
             }
         }
         start += patch.points.len();
@@ -496,21 +606,5 @@ fn position(point: [f64; 3]) -> String {
 }
 
 fn pair(key: &str, value: &str) -> String {
-    format!("\"{key}\":\"{}\"", escape(value))
-}
-
-fn escape(value: &str) -> String {
-    let mut out = String::with_capacity(value.len());
-    for c in value.chars() {
-        match c {
-            '"' => out.push_str("\\\""),
-            '\\' => out.push_str("\\\\"),
-            '\n' => out.push_str("\\n"),
-            '\r' => out.push_str("\\r"),
-            '\t' => out.push_str("\\t"),
-            c if (c as u32) < 0x20 => out.push_str(&format!("\\u{:04x}", c as u32)),
-            c => out.push(c),
-        }
-    }
-    out
+    format!("\"{key}\":{}", energyml_core::json::quote(value))
 }

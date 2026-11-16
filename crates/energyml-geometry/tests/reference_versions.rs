@@ -155,6 +155,7 @@ fn systems() -> Vec<Box<dyn DynObject>> {
             abstract_vertical_crs: Some(AbstractVerticalCrs::VerticalEpsgCrs(VerticalEpsgCrs {
                 epsg_code: 5714,
             })),
+            uom: energyml_eml_2_3::LengthUomExt::M,
             ..Default::default()
         }),
         Box::new(ProjectedCrs {

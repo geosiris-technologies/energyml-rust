@@ -183,6 +183,7 @@ fn preview_of(values: &ArrayValues, n: usize) -> Vec<Value> {
         ArrayValues::U32(v) => unsigned(v, n),
         ArrayValues::U16(v) => unsigned(v, n),
         ArrayValues::U8(v) => unsigned(v, n),
+        ArrayValues::Text(v) => v.iter().take(n).map(|s| json!(s)).collect(),
         // `ArrayValues` is `#[non_exhaustive]`: a variant added later is shown
         // widened to a double, which is what `to_f64` is for.
         other => other.to_f64().into_iter().take(n).map(number).collect(),

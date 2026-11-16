@@ -47,16 +47,26 @@
 //! [`ArraySource`] the arrays, and a check that needs arrays with none given
 //! says so rather than passing.
 
-use std::collections::BTreeMap;
+use std::cell::RefCell;
+use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::rc::Rc;
 
 use energyml_core::identity;
-use energyml_core::value::{FieldValue, Reflect, Scalar};
+use energyml_core::value::{FieldValue, Reflect};
 
+use crate::activity::{
+    ActivityRefusal, ParameterIssue, TemplateRecord, conformance, descriptor_of, read_activity, read_template,
+};
 use crate::property;
-use crate::rules::{Finding, Gravity, Outcome, concepts_of};
-use crate::source::{ArraySource, ObjectSource};
-use crate::table::{Cell, Lookup};
-use crate::values::Values;
+use crate::property_kind::Resolver;
+use crate::rules::{Finding, Gravity, Outcome, concepts_of, split_identity};
+use crate::source::{ArraySource, NoObjects, ObjectSource, Presence, object_chip};
+use crate::table::{
+    Cell, CellState, ColumnCells, Convention, LinkDeclaration, LinkReaders, LinkRefusal, LinkReport,
+    LinkTarget, Lookup, NamingRefusal, Resolved, RowMatch, Table, TableRefusal, TableSet, TableSheet,
+    TargetIndexes, check_links, resolve, resolve_kinds, row_named_by, uri_column,
+};
+use crate::values::{Family, Values};
 
 /// One cross-object check: its id, what it means, and the code that judges.
 pub struct Integrity {
@@ -76,6 +86,53 @@ struct Context<'a> {
     objects: &'a [(&'a str, &'a dyn Reflect)],
     source: &'a dyn ObjectSource,
     arrays: Option<&'a dyn ArraySource>,
+    /// What the checks of one run read, kept for the next check that needs it.
+    memory: Memory,
+}
+
+/// What the table checks of **one run** read, so that a table is read once however many checks ask.
+///
+/// A `Context` lives for one [`run`] (or one [`directional_ratio_declaring`]) over a fixed set of objects, a source
+/// and arrays: nothing it remembers can go stale, and a new run starts empty. Keyed by the table's uuid.
+#[derive(Default)]
+struct Memory {
+    /// A table's sheet and link declarations (`None`: the table does not read).
+    linked: RefCell<HashMap<String, Option<Rc<LinkedTable>>>>,
+    /// A table's links checked against its targets.
+    checked: RefCell<HashMap<String, Rc<std::result::Result<LinksChecked, String>>>>,
+    /// A table's cells, read with the run's arrays (or with nothing, when it was given none).
+    cells: RefCell<HashMap<String, Rc<TableCells>>>,
+}
+
+/// Every column of a table as cells (an unreadable column is an `Err`, named).
+type TableCells = Vec<std::result::Result<ColumnCells<'static>, TableRefusal>>;
+
+impl Context<'_> {
+    /// The sheet and declarations of a table, built once per run.
+    fn linked(&self, uuid: &str, object: &dyn Reflect) -> Option<Rc<LinkedTable>> {
+        if let Some(held) = self.memory.linked.borrow().get(uuid) {
+            return held.clone();
+        }
+        let built = table_context(object, self.source).map(Rc::new);
+        self.memory
+            .linked
+            .borrow_mut()
+            .insert(uuid.to_string(), built.clone());
+        built
+    }
+
+    /// The cells of a table, read once per run.
+    fn cells(&self, uuid: &str, table: &Table<'_>, arrays: &dyn ArraySource) -> Rc<TableCells> {
+        if let Some(held) = self.memory.cells.borrow().get(uuid) {
+            return Rc::clone(held);
+        }
+        let read = Rc::new(table.read_cells(arrays));
+        self.memory
+            .cells
+            .borrow_mut()
+            .insert(uuid.to_string(), Rc::clone(&read));
+        read
+    }
 }
 
 /// The shipped checks - the list `check` runs and counts.
@@ -89,9 +146,33 @@ pub fn checks() -> &'static [Integrity] {
 const CHECKS: &[Integrity] = &[
     Integrity {
         id: "house/discrete-value-in-lookup",
-        says: "every value of a property with a category lookup is a key of its table's key column (the reading is ours: common TRG 2.3 §9.1 says a KeyColumn makes the table a lookup table, not how a value names a row)",
+        says: "every value of a property with a category lookup names a row of its table, by its key column or by rank from 0 when it has none (the reading is ours: common TRG 2.3 §9.1 says a KeyColumn makes the table a lookup table, not how a value names a row)",
         gravity: Gravity::Error,
         judge: discrete_value_in_lookup,
+    },
+    Integrity {
+        id: "house/table/link-resolves",
+        says: "every non-empty value of a link column names a row of its target table, by its one key column or by rank when it has none (the convention is ours: common TRG 2.3 §9.1 p. 190 has no column naming another table; the declaration is a qualifier facet, §11.11 p. 294)",
+        gravity: Gravity::Error,
+        judge: table_link_resolves,
+    },
+    Integrity {
+        id: "house/table/link-target-key-unique",
+        says: "a key a link names is held by one row of its target (nothing in common TRG 2.3 §9.1 p. 190 requires keys to be unique; the first row is used and the ambiguity reported)",
+        gravity: Gravity::Warning,
+        judge: table_link_target_key_unique,
+    },
+    Integrity {
+        id: "house/table/link-declared-by-facet",
+        says: "a link column is declared by one qualifier facet holding the target table's uri (common TRG 2.3 §11.11 p. 294, §11.3 p. 285); a description or a title is read and reported",
+        gravity: Gravity::Warning,
+        judge: table_link_declared_by_facet,
+    },
+    Integrity {
+        id: "house/table/uri-value-resolves",
+        says: "a uri written as a value names an object of the package (Identifier Specification v4.0 §6.3 p. 14); another dataspace is not judged",
+        gravity: Gravity::Warning,
+        judge: table_uri_value_resolves,
     },
     Integrity {
         id: "house/time-series-asset-resolves",
@@ -129,6 +210,18 @@ const CHECKS: &[Integrity] = &[
         gravity: Gravity::Error,
         judge: wellbore_interpretation_set_holds_wellbores,
     },
+    Integrity {
+        id: "house/property/directional-ratio",
+        says: "two properties of one kind on one support, told apart only by a vertical and a lateral direction facet, keep the vertical value at least 0.95 times the lateral one in 95 % of their pairs, for a resistivity (the reading is ours: common TRG 2.3 §11.1 p. 281 names the directions, not the order of their values; ADR-0036)",
+        gravity: Gravity::Warning,
+        judge: directional_ratio,
+    },
+    Integrity {
+        id: "house/provenance/activity-follows-its-template",
+        says: "every parameter of an activity has an equivalent in the template its ActivityDescriptor names, of an allowed kind and in the allowed numbers (common TRG 2.3 §3.1 p. 40: \"Must have an equivalent in the activity descriptor parameters\"; §3.10 p. 49: an empty AllowedKind allows all, a MaxOccurs of -1 is unbounded; reading a data object that names an activity as a sub-activity is ours, ADR-0035)",
+        gravity: Gravity::Warning,
+        judge: activity_follows_its_template,
+    },
 ];
 
 /// Run every check over a package's objects.
@@ -146,6 +239,7 @@ pub fn run(
         objects,
         source,
         arrays,
+        memory: Memory::default(),
     };
     let mut out = Vec::new();
     for check in CHECKS {
@@ -159,11 +253,12 @@ pub fn run(
 // ---------------------------------------------------------------------------
 
 /// **House rule**, and the reading is written down: the value is looked up in the
-/// key column - because neither
+/// key column, or by its rank from 0 when the table has none - because neither
 /// the common TRG 2.3 §9.1-9.2 (p. 190-191) nor the RESQML TRG 2.2 §7.7
 /// (p. 230) says how a value designates a row, beyond *"Defines a key column
-/// which make the table a lookup table"*. `energyml-domain::table` and the front end
-/// read it the same way; a value no key matches is a value no legend can name.
+/// which make the table a lookup table"*. The one door is
+/// [`crate::table::row_named_by`] (`house/table/row-rank-without-key`,
+/// ADR-0030); a value that names no row is a value no legend can name.
 ///
 /// A value equal to the array's own `NullValue` is not a value, and `NaN` is
 /// how floating arrays say the same thing.
@@ -201,30 +296,35 @@ fn discrete_value_in_lookup(context: &Context<'_>, check: &Integrity, out: &mut 
                 continue;
             }
         };
-        let [key] = lookup.key_columns.as_slice() else {
+        // The index is built once per table, and `row_named_by` is the one door.
+        let index = lookup.key_index();
+        if let Err(NamingRefusal::SeveralKeyColumns { count }) = row_named_by(&index, &Cell::Number(0.0)) {
             out.push(cant(format!(
-                "its lookup `{table_uuid}` has {} key column(s), and a value can name a row by one",
-                lookup.key_columns.len()
+                "its lookup `{table_uuid}` has {count} key column(s), and a value can name a row by one"
             )));
             continue;
-        };
-        match lookup.rows.columns.get(*key) {
-            Some(Some(Values::Text(_))) => {
-                out.push(cant(format!(
-                    "the key column of `{table_uuid}` holds text, and the property's values are numbers"
-                )));
-                continue;
-            }
-            Some(Some(_)) => {}
-            _ => {
-                out.push(cant(format!(
-                    "the key column of `{table_uuid}` does not read: {}",
-                    lookup.notes.join("; ")
-                )));
-                continue;
+        }
+        // A keyed table is read by its key; the checks on the key column apply to it only.
+        let key = index.key_columns().first().copied();
+        if let Some(key) = key {
+            match lookup.rows.columns.get(key) {
+                Some(Some(Values::Text(_))) => {
+                    out.push(cant(format!(
+                        "the key column of `{table_uuid}` holds text, and the property's values are numbers"
+                    )));
+                    continue;
+                }
+                Some(Some(_)) => {}
+                _ => {
+                    out.push(cant(format!(
+                        "the key column of `{table_uuid}` does not read: {}",
+                        lookup.notes.join("; ")
+                    )));
+                    continue;
+                }
             }
         }
-        let key_title = lookup.titles.get(*key).cloned().flatten();
+        let key_title = key.and_then(|key| lookup.titles.get(key).cloned().flatten());
 
         // Value → how many elements carry it, in order of first appearance.
         let mut missing: Vec<(f64, usize)> = Vec::new();
@@ -240,12 +340,15 @@ fn discrete_value_in_lookup(context: &Context<'_>, check: &Integrity, out: &mut 
                 out.push(cant(format!("patch {} does not hold numbers", patch.position)));
                 continue 'objects;
             };
-            let null = number(patch.array, "NullValue");
+            let null = crate::values::null_value(patch.array).map(|n| n as f64);
             for value in numbers {
                 if value.is_nan() || Some(value) == null {
                     continue;
                 }
-                if !lookup.find(&[Cell::Number(value)]).is_empty() {
+                if matches!(
+                    row_named_by(&index, &Cell::Number(value)),
+                    Ok(RowMatch::One(_) | RowMatch::Several(_))
+                ) {
                     continue;
                 }
                 match missing.iter_mut().find(|(known, _)| *known == value) {
@@ -259,15 +362,474 @@ fn discrete_value_in_lookup(context: &Context<'_>, check: &Integrity, out: &mut 
                 .iter()
                 .map(|(value, count)| format!("{value} ({count} element(s))"))
                 .collect();
-            out.push(violation(
-                check,
-                uuid,
+            let read = if key.is_some() {
                 format!(
                     "{} not in the key column{} of `{table_uuid}`",
                     listed.join(", "),
                     key_title.map(|title| format!(" `{title}`")).unwrap_or_default()
-                ),
+                )
+            } else {
+                format!(
+                    "{} not a row of `{table_uuid}` ({} row(s), named by rank from 0: house/table/row-rank-without-key)",
+                    listed.join(", "),
+                    index.row_count()
+                )
+            };
+            out.push(violation(check, uuid, read));
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Links between tables, and uris written as values
+// ---------------------------------------------------------------------------
+
+/// The object types a link column can sit in: the ones the table checks judge.
+const TABLE_TYPE: &str = "ColumnBasedTable";
+
+/// A table read for the link checks: its sheet, and what each of its columns
+/// declares. Nothing here reads an array.
+struct LinkedTable {
+    sheet: TableSheet,
+    declarations: Vec<(usize, std::result::Result<LinkDeclaration, LinkRefusal>)>,
+}
+
+/// The sheet of a table object and the declarations of its columns: the kinds
+/// are resolved through the package then the dictionary, and `LinkReaders`
+/// reads the conventions (ADR-0030). `None` when the table does not read: that
+/// is the business of `Table::read`, not of a link check.
+fn table_context(object: &dyn Reflect, source: &dyn ObjectSource) -> Option<LinkedTable> {
+    let sheet = TableSheet::of(object).ok()?;
+    let resolver = Resolver::new(source);
+    let kinds = resolve_kinds(&sheet, &resolver);
+    let declarations = LinkReaders::builtin().declarations(&sheet, &kinds);
+    Some(LinkedTable { sheet, declarations })
+}
+
+/// The title of a column, or its rank when it has none.
+fn column_name(sheet: &TableSheet, column: usize) -> String {
+    sheet
+        .columns
+        .get(column)
+        .and_then(|c| c.title.as_deref())
+        .map(str::to_owned)
+        .unwrap_or_else(|| column.to_string())
+}
+
+/// Rows as a list, ten at most, then how many more.
+fn rows_listed(rows: &[usize]) -> String {
+    const SHOWN: usize = 10;
+    let mut text = rows
+        .iter()
+        .take(SHOWN)
+        .map(usize::to_string)
+        .collect::<Vec<_>>()
+        .join(", ");
+    if rows.len() > SHOWN {
+        text.push_str(&format!(" and {} more", rows.len() - SHOWN));
+    }
+    text
+}
+
+/// The value of a cell as text, when it holds a value.
+fn value_at(
+    cells: &[std::result::Result<ColumnCells<'static>, TableRefusal>],
+    column: usize,
+    row: usize,
+) -> Option<String> {
+    match cells.get(column)?.as_ref().ok()?.cell(row)? {
+        CellState::Value(cell) => Some(cell.to_string()),
+        _ => None,
+    }
+}
+
+/// What the links of one table were checked against.
+struct LinksChecked {
+    report: LinkReport,
+    cells: Rc<TableCells>,
+    targets: TableSet,
+    /// The declared targets that could not be read, with why.
+    unread: Vec<(String, String)>,
+}
+
+/// Read the table, its targets, and run `check_links`. `Err` is the reason the
+/// table could not be checked: an *uncheckable*, never a pass.
+///
+/// **Once per table and run**: the two link checks (`house/table/link-resolves` and
+/// `house/table/link-target-key-unique`) judge the same reading, and it is made by whichever asks first.
+fn check_table_links(
+    context: &Context<'_>,
+    uuid: &str,
+    object: &dyn Reflect,
+    links: &LinkedTable,
+    arrays: &dyn ArraySource,
+) -> Rc<std::result::Result<LinksChecked, String>> {
+    if let Some(held) = context.memory.checked.borrow().get(uuid) {
+        return Rc::clone(held);
+    }
+    let made = Rc::new(read_table_links(context, uuid, object, links, arrays));
+    context
+        .memory
+        .checked
+        .borrow_mut()
+        .insert(uuid.to_string(), Rc::clone(&made));
+    made
+}
+
+fn read_table_links(
+    context: &Context<'_>,
+    uuid: &str,
+    object: &dyn Reflect,
+    links: &LinkedTable,
+    arrays: &dyn ArraySource,
+) -> std::result::Result<LinksChecked, String> {
+    let table = Table::read(object).map_err(|why| format!("it does not read: {why}"))?;
+    let cells = context.cells(uuid, &table, arrays);
+
+    let mut declared: Vec<String> = Vec::new();
+    let mut by_title = false;
+    for (_, declaration) in &links.declarations {
+        let Ok(declaration) = declaration else { continue };
+        match &declaration.target {
+            LinkTarget::Key { table_uri } | LinkTarget::Rank { table_uri } => {
+                if !declared.contains(table_uri) {
+                    declared.push(table_uri.clone());
+                }
+            }
+            LinkTarget::ByTitleIn { .. } => by_title = true,
+            _ => {}
+        }
+    }
+    // A title names a table of the package: every other table is a candidate.
+    let mut uris = declared.clone();
+    if by_title {
+        for (_, other) in context.objects {
+            if other.type_info().type_key != TABLE_TYPE {
+                continue;
+            }
+            if let Some(uri) = identity::uri_of_reflect(*other)
+                && uri.as_str() != &*links.sheet.uri
+                && !uris.contains(&uri)
+            {
+                uris.push(uri);
+            }
+        }
+    }
+    let wanted: Vec<&str> = uris.iter().map(String::as_str).collect();
+    let (mut targets, unread) = TableSet::read(&wanted, arrays);
+    // The table itself: a self reference lands in it.
+    if let Ok(lookup) = Lookup::read(object, arrays) {
+        targets.insert(
+            &links.sheet.uri,
+            links.sheet.title.as_ref().map(|title| title.to_string()),
+            lookup,
+        );
+    }
+    let unread = unread
+        .into_iter()
+        .filter(|(uri, _)| declared.contains(uri))
+        .collect();
+    let report = check_links(
+        &links.sheet,
+        cells.as_slice(),
+        &links.declarations,
+        &targets,
+        None,
+    );
+    Ok(LinksChecked {
+        report,
+        cells,
+        targets,
+        unread,
+    })
+}
+
+/// The tables of the package that declare at least one link they can follow.
+fn tables_with_links<'a>(
+    context: &'a Context<'a>,
+) -> impl Iterator<Item = (&'a str, &'a dyn Reflect, Rc<LinkedTable>)> {
+    context.objects.iter().filter_map(move |(uuid, object)| {
+        if object.type_info().type_key != TABLE_TYPE {
+            return None;
+        }
+        let links = context.linked(uuid, *object)?;
+        if links
+            .declarations
+            .iter()
+            .all(|(_, declaration)| declaration.is_err())
+        {
+            return None;
+        }
+        Some((*uuid, *object, links))
+    })
+}
+
+/// **House rule** (ADR-0030). A link column names a row of its target table by
+/// its one key column, or by rank from 0 when the target has none; a non-empty
+/// value that names no row is an error, with its rows. An empty string names no
+/// row. A target that is not in the package, or a declaration that cannot be
+/// followed, makes the table *uncheckable*, never a pass.
+fn table_link_resolves(context: &Context<'_>, check: &Integrity, out: &mut Vec<Finding>) {
+    for (uuid, object, links) in tables_with_links(context) {
+        let Some(arrays) = context.arrays else {
+            out.push(unverifiable(
+                check,
+                uuid,
+                "its link columns are values, and this check was given nothing to read arrays with".into(),
             ));
+            continue;
+        };
+        let checked = check_table_links(context, uuid, object, &links, arrays);
+        let checked = match &*checked {
+            Ok(checked) => checked,
+            Err(why) => {
+                out.push(unverifiable(check, uuid, why.clone()));
+                continue;
+            }
+        };
+        for (uri, _) in &checked.unread {
+            out.push(unverifiable(
+                check,
+                uuid,
+                format!("its target `{uri}` is not in this package"),
+            ));
+        }
+        let mut dangling: Vec<String> = Vec::new();
+        for column in &checked.report.columns {
+            if !column.dangling.is_empty() {
+                let values: Vec<String> = column
+                    .dangling
+                    .iter()
+                    .take(10)
+                    .filter_map(|row| value_at(&checked.cells, column.column, *row))
+                    .map(|value| format!("`{value}`"))
+                    .collect();
+                dangling.push(format!(
+                    "column `{}`: row(s) {} (values {})",
+                    column_name(&links.sheet, column.column),
+                    rows_listed(&column.dangling),
+                    values.join(", ")
+                ));
+            }
+            // A target that is not held is said above, once.
+            let refused: Vec<&(usize, LinkRefusal)> = column
+                .unresolvable
+                .iter()
+                .filter(|(_, why)| !matches!(why, LinkRefusal::TargetUnknown { .. }))
+                .collect();
+            if let Some((_, why)) = refused.first() {
+                let rows: Vec<usize> = refused.iter().map(|(row, _)| *row).collect();
+                out.push(unverifiable(
+                    check,
+                    uuid,
+                    format!(
+                        "column `{}`: row(s) {} cannot be followed: {why}",
+                        column_name(&links.sheet, column.column),
+                        rows_listed(&rows)
+                    ),
+                ));
+            }
+        }
+        for (column, why) in &checked.report.refused {
+            if !matches!(why, LinkRefusal::TargetUnknown { .. }) {
+                out.push(unverifiable(
+                    check,
+                    uuid,
+                    format!("column `{}`: {why}", column_name(&links.sheet, *column)),
+                ));
+            }
+        }
+        if !dangling.is_empty() {
+            out.push(violation(check, uuid, dangling.join("; ")));
+        }
+    }
+}
+
+/// **House rule** (ADR-0030). Nothing in the specification requires keys to be
+/// unique: when the target holds the key a link names on several rows, the
+/// first row is used and the link is reported as ambiguous.
+fn table_link_target_key_unique(context: &Context<'_>, check: &Integrity, out: &mut Vec<Finding>) {
+    for (uuid, object, links) in tables_with_links(context) {
+        let Some(arrays) = context.arrays else {
+            out.push(unverifiable(
+                check,
+                uuid,
+                "its link columns are values, and this check was given nothing to read arrays with".into(),
+            ));
+            continue;
+        };
+        let checked = check_table_links(context, uuid, object, &links, arrays);
+        let checked = match &*checked {
+            Ok(checked) => checked,
+            Err(why) => {
+                out.push(unverifiable(check, uuid, why.clone()));
+                continue;
+            }
+        };
+        let mut ambiguous: Vec<String> = Vec::new();
+        for column in &checked.report.columns {
+            let Some(Ok(declaration)) = links
+                .declarations
+                .iter()
+                .find(|(at, _)| *at == column.column)
+                .map(|(_, declaration)| declaration)
+            else {
+                continue;
+            };
+            // Which keys, held by which rows of which table: the same resolution
+            // `check_links` made, asked again for the rows it flagged.
+            let mut named: Vec<(String, String, Vec<usize>)> = Vec::new();
+            for row in &column.ambiguous {
+                let Some(state) = checked
+                    .cells
+                    .get(column.column)
+                    .and_then(|c| c.as_ref().ok())
+                    .and_then(|c| c.cell(*row))
+                else {
+                    continue;
+                };
+                let sibling = match &declaration.target {
+                    LinkTarget::ByTitleIn { column: sibling } => checked
+                        .cells
+                        .get(*sibling)
+                        .and_then(|c| c.as_ref().ok())
+                        .and_then(|c| c.cell(*row)),
+                    _ => None,
+                };
+                let Resolved::Ambiguous { table_uri, rows } = resolve(
+                    declaration,
+                    &state,
+                    sibling.as_ref(),
+                    &links.sheet.uri,
+                    &checked.targets,
+                ) else {
+                    continue;
+                };
+                let CellState::Value(key) = &state else { continue };
+                let key = key.to_string();
+                let target = checked
+                    .targets
+                    .target(&table_uri)
+                    .and_then(|t| t.title.clone())
+                    .unwrap_or(table_uri);
+                if !named.iter().any(|(k, t, _)| *k == key && *t == target) {
+                    named.push((key, target, rows));
+                }
+            }
+            for (key, target, rows) in named {
+                ambiguous.push(format!(
+                    "column `{}`: key(s) `{key}` held by rows {} of `{target}`",
+                    column_name(&links.sheet, column.column),
+                    rows_listed(&rows)
+                ));
+            }
+        }
+        if !ambiguous.is_empty() {
+            out.push(violation(check, uuid, ambiguous.join("; ")));
+        }
+    }
+}
+
+/// **House rule** (ADR-0030, convention B). A link column is declared by one
+/// `qualifier` facet holding the complete uri of the target table. A
+/// declaration in the description (A), or a target named by title in a sibling
+/// column (D), is read and reported; so is a declaration that is refused.
+/// Nothing here reads an array.
+fn table_link_declared_by_facet(context: &Context<'_>, check: &Integrity, out: &mut Vec<Finding>) {
+    for (uuid, object) in context.objects {
+        if object.type_info().type_key != TABLE_TYPE {
+            continue;
+        }
+        let Some(links) = context.linked(uuid, *object) else {
+            continue;
+        };
+        let mut read: Vec<String> = Vec::new();
+        for (column, declaration) in &links.declarations {
+            let name = column_name(&links.sheet, *column);
+            match declaration {
+                Ok(declaration) if declaration.convention == Convention::DescriptionText => {
+                    read.push(format!("column `{name}` (description)"));
+                }
+                Ok(declaration) if declaration.convention == Convention::SiblingColumn => {
+                    read.push(format!("column `{name}` (title in a sibling column)"));
+                }
+                Ok(_) => {}
+                Err(why) => read.push(format!("column `{name}`: {why}")),
+            }
+        }
+        if !read.is_empty() {
+            out.push(violation(check, uuid, read.join("; ")));
+        }
+    }
+}
+
+/// **House rule** (ADR-0030, Identifier Specification v4.0 §6.3 p. 14). In a
+/// column whose every non-empty value is a complete ETP uri, each uri names an
+/// object the package holds. A uri of another dataspace is not judged: an
+/// object may legitimately live elsewhere. A column in an array file nobody
+/// gave a reader for is *uncheckable*, named.
+fn table_uri_value_resolves(context: &Context<'_>, check: &Integrity, out: &mut Vec<Finding>) {
+    let nothing = NoObjects;
+    let arrays: &dyn ArraySource = match context.arrays {
+        Some(arrays) => arrays,
+        None => &nothing,
+    };
+    for (uuid, object) in context.objects {
+        if object.type_info().type_key != TABLE_TYPE {
+            continue;
+        }
+        let Some(links) = context.linked(uuid, *object) else {
+            continue;
+        };
+        let Ok(table) = Table::read(*object) else {
+            continue;
+        };
+        let mut missing: Vec<String> = Vec::new();
+        let all_cells = context.cells(uuid, &table, arrays);
+        for (column, cells) in all_cells.iter().enumerate() {
+            let name = column_name(&links.sheet, column);
+            let cells = match cells {
+                Ok(cells) => cells,
+                Err(why) => {
+                    // Only a text column can hold uris: another one, unread, is not this rule's.
+                    let text = links.sheet.columns.get(column).and_then(|c| c.family) == Some(Family::Text);
+                    if text {
+                        out.push(unverifiable(
+                            check,
+                            uuid,
+                            format!("column `{name}` cannot be read: {why}"),
+                        ));
+                    }
+                    continue;
+                }
+            };
+            // A column that declares a link is the link rules' business.
+            if links.declarations.iter().any(|(at, _)| *at == column) || uri_column(cells).is_none() {
+                continue;
+            }
+            let mut rows: Vec<usize> = Vec::new();
+            let mut uris: Vec<String> = Vec::new();
+            let mut row = 0;
+            while let Some(state) = cells.cell(row) {
+                if let CellState::Value(Cell::Text(value)) = state
+                    && let Ok(chip) = object_chip(&value, None, context.source)
+                    && chip.presence == Presence::NotInPackage
+                {
+                    rows.push(row);
+                    uris.push(format!("`{}`", chip.uri));
+                }
+                row += 1;
+            }
+            if !rows.is_empty() {
+                missing.push(format!(
+                    "column `{name}`: row(s) {} ({}) name(s) no object of this package",
+                    rows_listed(&rows),
+                    uris.iter().take(10).cloned().collect::<Vec<_>>().join(", ")
+                ));
+            }
+        }
+        if !missing.is_empty() {
+            out.push(violation(check, uuid, missing.join("; ")));
         }
     }
 }
@@ -402,7 +964,9 @@ pub(crate) fn well_named_by(uri: &str) -> Result<Option<String>, String> {
 }
 
 /// RFC 3986 percent-decoding, the one the identifier grammar allows
-/// (`pct-encoded`, §6.3). A malformed escape is kept as written.
+/// (`pct-encoded`, §6.3). A malformed escape is kept as written: `%` must be
+/// followed by two hexadecimal digits, and **nothing else** - `u8::from_str_radix`
+/// alone would take `%+f` for `0x0F`, so the digits are checked first.
 fn percent_decoded(text: &str) -> String {
     let bytes = text.as_bytes();
     let mut out = Vec::with_capacity(bytes.len());
@@ -410,6 +974,7 @@ fn percent_decoded(text: &str) -> String {
     while at < bytes.len() {
         if bytes[at] == b'%'
             && let Some(hex) = text.get(at + 1..at + 3)
+            && hex.bytes().all(|digit| digit.is_ascii_hexdigit())
             && let Ok(byte) = u8::from_str_radix(hex, 16)
         {
             out.push(byte);
@@ -593,7 +1158,11 @@ fn homogeneous_collection(context: &Context<'_>, check: &Integrity, out: &mut Ve
         {
             continue;
         }
-        let members = members_of(&held, uuid, identity::object_version_of_reflect(*object));
+        let members = members_of(
+            &held,
+            &identity::parse_address(uuid).0,
+            identity::object_version_of_reflect(*object),
+        );
         if members.is_empty() {
             continue;
         }
@@ -693,13 +1262,557 @@ fn wellbore_interpretation_set_holds_wellbores(
 }
 
 // ---------------------------------------------------------------------------
+// Two directional properties of one quantity
+// ---------------------------------------------------------------------------
+
+/// Below this fraction of the lateral value, a vertical value breaks the
+/// expected order (ADR-0036).
+pub const RATIO_TOLERANCE: f64 = 0.95;
+
+/// Beyond this share of the pairs breaking the order, the rule warns
+/// (ADR-0036).
+pub const RATIO_SHARE: f64 = 0.05;
+
+/// What a kind expects of its vertical values against its lateral ones.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DirectionalOrder {
+    /// The vertical value is not below the lateral one (resistivity).
+    VerticalNotBelowLateral,
+}
+
+/// One kind the rule judges: a table, not a `match` (ADR-0006).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct DirectionalExpectation {
+    /// The dictionary uuid of the kind; its descendants are judged too.
+    pub kind_uuid: &'static str,
+    /// Its title, for the report.
+    pub kind_title: &'static str,
+    /// The order its values are expected to keep.
+    pub order: DirectionalOrder,
+}
+
+/// The kinds judged. `resistivity` is the Energistics dictionary's
+/// 7c0d1a5d-483e-4d77-81f3-9883527838d2 (`data/property_kinds.tsv`).
+/// Permeability is not here: its expectation is weaker and unconfirmed
+/// (TODO(verify): ADR-0036).
+pub const DIRECTIONAL_EXPECTATIONS: &[DirectionalExpectation] = &[DirectionalExpectation {
+    kind_uuid: "7c0d1a5d-483e-4d77-81f3-9883527838d2",
+    kind_title: "resistivity",
+    order: DirectionalOrder::VerticalNotBelowLateral,
+}];
+
+/// What a caller says a property's direction is, where its facet does not (an
+/// extension value). Never written into the package.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DeclaredDirection {
+    /// The property, by its full uri.
+    pub property: String,
+    /// The direction the caller says it is.
+    pub role: DirectionRole,
+}
+
+/// A direction, as the rule reads it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DirectionRole {
+    /// Across the layers (`K`, `Z`).
+    Vertical,
+    /// Along the layers (`I`, `J`, `X`, `Y`).
+    Lateral,
+}
+
+/// Which axes a direction facet names: a grid's (`I`, `J`, `K`) or the
+/// coordinates' (`X`, `Y`, `Z`). A grid's vertical is not the coordinates'
+/// lateral, so two families are never paired. A declared direction pairs with
+/// any family.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Axes {
+    Grid,
+    Coordinates,
+    Declared,
+}
+
+/// How a direction facet reads.
+enum DirectionReading {
+    /// A role, in a family of axes.
+    Role(DirectionRole, Axes),
+    /// An extension value nobody declared: not readable.
+    Extension(String),
+    /// A standard value that names no axis.
+    Unknown(String),
+}
+
+/// One property the rule may judge: it has exactly one `direction` facet and a
+/// support.
+struct Directional<'a> {
+    uuid: &'a str,
+    uri: String,
+    support: String,
+    read: property::Property<'a>,
+}
+
+const DIRECTIONAL_RATIO: &str = "house/property/directional-ratio";
+
+/// The rule, with what the caller declared: a view of a property runs it again
+/// once a person said which sibling is vertical. [`run`] calls it with nothing
+/// declared.
+///
+/// A [`DeclaredDirection`] is read for this one run and never written into the
+/// package.
+pub fn directional_ratio_declaring(
+    objects: &[(&str, &dyn Reflect)],
+    source: &dyn ObjectSource,
+    arrays: Option<&dyn ArraySource>,
+    declared: &[DeclaredDirection],
+) -> Vec<Finding> {
+    let context = Context {
+        objects,
+        source,
+        arrays,
+        memory: Memory::default(),
+    };
+    let mut out = Vec::new();
+    if let Some(check) = CHECKS.iter().find(|check| check.id == DIRECTIONAL_RATIO) {
+        judge_directional(&context, check, declared, &mut out);
+    }
+    out
+}
+
+fn directional_ratio(context: &Context<'_>, check: &Integrity, out: &mut Vec<Finding>) {
+    judge_directional(context, check, &[], out);
+}
+
+/// Read one direction facet. A standard value is the schema's (`I`, `K+`...,
+/// EML 2.3 `Facet`; common TRG 2.3 §11.1 p. 281); an extension value is the
+/// producer's and is read only when the caller declared it.
+fn direction_reading(facet: &property::Facet, uri: &str, declared: &[DeclaredDirection]) -> DirectionReading {
+    match &facet.value {
+        property::FacetValue::Standard(value) => {
+            let upper = value.trim().to_ascii_uppercase();
+            match upper.trim_end_matches(['+', '-']) {
+                "K" => DirectionReading::Role(DirectionRole::Vertical, Axes::Grid),
+                "Z" => DirectionReading::Role(DirectionRole::Vertical, Axes::Coordinates),
+                "I" | "J" => DirectionReading::Role(DirectionRole::Lateral, Axes::Grid),
+                "X" | "Y" => DirectionReading::Role(DirectionRole::Lateral, Axes::Coordinates),
+                _ => DirectionReading::Unknown(value.clone()),
+            }
+        }
+        property::FacetValue::Extension(value) => {
+            match declared
+                .iter()
+                .find(|declaration| declaration.property.eq_ignore_ascii_case(uri))
+            {
+                Some(declaration) => DirectionReading::Role(declaration.role, Axes::Declared),
+                None => DirectionReading::Extension(value.clone()),
+            }
+        }
+    }
+}
+
+/// Whether two directions can be paired: one family, or one of them declared.
+fn same_axes(a: Axes, b: Axes) -> bool {
+    a == b || a == Axes::Declared || b == Axes::Declared
+}
+
+/// What the kind of a property expects: `Ok(None)` when the rule does not
+/// apply to it, an error when the kind does not resolve.
+fn expectation_of(
+    resolver: &Resolver<'_>,
+    kind: &property::PropertyKindRef,
+    kind_uri: Option<&str>,
+) -> std::result::Result<Option<DirectionalOrder>, String> {
+    let resolution = resolver
+        .resolve_at(kind, kind_uri)
+        .map_err(|why| format!("its kind does not resolve: {why}"))?;
+    Ok(DIRECTIONAL_EXPECTATIONS
+        .iter()
+        .find(|expectation| {
+            resolution
+                .chain
+                .iter()
+                .any(|kind| kind.uuid.eq_ignore_ascii_case(expectation.kind_uuid))
+        })
+        .map(|expectation| expectation.order))
+}
+
+/// The values of a property, every patch in order; the array's `NullValue` and
+/// every non-finite value are `NaN`.
+fn directional_values(
+    read: &property::Property<'_>,
+    arrays: &dyn ArraySource,
+) -> std::result::Result<Vec<f64>, String> {
+    let mut all = Vec::new();
+    for patch in &read.patches {
+        let values = patch
+            .read(arrays)
+            .map_err(|why| format!("patch {} does not read: {why}", patch.position))?;
+        let numbers = values
+            .to_f64()
+            .ok_or_else(|| format!("patch {} does not hold numbers", patch.position))?;
+        let null = crate::values::null_value(patch.array).map(|n| n as f64);
+        all.extend(numbers.into_iter().map(|value| {
+            if !value.is_finite() || Some(value) == null {
+                f64::NAN
+            } else {
+                value
+            }
+        }));
+    }
+    Ok(all)
+}
+
+/// Say once, per property and per reason, that a property cannot be judged.
+fn tell(
+    out: &mut Vec<Finding>,
+    told: &mut BTreeSet<(String, String)>,
+    check: &Integrity,
+    uuid: &str,
+    why: String,
+) {
+    if told.insert((uuid.to_owned(), why.clone())) {
+        out.push(unverifiable(check, uuid, why));
+    }
+}
+
+/// **House rule** (ADR-0036): the specification names the directions of a
+/// property (common TRG 2.3 §11.1 p. 281) and says nothing of the order of
+/// their values; this is a reading of the physics of a layered medium, so it
+/// is a warning and never an error.
+///
+/// The siblings are found by [`property::kinship::kinship`], the one rule; this
+/// function adds what only it knows: which direction is vertical, which kinds
+/// expect an order, and the count of the pairs that break it
+/// ([`crate::stats::tally`], the one counter).
+#[allow(clippy::needless_range_loop)] // `i` and `j` name the pair, not only the element
+fn judge_directional(
+    context: &Context<'_>,
+    check: &Integrity,
+    declared: &[DeclaredDirection],
+    out: &mut Vec<Finding>,
+) {
+    use crate::property::kinship::{KinFacts, Kinship, kinship};
+    use crate::stats::{CellRule, tally};
+
+    let mut candidates: Vec<Directional<'_>> = Vec::new();
+    for (uuid, object) in context.objects {
+        if !concepts_of(*object).contains(&"AbstractProperty") {
+            continue;
+        }
+        let Ok(read) = property::read(*object) else {
+            continue;
+        };
+        let directions = read
+            .facets
+            .iter()
+            .filter(|facet| facet.kind.eq_ignore_ascii_case("direction"))
+            .count();
+        if directions != 1 {
+            continue;
+        }
+        let Some(support) = read
+            .supporting_representation_uri
+            .clone()
+            .or_else(|| read.supporting_representation.clone())
+        else {
+            continue;
+        };
+        let uri = identity::uri_of_reflect(*object).unwrap_or_else(|| (*uuid).to_owned());
+        candidates.push(Directional {
+            uuid,
+            uri,
+            support,
+            read,
+        });
+    }
+
+    let resolver = Resolver::new(context.source);
+    let mut orders: BTreeMap<String, std::result::Result<Option<DirectionalOrder>, String>> = BTreeMap::new();
+    let mut values: BTreeMap<usize, std::result::Result<Vec<f64>, String>> = BTreeMap::new();
+    let mut told: BTreeSet<(String, String)> = BTreeSet::new();
+
+    // `kinship` pairs two properties of **one support** only (the uuid of the support, compared as written): the
+    // pairs are searched inside each support's group, not among all candidates. The outer loop still runs in the
+    // candidates' order and each group lists its members in that order, so the findings come out in the order
+    // the all-pairs loop gave.
+    let supports: Vec<String> = candidates
+        .iter()
+        .map(|candidate| identity::parse_address(&candidate.support).0)
+        .collect();
+    let mut groups: BTreeMap<&str, Vec<usize>> = BTreeMap::new();
+    for (at, support) in supports.iter().enumerate() {
+        groups.entry(support.as_str()).or_default().push(at);
+    }
+
+    for i in 0..candidates.len() {
+        for &j in groups[supports[i].as_str()].iter().filter(|&&j| j > i) {
+            let (a, b) = (&candidates[i], &candidates[j]);
+            let Some(Kinship::Direction { this, other }) = kinship(
+                &KinFacts::of_property(&a.uri, &a.support, &a.read),
+                &KinFacts::of_property(&b.uri, &b.support, &b.read),
+            ) else {
+                continue;
+            };
+            let Some(kind) = &a.read.kind else {
+                continue;
+            };
+            let key = match kind {
+                property::PropertyKindRef::Object { uuid, .. } => uuid.to_ascii_lowercase(),
+                property::PropertyKindRef::Standard { name } => name.to_ascii_lowercase(),
+            };
+            let expectation = orders
+                .entry(key)
+                .or_insert_with(|| expectation_of(&resolver, kind, a.read.kind_uri.as_deref()))
+                .clone();
+            let order = match expectation {
+                Ok(Some(order)) => order,
+                Ok(None) => continue,
+                Err(why) => {
+                    tell(out, &mut told, check, a.uuid, why);
+                    continue;
+                }
+            };
+
+            let reading_a = direction_reading(&this, &a.uri, declared);
+            let reading_b = direction_reading(&other, &b.uri, declared);
+            for (side, reading) in [(a, &reading_a), (b, &reading_b)] {
+                match reading {
+                    DirectionReading::Role(..) => {}
+                    DirectionReading::Extension(value) => tell(
+                        out,
+                        &mut told,
+                        check,
+                        side.uuid,
+                        format!(
+                            "its direction facet `{value}` is an extension value: which direction it names is not in the specification (common TRG 2.3 §11.1 p. 281); declare it to compare"
+                        ),
+                    ),
+                    DirectionReading::Unknown(value) => tell(
+                        out,
+                        &mut told,
+                        check,
+                        side.uuid,
+                        format!(
+                            "its direction facet `{value}` names no axis of the schema's list (common TRG 2.3 §11.1 p. 281)"
+                        ),
+                    ),
+                }
+            }
+            let (DirectionReading::Role(role_a, axes_a), DirectionReading::Role(role_b, axes_b)) =
+                (&reading_a, &reading_b)
+            else {
+                continue;
+            };
+            if role_a == role_b || !same_axes(*axes_a, *axes_b) {
+                continue;
+            }
+            let (v, h) = if *role_a == DirectionRole::Vertical {
+                (i, j)
+            } else {
+                (j, i)
+            };
+            let (vertical, lateral) = (&candidates[v], &candidates[h]);
+
+            let Some(arrays) = context.arrays else {
+                tell(
+                    out,
+                    &mut told,
+                    check,
+                    vertical.uuid,
+                    "its values are an array, and this check was given nothing to read arrays with".into(),
+                );
+                continue;
+            };
+            for index in [v, h] {
+                values
+                    .entry(index)
+                    .or_insert_with(|| directional_values(&candidates[index].read, arrays));
+            }
+            let (vertical_values, lateral_values) = match (&values[&v], &values[&h]) {
+                (Ok(vertical_values), Ok(lateral_values)) => (vertical_values, lateral_values),
+                (Err(why), _) => {
+                    tell(out, &mut told, check, vertical.uuid, why.clone());
+                    continue;
+                }
+                (_, Err(why)) => {
+                    tell(out, &mut told, check, lateral.uuid, why.clone());
+                    continue;
+                }
+            };
+            if vertical_values.len() != lateral_values.len() {
+                tell(
+                    out,
+                    &mut told,
+                    check,
+                    vertical.uuid,
+                    format!(
+                        "{} values against {}",
+                        vertical_values.len(),
+                        lateral_values.len()
+                    ),
+                );
+                continue;
+            }
+
+            let rule = match order {
+                DirectionalOrder::VerticalNotBelowLateral => CellRule::Below(RATIO_TOLERANCE),
+            };
+            let ratios: Vec<f64> = vertical_values
+                .iter()
+                .zip(lateral_values)
+                .map(|(v, h)| {
+                    if v.is_finite() && h.is_finite() && *h != 0.0 {
+                        v / h
+                    } else {
+                        f64::NAN
+                    }
+                })
+                .collect();
+            let counted = tally(&ratios, 1, &rule).expect("the tolerance is a finite number");
+            let pairs = counted.cells - counted.absent;
+            if pairs == 0 {
+                tell(
+                    out,
+                    &mut told,
+                    check,
+                    vertical.uuid,
+                    "no pair of finite values".into(),
+                );
+                continue;
+            }
+            let share = counted.matched as f64 / pairs as f64;
+            if share > RATIO_SHARE {
+                out.push(violation(
+                    check,
+                    vertical.uuid,
+                    format!(
+                        "{:.2} % of {pairs} pairs below {RATIO_TOLERANCE} (vertical `{}` against lateral `{}`)",
+                        share * 100.0,
+                        vertical.uri,
+                        lateral.uri
+                    ),
+                ));
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// An activity against its template
+// ---------------------------------------------------------------------------
+
+/// How many departures a finding spells out before saying `and N more`.
+const ACTIVITY_ISSUES_SHOWN: usize = 10;
+
+/// One departure of an activity from its template, as the report reads it.
+fn issue_read(issue: &ParameterIssue) -> Option<String> {
+    match issue {
+        ParameterIssue::NotInTemplate { position, title } => {
+            Some(format!("parameter `{title}` ({position}) is not in the template"))
+        }
+        ParameterIssue::KindDiffers {
+            position,
+            title,
+            declared,
+            written,
+        } => Some(format!(
+            "parameter `{title}` ({position}) is written {}, the template allows {}",
+            written.word(),
+            declared
+                .iter()
+                .map(|kind| kind.word())
+                .collect::<Vec<_>>()
+                .join(", ")
+        )),
+        ParameterIssue::TooFew { title, min, found } => {
+            Some(format!("`{title}`: {found} for at least {min}"))
+        }
+        ParameterIssue::TooMany { title, max, found } => {
+            Some(format!("`{title}`: {found} for at most {max}"))
+        }
+        // The template is given to `conformance` here: this cannot happen.
+        ParameterIssue::TemplateAbsent => None,
+    }
+}
+
+/// **House rule** (`house/provenance/activity-follows-its-template`): each
+/// activity against the template its `ActivityDescriptor` names, by
+/// `crate::activity::conformance` - the one reading of conformance, never a
+/// second. A warning: the activity is read all the same. A template that
+/// cannot be found is *unverifiable*, never a pass.
+fn activity_follows_its_template(context: &Context<'_>, check: &Integrity, out: &mut Vec<Finding>) {
+    let templates: Vec<TemplateRecord> = context
+        .objects
+        .iter()
+        .filter_map(|(_, object)| read_template(*object).ok())
+        .collect();
+    for (uuid, object) in context.objects {
+        let activity = match read_activity(*object) {
+            Ok(activity) => activity,
+            Err(ActivityRefusal::NoIdentity { .. }) => {
+                out.push(unverifiable(
+                    check,
+                    uuid,
+                    "it has no uuid, so the template it names cannot be told from another".into(),
+                ));
+                continue;
+            }
+            Err(_) => continue,
+        };
+        let Some(descriptor) = &activity.descriptor else {
+            out.push(unverifiable(
+                check,
+                uuid,
+                "it names no ActivityDescriptor, so there is no template to hold it to".into(),
+            ));
+            continue;
+        };
+        let fetched: Option<TemplateRecord> = match descriptor_of(&activity, &templates) {
+            Some(_) => None,
+            None => context
+                .source
+                .object_at(&descriptor.address)
+                .and_then(|found| read_template(found.as_reflect()).ok()),
+        };
+        let template = match (descriptor_of(&activity, &templates), fetched.as_ref()) {
+            (Some(template), _) | (None, Some(template)) => template,
+            (None, None) => {
+                out.push(unverifiable(
+                    check,
+                    uuid,
+                    format!("its template `{}` is not in this package", descriptor.address),
+                ));
+                continue;
+            }
+        };
+        let reads: Vec<String> = conformance(&activity, Some(template))
+            .iter()
+            .filter_map(issue_read)
+            .collect();
+        if reads.is_empty() {
+            continue;
+        }
+        let mut read = reads
+            .iter()
+            .take(ACTIVITY_ISSUES_SHOWN)
+            .cloned()
+            .collect::<Vec<_>>()
+            .join("; ");
+        if reads.len() > ACTIVITY_ISSUES_SHOWN {
+            read.push_str(&format!(" and {} more", reads.len() - ACTIVITY_ISSUES_SHOWN));
+        }
+        out.push(violation(check, uuid, read));
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Reading
 // ---------------------------------------------------------------------------
 
 fn violation(check: &Integrity, uuid: &str, read: String) -> Finding {
+    let (bare, uri) = split_identity(uuid);
     Finding {
         rule: check.id.to_owned(),
-        uuid: uuid.to_owned(),
+        uuid: bare,
+        uri,
         says: check.says.to_owned(),
         outcome: Outcome::Violation { read },
         gravity: check.gravity,
@@ -707,64 +1820,20 @@ fn violation(check: &Integrity, uuid: &str, read: String) -> Finding {
 }
 
 fn unverifiable(check: &Integrity, uuid: &str, why: String) -> Finding {
+    let (bare, uri) = split_identity(uuid);
     Finding {
         rule: check.id.to_owned(),
-        uuid: uuid.to_owned(),
+        uuid: bare,
+        uri,
         says: check.says.to_owned(),
         outcome: Outcome::Unverifiable { why },
         gravity: check.gravity,
     }
 }
 
-/// A scalar field as its wire text - an enumeration's value, `true` for a
-/// boolean. `None` when absent.
-fn text(object: &dyn Reflect, name: &str) -> Option<String> {
-    match object.field(name)? {
-        FieldValue::Scalar(scalar) => Some(scalar.to_string()),
-        _ => None,
-    }
-}
-
-/// A numeric scalar field.
-fn number(object: &dyn Reflect, name: &str) -> Option<f64> {
-    match object.field(name)? {
-        FieldValue::Scalar(Scalar::Int(value)) => Some(value as f64),
-        FieldValue::Scalar(Scalar::UInt(value)) => Some(value as f64),
-        FieldValue::Scalar(Scalar::Double(value)) => Some(value),
-        FieldValue::Scalar(Scalar::Str(value)) => value.trim().parse().ok(),
-        _ => None,
-    }
-}
-
-/// Every scalar of a field, repeated or not, as wire text.
-fn scalars(object: &dyn Reflect, name: &str) -> Vec<String> {
-    match object.field(name) {
-        Some(FieldValue::Scalar(scalar)) => vec![scalar.to_string()],
-        Some(FieldValue::List(items)) => items
-            .iter()
-            .filter_map(|item| match item {
-                FieldValue::Scalar(scalar) => Some(scalar.to_string()),
-                _ => None,
-            })
-            .collect(),
-        _ => Vec::new(),
-    }
-}
-
-/// Every object of a field, repeated or not.
-fn objects<'a>(object: &'a dyn Reflect, name: &str) -> Vec<&'a dyn Reflect> {
-    match object.field(name) {
-        Some(FieldValue::Object(child)) => vec![child],
-        Some(FieldValue::List(items)) => items
-            .into_iter()
-            .filter_map(|item| match item {
-                FieldValue::Object(child) => Some(child),
-                _ => None,
-            })
-            .collect(),
-        _ => Vec::new(),
-    }
-}
+// The readers of a field are the door's (ADR 0046), under the names this file
+// already uses.
+use energyml_core::reflect::fields::{objects, text, texts as scalars};
 
 /// The reference held by a field, read with nothing opened.
 fn reference(object: &dyn Reflect, name: &str) -> Option<Member> {
@@ -831,6 +1900,21 @@ mod tests {
         // Not an Energistics URI: an error, which the check turns into an
         // uncheckable - never a pass.
         assert!(well_named_by("GTH-1 wellhead").is_err());
+    }
+
+    /// Identifier Specification v4.0 §6.3 (`pct-encoded` is `%` and two
+    /// hexadecimal digits, RFC 3986 §2.1): a sign is not a digit, so `%+f` is
+    /// not an escape and is kept as written.
+    ///
+    /// Break it: drop the `is_ascii_hexdigit` guard in `percent_decoded`.
+    #[test]
+    fn a_sign_inside_a_percent_escape_is_not_an_escape() {
+        assert_eq!(percent_decoded("a%+fb"), "a%+fb");
+        assert_eq!(percent_decoded("a%-1b"), "a%-1b");
+        // The two forms that are escapes still decode, in either case.
+        assert_eq!(percent_decoded("GTH%2D9%2d%41"), "GTH-9-A");
+        // A truncated escape at the end is kept too.
+        assert_eq!(percent_decoded("a%4"), "a%4");
     }
 
     #[test]

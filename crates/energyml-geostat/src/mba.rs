@@ -482,13 +482,7 @@ impl Mba {
 
         // The NaN set-aside - a sample with a non-finite position or value
         // takes no part, and is counted (the house rule, already `Idw`'s).
-        let usable: Vec<([f64; 2], f64)> = samples
-            .iter()
-            .zip(values)
-            .filter(|(p, v)| v.is_finite() && p.iter().all(|c| c.is_finite()))
-            .map(|(p, v)| (*p, *v))
-            .collect();
-        let set_aside = samples.len() - usable.len();
+        let (usable, set_aside) = crate::samples::usable(samples, values);
         if usable.is_empty() {
             return Err(Error::NoSample {
                 given: samples.len(),

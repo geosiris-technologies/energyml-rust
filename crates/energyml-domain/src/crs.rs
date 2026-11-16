@@ -10,6 +10,9 @@
 //!   values. eml 2.3 has a *pair* of `AxisDirectionKind`, about thirty values
 //!   including `display-up` and `column-positive`. 2.3 → 2.0.1 loses
 //!   information; a round-trippable pivot would have to invent it.
+//!   Reading it is another matter: [`Crs::axes`] reports what the file states about the placed frame,
+//!   as compass bearings, and says `NotStated`, `Unusable` or `Contradictory` rather than guessing.
+//!   Nothing is ever written back from it, which is why it does not make this a pivot.
 //! - **Time versus depth.** 2.0.1 makes it the *type* - `LocalTime3dCrs` and
 //!   `LocalDepth3dCrs` are different objects. eml 2.3 makes it a *flag*,
 //!   `VerticalAxis.IsTime`, on one type.
@@ -30,6 +33,7 @@
 //! | vertical system | inline choice | a referenced top-level object |
 //! | horizontal unit | `ProjectedUom` | `HorizontalAxes.Uom` |
 //! | vertical unit | `VerticalUom` | `VerticalAxis.Uom` - the `VerticalCrs`'s `uom` is the datum's |
+//! | horizontal axes | `ProjectedAxisOrder` (the projected CRS's) | `OriginProjectedCrs.AxisOrder`; `HorizontalAxes.Direction1/2` on the 2d CRS |
 //!
 //! # The local axis and the datum are two statements (24/09/2026)
 //!
@@ -119,6 +123,183 @@ pub enum VerticalQuantity {
     Time,
 }
 
+/// Which way round the placed frame turns: whether (first axis, second axis, up) is direct.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Handedness {
+    /// (first, second, up) is a direct frame - easting then northing.
+    Right,
+    /// (first, second, up) is an indirect frame - northing then easting. A cross product taken on
+    /// these coordinates points the other way from the physical one.
+    Left,
+}
+
+/// The compass directions of the two horizontal axes of the placed (projected) frame, as the file
+/// states them. Always two directions at right angles: the constructors refuse anything else.
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub struct AxisOrder {
+    /// Bearing of the first axis, in degrees clockwise from north (east is 90).
+    pub first_degrees: f64,
+    /// Bearing of the second axis, in degrees clockwise from north.
+    pub second_degrees: f64,
+}
+
+/// Where east and north point in the placed plane: unit vectors written in (first axis, second axis).
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub struct CompassAxes {
+    /// The unit vector pointing east.
+    pub east: [f64; 2],
+    /// The unit vector pointing north.
+    pub north: [f64; 2],
+}
+
+/// What the file says about the horizontal axes of the placed frame.
+#[derive(Clone, Debug, PartialEq)]
+pub enum AxisReading {
+    /// Stated, and usable.
+    Stated(AxisOrder),
+    /// Nothing states it: a datum read without its system, or a component with no axes.
+    NotStated,
+    /// Stated with words that are no compass direction, or two directions not at right angles
+    /// (`display-up`, `east` then `north-east`): kept as written, never guessed.
+    Unusable {
+        /// The first statement, as the file spells it.
+        first: String,
+        /// The second, or an empty string when the statement was one word pair (`AxisOrder2d`).
+        second: String,
+    },
+    /// Two statements of the same frame disagree on its handedness: eml 2.3's projected
+    /// `AxisOrder` against the local `HorizontalAxes`.
+    Contradictory {
+        /// What `LocalEngineering2dCrs.OriginProjectedCrs.AxisOrder` says.
+        projected: AxisOrder,
+        /// What `LocalEngineering2dCrs.HorizontalAxes` says.
+        local: AxisOrder,
+    },
+}
+
+/// The sixteen compass words of `AxisDirectionKind` (common TRG 2.3 §12.6 p. 307-308) and their
+/// bearings in degrees clockwise from north.
+const COMPASS_WORDS: [(&str, f64); 16] = [
+    ("north", 0.0),
+    ("north-north-east", 22.5),
+    ("north-east", 45.0),
+    ("east-north-east", 67.5),
+    ("east", 90.0),
+    ("east-south-east", 112.5),
+    ("south-east", 135.0),
+    ("south-south-east", 157.5),
+    ("south", 180.0),
+    ("south-south-west", 202.5),
+    ("south-west", 225.0),
+    ("west-south-west", 247.5),
+    ("west", 270.0),
+    ("west-north-west", 292.5),
+    ("north-west", 315.0),
+    ("north-north-west", 337.5),
+];
+
+fn compass_bearing(word: &str) -> Option<f64> {
+    let word = word.trim();
+    COMPASS_WORDS
+        .iter()
+        .find(|(name, _)| name.eq_ignore_ascii_case(word))
+        .map(|(_, bearing)| *bearing)
+}
+
+impl AxisOrder {
+    /// An `AxisOrder2d` value (`"easting northing"`, ...), trimmed, case ignored. `None` for anything else.
+    pub fn from_order(text: &str) -> Option<AxisOrder> {
+        let words: Vec<String> = text.split_whitespace().map(str::to_ascii_lowercase).collect();
+        let (first, second) = match words.iter().map(String::as_str).collect::<Vec<_>>().as_slice() {
+            ["easting", "northing"] => (90.0, 0.0),
+            ["easting", "southing"] => (90.0, 180.0),
+            ["southing", "easting"] => (180.0, 90.0),
+            ["northing", "easting"] => (0.0, 90.0),
+            ["westing", "southing"] => (270.0, 180.0),
+            ["southing", "westing"] => (180.0, 270.0),
+            ["northing", "westing"] => (0.0, 270.0),
+            ["westing", "northing"] => (270.0, 0.0),
+            _ => return None,
+        };
+        Some(AxisOrder {
+            first_degrees: first,
+            second_degrees: second,
+        })
+    }
+
+    /// Two `AxisDirectionKind` values. `None` unless both are compass directions at right angles.
+    pub fn from_directions(first: &str, second: &str) -> Option<AxisOrder> {
+        let first_degrees = compass_bearing(first)?;
+        let second_degrees = compass_bearing(second)?;
+        if (first_degrees - second_degrees).to_radians().cos().abs() > 1e-9 {
+            return None;
+        }
+        Some(AxisOrder {
+            first_degrees,
+            second_degrees,
+        })
+    }
+
+    /// Right when sin(first - second) > 0, Left otherwise (the two are at right angles by construction).
+    pub fn handedness(&self) -> Handedness {
+        if (self.first_degrees - self.second_degrees).to_radians().sin() > 0.0 {
+            Handedness::Right
+        } else {
+            Handedness::Left
+        }
+    }
+
+    /// east = (sin b1, sin b2), north = (cos b1, cos b2), with b1, b2 the bearings in radians.
+    pub fn compass(&self) -> CompassAxes {
+        let (s1, c1) = self.first_degrees.to_radians().sin_cos();
+        let (s2, c2) = self.second_degrees.to_radians().sin_cos();
+        CompassAxes {
+            east: [s1, s2],
+            north: [c1, c2],
+        }
+    }
+}
+
+impl AxisReading {
+    /// The order when it is `Stated`.
+    pub fn stated(&self) -> Option<&AxisOrder> {
+        match self {
+            AxisReading::Stated(order) => Some(order),
+            _ => None,
+        }
+    }
+}
+
+impl CompassAxes {
+    /// `Some` only when both vectors are unit (within 1e-9) and at right angles (|dot| <= 1e-9):
+    /// Right when east.x * north.y - east.y * north.x > 0, Left when < 0.
+    pub fn handedness(&self) -> Option<Handedness> {
+        let [ex, ey] = self.east;
+        let [nx, ny] = self.north;
+        let unit = |x: f64, y: f64| x.is_finite() && y.is_finite() && (x * x + y * y - 1.0).abs() <= 1e-9;
+        if !unit(ex, ey) || !unit(nx, ny) || (ex * nx + ey * ny).abs() > 1e-9 {
+            return None;
+        }
+        let turn = ex * ny - ey * nx;
+        Some(if turn > 0.0 {
+            Handedness::Right
+        } else {
+            Handedness::Left
+        })
+    }
+}
+
+/// What the order of two `AxisOrder2d` words, or the two words themselves, say.
+fn reading_of_order(text: String) -> AxisReading {
+    match AxisOrder::from_order(&text) {
+        Some(order) => AxisReading::Stated(order),
+        None => AxisReading::Unusable {
+            first: text,
+            second: String::new(),
+        },
+    }
+}
+
 /// A coordinate reference system, read the same way in every version.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Crs {
@@ -190,6 +371,10 @@ pub struct Crs {
     pub projected: CrsKind,
     /// The vertical system.
     pub vertical: CrsKind,
+
+    /// The order and direction of the two horizontal axes of the placed frame - what decides whether a
+    /// cross product taken on placed coordinates points to the physical right. See the module doc.
+    pub axes: AxisReading,
 }
 
 /// A point in the CRS's own axes and units.
@@ -252,6 +437,22 @@ impl Crs {
             match self.vertical_direction {
                 VerticalDirection::Down => -(self.z_offset + z),
                 VerticalDirection::Up => self.z_offset + z,
+            },
+        ]
+    }
+
+    /// A **direction** of the local frame in the projected one: the rotation and the vertical flip of
+    /// [`Crs::to_projected`], and no offset. The one door for vectors, as `to_projected` is for points.
+    /// Units are not touched, exactly as `to_projected` leaves them.
+    pub fn direction_to_projected(&self, vector: Point) -> Point {
+        let (sin, cos) = self.areal_rotation.sin_cos();
+        let [x, y, z] = vector;
+        [
+            x * cos - y * sin,
+            x * sin + y * cos,
+            match self.vertical_direction {
+                VerticalDirection::Down => -z,
+                VerticalDirection::Up => z,
             },
         ]
     }
@@ -396,13 +597,7 @@ fn of_within(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8) -> Result
         // reading bug in the connection set: it was one hop short in the
         // system that places it.
         for field in BORROWED_GEOMETRY_FIELDS {
-            let lenders: Vec<&dyn Reflect> = match object.field(field) {
-                Some(FieldValue::Object(lender)) => vec![lender],
-                Some(FieldValue::List(items)) => {
-                    items.into_iter().filter_map(|item| item.as_object()).collect()
-                }
-                _ => continue,
-            };
+            let lenders = objects(object, field);
             // **Every lender must agree, or nothing is claimed.** Two grids in
             // two systems are two systems, and taking the first would be *a
             // guess wearing a number* - the phrase this file already uses, two
@@ -455,11 +650,7 @@ fn of_within(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8) -> Result
 /// on, or `None` - no patch, no readable support, or two supports in two
 /// systems (a guess wearing a number, as for `Grid`).
 fn patch_supports_agree(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8) -> Result<Option<Crs>> {
-    let patches: Vec<&dyn Reflect> = match object.field("SubRepresentationPatch") {
-        Some(FieldValue::Object(patch)) => vec![patch],
-        Some(FieldValue::List(items)) => items.into_iter().filter_map(|item| item.as_object()).collect(),
-        _ => return Ok(None),
-    };
+    let patches = objects(object, "SubRepresentationPatch");
     let mut agreed: Option<Crs> = None;
     for patch in patches {
         let Some(FieldValue::Object(support)) = patch.field("SupportingRepresentation") else {
@@ -747,6 +938,7 @@ fn from_well_datum(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8) -> 
             time_uom: None,
             projected: compound.projected,
             vertical: compound.vertical,
+            axes: compound.axes,
         }));
     }
 
@@ -763,9 +955,22 @@ fn from_well_datum(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8) -> 
     {
         return read_with(local.as_reflect(), source).map(Some);
     }
+    // RESQML 2.0.1 proper keeps the `LocalCrs` on the `MdDatum` itself, beside a `Location` that is the
+    // `Point3d`: the same whole CRS.
+    if let Some(local_named) = reference_to(datum, "LocalCrs")
+        && let Some(local) = source.object_of(local_named)
+    {
+        return read_with(local.as_reflect(), source).map(Some);
+    }
 
     let projected = crs_object_kind(datum, "HorizontalCoordinates", source);
     let vertical: CrsKind = crs_object_kind(datum, "VerticalCrs", source);
+
+    // The placed x and y are in the projected system's unit; the elevation has been converted to
+    // metres to meet the measured depths (`place_datum`). The unit is read by `stated_uom`, the one
+    // reading of it.
+    let horizontal_uom =
+        crs_object_of(datum, "HorizontalCoordinates", source).and_then(|crs| stated_uom(crs.as_reflect()));
 
     let out = Crs {
         uuid: datum_uuid,
@@ -778,11 +983,13 @@ fn from_well_datum(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8) -> 
         // elevations, converting the datum's own convention on the way.
         vertical_direction: VerticalDirection::Up,
         vertical_quantity: VerticalQuantity::Length,
-        horizontal_uom: None,
-        vertical_uom: None,
+        horizontal_uom,
+        vertical_uom: Some("m".to_string()),
         time_uom: None,
         projected,
         vertical,
+        // TODO(verify): the `AxisOrder` of the `ProjectedCrs` of `HorizontalCoordinates` could be read here.
+        axes: AxisReading::NotStated,
     };
 
     // if let Some(horizontal_coordinates) = object.field("HorizontalCoordinates") {
@@ -791,6 +998,31 @@ fn from_well_datum(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8) -> 
     // }
 
     Ok(Some(out))
+}
+
+/// The unit a projected or a vertical CRS object (eml 2.3 `ProjectedCrs`, `VerticalCrs`) declares - the one
+/// reading of it: `crs::of`, `place_datum` and the survey reader call this.
+pub fn stated_uom(crs_object: &dyn Reflect) -> Option<String> {
+    measure::enum_value(crs_object, "uom")
+}
+
+/// The CRS object a datum field points at (`HorizontalCoordinates.Crs`, or a `VerticalCrs` reference),
+/// resolved as [`crs_object_kind`] resolves it. `None` when the field is absent or the object is not in
+/// the source.
+fn crs_object_of(
+    datum: &dyn Reflect,
+    field: &str,
+    source: &dyn ObjectSource,
+) -> Option<Box<dyn energyml_core::registry::DynObject>> {
+    let FieldValue::Object(holder) = datum.field(field)? else {
+        return None;
+    };
+    let named = if identity::uuid_of_reflect(holder).is_some() {
+        Some(holder)
+    } else {
+        reference_to(holder, "Crs")
+    }?;
+    source.object_of(named)
 }
 
 /// The EPSG identity of the CRS a datum field points at.
@@ -898,7 +1130,17 @@ pub fn read_with(crs: &dyn Reflect, source: &dyn ObjectSource) -> Result<Crs> {
         time_uom: measure::enum_value(crs, "TimeUom"),
         projected: kind_of(crs, "ProjectedCrs"),
         vertical: kind_of(crs, "VerticalCrs"),
+        axes: AxisReading::NotStated,
     };
+
+    // The axis order of the projected system: RESQML 2.0.1's `ProjectedAxisOrder`, or the `AxisOrder`
+    // of an eml 2.3 `ProjectedCrs` named directly. Never an error: a CRS whose axes cannot be read
+    // still places its points.
+    if let Some(text) =
+        measure::enum_value(crs, "ProjectedAxisOrder").or_else(|| measure::enum_value(crs, "AxisOrder"))
+    {
+        out.axes = reading_of_order(text);
+    }
 
     // The object may *be* a vertical system rather than merely name one - a
     // standalone eml 2.3 `VerticalCrs` is a top-level object in its own right.
@@ -1017,6 +1259,7 @@ pub fn read_with(crs: &dyn Reflect, source: &dyn ObjectSource) -> Result<Crs> {
                 out.projected = found;
             }
         }
+        out.axes = compound_axes(plane);
     }
 
     // eml 2.3: the vertical half, a referenced top-level object - the datum.
@@ -1060,6 +1303,41 @@ pub fn read_with(crs: &dyn Reflect, source: &dyn ObjectSource) -> Result<Crs> {
         out.z_offset = origin_along_axis(origin, &out, datum_direction, datum_uom.as_deref())?;
     }
     Ok(out)
+}
+
+/// The horizontal axes of an eml 2.3 `LocalEngineering2dCrs`: the projected system's `AxisOrder`
+/// (`OriginProjectedCrs`) against the local `HorizontalAxes`. The projected one wins when both are
+/// readable and agree on the handedness, because the placed coordinates are the projected system's
+/// (what `to_projected` produces); two statements that disagree are `Contradictory`.
+fn compound_axes(plane: &dyn Reflect) -> AxisReading {
+    let projected_text =
+        field_object(plane, "OriginProjectedCrs").and_then(|p| measure::enum_value(p, "AxisOrder"));
+    let projected = projected_text.as_deref().and_then(AxisOrder::from_order);
+    let words = field_object(plane, "HorizontalAxes").and_then(|axes| {
+        Some((
+            measure::enum_value(axes, "Direction1")?,
+            measure::enum_value(axes, "Direction2")?,
+        ))
+    });
+    let local = words
+        .as_ref()
+        .and_then(|(first, second)| AxisOrder::from_directions(first, second));
+    match (projected, local) {
+        (Some(projected), Some(local)) if projected.handedness() == local.handedness() => {
+            AxisReading::Stated(projected)
+        }
+        (Some(projected), Some(local)) => AxisReading::Contradictory { projected, local },
+        (Some(projected), None) => AxisReading::Stated(projected),
+        (None, Some(local)) => AxisReading::Stated(local),
+        (None, None) => match (words, projected_text) {
+            (Some((first, second)), _) => AxisReading::Unusable { first, second },
+            (None, Some(text)) => AxisReading::Unusable {
+                first: text,
+                second: String::new(),
+            },
+            (None, None) => AxisReading::NotStated,
+        },
+    }
 }
 
 /// `OriginVerticalCoordinate`, as the offset this view keeps: along the
@@ -1314,25 +1592,14 @@ fn angle(owner: &dyn Reflect, field: &str) -> Result<f64> {
     }
 }
 
+// The readers of a field are the door's (ADR 0046), under the names this file
+// already uses. A flag the file does not state is not set.
+use energyml_core::reflect::fields::{
+    integer as scalar_i64, number as scalar_f64, object as field_object, objects,
+};
+
 fn flag(object: &dyn Reflect, field: &str) -> bool {
-    matches!(
-        object.field(field),
-        Some(FieldValue::Scalar(energyml_core::value::Scalar::Bool(true)))
-    )
-}
-
-fn scalar_f64(object: &dyn Reflect, field: &str) -> Option<f64> {
-    match object.field(field)? {
-        FieldValue::Scalar(scalar) => scalar.as_f64(),
-        _ => None,
-    }
-}
-
-fn scalar_i64(object: &dyn Reflect, field: &str) -> Option<i64> {
-    match object.field(field)? {
-        FieldValue::Scalar(scalar) => scalar.as_f64().map(|v| v as i64),
-        _ => None,
-    }
+    energyml_core::reflect::fields::flag(object, field).unwrap_or(false)
 }
 
 /// The reference a field holds, when it names an object at all.
@@ -1352,18 +1619,11 @@ fn uri_or_uuid(reference: &dyn Reflect) -> String {
         .unwrap_or_default()
 }
 
-fn field_object<'a>(object: &'a dyn Reflect, field: &str) -> Option<&'a dyn Reflect> {
-    match object.field(field)? {
-        FieldValue::Object(child) => Some(child),
-        _ => None,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn crs(rotation: f64, direction: VerticalDirection) -> Crs {
+    pub(super) fn crs(rotation: f64, direction: VerticalDirection) -> Crs {
         Crs {
             uuid: "test".into(),
             kind: "LocalDepth3dCrs",
@@ -1378,6 +1638,7 @@ mod tests {
             time_uom: None,
             projected: CrsKind::Absent,
             vertical: CrsKind::Absent,
+            axes: AxisReading::NotStated,
         }
     }
 
@@ -1515,6 +1776,7 @@ mod tests {
 
 #[cfg(test)]
 mod inverse_tests {
+    use super::tests::crs;
     use super::*;
 
     #[test]
@@ -1538,6 +1800,7 @@ mod inverse_tests {
             time_uom: None,
             projected: CrsKind::Absent,
             vertical: CrsKind::Absent,
+            axes: AxisReading::NotStated,
         };
         for local in [[0.0, 0.0, 0.0], [12.5, -7.25, 33.0], [-100.0, 250.0, -8.5]] {
             let placed = crs.to_projected(local);
@@ -1549,5 +1812,120 @@ mod inverse_tests {
                 );
             }
         }
+    }
+
+    // RESQML TRG 2.0.1 §2.1 p. 10-11.
+    #[test]
+    fn a_direction_turns_and_flips_but_never_moves() {
+        let mut crs = crs(std::f64::consts::FRAC_PI_2, VerticalDirection::Down);
+        crs.x_offset = 1000.0;
+        crs.y_offset = 2000.0;
+        crs.z_offset = 35.0;
+        let close = |a: [f64; 3], b: [f64; 3]| (0..3).all(|i| (a[i] - b[i]).abs() < 1e-12);
+        assert!(close(
+            crs.direction_to_projected([1.0, 0.0, 0.0]),
+            [0.0, 1.0, 0.0]
+        ));
+        assert!(close(
+            crs.direction_to_projected([0.0, 0.0, 1.0]),
+            [0.0, 0.0, -1.0]
+        ));
+        assert!(close(
+            crs.direction_to_projected([0.0, 0.0, 0.0]),
+            [0.0, 0.0, 0.0]
+        ));
+    }
+
+    // The identity that defines the door: two doors, one fact.
+    #[test]
+    fn a_direction_is_the_difference_of_two_placed_points() {
+        let mut crs = crs(0.3, VerticalDirection::Down);
+        crs.x_offset = 700_000.0;
+        crs.y_offset = 6_600_000.0;
+        crs.z_offset = 120.0;
+        for p in [[0.0, 0.0, 0.0], [12.5, -7.25, 33.0]] {
+            for v in [[1.0, 2.0, 3.0], [-4.0, 0.5, -2.0]] {
+                let a = crs.to_projected([p[0] + v[0], p[1] + v[1], p[2] + v[2]]);
+                let b = crs.to_projected(p);
+                let d = crs.direction_to_projected(v);
+                for i in 0..3 {
+                    assert!((a[i] - b[i] - d[i]).abs() < 1e-6, "axis {i}");
+                }
+            }
+        }
+    }
+
+    // Common TRG 2.3 §12.7 p. 309 (AxisOrder2d): the eight values and the hand of each.
+    #[test]
+    fn the_axis_orders_of_the_schema_have_their_handedness() {
+        let table = [
+            ("easting northing", 90.0, 0.0, Handedness::Right),
+            ("easting southing", 90.0, 180.0, Handedness::Left),
+            ("southing easting", 180.0, 90.0, Handedness::Right),
+            ("northing easting", 0.0, 90.0, Handedness::Left),
+            ("westing southing", 270.0, 180.0, Handedness::Right),
+            ("southing westing", 180.0, 270.0, Handedness::Left),
+            ("northing westing", 0.0, 270.0, Handedness::Right),
+            ("westing northing", 270.0, 0.0, Handedness::Left),
+        ];
+        for (text, first, second, hand) in table {
+            let order = AxisOrder::from_order(text).unwrap();
+            assert_eq!(
+                (order.first_degrees, order.second_degrees),
+                (first, second),
+                "{text}"
+            );
+            assert_eq!(order.handedness(), hand, "{text}");
+        }
+        assert!(AxisOrder::from_order("up down").is_none());
+    }
+
+    // Common TRG 2.3 §12.6 p. 307-308 (AxisDirectionKind).
+    #[test]
+    fn compass_words_that_are_not_at_right_angles_state_no_order() {
+        assert!(AxisOrder::from_directions("east", "north-east").is_none());
+        assert!(AxisOrder::from_directions("display-up", "east").is_none());
+        let order = AxisOrder::from_directions("East", "NORTH").unwrap();
+        assert_eq!((order.first_degrees, order.second_degrees), (90.0, 0.0));
+    }
+
+    #[test]
+    fn the_compass_of_an_order_agrees_with_its_handedness() {
+        for text in [
+            "easting northing",
+            "easting southing",
+            "southing easting",
+            "northing easting",
+            "westing southing",
+            "southing westing",
+            "northing westing",
+            "westing northing",
+        ] {
+            let order = AxisOrder::from_order(text).unwrap();
+            assert_eq!(order.compass().handedness(), Some(order.handedness()), "{text}");
+        }
+        let compass = AxisOrder::from_order("northing easting").unwrap().compass();
+        for (got, want) in compass
+            .east
+            .iter()
+            .zip([0.0, 1.0])
+            .chain(compass.north.iter().zip([1.0, 0.0]))
+        {
+            assert!((got - want).abs() < 1e-12);
+        }
+    }
+
+    #[test]
+    fn skewed_or_short_compass_axes_have_no_handedness() {
+        let skewed = CompassAxes {
+            east: [1.0, 0.0],
+            north: [0.6, 0.8],
+        };
+        assert_eq!(skewed.handedness(), None);
+        let short = CompassAxes {
+            east: [0.5, 0.0],
+            north: [0.0, 1.0],
+        };
+        assert_eq!(short.handedness(), None);
     }
 }

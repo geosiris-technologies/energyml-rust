@@ -226,6 +226,8 @@ struct Store {
     point_reads: Cell<usize>,
     /// Whether the parent handed out is [`gapped_parent`].
     gapped: bool,
+    /// Whether the points array is handed out as strings (a file that stores text where numbers belong).
+    text_points: bool,
 }
 
 impl Default for Store {
@@ -247,6 +249,7 @@ impl Default for Store {
             points_read: Cell::new(0),
             point_reads: Cell::new(0),
             gapped: false,
+            text_points: false,
         }
     }
 }
@@ -312,6 +315,13 @@ impl ArraySource for Store {
         if location.path_in_file == POINTS {
             self.point_reads.set(self.point_reads.get() + 1);
             self.points_read.set(self.points_read.get() + values.len());
+            if self.text_points {
+                let text = values.iter().map(|v| v.to_string()).collect();
+                return Ok(ArrayData {
+                    metadata: ArrayMetadata::new(dimensions, "string".to_string()),
+                    values: ArrayValues::Text(text),
+                });
+            }
         }
         Ok(ArrayData {
             metadata: ArrayMetadata::new(dimensions, "f64".to_string()),
@@ -605,6 +615,31 @@ fn a_window_past_the_edge_of_the_parent_is_refused() {
     assert!(
         error.contains("4..5") && error.contains(" I,"),
         "the refusal should name the axis and the overrun: {error}"
+    );
+}
+
+/// A parent whose points array is text is refused by name: read through `to_f64` the window would be a lattice of
+/// `NaN` and the child grid would be drawn from it.
+///
+/// Break it: use `data.to_f64()` instead of `data.try_to_f64()` in `parent::window_points`; the refusal then never
+/// comes and the child nodes are `NaN`.
+#[test]
+fn a_parent_whose_points_are_text_is_refused() {
+    let mut store = Store::default();
+    let grid = child(
+        [1, 1, 1],
+        [
+            Axis::new(0, &[(1, 1)]),
+            Axis::new(0, &[(1, 1)]),
+            Axis::new(0, &[(1, 1)]),
+        ],
+        &mut store,
+    );
+    store.text_points = true;
+    let error = geometry::of(&grid, &store).unwrap_err().to_string();
+    assert!(
+        error.contains("string array"),
+        "the refusal should say the points are text: {error}"
     );
 }
 

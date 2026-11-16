@@ -129,9 +129,11 @@
 use energyml_core::value::{FieldValue, Reflect};
 
 use crate::error::{Error, Result};
+use crate::geometry::field_object;
 use crate::points::Point;
 use crate::source::ValueSource;
 use crate::values;
+use crate::vector::{add, dot, norm, scale as mul, sub, unit_above};
 
 /// Below this, a length or a spacing is treated as zero.
 const TINY: f64 = 1e-12;
@@ -183,18 +185,81 @@ impl Vertical {
     /// then agree to leave the file's own numbers as they are, which is what
     /// `Down` means here: the parameter is a depth and stays one.
     pub fn of(crs: Option<&energyml_domain::crs::Crs>) -> Self {
-        match crs.map(|crs| crs.vertical_direction) {
-            Some(energyml_domain::crs::VerticalDirection::Up) => Vertical::Up,
-            _ => Vertical::Down,
+        Self::reading(crs).vertical
+    }
+
+    /// [`Vertical::of`], with where the answer came from: a CRS that was read,
+    /// or this crate's convention for a geometry that names none.
+    pub fn reading(crs: Option<&energyml_domain::crs::Crs>) -> VerticalReading {
+        match crs {
+            None => VerticalReading {
+                vertical: Vertical::Down,
+                basis: VerticalBasis::NoCrs,
+            },
+            Some(crs) => VerticalReading {
+                vertical: match crs.vertical_direction {
+                    energyml_domain::crs::VerticalDirection::Up => Vertical::Up,
+                    _ => Vertical::Down,
+                },
+                basis: VerticalBasis::Crs,
+            },
         }
     }
 
     /// The direction the object naming a CRS sits in.
     pub fn read(object: &dyn Reflect, source: &dyn ValueSource) -> Self {
+        Self::read_noted(object, source).vertical
+    }
+
+    /// [`Vertical::read`], with where the answer came from.
+    pub fn read_noted(object: &dyn Reflect, source: &dyn ValueSource) -> VerticalReading {
         // A CRS that cannot be read is not a reason to refuse a geometry: the
-        // reader's answer is then the file's own numbers, and `crs::of` has
-        // already reported what it could not resolve.
-        Self::of(energyml_domain::crs::of(object, source).ok().flatten().as_ref())
+        // reader's answer is then the file's own numbers, and the reading says
+        // that it is a convention (`VerticalBasis::UnreadableCrs`).
+        match energyml_domain::crs::of(object, source) {
+            Ok(crs) => Self::reading(crs.as_ref()),
+            Err(error) => VerticalReading {
+                vertical: Vertical::Down,
+                basis: VerticalBasis::UnreadableCrs(error.to_string()),
+            },
+        }
+    }
+}
+
+/// Where a reading of the vertical came from.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum VerticalBasis {
+    /// A CRS was read, and its direction is the answer.
+    Crs,
+    /// No CRS is named: `Down` is this crate's convention, not the file's statement.
+    NoCrs,
+    /// A CRS is named and could not be read (the reason): `Down` is the convention.
+    UnreadableCrs(String),
+    /// The caller declared it (`Path::new`).
+    Declared,
+}
+
+/// A vertical sense and where it came from.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct VerticalReading {
+    /// The sense.
+    pub vertical: Vertical,
+    /// Where it came from.
+    pub basis: VerticalBasis,
+}
+
+impl VerticalReading {
+    /// The sentence to show beside a result, `None` when a CRS or the caller said it.
+    pub fn note(&self) -> Option<String> {
+        match &self.basis {
+            VerticalBasis::NoCrs => Some(
+                "no CRS is named, so a depth along this line is read as counting down - this library's convention, not the file's statement".to_string(),
+            ),
+            VerticalBasis::UnreadableCrs(why) => Some(format!(
+                "the CRS could not be read ({why}), so a depth along this line is read as counting down - this library's convention"
+            )),
+            VerticalBasis::Crs | VerticalBasis::Declared => None,
+        }
     }
 }
 
@@ -356,7 +421,17 @@ pub fn read_on_lines(
     let mut points = Vec::with_capacity(parameters.len());
     for (index, parameter) in parameters.iter().enumerate() {
         let line = match (&explicit, on) {
-            (Some(indices), _) => indices[index].max(0) as usize,
+            // A negative index is a corrupt file: clamped to 0 it would read
+            // line 0 silently (`[geometry G15]`).
+            (Some(indices), _) => usize::try_from(indices[index]).map_err(|_| {
+                Error::malformed(
+                    at,
+                    format!(
+                        "`ParametricLineIndices` holds {} at {index}: a line index is not negative",
+                        indices[index]
+                    ),
+                )
+            })?,
             (None, Some(on)) => on[index % on.len()],
             (None, None) => index % count,
         };
@@ -485,7 +560,7 @@ impl Lines {
             return Self::borrowed(object, source, at, vertical);
         }
         if !name.ends_with("ParametricLineArray") {
-            return Err(Error::unsupported(leak(name), at));
+            return Err(Error::unsupported(name, at));
         }
         let knots = values::scalar_i64(object, "KnotCount").unwrap_or(0).max(0) as usize;
         if knots == 0 {
@@ -547,7 +622,18 @@ impl Lines {
         };
 
         let kinds = match field_object(object, "LineKindIndices") {
-            Some(array) => values::read_integers(array, source, &format!("{at}.LineKindIndices"))?,
+            Some(array) => {
+                let kinds = values::read_integers(array, source, &format!("{at}.LineKindIndices"))?;
+                // One kind per line. A shorter array would give the last lines
+                // kind 0 (vertical) in place of the curve they declare.
+                if kinds.len() < count {
+                    return Err(Error::malformed(
+                        at,
+                        format!("{} line kind(s) for {count} line(s)", kinds.len()),
+                    ));
+                }
+                kinds
+            }
             // No kinds stated. One knot can only be a vertical line; more than
             // one is read as the linear spline, kind 1.
             None => vec![if knots == 1 { 0 } else { 1 }; count],
@@ -555,7 +641,7 @@ impl Lines {
 
         let mut lines = Vec::with_capacity(count);
         for index in 0..count {
-            let declared = kinds.get(index).copied().unwrap_or(0);
+            let declared = kinds[index];
             let Some(kind) = Kind::of(declared) else {
                 // Refused rather than guessed: an index the standard does not
                 // define could be anything, and every remaining kind curves
@@ -605,6 +691,8 @@ pub(crate) struct Line {
     /// Which way the local z counts - the clause the standard attaches to the
     /// vertical kind, and nothing else. See [`Vertical`].
     vertical: Vertical,
+    /// Where that sense came from (a CRS, a convention, the caller).
+    vertical_basis: VerticalBasis,
 }
 
 impl Line {
@@ -677,6 +765,7 @@ impl Line {
             tangents,
             parametrised,
             vertical,
+            vertical_basis: VerticalBasis::Declared,
         }
     }
 
@@ -720,7 +809,8 @@ impl Line {
     fn borrowed_one(object: &dyn Reflect, source: &dyn ValueSource, at: &str) -> Result<Self> {
         // The borrower's own sense, and it is the support's - the same rule the
         // plural form follows.
-        let vertical = Vertical::read(object, source);
+        let reading = Vertical::read_noted(object, source);
+        let vertical = reading.vertical;
         let Some(support_uri) = crate::well::reference_of(object, "SupportingRepresentation") else {
             return Err(Error::malformed(
                 at,
@@ -763,7 +853,9 @@ impl Line {
                 ),
             ));
         }
-        Ok(lines.lines[index as usize].clone())
+        let mut line = lines.lines[index as usize].clone();
+        line.vertical_basis = reading.basis;
+        Ok(line)
     }
 
     /// A single `ParametricLineGeometry` - one line, its knots, its kind.
@@ -773,12 +865,13 @@ impl Line {
             return Self::borrowed_one(geometry, source, at);
         }
         if !name.ends_with("ParametricLineGeometry") {
-            return Err(Error::unsupported(leak(name), at));
+            return Err(Error::unsupported(name, at));
         }
         // Resolved before anything is read: the geometry names its own
         // `LocalCrs`, so no caller has to remember to pass it and none can pass
         // the wrong one.
-        let vertical = Vertical::read(geometry, source);
+        let reading = Vertical::read_noted(geometry, source);
+        let vertical = reading.vertical;
         let Some(control) = field_object(geometry, "ControlPoints") else {
             return Err(Error::malformed(at, "a parametric line with no `ControlPoints`"));
         };
@@ -824,7 +917,9 @@ impl Line {
                 format!("{at}, kind {declared}"),
             ));
         };
-        Ok(Self::new(kind, control, parameters, tangents, vertical))
+        let mut line = Self::new(kind, control, parameters, tangents, vertical);
+        line.vertical_basis = reading.basis;
+        Ok(line)
     }
 
     /// The point at `parameter` along the line.
@@ -870,6 +965,139 @@ impl Line {
             // cannot join the enumeration and silently land here.
             Kind::Null | Kind::Vertical => NOWHERE,
         }
+    }
+
+    /// The unit derivative of `at` at `parameter`, in the line's own frame. `None` where the derivative
+    /// vanishes, is not finite, or the line does not exist.
+    ///
+    /// Every branch follows the fallbacks of [`Line::at`], so the direction is the derivative of the
+    /// very interpolant `at` evaluates, never of a second curve. At an interior knot the interval
+    /// that ends there is used (`segment`), the one `at` evaluates that parameter in (S5).
+    pub(crate) fn direction_at(&self, parameter: f64) -> Option<Point> {
+        if !parameter.is_finite() || self.kind == Kind::Null || self.control.is_empty() {
+            return None;
+        }
+        if self.kind == Kind::Vertical || self.control.len() == 1 {
+            return Some(match self.vertical {
+                Vertical::Down => [0.0, 0.0, 1.0],
+                Vertical::Up => [0.0, 0.0, -1.0],
+            });
+        }
+        let t = parameter;
+        let slope = match self.kind {
+            Kind::Linear => self.linear_slope(t),
+            Kind::NaturalCubic => self.cubic_slope(t),
+            Kind::ZLinearCubic => match (self.cubic_slope(t), self.linear_slope(t)) {
+                (Some(curved), Some(straight)) => Some([curved[0], curved[1], straight[2]]),
+                _ => None,
+            },
+            Kind::TangentialCubic => self.hermite_slope(t),
+            Kind::MinimumCurvature => self.arc_slope(t),
+            // Handled above, listed so that a new kind cannot land in a catch-all.
+            Kind::Null | Kind::Vertical => None,
+        };
+        unit(slope?)
+    }
+
+    /// The chord of the interval `t` falls in, per unit of parameter.
+    fn linear_slope(&self, t: f64) -> Option<Point> {
+        let index = self.segment(t);
+        let span = self.knots[index] - self.knots[index - 1];
+        if span.abs() < TINY {
+            return None;
+        }
+        Some(mul(sub(self.control[index], self.control[index - 1]), 1.0 / span))
+    }
+
+    /// The derivative of the natural cubic that `cubic` evaluates (not normalised).
+    fn cubic_slope(&self, t: f64) -> Option<Point> {
+        if self.moments.len() != self.control.len() {
+            return self.linear_slope(t);
+        }
+        let index = self.segment(t);
+        let span = self.knots[index] - self.knots[index - 1];
+        if span.abs() < TINY {
+            return None;
+        }
+        let a = (self.knots[index] - t) / span;
+        let b = (t - self.knots[index - 1]) / span;
+        let (p0, p1) = (self.control[index - 1], self.control[index]);
+        let (m0, m1) = (self.moments[index - 1], self.moments[index]);
+        let mut out = [0.0; 3];
+        for axis in 0..3 {
+            out[axis] = (p1[axis] - p0[axis]) / span
+                + (-(3.0 * a * a - 1.0) * m0[axis] + (3.0 * b * b - 1.0) * m1[axis]) * span / 6.0;
+        }
+        Some(out)
+    }
+
+    /// The derivative of the cubic Hermite that `hermite` evaluates (not normalised).
+    fn hermite_slope(&self, t: f64) -> Option<Point> {
+        if self.tangents.len() != self.control.len() {
+            return self.linear_slope(t);
+        }
+        let index = self.segment(t);
+        let span = self.knots[index] - self.knots[index - 1];
+        if span.abs() < TINY {
+            return None;
+        }
+        let s = (t - self.knots[index - 1]) / span;
+        let s2 = s * s;
+        let (p0, p1) = (self.control[index - 1], self.control[index]);
+        let (m0, m1) = (self.tangents[index - 1], self.tangents[index]);
+        let mut out = [0.0; 3];
+        for axis in 0..3 {
+            out[axis] = ((6.0 * s2 - 6.0 * s) * p0[axis] + (-6.0 * s2 + 6.0 * s) * p1[axis]) / span
+                + (3.0 * s2 - 4.0 * s + 1.0) * m0[axis]
+                + (3.0 * s2 - 2.0 * s) * m1[axis];
+        }
+        Some(out)
+    }
+
+    /// The derivative of the minimum-curvature arc that `arc` evaluates (not normalised), branch by
+    /// branch as `arc` falls back: the chord wherever `arc` returns the straight reading.
+    fn arc_slope(&self, t: f64) -> Option<Point> {
+        if self.tangents.len() != self.control.len() {
+            return self.linear_slope(t);
+        }
+        let (index, fraction) = self.place(t);
+        let span = self.knots[index] - self.knots[index - 1];
+        if span.abs() < TINY {
+            return None;
+        }
+        let (p0, p1) = (self.control[index - 1], self.control[index]);
+        let chord = mul(sub(p1, p0), 1.0 / span);
+        let (Some(t0), Some(t1)) = (unit(self.tangents[index - 1]), unit(self.tangents[index])) else {
+            return Some(chord);
+        };
+        let alpha = dot(t0, t1).clamp(-1.0, 1.0).acos();
+        if alpha < STRAIGHT || (std::f64::consts::PI - alpha) < 1e-9 {
+            return Some(chord);
+        }
+        let scale = 1.0 / (alpha * alpha.sin());
+        let cos = alpha.cos();
+        let integral = |f: f64| -> Point {
+            add(
+                mul(t0, scale * ((1.0 - f) * alpha).cos() - scale * cos),
+                mul(t1, scale * (1.0 - (f * alpha).cos())),
+            )
+        };
+        let whole = integral(1.0);
+        let length = norm(whole);
+        if length < TINY {
+            return Some(chord);
+        }
+        let arc_length = norm(sub(p1, p0)) / length;
+        let closing = sub(sub(p1, p0), mul(whole, arc_length));
+        // The rotated tangent: d(f) = (t0 sin((1 - f) alpha) + t1 sin(f alpha)) / sin(alpha).
+        let rotated = mul(
+            add(
+                mul(t0, ((1.0 - fraction) * alpha).sin()),
+                mul(t1, (fraction * alpha).sin()),
+            ),
+            1.0 / alpha.sin(),
+        );
+        Some(mul(add(mul(rotated, arc_length), closing), 1.0 / span))
     }
 
     /// The interval `t` falls in, as the index of its upper knot.
@@ -1086,6 +1314,40 @@ impl Path {
         self.0.at(parameter)
     }
 
+    /// The unit direction of the line at `parameter`, in the line's own frame: the derivative of the
+    /// very interpolant [`Path::at`] evaluates (linear: the interval a knot ends; arc: the rotated
+    /// tangent). Past either end, the derivative of the extended interval, as `at` extends it.
+    /// `None` where the line has no direction there.
+    pub fn direction_at(&self, parameter: f64) -> Option<[f64; 3]> {
+        self.0.direction_at(parameter)
+    }
+
+    /// The same line, its depth-to-z conversion read in `reading` - what a caller declaring a CRS
+    /// for a line read without one needs (`well::PlacedPath::new`). Only the vertical kind and a
+    /// single-control-point line use the sense (module doc, "Vertical"); the basis travels with
+    /// the line, so `vertical_note` (S21) stays true.
+    pub fn with_vertical(self, reading: VerticalReading) -> Path {
+        Path(Line {
+            vertical: reading.vertical,
+            vertical_basis: reading.basis,
+            ..self.0
+        })
+    }
+
+    /// Where the sense of the vertical of this line came from.
+    pub fn vertical_basis(&self) -> &VerticalBasis {
+        &self.0.vertical_basis
+    }
+
+    /// The note to show when that sense is a convention rather than the file's.
+    pub fn vertical_note(&self) -> Option<String> {
+        VerticalReading {
+            vertical: self.0.vertical,
+            basis: self.0.vertical_basis.clone(),
+        }
+        .note()
+    }
+
     /// The parameters of its knots, ascending - `None` when the file stated
     /// none: the knots are then the assumed 0, 1, 2 … and a parameter along
     /// the line is no measured depth.
@@ -1217,40 +1479,10 @@ fn derived_tangents(knots: &[f64], control: &[Point]) -> Vec<Point> {
     out
 }
 
-fn field_object<'a>(object: &'a dyn Reflect, field: &str) -> Option<&'a dyn Reflect> {
-    match object.field(field)? {
-        FieldValue::Object(child) => Some(child),
-        _ => None,
-    }
-}
-
-fn leak(key: &str) -> &'static str {
-    Box::leak(key.to_string().into_boxed_str())
-}
-
-fn add(a: Point, b: Point) -> Point {
-    [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
-}
-
-fn sub(a: Point, b: Point) -> Point {
-    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
-}
-
-fn mul(a: Point, by: f64) -> Point {
-    [a[0] * by, a[1] * by, a[2] * by]
-}
-
-fn dot(a: Point, b: Point) -> f64 {
-    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-}
-
-fn norm(a: Point) -> f64 {
-    dot(a, a).sqrt()
-}
-
+/// A direction, or `None` below [`TINY`]: this module's own floor on the shared
+/// normalisation (`crate::vector`).
 fn unit(a: Point) -> Option<Point> {
-    let length = norm(a);
-    (length.is_finite() && length > TINY).then(|| mul(a, 1.0 / length))
+    unit_above(a, TINY)
 }
 
 fn lerp(a: Point, b: Point, fraction: f64) -> Point {
@@ -1414,12 +1646,69 @@ mod tests {
             time_uom: None,
             projected: CrsKind::Absent,
             vertical: CrsKind::Absent,
+            axes: energyml_domain::crs::AxisReading::NotStated,
         };
         assert_eq!(Vertical::of(Some(&crs(VerticalDirection::Down))), Vertical::Down);
         assert_eq!(Vertical::of(Some(&crs(VerticalDirection::Up))), Vertical::Up);
         // Nothing said: the file's own numbers are left alone, which is what
         // the placement layer does too when there is no CRS to place with.
         assert_eq!(Vertical::of(None), Vertical::Down);
+    }
+
+    /// The `Crs` of the reading tests below (the layout of the test above).
+    fn crs_counting(direction: energyml_domain::crs::VerticalDirection) -> energyml_domain::crs::Crs {
+        use energyml_domain::crs::{Crs, CrsKind, VerticalQuantity};
+        Crs {
+            uuid: String::new(),
+            kind: "LocalDepth3dCrs",
+            x_offset: 0.0,
+            y_offset: 0.0,
+            z_offset: 0.0,
+            areal_rotation: 0.0,
+            vertical_direction: direction,
+            vertical_quantity: VerticalQuantity::Length,
+            horizontal_uom: None,
+            vertical_uom: None,
+            time_uom: None,
+            projected: CrsKind::Absent,
+            vertical: CrsKind::Absent,
+            axes: energyml_domain::crs::AxisReading::NotStated,
+        }
+    }
+
+    /// RESQML TRG 2.2 §3.8: the depth to Z conversion depends on the vertical
+    /// CRS direction; with no CRS the answer is this crate's convention, and
+    /// the reading says so.
+    #[test]
+    fn without_a_crs_the_reading_is_down_and_says_so() {
+        let reading = Vertical::reading(None);
+        assert_eq!(reading.vertical, Vertical::Down);
+        assert_eq!(reading.basis, VerticalBasis::NoCrs);
+        let note = reading.note().expect("a convention is said");
+        assert!(note.contains("no CRS"), "{note}");
+    }
+
+    #[test]
+    fn a_crs_reading_carries_no_note() {
+        use energyml_domain::crs::VerticalDirection;
+        let reading = Vertical::reading(Some(&crs_counting(VerticalDirection::Up)));
+        assert_eq!(reading.vertical, Vertical::Up);
+        assert_eq!(reading.basis, VerticalBasis::Crs);
+        assert_eq!(reading.note(), None);
+    }
+
+    #[test]
+    fn a_path_from_values_is_declared() {
+        let path = Path::new(
+            1,
+            vec![[0.0, 0.0, 0.0], [0.0, 0.0, 100.0]],
+            vec![0.0, 100.0],
+            None,
+            Vertical::Down,
+        )
+        .unwrap();
+        assert_eq!(path.vertical_basis(), &VerticalBasis::Declared);
+        assert_eq!(path.vertical_note(), None);
     }
 
     fn close(a: Point, b: Point) -> bool {

@@ -75,6 +75,15 @@ pub enum DiffKind {
     /// select a subtype cannot hide here: dropping it would take the subtype's
     /// own children with it, and those show up as `LostElement`.
     XsiTypeDropped,
+    /// A value came back in another lexical form that reads the same number or
+    /// boolean: `2.0` as `2`, `true` as `1`.
+    ///
+    /// Not a loss, and not silent either. The comparison has no schema type, so
+    /// it cannot tell a `xs:double` (where this is a normalisation) from a
+    /// string (a title, a code, an identifier: `007` as `7` is a change). Both
+    /// are therefore *said*: counted apart in the summary and listed by pattern
+    /// in the report, never rounded up to "identical".
+    LexicalFormChanged,
     /// The round trip produced an element the original did not have.
     AddedElement,
     /// The round trip produced an attribute the original did not have.
@@ -101,6 +110,7 @@ impl DiffKind {
             DiffKind::LostNamespace => "namespace lost",
             DiffKind::XsiTypeDropped => "xsi:type not rewritten",
             DiffKind::RootRenamed => "root tag renamed",
+            DiffKind::LexicalFormChanged => "lexical form changed",
             DiffKind::AddedElement => "element added",
             DiffKind::AddedAttribute => "attribute added",
             DiffKind::AddedText => "value added",
@@ -372,11 +382,12 @@ pub fn of(xml: &[u8]) -> Result<Shape> {
     Ok(shape)
 }
 
-/// Whether two lexical values mean the same thing.
+/// Whether two lexical values read the same number or boolean, or are equal.
 ///
 /// `2.0` and `2` are the same double; `true` and `1` the same boolean. A writer
-/// that normalises them is not losing anything, and flagging it would bury the
-/// real findings under thousands of lines.
+/// that normalises them is not losing anything, so this is not a loss - but it
+/// is not "identical" either (see [`DiffKind::LexicalFormChanged`]):
+/// [`compare_values`] reports every pair that is equivalent without being equal.
 fn same_value(a: &str, b: &str) -> bool {
     if a == b {
         return true;
@@ -410,10 +421,28 @@ fn compare_values(
     out: &mut Vec<Diff>,
 ) {
     let mut remaining: Vec<&String> = actual.iter().collect();
+    // Equal values first, so that `2` is not paired with `2.0` while an
+    // identical `2` is still waiting.
+    let mut unmatched: Vec<&String> = Vec::new();
     for want in expected {
-        match remaining.iter().position(|have| same_value(want, have)) {
+        match remaining.iter().position(|have| *have == want) {
             Some(i) => {
                 remaining.remove(i);
+            }
+            None => unmatched.push(want),
+        }
+    }
+    // Then the equivalent ones, said as such, and the rest are lost.
+    for want in unmatched {
+        match remaining.iter().position(|have| same_value(want, have)) {
+            Some(i) => {
+                let have = remaining.remove(i);
+                out.push(Diff {
+                    kind: DiffKind::LexicalFormChanged,
+                    path: path.to_string(),
+                    expected: want.clone(),
+                    actual: have.clone(),
+                });
             }
             None => out.push(Diff {
                 kind: kind_lost,
@@ -557,11 +586,46 @@ mod tests {
         let other = br#"<x:Root xmlns:x="urn:r" xmlns:y="urn:e"><x:A y:uom="m">1</x:A>
             <x:A y:uom="m">2.00</x:A><x:B></x:B></x:Root>"#;
         let mut diffs = compare(&of(DOC).unwrap(), &of(other).unwrap());
+        // `1.0` as `1` and `2` as `2.00` are said, as lexical forms, not lost.
+        assert_eq!(
+            diffs
+                .iter()
+                .filter(|d| d.kind == DiffKind::LexicalFormChanged)
+                .count(),
+            2,
+            "{diffs:?}"
+        );
+        diffs.retain(|d| d.kind != DiffKind::LexicalFormChanged);
         // Only the root's `id`, which the other document really does not have.
         assert_eq!(diffs.len(), 1, "{diffs:?}");
         let only = diffs.pop().unwrap();
         assert_eq!(only.kind, DiffKind::LostAttribute);
         assert!(only.path.ends_with("@id"), "{}", only.path);
+    }
+
+    /// [geostat-proj-roundtrip S8] A string rewritten from `007` to `7` (or a
+    /// code from `1e3` to `1000`, a label from `true` to `1`) is no longer
+    /// reported as identical: it is a `LexicalFormChanged`, which is not a loss
+    /// but is said. An identical value is still no difference at all.
+    #[test]
+    fn a_value_rewritten_in_another_lexical_form_is_said_not_hidden() {
+        let before = br#"<r:Root xmlns:r="urn:r"><r:Code>007</r:Code><r:Same>7</r:Same></r:Root>"#;
+        let after = br#"<r:Root xmlns:r="urn:r"><r:Code>7</r:Code><r:Same>7</r:Same></r:Root>"#;
+        let diffs = compare(&of(before).unwrap(), &of(after).unwrap());
+        assert_eq!(diffs.len(), 1, "{diffs:?}");
+        assert_eq!(diffs[0].kind, DiffKind::LexicalFormChanged);
+        assert!(!diffs[0].kind.is_loss());
+        assert_eq!(
+            (diffs[0].expected.as_str(), diffs[0].actual.as_str()),
+            ("007", "7")
+        );
+        assert!(compare(&of(before).unwrap(), &of(before).unwrap()).is_empty());
+        // A really different value is still a loss.
+        let other = br#"<r:Root xmlns:r="urn:r"><r:Code>8</r:Code><r:Same>7</r:Same></r:Root>"#;
+        let diffs = compare(&of(before).unwrap(), &of(other).unwrap());
+        assert!(diffs.iter().any(|d| d.kind == DiffKind::LostText), "{diffs:?}");
+        // Break it: `if a.parse::<f64>() == b.parse::<f64>()` in `compare_values`
+        // before the exact pass, i.e. return `true` without pushing the diff.
     }
 
     #[test]

@@ -39,8 +39,8 @@
 //! The listing keeps to what the walk resolves: the nearest carrier, with the
 //! tie-break the walk states. An object that has pieces of its own lists those.
 //!
-//! The base 64 codec is here too ([`encode_base64`], [`decode_base64`]): the
-//! crate needs it for `Content` and has no dependency for it, and the writer
+//! The base 64 codec is `energyml_core::base64` ([`encode_base64`] and
+//! [`decode_base64`] are its two functions under their old names): the writer
 //! (`energyml-build`'s `attach`) calls the same two functions as the reader.
 
 use std::collections::{HashMap, HashSet};
@@ -882,70 +882,15 @@ fn classify(uri: &str) -> Address {
 // Base 64 - RFC 4648 §4
 // ---------------------------------------------------------------------------
 
-const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
-/// Standard base 64 with padding, no line breaks (RFC 4648 §4).
+/// Standard base 64 with padding, no line breaks (RFC 4648 §4):
+/// [`energyml_core::base64::encode`], kept under this name for its callers.
 pub fn encode_base64(bytes: &[u8]) -> String {
-    let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
-    for chunk in bytes.chunks(3) {
-        let n = (u32::from(chunk[0]) << 16)
-            | (u32::from(*chunk.get(1).unwrap_or(&0)) << 8)
-            | u32::from(*chunk.get(2).unwrap_or(&0));
-        out.push(ALPHABET[(n >> 18) as usize & 63] as char);
-        out.push(ALPHABET[(n >> 12) as usize & 63] as char);
-        out.push(if chunk.len() > 1 {
-            ALPHABET[(n >> 6) as usize & 63] as char
-        } else {
-            '='
-        });
-        out.push(if chunk.len() > 2 {
-            ALPHABET[n as usize & 63] as char
-        } else {
-            '='
-        });
-    }
-    out
+    energyml_core::base64::encode(bytes)
 }
 
 /// Decode base 64; white space is ignored, as `xsd:base64Binary` allows, and
-/// anything else outside the alphabet - or a bad padding - is refused.
+/// anything else outside the alphabet - or a bad padding - is refused:
+/// [`energyml_core::base64::decode`], kept under this name for its callers.
 pub fn decode_base64(text: &str) -> Result<Vec<u8>, String> {
-    let mut sextets: Vec<u8> = Vec::with_capacity(text.len());
-    let mut padding = 0usize;
-    for c in text.chars().filter(|c| !c.is_ascii_whitespace()) {
-        if c == '=' {
-            padding += 1;
-            continue;
-        }
-        if padding > 0 {
-            return Err("a character follows the `=` padding".to_string());
-        }
-        let value = match c {
-            'A'..='Z' => c as u8 - b'A',
-            'a'..='z' => c as u8 - b'a' + 26,
-            '0'..='9' => c as u8 - b'0' + 52,
-            '+' => 62,
-            '/' => 63,
-            other => return Err(format!("`{other}` is not in the base 64 alphabet")),
-        };
-        sextets.push(value);
-    }
-    if padding > 2 || !(sextets.len() + padding).is_multiple_of(4) || sextets.len() % 4 == 1 {
-        return Err("the length is not that of padded base 64".to_string());
-    }
-    let mut out = Vec::with_capacity(sextets.len() * 3 / 4);
-    for group in sextets.chunks(4) {
-        let n = group
-            .iter()
-            .enumerate()
-            .fold(0u32, |n, (at, v)| n | (u32::from(*v) << (18 - 6 * at)));
-        out.push((n >> 16) as u8);
-        if group.len() > 2 {
-            out.push((n >> 8) as u8);
-        }
-        if group.len() > 3 {
-            out.push(n as u8);
-        }
-    }
-    Ok(out)
+    energyml_core::base64::decode(text)
 }

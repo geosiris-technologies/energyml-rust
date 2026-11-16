@@ -16,7 +16,6 @@ use serde_json::{Value, json};
 
 use energyml_build::operation::{Choices, Identity, NewObject, Numbers, Plan, Registry, When};
 use energyml_build::pieces::{Known, Pieces, Ref, Source};
-use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 
 fn when() -> When {
@@ -69,7 +68,7 @@ fn recorded(plan: &Plan, name: &str) -> Option<f64> {
         .parameters
         .iter()
         .find_map(|parameter| match parameter {
-            Parameter::Double { title, value, .. } if title == name => Some(*value),
+            other if other.title() == name => other.number(),
             _ => None,
         })
 }
@@ -114,7 +113,7 @@ fn slope() -> Source {
         [651_000.0, 6_862_000.0, 40.0],
     ];
     Source::Shape {
-        geometry: Geometry {
+        geometry: std::sync::Arc::new(Geometry {
             kind: "triangles",
             patches: vec![Patch {
                 index: 0,
@@ -123,7 +122,7 @@ fn slope() -> Source {
                 topology: Topology::Triangles(vec![[0, 1, 2], [0, 2, 3]]),
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     }
 }
@@ -566,7 +565,7 @@ fn parent(bent: bool) -> Pieces {
         .with(
             "parent",
             Source::Shape {
-                geometry: Geometry {
+                geometry: std::sync::Arc::new(Geometry {
                     kind: "polyline",
                     patches: vec![Patch {
                         index: 0,
@@ -575,7 +574,7 @@ fn parent(bent: bool) -> Pieces {
                         topology: Topology::Polylines(vec![count]),
                         closed: Vec::new(),
                     }],
-                },
+                }),
                 closed: None,
             },
         )

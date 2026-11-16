@@ -9,6 +9,7 @@
 use energyml_build::operation::{AnyOperation, Choices, Fitness, Identity, Registry, When};
 use energyml_build::pieces::{Pieces, Source};
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
+use std::sync::Arc;
 
 fn when() -> When {
     When {
@@ -25,7 +26,7 @@ fn operation() -> &'static dyn AnyOperation {
 
 fn surface(kind: &'static str, points: Vec<[f64; 3]>, triangles: Vec<[u32; 3]>) -> Source {
     Source::Shape {
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind,
             patches: vec![Patch {
                 index: 0,
@@ -34,7 +35,7 @@ fn surface(kind: &'static str, points: Vec<[f64; 3]>, triangles: Vec<[u32; 3]>) 
                 topology: Topology::Triangles(triangles),
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     }
 }
@@ -171,10 +172,12 @@ fn a_horizon_outside_the_fault_is_counted_and_none_is_a_refusal() {
         .expect("the plan succeeds");
     assert!(plan.says.iter().any(|n| n.key == "no-trace"));
     assert_eq!(plan.shapes.iter().filter(|m| m.parent.is_some()).count(), 1);
-    assert!(plan.activity.parameters.iter().any(|p| matches!(
-        p,
-        energyml_domain::provenance::Parameter::Double { title, value, .. } if title == "uncutSurfaces" && *value == 1.0
-    )));
+    assert!(
+        plan.activity
+            .parameters
+            .iter()
+            .any(|p| p.title() == "uncutSurfaces" && p.number() == Some(1.0))
+    );
 
     let none = Pieces::empty()
         .with("fault", wall())

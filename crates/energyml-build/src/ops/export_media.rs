@@ -129,7 +129,8 @@ fn scene_object(shape: &Shape) -> Result<SceneObject, Refusal> {
         uri: reference.uri(),
         title: reference.title.clone(),
         qualified_type: reference.qualified_type.clone(),
-        geometry: shape.geometry.clone(),
+        // A scene object owns its geometry (the exporters take it by value): the one copy here.
+        geometry: (*shape.geometry).clone(),
         crs: known.placement.clone(),
         interpretation: known.interpretation.as_ref().map(|one| Related {
             uuid: one.uuid.clone(),
@@ -225,6 +226,11 @@ impl Operation for ExportMedia {
         // An artefact is no object: the operation has nothing to relate its
         // file to. What the frame says is the plan's business.
         object_of(&inputs.shape).map(|_| ())
+    }
+
+    fn writes_objects(&self) -> bool {
+        // A part of the package, not a data object.
+        false
     }
 
     fn reports(&self) -> Vec<Slot> {

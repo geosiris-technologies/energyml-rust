@@ -54,6 +54,7 @@ fn vertical_crs() -> VerticalCrs {
         abstract_vertical_crs: Some(AbstractVerticalCrs::VerticalEpsgCrs(VerticalEpsgCrs {
             epsg_code: 5714,
         })),
+        uom: energyml_eml_2_3::LengthUomExt::M,
         ..Default::default()
     }
 }
@@ -287,7 +288,14 @@ fn frame_from(mds: Vec<f64>) -> WellboreFrameRepresentation {
 fn a_frames_head_portion_runs_from_the_datum_to_its_first_node() {
     let frame = frame_from(vec![10.0, 20.0, 30.0]);
     let found = well::head_portion(&frame, &Wellsite).unwrap();
-    let points = found.expect("MD 10 is below the datum: there is a portion to draw");
+    let head = found.expect("MD 10 is below the datum: there is a portion to draw");
+    // The vertical segment is this module's assumption, not a statement of the
+    // package.
+    assert!(
+        matches!(head, well::HeadPortion::Assumed(_)),
+        "a trajectory with no `Geometry` is assumed vertical: {head:?}"
+    );
+    let points = head.into_points();
     assert_eq!(
         points,
         vec![[1000.0, 2000.0, 37.73], [1000.0, 2000.0, 37.73 - 10.0]]
@@ -350,23 +358,20 @@ fn an_unreadable_datum_is_refused_by_name() {
     assert!(message.contains("head portion"), "{message}");
 }
 
-/// A deviated well: the head portion **follows the trajectory's own shape**
-/// rather than a straight guess, sampled with the exact reader `frame` uses
-/// for its own nodes (`Line::at`), so the two never disagree at the seam.
-///
-/// `LineKindIndex` 1 - linear spline - over two control points at
-/// `(1000, 2000, 37.73)` (MD 0) and `(1010, 2000, -62.27)` (MD 100), so a
-/// point at any MD is an exact linear interpolation the test can compute by
-/// hand.
-#[test]
-fn a_deviated_frames_head_portion_follows_the_trajectorys_shape() {
+const DEVIATED: &str = "88888888-8888-8888-8888-888888888888";
+
+/// A deviated well: a linear line (`LineKindIndex` 1) over two control points
+/// at `(1000, 2000, 37.73)` (parameter `knots[0]`) and `(1010, 2000, -62.27)`
+/// (parameter `knots[1]`), so a point at any parameter is an exact linear
+/// interpolation the test can compute by hand. Its interval starts at
+/// `md_min`.
+fn deviated(md_min: f64, knots: [f64; 2]) -> WellboreTrajectoryRepresentation {
     use energyml_eml_2_3::{AbstractFloatingPointArray, FloatingPointXmlArray};
     use energyml_resqml_2_2::{
         AbstractParametricLineGeometry, AbstractPoint3dArray, ParametricLineGeometry, Point3d,
         Point3dLatticeArray, Point3dLatticeDimension,
     };
 
-    const DEVIATED: &str = "88888888-8888-8888-8888-888888888888";
     let origin = Point3d {
         coordinate1: 1000.0,
         coordinate2: 2000.0,
@@ -378,11 +383,11 @@ fn a_deviated_frames_head_portion_follows_the_trajectorys_shape() {
         coordinate3: -100.0,
     };
 
-    let deviated = WellboreTrajectoryRepresentation {
+    WellboreTrajectoryRepresentation {
         uuid: DEVIATED.to_string(),
         md_interval: MdInterval {
-            md_min: 0.0,
-            md_max: 100.0,
+            md_min,
+            md_max: knots[1],
             uom: energyml_eml_2_3::LengthUomExt::M,
             datum: Some(dor(DATUM)),
             ..Default::default()
@@ -393,7 +398,7 @@ fn a_deviated_frames_head_portion_follows_the_trajectorys_shape() {
                 control_point_parameters: Some(AbstractFloatingPointArray::FloatingPointXmlArray(
                     FloatingPointXmlArray {
                         count_per_value: 1,
-                        values: vec![0.0, 100.0],
+                        values: knots.to_vec(),
                         ..Default::default()
                     },
                 )),
@@ -417,63 +422,65 @@ fn a_deviated_frames_head_portion_follows_the_trajectorys_shape() {
             },
         )),
         ..Default::default()
-    };
+    }
+}
 
-    struct DeviatedSite(WellboreTrajectoryRepresentation);
-    impl ObjectSource for DeviatedSite {
-        fn object(&self, uuid: &str) -> Option<Box<dyn DynObject>> {
-            match uuid {
-                DATUM => Some(Box::new(datum())),
-                VCRS => Some(Box::new(vertical_crs())),
-                DEVIATED => Some(Box::new(self.0.clone())),
-                _ => None,
-            }
+/// A store holding the datum, its CRS and one deviated trajectory.
+struct DeviatedSite(WellboreTrajectoryRepresentation);
+
+impl ObjectSource for DeviatedSite {
+    fn object(&self, uuid: &str) -> Option<Box<dyn DynObject>> {
+        match uuid {
+            DATUM => Some(Box::new(datum())),
+            VCRS => Some(Box::new(vertical_crs())),
+            DEVIATED => Some(Box::new(self.0.clone())),
+            _ => None,
         }
     }
-    impl energyml_domain::source::ArraySource for DeviatedSite {
-        fn locate(
-            &self,
-            _object: &dyn energyml_core::value::Reflect,
-        ) -> Vec<energyml_storage::ArrayLocation> {
-            Vec::new()
-        }
-        fn metadata(
-            &self,
-            location: &energyml_storage::ArrayLocation,
-        ) -> energyml_domain::Result<energyml_storage::ArrayMetadata> {
-            Err(energyml_domain::Error::Missing(location.field_path.clone()))
-        }
-        fn read(
-            &self,
-            location: &energyml_storage::ArrayLocation,
-        ) -> energyml_domain::Result<energyml_storage::ArrayData> {
-            Err(energyml_domain::Error::Missing(location.field_path.clone()))
-        }
-        fn read_into(
-            &self,
-            location: &energyml_storage::ArrayLocation,
-            _out: &mut energyml_storage::array::ArrayBuffer<'_>,
-        ) -> energyml_domain::Result<energyml_storage::ArrayMetadata> {
-            Err(energyml_domain::Error::Missing(location.field_path.clone()))
-        }
+}
+
+impl energyml_domain::source::ArraySource for DeviatedSite {
+    fn locate(&self, _object: &dyn energyml_core::value::Reflect) -> Vec<energyml_storage::ArrayLocation> {
+        Vec::new()
     }
+    fn metadata(
+        &self,
+        location: &energyml_storage::ArrayLocation,
+    ) -> energyml_domain::Result<energyml_storage::ArrayMetadata> {
+        Err(energyml_domain::Error::Missing(location.field_path.clone()))
+    }
+    fn read(
+        &self,
+        location: &energyml_storage::ArrayLocation,
+    ) -> energyml_domain::Result<energyml_storage::ArrayData> {
+        Err(energyml_domain::Error::Missing(location.field_path.clone()))
+    }
+    fn read_into(
+        &self,
+        location: &energyml_storage::ArrayLocation,
+        _out: &mut energyml_storage::array::ArrayBuffer<'_>,
+    ) -> energyml_domain::Result<energyml_storage::ArrayMetadata> {
+        Err(energyml_domain::Error::Missing(location.field_path.clone()))
+    }
+}
 
-    let frame = WellboreFrameRepresentation {
-        uuid: "99999999-9999-9999-9999-999999999999".to_string(),
-        node_md: Some(AbstractFloatingPointArray::FloatingPointXmlArray(
-            FloatingPointXmlArray {
-                count_per_value: 1,
-                values: vec![40.0, 60.0],
-                ..Default::default()
-            },
-        )),
-        trajectory: dor(DEVIATED),
-        ..Default::default()
-    };
-
-    let site = DeviatedSite(deviated);
+/// A deviated well: the head portion **follows the trajectory's own shape**
+/// rather than a straight guess, sampled with the exact reader `frame` uses
+/// for its own nodes (`Line::at`), so the two never disagree at the seam. The
+/// line reaches MD 0, so the package describes the portion.
+///
+/// A point at any MD is an exact linear interpolation (see [`deviated`]).
+#[test]
+fn a_deviated_frames_head_portion_follows_the_trajectorys_shape() {
+    let frame = frame_on(DEVIATED, vec![40.0, 60.0]);
+    let site = DeviatedSite(deviated(0.0, [0.0, 100.0]));
     let found = well::head_portion(&frame, &site).unwrap();
-    let points = found.expect("MD 40 is well below MD 0: there is a portion to draw");
+    let head = found.expect("MD 40 is well below MD 0: there is a portion to draw");
+    assert!(
+        matches!(head, well::HeadPortion::Described(_)),
+        "the line reaches MD 0: the package states the portion"
+    );
+    let points = head.into_points();
     assert_eq!(points.len(), 17, "one sample per HEAD_SAMPLES step");
     assert_eq!(
         points[0],
@@ -486,4 +493,34 @@ fn a_deviated_frames_head_portion_follows_the_trajectorys_shape() {
     // MD 40 (i = 16, the last sample): t = 0.4.
     assert!((points[16][0] - 1004.0).abs() < 1e-9);
     assert!((points[16][2] - (-2.27)).abs() < 1e-9);
+}
+
+/// A frame of the trajectory `trajectory`, with these node depths.
+fn frame_on(trajectory: &str, mds: Vec<f64>) -> WellboreFrameRepresentation {
+    let mut frame = frame_from(mds);
+    frame.trajectory = dor(trajectory);
+    frame
+}
+
+/// S21: with no CRS to read, a line says that its vertical is this library's
+/// convention, not the file's statement (RESQML TRG 2.2 §3.8: *"the depth to Z
+/// conversion depends on the vertical CRS direction"*).
+#[test]
+fn a_line_whose_crs_is_missing_reads_down_and_says_so() {
+    use energyml_geometry::parametric::VerticalBasis;
+    use energyml_resqml_2_2::AbstractParametricLineGeometry;
+
+    let mut trajectory = deviated(0.0, [0.0, 100.0]);
+    if let Some(AbstractParametricLineGeometry::ParametricLineGeometry(line)) = &mut trajectory.geometry {
+        line.local_crs = dor("77777777-7777-4777-8777-777777777777");
+    }
+    let site = DeviatedSite(trajectory.clone());
+    let path = well::path_of(&trajectory, &site).unwrap();
+    assert!(
+        matches!(path.vertical_basis(), VerticalBasis::UnreadableCrs(_)),
+        "{:?}",
+        path.vertical_basis()
+    );
+    let note = path.vertical_note().expect("a convention is said");
+    assert!(note.contains("could not be read"), "{note}");
 }

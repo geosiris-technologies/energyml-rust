@@ -88,8 +88,16 @@ pub struct Overlay {
     /// come out holding **both**, the repaired object and the wreck it was
     /// made from.
     superseded: BTreeSet<String>,
+    /// The parts superseded inside the open transaction: a rollback that kept
+    /// them would leave the wreck skipped by the save while the object that
+    /// replaced it was thrown away - the part would vanish.
+    superseded_transaction: Option<BTreeSet<String>>,
     /// Parts a caller has removed - an attachment taken back out of the package.
     dropped: BTreeSet<String>,
+    /// Inside the open transaction: part → dropped (`true`) or put back
+    /// (`false`). A rollback undoes a removal of an attachment like it undoes
+    /// an object (`[storage-2 S14]`).
+    dropped_transaction: Option<BTreeMap<String, bool>>,
     /// `(media part, lowercased object uuid)` → related (`true`) or unrelated
     /// (`false`) in this session, committed. What the archive's `.rels` said
     /// is read from the archive; this is only what changed since.
@@ -159,7 +167,12 @@ impl Overlay {
             || !self.raw.is_empty()
             || self.raw_transaction.as_ref().is_some_and(|t| !t.is_empty())
             || !self.superseded.is_empty()
+            || self
+                .superseded_transaction
+                .as_ref()
+                .is_some_and(|t| !t.is_empty())
             || !self.dropped.is_empty()
+            || self.dropped_transaction.as_ref().is_some_and(|t| !t.is_empty())
             || !self.media.is_empty()
             || self.media_transaction.as_ref().is_some_and(|t| !t.is_empty())
     }
@@ -219,12 +232,28 @@ impl Overlay {
 
     /// Mark an archive part as replaced by an object.
     pub fn supersede(&mut self, part: &str) {
-        self.superseded.insert(part.to_string());
+        match &mut self.superseded_transaction {
+            Some(transaction) => transaction.insert(part.to_string()),
+            None => self.superseded.insert(part.to_string()),
+        };
+    }
+
+    /// Take back a [`Overlay::supersede`] of the layer on top - what a repair
+    /// does when the object that was to replace the part is refused.
+    pub fn unsupersede(&mut self, part: &str) {
+        match &mut self.superseded_transaction {
+            Some(transaction) => transaction.remove(part),
+            None => self.superseded.remove(part),
+        };
     }
 
     /// Whether a save should skip this archive part.
     pub fn is_superseded(&self, part: &str) -> bool {
         self.superseded.contains(part)
+            || self
+                .superseded_transaction
+                .as_ref()
+                .is_some_and(|transaction| transaction.contains(part))
     }
 
     /// Drop an archive part: a save must not copy it through.
@@ -238,24 +267,54 @@ impl Overlay {
     pub fn drop_part(&mut self, part: &str) {
         self.files += 1;
         self.revisions.note_files();
-        self.dropped.insert(part.to_string());
+        match &mut self.dropped_transaction {
+            Some(transaction) => {
+                transaction.insert(part.to_string(), true);
+            }
+            None => {
+                self.dropped.insert(part.to_string());
+            }
+        }
     }
 
-    /// Whether a part has been dropped.
+    /// Whether a part has been dropped - the transaction first, since it sits
+    /// above.
     pub fn is_dropped(&self, part: &str) -> bool {
-        self.dropped.contains(part)
+        match self.dropped_transaction.as_ref().and_then(|t| t.get(part)) {
+            Some(dropped) => *dropped,
+            None => self.dropped.contains(part),
+        }
     }
 
     /// Take a part off the dropped list. `true` when it was on it.
     pub fn restore_part(&mut self, part: &str) -> bool {
+        let was_dropped = self.is_dropped(part);
         self.files += 1;
         self.revisions.note_files();
-        self.dropped.remove(part)
+        match &mut self.dropped_transaction {
+            Some(transaction) => {
+                transaction.insert(part.to_string(), false);
+            }
+            None => {
+                self.dropped.remove(part);
+            }
+        }
+        was_dropped
     }
 
     /// The parts dropped since the package was opened.
     pub fn dropped_parts(&self) -> Vec<String> {
-        self.dropped.iter().cloned().collect()
+        let mut out: BTreeSet<&String> = self.dropped.iter().collect();
+        if let Some(transaction) = &self.dropped_transaction {
+            for (part, dropped) in transaction {
+                if *dropped {
+                    out.insert(part);
+                } else {
+                    out.remove(part);
+                }
+            }
+        }
+        out.into_iter().cloned().collect()
     }
 
     /// Every part with bytes staged, transaction included.
@@ -385,6 +444,8 @@ impl Overlay {
         self.transaction = Some(BTreeMap::new());
         self.raw_transaction = Some(BTreeMap::new());
         self.media_transaction = Some(BTreeMap::new());
+        self.superseded_transaction = Some(BTreeSet::new());
+        self.dropped_transaction = Some(BTreeMap::new());
         Ok(())
     }
 
@@ -398,6 +459,18 @@ impl Overlay {
         }
         if let Some(media) = self.media_transaction.take() {
             self.media.extend(media);
+        }
+        if let Some(superseded) = self.superseded_transaction.take() {
+            self.superseded.extend(superseded);
+        }
+        if let Some(dropped) = self.dropped_transaction.take() {
+            for (part, dropped) in dropped {
+                if dropped {
+                    self.dropped.insert(part);
+                } else {
+                    self.dropped.remove(&part);
+                }
+            }
         }
         Ok(())
     }
@@ -419,6 +492,11 @@ impl Overlay {
         });
         if self.media_transaction.as_ref().is_some_and(|t| !t.is_empty())
             || self.raw_transaction.as_ref().is_some_and(|t| !t.is_empty())
+            || self.dropped_transaction.as_ref().is_some_and(|t| !t.is_empty())
+            || self
+                .superseded_transaction
+                .as_ref()
+                .is_some_and(|t| !t.is_empty())
         {
             self.revisions.note_files();
         }
@@ -427,6 +505,8 @@ impl Overlay {
         }
         self.raw_transaction = None;
         self.media_transaction = None;
+        self.superseded_transaction = None;
+        self.dropped_transaction = None;
         outcome
     }
 
@@ -444,7 +524,9 @@ impl Overlay {
         self.raw.clear();
         self.raw_transaction = None;
         self.superseded.clear();
+        self.superseded_transaction = None;
         self.dropped.clear();
+        self.dropped_transaction = None;
         self.media.clear();
         self.media_transaction = None;
     }
@@ -461,7 +543,9 @@ impl Clone for Overlay {
             raw: self.raw.clone(),
             raw_transaction: self.raw_transaction.clone(),
             superseded: self.superseded.clone(),
+            superseded_transaction: self.superseded_transaction.clone(),
             dropped: self.dropped.clone(),
+            dropped_transaction: self.dropped_transaction.clone(),
             media: self.media.clone(),
             media_transaction: self.media_transaction.clone(),
             revisions: self.revisions.clone(),

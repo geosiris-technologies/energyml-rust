@@ -102,44 +102,64 @@ pub fn qualified_type_of(info: &TypeInfo) -> String {
 /// A borrow rather than an owned object, because the caller writing a
 /// self-contained document has usually already read the whole package.
 pub trait ObjectSource {
-    /// The object with this uuid, if the caller can supply it.
-    fn find(&self, uuid: &str) -> Option<&dyn Reflect>;
+    /// The object an **address** names, if the caller can supply it.
+    ///
+    /// The address is what [`identity::address_of_reflect`] makes of the
+    /// reference: its full uri (the identity, version included), or its uuid
+    /// when the reference names no type. A source holding one uuid in two
+    /// versions answers the version the address names.
+    fn find(&self, address: &str) -> Option<&dyn Reflect>;
 }
 
 /// No `_data` at all: references are written as they stand.
 pub struct NoObjects;
 
 impl ObjectSource for NoObjects {
-    fn find(&self, _uuid: &str) -> Option<&dyn Reflect> {
+    fn find(&self, _address: &str) -> Option<&dyn Reflect> {
         None
     }
 }
 
+/// The versions of one uuid held in memory: `(object version, object)`, in the order given.
+type Versions<'a> = Vec<(Option<String>, &'a dyn Reflect)>;
+
 /// An [`ObjectSource`] over objects already in memory.
+///
+/// Keeps **every version** of a uuid: one uuid held twice is two objects, and a
+/// reference names one of them.
 pub struct ObjectsInMemory<'a> {
-    by_uuid: Vec<(String, &'a dyn Reflect)>,
+    /// Lower-case uuid, then `(object version, object)` in the order given.
+    by_uuid: std::collections::HashMap<String, Versions<'a>>,
 }
 
 impl<'a> ObjectsInMemory<'a> {
-    /// Index the objects that carry a uuid; the others are ignored.
+    /// Index the objects that carry an identity; the others are ignored.
     pub fn new(objects: impl IntoIterator<Item = &'a dyn Reflect>) -> Self {
-        let by_uuid = objects
-            .into_iter()
-            .filter_map(|object| {
-                identity::uuid_of_reflect(object).map(|uuid| (uuid.to_ascii_lowercase(), object))
-            })
-            .collect();
+        let mut by_uuid: std::collections::HashMap<String, Versions<'a>> = std::collections::HashMap::new();
+        for object in objects {
+            let Some(address) = identity::address_of_reflect(object) else {
+                continue;
+            };
+            let (uuid, version) = identity::parse_address(&address);
+            by_uuid.entry(uuid).or_default().push((version, object));
+        }
         Self { by_uuid }
     }
 }
 
 impl ObjectSource for ObjectsInMemory<'_> {
-    fn find(&self, uuid: &str) -> Option<&dyn Reflect> {
-        let key = uuid.to_ascii_lowercase();
+    fn find(&self, address: &str) -> Option<&dyn Reflect> {
+        let (uuid, wanted) = identity::parse_address(address);
+        // The one rule (`identity::version_fit`): the exact version first, then
+        // one that contradicts nothing (first given wins a tie), and a version
+        // the address contradicts is not that object.
         self.by_uuid
+            .get(&uuid)?
             .iter()
-            .find(|(u, _)| *u == key)
-            .map(|(_, object)| *object)
+            .map(|(held, object)| (identity::version_fit(wanted.as_deref(), held.as_deref()), *object))
+            .filter(|(fit, _)| *fit != identity::VersionFit::Contradicts)
+            .min_by_key(|(fit, _)| *fit)
+            .map(|(_, object)| object)
     }
 }
 
@@ -159,10 +179,18 @@ pub fn write_value(object: &dyn Reflect) -> Value {
 /// interpretation back - would never terminate.
 pub fn write_value_with(object: &dyn Reflect, source: &dyn ObjectSource) -> Value {
     let mut expanded = BTreeSet::new();
-    if let Some(uuid) = identity::uuid_of_reflect(object) {
-        expanded.insert(uuid.to_ascii_lowercase());
+    if let Some(address) = identity::address_of_reflect(object) {
+        expanded.insert(address.to_ascii_lowercase());
     }
     write_object(object, source, &mut expanded)
+}
+
+/// `text` as a JSON string literal, quotes included: the one door for a string
+/// written into JSON by hand (a graph, a GeoJSON property). `serde_json` does
+/// the escaping (quote, backslash, `\b`, `\f`, `\n`, `\r`, `\t`, any other
+/// control character as `\u00xx`), so no crate keeps an escaper of its own.
+pub fn quote(text: &str) -> String {
+    Value::String(text.to_string()).to_string()
 }
 
 /// Encode an object as JSON text.
@@ -217,16 +245,22 @@ fn write_data(
     source: &dyn ObjectSource,
     expanded: &mut BTreeSet<String>,
 ) {
-    let Some(uuid) = identity::uuid_of_reflect(reference).filter(|u| !u.is_empty()) else {
+    let Some(address) = identity::address_of_reflect(reference) else {
         return;
     };
-    if !expanded.insert(uuid.to_ascii_lowercase()) {
+    let Some(target) = source.find(&address) else {
+        return;
+    };
+    // **Expanded once per object, keyed by the object's address**: two versions
+    // of one uuid are two objects and each is written; a reference that names no
+    // version and the object it resolves to are the same key, so a cycle still
+    // ends.
+    let key = identity::address_of_reflect(target).unwrap_or(address);
+    if !expanded.insert(key.to_ascii_lowercase()) {
         return;
     }
-    if let Some(target) = source.find(uuid) {
-        let value = write_object(target, source, expanded);
-        map.insert(DATA_KEY.to_string(), value);
-    }
+    let value = write_object(target, source, expanded);
+    map.insert(DATA_KEY.to_string(), value);
 }
 
 fn write_field(value: &FieldValue<'_>, source: &dyn ObjectSource, expanded: &mut BTreeSet<String>) -> Value {
@@ -262,16 +296,7 @@ fn write_scalar(scalar: Scalar<'_>) -> Value {
     }
 }
 
-/// The `xsd:double` lexical form of a value JSON cannot hold.
-fn xsd_double(value: f64) -> String {
-    if value.is_nan() {
-        "NaN".to_string()
-    } else if value.is_sign_positive() {
-        "INF".to_string()
-    } else {
-        "-INF".to_string()
-    }
-}
+use crate::xml::xsd_double;
 
 /// The three lexical doubles JSON has no number for, read back.
 fn parse_xsd_double(text: &str) -> Option<f64> {
@@ -641,6 +666,16 @@ fn kind_of(value: &Value) -> &'static str {
 mod tests {
     use super::*;
     use crate::reflect::EnergymlType;
+
+    /// A string is quoted and escaped as JSON says (RFC 8259 section 7).
+    ///
+    /// Break it: return `format!("\"{text}\"")`.
+    #[test]
+    fn quote_escapes_what_json_requires() {
+        assert_eq!(quote("plain"), "\"plain\"");
+        assert_eq!(quote("a\"b\\c\nd\u{1}"), "\"a\\\"b\\\\c\\nd\\u0001\"");
+        assert_eq!(quote("caf\u{e9}"), "\"caf\u{e9}\"");
+    }
 
     #[test]
     fn a_qualified_type_covers_nested_types_too() {

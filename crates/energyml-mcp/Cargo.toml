@@ -27,7 +27,7 @@ async-trait = "0.1"
 serde_json = "1.0"
 # The stdio server (feature `server`): the SDK is an adapter, never in the
 # public API (ADR-0021), and tokio comes with it only.
-rmcp = { version = "3.5.1", default-features = false, features = ["server", "transport-io"], optional = true }
+rmcp = { version = "3.9", default-features = false, features = ["server", "transport-io"], optional = true }
 tokio = { version = "1", default-features = false, features = ["rt", "time"], optional = true }
 futures-executor = { version = "0.3", optional = true }
 thiserror = { version = "2.0", optional = true }
@@ -49,7 +49,7 @@ zip = { version = "9", default-features = false, features = ["deflate"] }
 # The executor the storage tests already use; no tokio.
 futures-executor = "0.3"
 # The SDK's own client drives the server in memory (tests/server.rs).
-rmcp = { version = "3.5.1", default-features = false, features = ["server", "client", "transport-io"] }
+rmcp = { version = "3.9", default-features = false, features = ["server", "client", "transport-io"] }
 tokio = { version = "1", default-features = false, features = ["rt", "time", "macros", "io-util"] }
 
 [lints.rust]

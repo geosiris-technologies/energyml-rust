@@ -60,6 +60,7 @@ use crate::declare::{Inputs, LatticeIn, Params, Suggestions, Title};
 use crate::operation::{About, Category, Context, Need, Note, Operation, Plan, Refusal, Slot};
 use crate::pieces::Pieces;
 
+use super::blocks::double;
 use super::support;
 use super::written::Written;
 
@@ -92,14 +93,6 @@ pub struct TerrainParams {
 pub struct TerrainInputs {
     /// the digital elevation model - a lattice of heights in the house order, `NaN` where the source has none
     pub lattice: LatticeIn,
-}
-
-fn double(title: &str, value: f64) -> Parameter {
-    Parameter::Double {
-        title: title.to_string(),
-        value,
-        uom: None,
-    }
 }
 
 fn text(title: &str, value: &str) -> Parameter {

@@ -76,6 +76,7 @@
 use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 use energyml_section::model::SectionKey;
+use std::sync::Arc;
 
 use super::attach::{Attach, AttachInputs, AttachParams, Form};
 use super::media::Document;
@@ -400,7 +401,7 @@ fn metadata_of(svg: &Document) -> Result<Metadata, Refusal> {
 }
 
 /// What a uri read from a drawing's metadata names among the objects held.
-enum Named<'a> {
+pub(super) enum Named<'a> {
     /// Exactly one.
     One(&'a Ref),
     /// None of them.
@@ -415,7 +416,7 @@ enum Named<'a> {
 /// a uuid. **The uuid, then the version the uri names**; a short uri
 /// names the entry that declares none when there are several, as the store's own
 /// resolution does (`EpcStore::resolve`), and is otherwise ambiguous.
-fn named_in<'a>(held: &[&'a Ref], uri: &str) -> Named<'a> {
+pub(super) fn named_in<'a>(held: &[&'a Ref], uri: &str) -> Named<'a> {
     let Ok(asked) = energyml_core::identifiers::EtpUri::parse(uri) else {
         return Named::None;
     };
@@ -487,7 +488,7 @@ const STRING_PARAMETER: usize = 2000;
 const PNG_SIGNATURE: [u8; 8] = [0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a];
 
 /// A PNG's width and height, from its `IHDR` - which PNG §5.6 puts first.
-fn png_size(bytes: &[u8]) -> Option<[u32; 2]> {
+pub(super) fn png_size(bytes: &[u8]) -> Option<[u32; 2]> {
     if bytes.len() < 24 || bytes[..8] != PNG_SIGNATURE || &bytes[12..16] != b"IHDR" {
         return None;
     }
@@ -539,18 +540,28 @@ fn drawing_type(file: &Document) -> Result<&'static str, Refusal> {
 /// writes over its own files and nobody else's (a
 /// folder named like the section).
 fn part_of(stated: &Option<String>, title: &str, file: &Document) -> String {
+    part_named(stated, "media/sections", &folder_of(title), file)
+}
+
+/// A part name for a file, the one door of the drawing operations: the one
+/// stated, or `<root>/<folder>/` and the file's name.
+pub(super) fn part_named(stated: &Option<String>, root: &str, folder: &str, file: &Document) -> String {
     stated.clone().unwrap_or_else(|| {
         format!(
-            "media/sections/{}/{}",
-            folder_of(title),
+            "{root}/{folder}/{}",
             file.file.rsplit(['/', '\\']).next().unwrap_or(&file.file)
         )
     })
 }
 
-/// A section's title as a folder name: what a part name may hold (letters,
-/// digits, `-`, `_`, `.`), the rest a `_`, never empty.
+/// A section's title as a folder name, `section` when nothing is left.
 fn folder_of(title: &str) -> String {
+    folder_named(title, "section")
+}
+
+/// A title as a folder name: what a part name may hold (letters, digits,
+/// `-`, `_`, `.`), the rest a `_`, and `empty` when nothing is left.
+pub(super) fn folder_named(title: &str, empty: &str) -> String {
     let named: String = title
         .trim()
         .chars()
@@ -564,10 +575,69 @@ fn folder_of(title: &str) -> String {
         .collect();
     let named = named.trim_matches(['_', '.']).to_string();
     if named.is_empty() {
-        "section".to_string()
+        empty.to_string()
     } else {
         named
     }
+}
+
+/// One image attached to an object by the one writer of attachments, in the
+/// part-address form, its title given.
+///
+/// **A drawing drawn again replaces its attachment.** `attach` names an
+/// attachment by its bytes too - a second file is a second attachment -, and a
+/// redrawn view would then leave the first beside the second, both naming the
+/// same part. With a derived identity the attachment's uuid comes from `seed`
+/// (the operation, the object it hangs on and what the image is): the same view
+/// stored twice writes the same object over itself. Given uuids are handed out
+/// in the plan's order: the attachment takes the next one.
+#[allow(clippy::too_many_arguments)]
+pub(super) fn attachment_named(
+    cx: &Context<'_>,
+    rank: &mut usize,
+    target: ObjectIn,
+    file: Document,
+    part: String,
+    category: &str,
+    content_type: &str,
+    title: String,
+    seed: &str,
+) -> Result<Plan, Refusal> {
+    let identity = match cx.identity {
+        Identity::Derived { .. } => cx.identity.clone(),
+        Identity::Given(_) => Identity::Given(vec![support::next_uuid(cx.identity, "", rank)?]),
+    };
+    let sub = Context {
+        identity: &identity,
+        ..*cx
+    };
+    let mut made = Attach.plan(
+        AttachInputs {
+            target,
+            file: Some(file),
+        },
+        AttachParams {
+            form: Some(Form::PartAddress),
+            address: None,
+            md: None,
+            md_uom: "m".to_string(),
+            category: Some(category.to_string()),
+            file_name: None,
+            content_type: Some(content_type.to_string()),
+            path: Some(part),
+            title: Some(Title(title)),
+        },
+        &sub,
+    )?;
+    if let (Identity::Derived { .. }, Some(object)) = (cx.identity, made.objects.first_mut()) {
+        let uuid = cx.identity.uuid(seed, 0)?;
+        object.json["uuid"] = serde_json::json!(uuid);
+        object.uuid = uuid.clone();
+        for part in &mut made.media {
+            part.related_to = vec![uuid.to_ascii_lowercase()];
+        }
+    }
+    Ok(made)
 }
 
 impl Operation for SectionView {
@@ -835,7 +905,7 @@ impl Operation for SectionView {
         let frame = support::frame_in(&cx.known(), &written.frame, cx.identity, cx.when, &mut 0)?;
         let shape = Shape {
             name: inputs.svg.name.clone(),
-            geometry: support::geometry_placed(
+            geometry: Arc::new(support::geometry_placed(
                 &inputs.svg.name,
                 &Geometry {
                     kind: "polylines",
@@ -843,7 +913,7 @@ impl Operation for SectionView {
                 },
                 None,
                 &frame,
-            )?,
+            )?),
             closed: None,
             known: None,
         };
@@ -872,16 +942,6 @@ impl Operation for SectionView {
                           seed: &str,
                           parameter: &str|
          -> Result<(), Refusal> {
-            // Given uuids are handed out in the plan's order: the attachment
-            // takes the next one, not the first, which the lines have.
-            let identity = match cx.identity {
-                Identity::Derived { .. } => cx.identity.clone(),
-                Identity::Given(_) => Identity::Given(vec![support::next_uuid(cx.identity, "", &mut rank)?]),
-            };
-            let sub = Context {
-                identity: &identity,
-                ..*cx
-            };
             let target = ObjectIn {
                 name: "target".to_string(),
                 known: Known {
@@ -889,54 +949,29 @@ impl Operation for SectionView {
                     ..Known::default()
                 },
             };
-            let made = Attach.plan(
-                AttachInputs {
-                    target,
-                    file: Some(file),
-                },
-                AttachParams {
-                    form: Some(Form::PartAddress),
-                    address: None,
-                    md: None,
-                    md_uom: "m".to_string(),
-                    category: Some(params.category.clone()),
-                    file_name: None,
-                    content_type: Some(kind.to_string()),
-                    path: Some(part.clone()),
-                    title: Some(Title(format!("{title} - {what}"))),
-                },
-                &sub,
+            // A section's drawing is named by the section and what it is (`SVG`,
+            // `PNG`); a further drawing by its file's name - a section has one SVG
+            // and one PNG of its own, and as many others as it has files.
+            let made = attachment_named(
+                cx,
+                &mut rank,
+                target,
+                file,
+                part.clone(),
+                &params.category,
+                kind,
+                format!("{title} - {what}"),
+                &format!(
+                    "section-view:attachment:{}:{seed}",
+                    representation.uuid.to_ascii_lowercase()
+                ),
             )?;
             parameters.push(Parameter::Text {
                 title: parameter.to_string(),
                 value: part,
             });
-            // **A drawing drawn again replaces its attachment.** `attach` names
-            // an attachment by its bytes too - a second file is a second
-            // attachment -, and a redrawn section would then leave the first
-            // beside the second, both naming the same part. A section's drawing
-            // is named by the section and what it is (`SVG`, `PNG`): the same
-            // section stored twice writes the same object over itself. A further
-            // drawing is named by its file's name instead - a section has one
-            // SVG and one PNG of its own, and as many others as it has files.
-            let mut objects = made.objects;
-            let mut media = made.media;
-            if let (Identity::Derived { .. }, Some(object)) = (cx.identity, objects.first_mut()) {
-                let uuid = cx.identity.uuid(
-                    &format!(
-                        "section-view:attachment:{}:{seed}",
-                        representation.uuid.to_ascii_lowercase()
-                    ),
-                    0,
-                )?;
-                object.json["uuid"] = serde_json::json!(uuid);
-                object.uuid = uuid.clone();
-                for part in &mut media {
-                    part.related_to = vec![uuid.to_ascii_lowercase()];
-                }
-            }
-            plan.objects.extend(objects);
-            plan.media.extend(media);
+            plan.objects.extend(made.objects);
+            plan.media.extend(made.media);
             Ok(())
         };
         // Known to be an SVG - its metadata was just read from it - and a PNG

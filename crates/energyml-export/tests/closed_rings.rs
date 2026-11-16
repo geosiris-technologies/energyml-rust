@@ -52,6 +52,7 @@ fn two_runs(closed: Vec<bool>) -> SceneObject {
             time_uom: None,
             projected: CrsKind::Epsg(4326),
             vertical: CrsKind::Absent,
+            axes: energyml_domain::crs::AxisReading::NotStated,
         }),
         interpretation: None,
         feature: None,

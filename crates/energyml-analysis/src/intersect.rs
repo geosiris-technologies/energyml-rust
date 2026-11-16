@@ -60,11 +60,7 @@ type Boxed = ([Point; 3], [u32; 3], [f64; 3], [f64; 3]);
 fn plane(t: &[Point; 3]) -> Option<([f64; 3], f64)> {
     let u = [t[1][0] - t[0][0], t[1][1] - t[0][1], t[1][2] - t[0][2]];
     let v = [t[2][0] - t[0][0], t[2][1] - t[0][1], t[2][2] - t[0][2]];
-    let n = [
-        u[1] * v[2] - u[2] * v[1],
-        u[2] * v[0] - u[0] * v[2],
-        u[0] * v[1] - u[1] * v[0],
-    ];
+    let n = energyml_geostat::vector::cross(u, v);
     let len = (n[0] * n[0] + n[1] * n[1] + n[2] * n[2]).sqrt();
     if len < 1e-18 {
         return None;
@@ -94,12 +90,22 @@ fn cut_by(corners: &[Point; 3], index: &[u32; 3], n: &[f64; 3], d: f64) -> Vec<P
         if span.abs() < 1e-300 {
             continue;
         }
-        let t = da / span;
-        let hit = [
-            corners[a][0] + (corners[b][0] - corners[a][0]) * t,
-            corners[a][1] + (corners[b][1] - corners[a][1]) * t,
-            corners[a][2] + (corners[b][2] - corners[a][2]) * t,
-        ];
+        // A corner exactly on the plane is the hit itself, copied: the two
+        // edges meeting at it would otherwise compute it from different ends
+        // (`t = 0` and `t = 1`) and `a + (b - a) * 1.0` is not always `b` to
+        // the bit, which made a third, distinct hit.
+        let hit = if da == 0.0 {
+            corners[a]
+        } else if db == 0.0 {
+            corners[b]
+        } else {
+            let t = da / span;
+            [
+                corners[a][0] + (corners[b][0] - corners[a][0]) * t,
+                corners[a][1] + (corners[b][1] - corners[a][1]) * t,
+                corners[a][2] + (corners[b][2] - corners[a][2]) * t,
+            ]
+        };
         if !hits.iter().any(|seen| seen == &hit) {
             hits.push(hit);
         }
@@ -118,11 +124,7 @@ fn meet(t1: &[Point; 3], i1: &[u32; 3], t2: &[Point; 3], i2: &[u32; 3]) -> Optio
     }
     // Both segments lie on the same line: order them along its direction and
     // keep the overlap. The direction is the cross product of the normals.
-    let dir = [
-        n1[1] * n2[2] - n1[2] * n2[1],
-        n1[2] * n2[0] - n1[0] * n2[2],
-        n1[0] * n2[1] - n1[1] * n2[0],
-    ];
+    let dir = energyml_geostat::vector::cross(n1, n2);
     let along = |p: &Point| p[0] * dir[0] + p[1] * dir[1] + p[2] * dir[2];
     let order = |s: &[Point]| -> (Point, Point, f64, f64) {
         let (a, b) = (s[0], s[1]);
@@ -247,55 +249,25 @@ pub fn pieces(
 }
 
 /// Weld pieces into traces on **exactly** shared ends - the rule of
-/// `energyml_geometry::section::chain`, without the profile.
+/// [`energyml_geometry::section::chain`], which does the walk (a junction of
+/// three or more ends is a stop, a ring is stated by `closed` and its first
+/// node is not repeated). The profile it also carries is not used here, so each
+/// piece is handed over with a zero one.
 pub fn chain(pieces: &[Piece]) -> Vec<Trace> {
-    let key = |p: &Point| -> [u64; 3] { [p[0].to_bits(), p[1].to_bits(), p[2].to_bits()] };
-    let mut by_end: HashMap<[u64; 3], Vec<usize>> = HashMap::new();
-    for (index, one) in pieces.iter().enumerate() {
-        for end in &one.ends {
-            by_end.entry(key(end)).or_default().push(index);
-        }
-    }
-    let mut used = vec![false; pieces.len()];
-    let mut out = Vec::new();
-    for start in 0..pieces.len() {
-        if used[start] {
-            continue;
-        }
-        used[start] = true;
-        let mut points = vec![pieces[start].ends[0], pieces[start].ends[1]];
-        for forward in [true, false] {
-            loop {
-                let tip = if forward {
-                    *points.last().unwrap()
-                } else {
-                    points[0]
-                };
-                let at_tip = by_end.get(&key(&tip)).map(Vec::as_slice).unwrap_or(&[]);
-                // Degree two or nothing: a junction is a stop.
-                if at_tip.len() != 2 {
-                    break;
-                }
-                let Some(&next) = at_tip.iter().find(|&&i| !used[i]) else {
-                    break;
-                };
-                used[next] = true;
-                let [a, b] = pieces[next].ends;
-                let extend = if key(&a) == key(&tip) { b } else { a };
-                if forward {
-                    points.push(extend)
-                } else {
-                    points.insert(0, extend)
-                }
-            }
-        }
-        let closed = points.len() > 2 && key(points.first().unwrap()) == key(points.last().unwrap());
-        if closed {
-            points.pop();
-        }
-        out.push(Trace { points, closed });
-    }
-    out
+    let cuts: Vec<energyml_geometry::section::Cut> = pieces
+        .iter()
+        .map(|one| energyml_geometry::section::Cut {
+            ends: one.ends,
+            profile: [[0.0; 2]; 2],
+        })
+        .collect();
+    energyml_geometry::section::chain(&cuts)
+        .into_iter()
+        .map(|one| Trace {
+            points: one.points,
+            closed: one.closed,
+        })
+        .collect()
 }
 
 /// The traces where surface A meets surface B.
@@ -315,6 +287,19 @@ pub fn intersect(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// [analysis C1] A plane through a vertex gives that vertex once, bit for
+    /// bit. Here `1.0 + (1e-20 - 1.0) * 1.0` is `0.0`, not `1e-20`, so the old
+    /// interpolation made the touched corner a different point from each of the
+    /// two edges and the cut had three hits.
+    #[test]
+    fn a_plane_through_a_vertex_gives_two_hits_not_three() {
+        let corners = [[1.0, 0.0, 0.0], [1e-20, 0.0, 0.0], [-1.0, 1.0, 0.0]];
+        let hits = cut_by(&corners, &[0, 1, 2], &[1.0, 0.0, 0.0], -1e-20);
+        assert_eq!(hits.len(), 2, "{hits:?}");
+        assert!(hits.contains(&[1e-20, 0.0, 0.0]), "{hits:?}");
+        // Break it: interpolate every hit with `t = da / span`, even when `da` or `db` is 0.
+    }
 
     /// A horizontal square at height `z`, split in two triangles.
     fn plate(z: f64) -> (Vec<Point>, Vec<[u32; 3]>) {

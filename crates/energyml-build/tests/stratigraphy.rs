@@ -617,7 +617,7 @@ fn bag(text: &str) -> Pieces {
         "table",
         Source::Table {
             name: "essai.csv".into(),
-            table,
+            table: Arc::new(table),
             template,
         },
     )
@@ -721,7 +721,7 @@ fn a_mapping_without_passes_is_refused_towards_the_top_depth() {
         "table",
         Source::Table {
             name: "essai.csv".into(),
-            table,
+            table: Arc::new(table),
             template: osdu::from_json(&columns).expect("a template"),
         },
     );
@@ -880,4 +880,31 @@ fn the_same_divisions_titled_in_english_keep_their_uuids_and_the_french_as_an_al
             .any(|alias| alias["authority"] == "BRGM label (fr)" && alias["Identifier"] == "Eocène"),
         "{aliases:?}"
     );
+}
+
+/// `[build-ops-3 S15]`: a parent with **one** age bound states no interval, so
+/// no `HasOccurredDuring` could be written: it is refused like an undated one,
+/// not written bare.
+///
+/// Break it: put `&&` back in the `undated` filter of `stratigraphy::selection`;
+/// the half-dated Paleogene is then written without an `OccurredDuring`.
+#[test]
+fn a_parent_with_one_age_bound_is_refused_like_an_undated_one() {
+    let bounds =
+        "<https://data.geoscience.fr/ncl/GeolTsBound/1241>,<https://data.geoscience.fr/ncl/GeolTsBound/1269>";
+    assert_eq!(CONCEPTS.matches(bounds).count(), 1);
+    let one_bound = "<https://data.geoscience.fr/ncl/GeolTsBound/1241>,";
+    let chart =
+        Chart::from_csv(&CONCEPTS.replace(bounds, one_bound), Some(BOUNDS)).expect("the extract reads");
+    let params = StratigraphyParams {
+        units: vec![ChartTerm("Eocène".to_string())],
+        ancestors: true,
+        regional: false,
+        finest: 7,
+        title: None,
+        language: stratigraphy::Language::Fr,
+    };
+    let why = stratigraphy::selection(&chart, &params).expect_err("half a span cannot be placed");
+    assert_eq!(why.slot.as_deref(), Some("ancestors"), "{why}");
+    assert!(why.message.contains("Paléogène"), "{why}");
 }

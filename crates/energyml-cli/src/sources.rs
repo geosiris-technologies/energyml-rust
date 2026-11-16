@@ -62,12 +62,26 @@ pub struct FetchArgs {
     /// Keep no property - what a preview asks for.
     #[arg(long, conflicts_with = "only")]
     pub shapes_only: bool,
-    /// How many entities per page.
-    #[arg(long, default_value_t = 1000, value_name = "N")]
+    /// How many entities per page (at least 1).
+    #[arg(long, default_value_t = 1000, value_name = "N", value_parser = at_least_one)]
     pub page: usize,
-    /// A ceiling in entities. The harvest stops there, and says so.
-    #[arg(long, value_name = "N")]
+    /// A ceiling in entities (at least 1). The harvest stops there, and says so.
+    #[arg(long, value_name = "N", value_parser = at_least_one)]
     pub most: Option<usize>,
+}
+
+/// A count that is a whole number of at least one: `--page 0` would divide by
+/// zero in the page count, and `--most 0` would stop the harvest at once while
+/// reporting success. Refused by name at parse time, before any request is sent.
+fn at_least_one(text: &str) -> Result<usize, String> {
+    let n: usize = text
+        .trim()
+        .parse()
+        .map_err(|_| format!("`{text}` is not a whole number"))?;
+    if n == 0 {
+        return Err("must be at least 1".to_string());
+    }
+    Ok(n)
 }
 
 /// `energyml sources`.
@@ -348,4 +362,21 @@ fn area_of(path: &PathBuf) -> Result<Area> {
         .and_then(|one| one.parts.first())
         .with_context(|| format!("{} holds no polygon to use as an area", path.display()))?;
     Ok(Area::Ring(ring.iter().map(|p| (p.lon, p.lat)).collect()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::at_least_one;
+
+    #[test]
+    fn zero_is_refused_by_name_and_a_count_is_kept() {
+        assert_eq!(at_least_one("1000"), Ok(1000));
+        assert_eq!(at_least_one("0"), Err("must be at least 1".to_string()));
+        assert!(at_least_one("-3").is_err());
+        assert!(at_least_one("many").is_err());
+    }
+
+    // Break it: make `at_least_one` accept 0 (drop the `n == 0` branch): the
+    // test fails, and `energyml fetch ... --page 0` panics again on
+    // `matched.div_ceil(0)`.
 }

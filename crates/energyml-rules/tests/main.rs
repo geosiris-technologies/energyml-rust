@@ -14,3 +14,4 @@ mod loader;
 mod crosscheck;
 mod loading;
 mod registry;
+mod stated_numbers;

@@ -1654,6 +1654,13 @@ pub trait AnyOperation: Send + Sync {
     fn reports(&self) -> Vec<Slot> {
         Vec::new()
     }
+    /// Whether a run writes at least one data object. `false` for an operation
+    /// that only writes a part of the package (a media file): its template then
+    /// declares `output` from 0, never a promise its activity cannot keep
+    /// (common TRG 2.3 section 3.1, p. 40).
+    fn writes_objects(&self) -> bool {
+        true
+    }
     /// **What it writes, by role** - see [`Output`]. Empty by default, which
     /// means *not declared yet*, never *writes nothing*: a caller that chains
     /// steps falls back to the roles the plan carries.
@@ -1911,6 +1918,7 @@ impl Registry {
         let settled = choices.settle_given(&slots, cx.purpose, &given)?;
         let mut plan = operation.plan_with(pieces, &settled, cx)?;
         record_choices(&mut plan, &slots, &settled);
+        conform_integer_kinds(&mut plan);
         span.record("objects", plan.objects.len());
         span.record("datasets", plan.datasets.len());
         Ok(plan)
@@ -1946,72 +1954,135 @@ fn record_choices(plan: &mut Plan, slots: &[Slot], settled: &Choices) {
         let Some(value) = settled.get(slot.name) else {
             continue;
         };
-        if plan.activity.parameters.iter().any(|p| title_of(p) == slot.name) {
+        if plan.activity.parameters.iter().any(|p| p.title() == slot.name) {
             continue;
         }
-        let parameter = match &slot.need {
-            Need::Object { .. } | Need::Crs | Need::Interpretation | Need::PropertyKind => {
-                // A bare uuid is not a reference, and inventing the rest of one
-                // here would be this pass asserting a content type nobody wrote.
-                if !value.is_object() {
-                    continue;
-                }
-                Parameter::Object {
-                    title: slot.name.to_string(),
-                    reference: value.clone(),
-                }
+        // A list of settings (`times`, `layers`, the sections of a plan) is
+        // recorded one parameter per item, under the slot's title, as its
+        // template declares it (MaxOccurs above one). Skipping it left the
+        // activity without a parameter its template requires.
+        let items: Vec<&Value> = match value {
+            Value::Array(items)
+                if !matches!(
+                    slot.need,
+                    Need::Object { .. }
+                        | Need::Crs
+                        | Need::Interpretation
+                        | Need::PropertyKind
+                        | Need::Input(_)
+                ) =>
+            {
+                items.iter().collect()
             }
-            // **An input is not a parameter.** The activity records its
-            // inputs as such, through `apply`; adding it here would make it a
-            // setting, and the same fact would be stated twice under two
-            // natures.
-            Need::Input(_) => continue,
-            Need::Number { uom, .. } => match value.as_f64() {
-                Some(number) => Parameter::Double {
-                    title: slot.name.to_string(),
-                    value: number,
-                    uom: uom.map(str::to_string),
-                },
-                None => continue,
-            },
-            Need::Epsg | Need::Integer { .. } => match value.as_f64() {
-                Some(number) => Parameter::Double {
-                    title: slot.name.to_string(),
-                    value: number,
-                    uom: None,
-                },
-                None => continue,
-            },
-            // eml 2.3 has no boolean parameter - the template's `Constraint`
-            // says which two words, and this writes one of them.
-            Need::Flag => Parameter::Text {
-                title: slot.name.to_string(),
-                value: if value.as_bool() == Some(true) {
-                    "true".to_string()
-                } else {
-                    "false".to_string()
-                },
-            },
-            Need::Text | Need::Title | Need::Choice(_) | Need::Type(_) | Need::Vocabulary(_) => {
-                match value.as_str() {
-                    Some(text) => Parameter::Text {
+            one => vec![one],
+        };
+        for value in items {
+            let parameter = match &slot.need {
+                Need::Object { .. } | Need::Crs | Need::Interpretation | Need::PropertyKind => {
+                    // A bare uuid is not a reference, and inventing the rest of one
+                    // here would be this pass asserting a content type nobody wrote.
+                    if !value.is_object() {
+                        continue;
+                    }
+                    Parameter::Object {
                         title: slot.name.to_string(),
-                        value: text.to_string(),
+                        reference: value.clone(),
+                    }
+                }
+                // **An input is not a parameter.** The activity records its
+                // inputs as such, through `apply`; adding it here would make it a
+                // setting, and the same fact would be stated twice under two
+                // natures.
+                Need::Input(_) => continue,
+                Need::Number { uom, .. } => match value.as_f64() {
+                    Some(number) => Parameter::Double {
+                        title: slot.name.to_string(),
+                        value: number,
+                        uom: uom.map(str::to_string),
                     },
                     None => continue,
+                },
+                Need::Epsg => match value.as_f64() {
+                    Some(number) => Parameter::Double {
+                        title: slot.name.to_string(),
+                        value: number,
+                        uom: None,
+                    },
+                    None => continue,
+                },
+                // The template declares `integer` for this slot (common TRG 2.3
+                // section 3.8, p. 47): a whole number is written as one. `accepts`
+                // has already checked that a choice here is an `i64`.
+                Need::Integer { .. } => match value.as_i64() {
+                    Some(number) => Parameter::Integer {
+                        title: slot.name.to_string(),
+                        value: number,
+                    },
+                    None => continue,
+                },
+                // eml 2.3 has no boolean parameter - the template's `Constraint`
+                // says which two words, and this writes one of them.
+                Need::Flag => Parameter::Text {
+                    title: slot.name.to_string(),
+                    value: if value.as_bool() == Some(true) {
+                        "true".to_string()
+                    } else {
+                        "false".to_string()
+                    },
+                },
+                Need::Text | Need::Title | Need::Choice(_) | Need::Type(_) | Need::Vocabulary(_) => {
+                    match value.as_str() {
+                        Some(text) => Parameter::Text {
+                            title: slot.name.to_string(),
+                            value: text.to_string(),
+                        },
+                        None => continue,
+                    }
                 }
-            }
-        };
-        plan.activity.parameters.push(parameter);
+            };
+            plan.activity.parameters.push(parameter);
+        }
     }
 }
 
-/// A parameter's title, whatever its kind.
-fn title_of(parameter: &energyml_domain::provenance::Parameter) -> &str {
+/// Retype as `Parameter::Integer` every `Parameter::Double` the operation wrote
+/// itself under a title its canonical template declares `integer`, when the
+/// value is whole and has no unit (`None` or `Euc`).
+///
+/// The canonical template is the declaration the conformance reads, and the
+/// operations write some of their own counts (`faultCount`, `nodesAdded`...)
+/// that `record_choices` never sees. A value that is not whole stays a double:
+/// the conformance will report it, and rounding it would hide that.
+fn conform_integer_kinds(plan: &mut Plan) {
     use energyml_domain::provenance::Parameter;
-    match parameter {
-        Parameter::Double { title, .. } | Parameter::Text { title, .. } | Parameter::Object { title, .. } => {
-            title
+    let Ok(template) = energyml_domain::provenance::template(plan.activity.recipe) else {
+        return;
+    };
+    let integers: Vec<&str> = template["Parameter"]
+        .as_array()
+        .map(|declared| {
+            declared
+                .iter()
+                .filter(|p| p["AllowedKind"] == serde_json::json!(["integer"]))
+                .filter_map(|p| p["Title"].as_str())
+                .collect()
+        })
+        .unwrap_or_default();
+    for parameter in &mut plan.activity.parameters {
+        let Parameter::Double { title, value, uom } = &mut *parameter else {
+            continue;
+        };
+        let unitless = matches!(uom.as_deref(), None | Some("Euc"));
+        if unitless
+            && integers.contains(&title.as_str())
+            && value.is_finite()
+            && value.fract() == 0.0
+            && value.abs() < 9.0e15
+        {
+            *parameter = Parameter::Integer {
+                title: std::mem::take(title),
+                value: *value as i64,
+            };
         }
     }
 }

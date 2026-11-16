@@ -359,7 +359,7 @@ pub fn read_with_interpretations(
             uuid: energyml_core::identity::uuid_of_reflect(reference)
                 .unwrap_or_default()
                 .to_string(),
-            title: text_of(reference, "Title").unwrap_or_default(),
+            title: crate::geometry::field_text(reference, "Title").unwrap_or_default(),
         })
         .collect();
     if features.is_empty() {
@@ -424,14 +424,6 @@ pub fn read_with_interpretations(
     }
 
     Ok((patches, Some(Interpretations { features, per_entry })))
-}
-
-/// A string field of a reflected object, empty treated as absent.
-fn text_of(object: &dyn Reflect, field: &str) -> Option<String> {
-    match object.field(field)?.as_scalar()? {
-        energyml_core::value::Scalar::Str(found) if !found.is_empty() => Some(found.to_string()),
-        _ => None,
-    }
 }
 
 /// The grids the set draws from, read once each and in the file's order.
@@ -545,7 +537,7 @@ fn face_of(shape: &Geometry, cell: u64, face: usize) -> Result<Option<Vec<Point>
                 ))
             }
             other => Err(Error::Shape {
-                topology: crate::geometry::leak(name_of(other)),
+                topology: other.describe(),
                 wanted: "a grid whose cells have faces",
             }),
         };
@@ -585,21 +577,6 @@ fn centre_of(shape: &Geometry, cell: u64) -> Option<Point> {
         return Some([sum[0] / count, sum[1] / count, sum[2] / count]);
     }
     None
-}
-
-/// What a topology is called, for a refusal that names it.
-fn name_of(topology: &Topology) -> &'static str {
-    match topology {
-        Topology::Points => "a set of points",
-        Topology::Triangles(_) => "a set of triangles",
-        Topology::Quads(_) => "a set of quadrilaterals",
-        Topology::Polygons(_) => "a set of polygons",
-        Topology::Polylines(_) => "a set of polylines",
-        Topology::Segments(_) => "a set of segments",
-        Topology::Grid { .. } => "a lattice",
-        Topology::Hexahedra { .. } => "an IJK grid",
-        Topology::Polyhedra(_) => "an unstructured grid",
-    }
 }
 
 /// An integer array under the first of these fields that carries one.

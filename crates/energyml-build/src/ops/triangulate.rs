@@ -72,6 +72,7 @@
 use energyml_analysis::{plan_distance, resample, triangulate_xy, triangulate_xy_constrained};
 use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
+use std::sync::Arc;
 
 use crate::declare::{Inputs, Params, Shape, Suggestions};
 use crate::operation::{About, Category, Context, Need, Note, Operation, Plan, Refusal, Slot};
@@ -351,7 +352,7 @@ pub fn run(
     let nodes = points.len();
     let surface = Shape {
         name: name.clone(),
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind: "triangulate",
             patches: vec![Patch {
                 index: 0,
@@ -360,7 +361,7 @@ pub fn run(
                 topology: Topology::Triangles(triangles.clone()),
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
         known: None,
     };

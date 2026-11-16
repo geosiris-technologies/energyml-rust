@@ -78,9 +78,20 @@ impl<'a> Row<'a> {
 /// `name` itself (lowercased) when the package holds no such object: a cascade
 /// may ask about a target that lives elsewhere.
 fn walk_key(store: &EpcStore, name: &str) -> Result<String, Error> {
+    Ok(held_uri(store, name)?.unwrap_or_else(|| name.trim().to_ascii_lowercase()))
+}
+
+/// The uri of the object `name` names, through the store's one door
+/// ([`EpcStore::resolve`]), written **once**: `None` when the package holds no
+/// such object - a cascade may ask about a target that lives elsewhere - and an
+/// error for any other refusal (a name that fits two versions). What a caller
+/// does with the `None` is its own: [`walk_key`] keys the walk by the lowercased
+/// name; the maps this module answers (`file_colours_at`, `of_package`) keep the
+/// trimmed name as given, because their keys are the caller's own spelling.
+fn held_uri(store: &EpcStore, name: &str) -> Result<Option<String>, Error> {
     match store.resolve(name.trim()) {
-        Ok(summary) => Ok(summary.uri.clone()),
-        Err(energyml_storage::Error::NotFound(_)) => Ok(name.trim().to_ascii_lowercase()),
+        Ok(summary) => Ok(Some(summary.uri.clone())),
+        Err(energyml_storage::Error::NotFound(_)) => Ok(None),
         Err(other) => Err(other.into()),
     }
 }
@@ -166,13 +177,11 @@ pub fn kind_chain(store: &EpcStore, read: &Property<'_>) -> Vec<String> {
 /// names is the property read), or a bare uuid as an adapter. Empty when the
 /// store holds no such property; an error when the name fits two versions.
 pub fn kind_chain_at(store: &EpcStore, name: &str) -> Result<Vec<String>, Error> {
-    let summary = match store.resolve(name.trim()) {
-        Ok(summary) => summary,
-        Err(energyml_storage::Error::NotFound(_)) => return Ok(Vec::new()),
-        Err(other) => return Err(other.into()),
+    let Some(uri) = held_uri(store, name)? else {
+        return Ok(Vec::new());
     };
     Ok(store
-        .get_object(&summary.uri)
+        .get_object(&uri)
         .ok()
         .and_then(|object| {
             property::read(object.as_reflect())
@@ -270,6 +279,103 @@ fn decide_in(
     }))
 }
 
+/// What the walk decides for one object of the package: `None` for an object that is neither a representation nor a
+/// property (it has no row), and for a property that does not read (left out, as it always was).
+///
+/// The one place a package object becomes a walk, for [`of_package`] and [`decisions_of`].
+fn decide_summary(
+    index: &PackageIndex,
+    store: &EpcStore,
+    set: &GraphicalSet,
+    summary: &ObjectSummary,
+    options: &Options,
+) -> Option<Result<Option<Decision>, Error>> {
+    let is_representation = summary.qualified_type.contains("Representation");
+    let is_property = summary.qualified_type.ends_with("Property");
+    if !is_representation && !is_property {
+        return None;
+    }
+    if is_property {
+        let object = store.get_object(&summary.uri).ok()?;
+        let read = property::read(object.as_reflect()).ok()?;
+        let chain = kind_chain(store, &read);
+        // By the uri the property names, so the version it names is the
+        // one whose colour it inherits.
+        let representation = read
+            .supporting_representation_uri
+            .clone()
+            .or_else(|| read.supporting_representation.clone())
+            .unwrap_or_default();
+        Some(decide_in(
+            index,
+            store,
+            set,
+            &representation,
+            Some(&summary.uri),
+            &chain,
+            options,
+        ))
+    } else {
+        Some(decide_in(index, store, set, &summary.uri, None, &[], options))
+    }
+}
+
+/// What the package paints each of several objects with, **in one walk**: the sets are read and merged once, the
+/// index is built once, and the package is listed once, whatever the number of objects.
+///
+/// `names` are as [`of_package`]'s `Wanted::object` takes them (a full uri; a bare uuid is an adapter). The answer
+/// has one entry per name, in order, and each is what `of_package` would have said for that object alone: the
+/// decision (`None` when no level answers, or when the object is neither a representation nor a property), or
+/// the words of the refusal that object alone would have met (a name that fits two versions, a walk that fails).
+/// An outer error is what stops every object: the sets do not read.
+///
+/// # Errors
+///
+/// The package's graphical information does not read.
+pub fn decisions_of(
+    cache: &Cache,
+    store: &EpcStore,
+    names: &[&str],
+    options: &Options,
+) -> Result<Vec<Result<Option<Decision>, String>>, Error> {
+    let sets: Vec<GraphicalSet> = graphical_sets(store)?.into_iter().map(|(_, set)| set).collect();
+    if sets.is_empty() {
+        return Ok(names.iter().map(|_| Ok(None)).collect());
+    }
+    let set = GraphicalSet::merged(sets);
+    // Each name through the one door, as `of_package` does; a refusal belongs to its name alone.
+    let uris: Vec<Result<String, String>> = names
+        .iter()
+        .map(|name| match held_uri(store, name) {
+            Ok(held) => Ok(held.unwrap_or_else(|| name.trim().to_string())),
+            Err(why) => Err(why.to_string()),
+        })
+        .collect();
+    let wanted: HashSet<&str> = uris
+        .iter()
+        .filter_map(|uri| uri.as_ref().ok())
+        .map(String::as_str)
+        .collect();
+    let mut decided: HashMap<String, Result<Option<Decision>, String>> = HashMap::new();
+    cache.with_index(store, |index| {
+        for summary in store.resources() {
+            if !wanted.contains(summary.uri.as_str()) {
+                continue;
+            }
+            if let Some(decision) = decide_summary(index, store, &set, &summary, options) {
+                decided.insert(summary.uri.clone(), decision.map_err(|why| why.to_string()));
+            }
+        }
+    });
+    Ok(uris
+        .into_iter()
+        .map(|uri| match uri {
+            Ok(uri) => decided.get(&uri).cloned().unwrap_or(Ok(None)),
+            Err(why) => Err(why),
+        })
+        .collect())
+}
+
 impl Cache {
     /// The ladders of `rows`, in order, **from the walks the cache keeps**: one
     /// walker for all of them, the walk of an object done once, a target the
@@ -330,11 +436,7 @@ impl Cache {
         let mut keys = Vec::with_capacity(names.len());
         let mut rows: Vec<Row<'_>> = Vec::with_capacity(names.len());
         for name in names {
-            let key = match store.resolve(name.trim()) {
-                Ok(summary) => summary.uri.clone(),
-                Err(energyml_storage::Error::NotFound(_)) => name.trim().to_string(),
-                Err(other) => return Err(other.into()),
-            };
+            let key = held_uri(store, name)?.unwrap_or_else(|| name.trim().to_string());
             rows.push(Row::at(store, name, Vec::new(), None)?);
             keys.push(key);
         }
@@ -368,10 +470,12 @@ impl Cache {
         let by_uri = self.file_colours_at(store, uuids)?;
         let mut out = HashMap::with_capacity(uuids.len());
         for uuid in uuids {
-            let key = match store.resolve(uuid.trim()) {
-                Ok(summary) => summary.uri.clone(),
-                Err(_) => uuid.trim().to_string(),
-            };
+            // Any refusal, a name that fits two versions included, was already
+            // raised by `file_colours_at` above: this one only spells the key.
+            let key = held_uri(store, uuid)
+                .ok()
+                .flatten()
+                .unwrap_or_else(|| uuid.trim().to_string());
             out.insert(uuid.to_ascii_lowercase(), by_uri.get(&key).cloned().flatten());
         }
         Ok(out)
@@ -527,57 +631,24 @@ pub fn of_package(cache: &Cache, store: &EpcStore, wanted: &Wanted<'_>) -> Resul
     // compared by its full uri so that one version of a uuid is not the other.
     let wanted_uri: Option<String> = match wanted.object {
         None => None,
-        Some(name) => match store.resolve(name.trim()) {
-            Ok(summary) => Some(summary.uri.clone()),
-            Err(energyml_storage::Error::NotFound(_)) => Some(name.trim().to_string()),
-            Err(other) => return Err(other.into()),
-        },
+        Some(name) => Some(held_uri(store, name)?.unwrap_or_else(|| name.trim().to_string())),
     };
 
     // One index for the whole walk: a cache that keeps nothing builds it once.
     let rows = cache.with_index(store, |index| -> Result<Vec<Coloured>, Error> {
         let mut rows = Vec::new();
         for summary in store.resources() {
-            let is_representation = summary.qualified_type.contains("Representation");
-            let is_property = summary.qualified_type.ends_with("Property");
-            if !is_representation && !is_property {
-                continue;
-            }
             if let Some(wanted) = &wanted_uri
                 && summary.uri != *wanted
             {
                 continue;
             }
-            let decision = if is_property {
-                let Ok(object) = store.get_object(&summary.uri) else {
-                    continue;
-                };
-                let Ok(read) = property::read(object.as_reflect()) else {
-                    continue;
-                };
-                let chain = kind_chain(store, &read);
-                // By the uri the property names, so the version it names is the
-                // one whose colour it inherits.
-                let representation = read
-                    .supporting_representation_uri
-                    .clone()
-                    .or_else(|| read.supporting_representation.clone())
-                    .unwrap_or_default();
-                decide_in(
-                    index,
-                    store,
-                    &set,
-                    &representation,
-                    Some(&summary.uri),
-                    &chain,
-                    &wanted.options,
-                )?
-            } else {
-                decide_in(index, store, &set, &summary.uri, None, &[], &wanted.options)?
+            let Some(decision) = decide_summary(index, store, &set, &summary, &wanted.options) else {
+                continue;
             };
             rows.push(Coloured {
                 summary: summary.clone(),
-                decision,
+                decision: decision?,
             });
         }
         Ok(rows)

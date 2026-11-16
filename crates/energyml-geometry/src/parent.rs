@@ -82,7 +82,7 @@ use energyml_core::value::{FieldValue, Reflect, Scalar};
 use energyml_storage::array::ArrayLocation;
 
 use crate::error::{Error, Result};
-use crate::geometry::{Patch, Topology};
+use crate::geometry::{Patch, Topology, field_list, field_text};
 use crate::points::Point;
 use crate::source::ValueSource;
 use crate::values::scalar_i64;
@@ -417,7 +417,13 @@ fn window_points(
             part.start = vec![k0 as i64, first as i64, 0];
             part.count = vec![(pk + 1) as i64, (pi + 1) as i64, 3];
             let data = source.read(&part)?;
-            let values = data.to_f64();
+            // A text array is no coordinate: refused by name, not read as a row of `NaN`.
+            let values = data.try_to_f64().ok_or_else(|| {
+                Error::malformed(
+                    at,
+                    "the window of coordinates is a string array, not numbers".to_string(),
+                )
+            })?;
             if values.len() != (pk + 1) * (pi + 1) * 3 {
                 return Err(Error::malformed(
                     at,
@@ -619,7 +625,7 @@ pub(crate) fn sub_representation(
     let at = "SubRepresentation";
     // 2.2 carries these on the object, 2.0.1 on the patch. Read both here and
     // let each patch prefer its own.
-    let object_element = text_of(representation, "IndexableElement");
+    let object_element = field_text(representation, "IndexableElement");
     // **A convention that overrides the schema element, and it is written down.**
     // TUG §4.4.1 describes how a sub-representation draws from *several*
     // supporting representations in a version whose schema allows one: an
@@ -648,7 +654,7 @@ pub(crate) fn sub_representation(
 
     let object_support = crate::well::reference_of(representation, "SupportingRepresentation");
 
-    let patches = list_of(representation, "SubRepresentationPatch");
+    let patches = field_list(representation, "SubRepresentationPatch");
     if patches.is_empty() {
         return Err(Error::malformed(at, "a sub-representation with no patch"));
     }
@@ -657,7 +663,7 @@ pub(crate) fn sub_representation(
     let mut offset = 0usize;
     for (index, patch) in patches.iter().enumerate() {
         let where_ = format!("{at}.SubRepresentationPatch[{index}]");
-        let elements = list_of(*patch, "ElementIndices");
+        let elements = field_list(*patch, "ElementIndices");
         if elements.len() > 1 {
             return Err(Error::unsupported(
                 "a sub-representation listing pairs of elements",
@@ -667,7 +673,7 @@ pub(crate) fn sub_representation(
         let (element, indices) = match elements.first() {
             // 2.0.1: the kind and the indices are both inside `ElementIndices`.
             Some(one) => (
-                text_of(*one, "IndexableElement"),
+                field_text(*one, "IndexableElement"),
                 crate::geometry::field_object(*one, "Indices"),
             ),
             // 2.2: the kind is on the object, the indices on the patch.
@@ -854,21 +860,6 @@ fn compact_cells(points: Vec<Point>, cells: Vec<[u32; 8]>) -> Patch {
             index: Vec::new(),
         },
         closed: Vec::new(),
-    }
-}
-
-fn text_of(object: &dyn Reflect, field: &str) -> Option<String> {
-    match object.field(field)? {
-        FieldValue::Scalar(scalar) => scalar.as_str().map(str::to_string),
-        _ => None,
-    }
-}
-
-fn list_of<'a>(object: &'a dyn Reflect, field: &str) -> Vec<&'a dyn Reflect> {
-    match object.field(field) {
-        Some(FieldValue::List(items)) => items.iter().filter_map(|item| item.as_object()).collect(),
-        Some(FieldValue::Object(one)) => vec![one],
-        _ => Vec::new(),
     }
 }
 

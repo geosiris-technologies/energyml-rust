@@ -276,7 +276,7 @@ fn ring_of_package(file: &Path, uuid: &str, as_inner: bool, modes: &Modes) -> Re
     let object = store
         .get_object(&summary.uri)
         .map_err(|e| anyhow!("reading {}: {e}", summary.uri))?;
-    let built = scene::object_of(object.as_reflect(), &store, &summary.uri)
+    let built = scene::object_of(object.as_reflect(), &*store, &summary.uri)
         .map_err(|e| anyhow!("{}: {e}", summary.uri))?;
     let placed = built
         .geometry_in(Placement::Projected)

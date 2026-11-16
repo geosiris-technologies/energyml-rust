@@ -147,15 +147,18 @@ pub fn triangulate_xy_constrained(points: &[f64], faults: &[Vec<[f64; 3]>]) -> R
     let mut duplicates = 0usize;
     for at in 0..count {
         let (x, y, z) = (points[at * 3], points[at * 3 + 1], points[at * 3 + 2]);
-        let before = cdt.num_vertices();
-        cdt.insert(Vertex {
-            at: Point2::new(x, y),
-            z,
-        })
-        .map_err(|_| format!("point {at} has a non-finite coordinate ({x}, {y})"))?;
-        if cdt.num_vertices() == before {
-            duplicates += 1;
+        let position = Point2::new(x, y);
+        // The first of two coincident points wins, as on the plain path:
+        // `insert` on a taken position would replace its z with the last one's.
+        if !(x.is_finite() && y.is_finite()) {
+            return Err(format!("point {at} has a non-finite coordinate ({x}, {y})"));
         }
+        if cdt.locate_vertex(position).is_some() {
+            duplicates += 1;
+            continue;
+        }
+        cdt.insert(Vertex { at: position, z })
+            .map_err(|_| format!("point {at} has a non-finite coordinate ({x}, {y})"))?;
     }
     let cloud = cdt.num_vertices();
 
@@ -270,6 +273,23 @@ mod tests {
             };
             strict(p(t[0]), p(t[1])) || strict(p(t[1]), p(t[2])) || strict(p(t[2]), p(t[0]))
         })
+    }
+
+    /// [geostat-proj-roundtrip S15] Of two samples at one (x, y) the first
+    /// gives the depth on both paths; `insert` alone kept the last one's z on
+    /// the constrained path.
+    #[test]
+    fn of_two_coincident_samples_the_first_z_wins_on_both_paths() {
+        let mut cloud = square();
+        cloud.extend([0.0, 0.0, 99.0]); // the corner (0, 0) again, with another z
+        let made = triangulate_xy_constrained(&cloud, &[]).unwrap();
+        assert_eq!(made.duplicates, 1);
+        assert_eq!(made.points.len(), 5);
+        assert_eq!(made.points[0], [0.0, 0.0, 10.0]);
+        assert!(made.points.iter().all(|p| p[2] != 99.0), "{:?}", made.points);
+        let plain = triangulate_xy(&cloud).unwrap();
+        assert!(plain.iter().all(|&i| i < 5), "the duplicate (index 5) is unused");
+        // Break it: `cdt.insert` every point without `locate_vertex` first.
     }
 
     #[test]

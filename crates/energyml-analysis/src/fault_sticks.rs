@@ -156,11 +156,7 @@ pub fn orientation(points: &[[f64; 3]], triangles: &[[u32; 3]], up: bool) -> Opt
         // to grow upward: a depth frame measures the same dip.
         let u = [b[0] - a[0], b[1] - a[1], sign * (b[2] - a[2])];
         let v = [c[0] - a[0], c[1] - a[1], sign * (c[2] - a[2])];
-        let mut n = [
-            u[1] * v[2] - u[2] * v[1],
-            u[2] * v[0] - u[0] * v[2],
-            u[0] * v[1] - u[1] * v[0],
-        ];
+        let mut n = energyml_geostat::vector::cross(u, v);
         if !n.iter().all(|x| x.is_finite()) || n.iter().all(|x| *x == 0.0) {
             continue;
         }

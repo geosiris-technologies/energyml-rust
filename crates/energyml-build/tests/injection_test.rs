@@ -293,6 +293,13 @@ fn what_cannot_be_a_test_is_refused_by_name() {
         assert!(why.contains(slot), "`{slot}` named: {why}");
     };
     refused(choices().set("sampleMinutes", 25), "sampleMinutes");
+    // `[build-ops-2 S2]`: a step of ten million hours sampled every minute is
+    // billions of samples, refused before anything is allocated.
+    // Break it: remove the `MOST_SAMPLES` check in `injection_test.rs`.
+    refused(
+        choices().set("stepHours", 1.0e7).set("sampleMinutes", 1),
+        "sampleMinutes",
+    );
     refused(choices().set("injectivity", 0.0), "injectivity");
     refused(choices().set("nominalPeriod", "fortnight"), "nominalPeriod");
     refused(choices().set("source", "  "), "source");

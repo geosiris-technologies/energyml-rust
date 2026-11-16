@@ -191,19 +191,14 @@ pub fn run(args: ProfileArgs, modes: Modes) -> Result<()> {
         bail!("give `--track`, `--left` and `--right`");
     };
     let track = read_track(track)?;
-    let placement = match args.placement.as_str() {
-        "projected" => Placement::Projected,
-        "metres" => Placement::Metres,
-        "local" => Placement::Local,
-        other => bail!("placement `{other}`: one of projected, metres, local"),
-    };
+    let placement = Placement::parse(&args.placement).map_err(anyhow::Error::msg)?;
     let asked: Vec<String> = if args.wells.is_empty() {
         heads::trajectories_of(&store.resources())
     } else {
         args.wells.clone()
     };
     let answer = wells_profile::of_wells(
-        &store,
+        &*store,
         &asked,
         &track,
         left,
@@ -256,7 +251,7 @@ pub fn run(args: ProfileArgs, modes: Modes) -> Result<()> {
 /// Parsing and writing only: what a package gives (its colour sets, its index,
 /// its default selection) is `energyml_section::read::package`, the
 /// calculation `compute_packages`, the drawing `draw` - and `redraw` both.
-fn draw_svg(stores: &[energyml_storage::EpcStore], args: &ProfileArgs) -> Result<()> {
+fn draw_svg(stores: &[crate::Opened], args: &ProfileArgs) -> Result<()> {
     use energyml_section::Opened;
     use energyml_section::model::{Asked, CrossWidths, Crosses, Inputs, SectionKey, Target, View};
     use energyml_section::read::{frame, package};
@@ -267,7 +262,7 @@ fn draw_svg(stores: &[energyml_storage::EpcStore], args: &ProfileArgs) -> Result
     }
     let listed = stores
         .iter()
-        .map(package::Listed::of)
+        .map(|store| package::Listed::of(store))
         .collect::<std::result::Result<Vec<_>, String>>()
         .map_err(|e| anyhow!("{e}"))?;
     let mut opened: Vec<Opened<'_>> = stores
@@ -276,7 +271,7 @@ fn draw_svg(stores: &[energyml_storage::EpcStore], args: &ProfileArgs) -> Result
         .enumerate()
         .map(|(at, (store, listed))| Opened {
             store: format!("s{}", at + 1),
-            source: store,
+            source: &**store,
             context: listed.context(),
             cache: None,
         })
@@ -337,7 +332,7 @@ fn draw_svg(stores: &[energyml_storage::EpcStore], args: &ProfileArgs) -> Result
         // The scene's system: the first a package's objects state.
         let system = stores.iter().zip(&objects).find_map(|(store, asked)| {
             let all: Vec<String> = asked.wells.iter().chain(&asked.surfaces).cloned().collect();
-            frame::first_system(store, &all)
+            frame::first_system(&**store, &all)
         });
         let widths = CrossWidths {
             before: args.cross_length,
@@ -382,11 +377,7 @@ fn draw_svg(stores: &[energyml_storage::EpcStore], args: &ProfileArgs) -> Result
                 None => bail!("`--draw {other}`: one of long, plan, cross:N"),
             },
         };
-        let (width, height) = args
-            .size
-            .split_once('x')
-            .and_then(|(w, h)| Some((w.trim().parse::<f64>().ok()?, h.trim().parse::<f64>().ok()?)))
-            .ok_or_else(|| anyhow!("`--size {}`: expected WIDTHxHEIGHT", args.size))?;
+        let (width, height) = super::view::parse_size(&args.size)?;
         let mut view = View::new(target, [width, height]);
         view.zoom_script = !args.static_svg;
         view.strata_legend = args.strata_legend;

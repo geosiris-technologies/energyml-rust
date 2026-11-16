@@ -246,7 +246,7 @@ fn bag_with(faults: &[(&str, Geometry)], fault_frame: &Ref) -> Pieces {
             .with(
                 slot_name("horizons", rank),
                 Source::Shape {
-                    geometry,
+                    geometry: std::sync::Arc::new(geometry),
                     closed: None,
                 },
             )
@@ -265,7 +265,7 @@ fn bag_with(faults: &[(&str, Geometry)], fault_frame: &Ref) -> Pieces {
             .with(
                 slot_name("faults", rank),
                 Source::Shape {
-                    geometry: geometry.clone(),
+                    geometry: std::sync::Arc::new(geometry.clone()),
                     closed: None,
                 },
             )
@@ -344,7 +344,7 @@ fn number(plan: &Plan, title: &str) -> f64 {
         .parameters
         .iter()
         .find_map(|one| match one {
-            Parameter::Double { title: t, value, .. } if t == title => Some(*value),
+            other if other.title() == title => other.number(),
             _ => None,
         })
         .unwrap_or_else(|| panic!("`{title}` is not a number of the activity"))
@@ -815,7 +815,7 @@ fn the_reader_draws_the_split_nodes_and_not_the_removed_cells() {
         pieces = pieces.with(
             slot_name("horizons", rank),
             Source::Shape {
-                geometry,
+                geometry: std::sync::Arc::new(geometry),
                 closed: None,
             },
         );
@@ -824,7 +824,7 @@ fn the_reader_draws_the_split_nodes_and_not_the_removed_cells() {
         pieces = pieces.with(
             slot_name("faults", rank),
             Source::Shape {
-                geometry,
+                geometry: std::sync::Arc::new(geometry),
                 closed: None,
             },
         );

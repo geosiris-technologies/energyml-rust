@@ -59,7 +59,7 @@ fn patch(points: Vec<[f64; 3]>, topology: Topology) -> Geometry {
 
 fn shape(geometry: Geometry) -> Source {
     Source::Shape {
-        geometry,
+        geometry: std::sync::Arc::new(geometry),
         closed: None,
     }
 }

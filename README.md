@@ -101,6 +101,7 @@ Start with [docs/getting-started.md](docs/getting-started.md) for a ten-minute w
 | `energyml-log` | The one `tracing` subscriber a front end installs. |
 | `energyml-sheet` | A drilling sheet laid out in Rust and written as SVG. |
 | `energyml-section` | Long and cross sections of a model along a trace, as SVG. |
+| `energyml-views` | The views of a package as pictures: one registry of views drawn as SVG (PNG on demand), each saying what it proposes where the file is silent. |
 | `energyml-analysis` | Computation on shapes: interpolation and more. |
 | `energyml-build` | Create objects from geometry or foreign files: operations, plans, recipes. |
 | `energyml-build-derive` | Derive macros for `energyml-build` operations. |

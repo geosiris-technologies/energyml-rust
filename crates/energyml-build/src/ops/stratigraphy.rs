@@ -348,14 +348,14 @@ pub fn selection(chart: &Chart, params: &StratigraphyParams) -> Result<Selected,
     let undated: Vec<String> = added
         .iter()
         .filter_map(|id| chart.get(*id))
-        .filter(|one| one.begins_ma.is_none() && one.ends_ma.is_none())
+        .filter(|one| one.begins_ma.is_none() || one.ends_ma.is_none())
         .map(|one| format!("{} ({})", one.label, one.uri()))
         .collect();
     if !undated.is_empty() {
         return Err(Refusal::on(
             "ancestors",
             format!(
-                "{} parent(s) of the divisions chosen state no age in the chart, so where they sit in a column \
+                "{} parent(s) of the divisions chosen state no complete age (both bounds) in the chart, so where they sit in a column \
                  cannot be read: {} - they are there only as parents; `ancestors` off writes the branches alone",
                 undated.len(),
                 undated.join(", ")

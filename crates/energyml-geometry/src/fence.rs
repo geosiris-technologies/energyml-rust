@@ -42,12 +42,18 @@
 //! holes **and** crossings by the same route, with no special case.
 
 use crate::section::{self, Cut};
+use energyml_geostat::buckets;
+use energyml_geostat::polyline::sample;
 
 /// The relative tolerance of a wedge: beyond it, two surfaces cross; below it,
 /// they touch. Relative to the section's vertical extent, never absolute - a
 /// model in millimetres and a model in kilometres do not share an idea of
 /// "zero".
 const PINCH: f64 = 1e-9;
+
+/// The most crosslines a trace may be given: a fence of this many is a drawing
+/// no one reads, and a spacing that asks for more is a unit typed wrong.
+pub const MOST_CROSSLINES: usize = 20_000;
 
 /// One section curve: what a surface gives along the trace, in **continuous**
 /// spans increasing in s.
@@ -140,26 +146,6 @@ fn curve_of_chains(chains: Vec<(section::Chain, Vec<section::CutEnd>)>) -> Sourc
     }
 }
 
-/// A curve's z at an abscissa, interpolated **within a span** - `None` outside
-/// the spans: between two spans, the surface does not exist.
-fn z_at(span: &[[f64; 2]], s: f64) -> Option<f64> {
-    let (first, last) = (span.first()?, span.last()?);
-    if s < first[0] || s > last[0] {
-        return None;
-    }
-    for pair in span.windows(2) {
-        let ([s0, z0], [s1, z1]) = (pair[0], pair[1]);
-        if s >= s0 && s <= s1 {
-            let span_s = s1 - s0;
-            if span_s.abs() < f64::EPSILON {
-                return Some(z0);
-            }
-            return Some(z0 + (z1 - z0) * (s - s0) / span_s);
-        }
-    }
-    None
-}
-
 /// One piece of a panel: continuous material between two surfaces.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Patch {
@@ -204,6 +190,7 @@ impl Panel {
 /// where it is would overlay nothing in the scene.
 pub fn panel(upper: &Curve, lower: &Curve, trace: &[[f64; 2]]) -> Panel {
     let mut out = Panel::default();
+    let walk = Walk::new(trace);
     for (i, up) in upper.spans.iter().enumerate() {
         for (j, low) in lower.spans.iter().enumerate() {
             // Where the two spans overlap: outside it, one of the two surfaces
@@ -230,12 +217,16 @@ pub fn panel(upper: &Curve, lower: &Curve, trace: &[[f64; 2]]) -> Panel {
             steps.sort_by(f64::total_cmp);
             steps.dedup_by(|a, b| (*a - *b).abs() <= f64::EPSILON * a.abs().max(1.0));
 
+            // One pass over each span: the steps ascend, so `sample` answers what
+            // `z_at` does at each, without rescanning the span from its start for
+            // every step ([geometry G14]).
+            let (zu, zl) = (sample(up, &steps), sample(low, &steps));
             let mut samples: Vec<(f64, f64, f64)> = Vec::with_capacity(steps.len());
-            for s in steps {
-                let (Some(zu), Some(zl)) = (z_at(up, s), z_at(low, s)) else {
+            for (s, (zu, zl)) in steps.iter().zip(zu.into_iter().zip(zl)) {
+                let (Some(zu), Some(zl)) = (zu, zl) else {
                     continue;
                 };
-                samples.push((s, zu, zl));
+                samples.push((*s, zu, zl));
             }
             if samples.len() < 2 {
                 continue;
@@ -244,7 +235,7 @@ pub fn panel(upper: &Curve, lower: &Curve, trace: &[[f64; 2]]) -> Panel {
                 .iter()
                 .map(|(_, zu, zl)| zu.abs().max(zl.abs()))
                 .fold(1.0_f64, f64::max);
-            let crossed = build(&mut out, &samples, trace, scale * PINCH);
+            let crossed = build(&mut out, &samples, &walk, scale * PINCH);
             if crossed > 0 {
                 out.notes.push(format!(
                     "spans {i}/{j}: {crossed} crossing(s) - the upper surface passes below the \
@@ -261,7 +252,7 @@ pub fn panel(upper: &Curve, lower: &Curve, trace: &[[f64; 2]]) -> Panel {
 
 /// Build the quadrilaterals of a run of samples, cutting at every sign change
 /// of the thickness. Returns the number of crossings.
-fn build(out: &mut Panel, samples: &[(f64, f64, f64)], trace: &[[f64; 2]], pinch: f64) -> usize {
+fn build(out: &mut Panel, samples: &[(f64, f64, f64)], trace: &Walk<'_>, pinch: f64) -> usize {
     let mut crossed = 0usize;
     // The current sign: `None` while the thickness is nil - a panel that starts
     // on a wedge has no side yet.
@@ -328,7 +319,7 @@ fn crossing(a: (f64, f64, f64), b: (f64, f64, f64)) -> (f64, f64, f64) {
 }
 
 /// Close the current piece into a patch, if it carries any material.
-fn flush(out: &mut Panel, current: &mut Vec<(f64, f64, f64)>, trace: &[[f64; 2]], upright: bool) {
+fn flush(out: &mut Panel, current: &mut Vec<(f64, f64, f64)>, trace: &Walk<'_>, upright: bool) {
     let samples = std::mem::take(current);
     if samples.len() < 2 {
         return;
@@ -336,7 +327,7 @@ fn flush(out: &mut Panel, current: &mut Vec<(f64, f64, f64)>, trace: &[[f64; 2]]
     let mut points = Vec::with_capacity(samples.len() * 2);
     let mut profile = Vec::with_capacity(samples.len() * 2);
     for (s, zu, zl) in &samples {
-        let [x, y] = point_at(trace, *s);
+        let [x, y] = trace.point(*s);
         // Two vertices per abscissa: the top then the bottom, so the bottom's
         // index is the top's plus one - which the triangulation assumes.
         points.push([x, y, *zu]);
@@ -375,27 +366,120 @@ fn flush(out: &mut Panel, current: &mut Vec<(f64, f64, f64)>, trace: &[[f64; 2]]
 ///
 /// Outside the trace, the point is **clamped** to its ends rather than
 /// extrapolated: a section does not leave its trace.
+///
+/// For many abscissas on one trace, build a `Walk` once instead: this builds
+/// it at every call.
 pub fn point_at(trace: &[[f64; 2]], s: f64) -> [f64; 2] {
-    let Some(first) = trace.first() else {
-        return [0.0, 0.0];
-    };
-    if s <= 0.0 {
-        return *first;
-    }
-    let mut travelled = 0.0;
-    for pair in trace.windows(2) {
-        let ([x0, y0], [x1, y1]) = (pair[0], pair[1]);
-        let length = (x1 - x0).hypot(y1 - y0);
-        if length < 1e-12 {
-            continue;
+    Walk::new(trace).point(s)
+}
+
+/// A trace read once for lookups by abscissa: the segments that have a length
+/// and where each one ends, so the segment holding an abscissa is found by a
+/// binary search and not by walking the trace from its start.
+///
+/// The answers are those of the walk: the first segment `i` with
+/// `s <= start_i + length_i`, the sums taken in the same order, so a lookup is
+/// bit for bit what the linear scan gave. A trace with a coordinate that is not
+/// finite has no order to search in, and is walked.
+struct Walk<'a> {
+    trace: &'a [[f64; 2]],
+    /// The segments of length at least a picometre: `(from, to, length)`.
+    pieces: Vec<([f64; 2], [f64; 2], f64)>,
+    /// Where each piece ends along the trace, ascending.
+    ends: Vec<f64>,
+    /// Every end is finite, so `ends` can be searched.
+    sound: bool,
+}
+
+impl<'a> Walk<'a> {
+    fn new(trace: &'a [[f64; 2]]) -> Self {
+        let mut pieces = Vec::new();
+        let mut ends = Vec::new();
+        let mut travelled = 0.0f64;
+        for pair in trace.windows(2) {
+            let ([x0, y0], [x1, y1]) = (pair[0], pair[1]);
+            let length = (x1 - x0).hypot(y1 - y0);
+            if length < 1e-12 {
+                continue;
+            }
+            travelled += length;
+            pieces.push((pair[0], pair[1], length));
+            ends.push(travelled);
         }
-        if s <= travelled + length {
-            let t = (s - travelled) / length;
-            return [x0 + (x1 - x0) * t, y0 + (y1 - y0) * t];
+        let sound = ends.iter().all(|e| e.is_finite());
+        Walk {
+            trace,
+            pieces,
+            ends,
+            sound,
         }
-        travelled += length;
     }
-    *trace.last().unwrap_or(first)
+
+    /// The piece holding the abscissa: the first whose end is at or past it.
+    fn piece_at(&self, s: f64) -> Option<usize> {
+        if self.sound {
+            if s.is_nan() {
+                return None;
+            }
+            let at = self.ends.partition_point(|end| s > *end);
+            return (at < self.ends.len()).then_some(at);
+        }
+        let mut travelled = 0.0;
+        for (at, (_, _, length)) in self.pieces.iter().enumerate() {
+            if s <= travelled + length {
+                return Some(at);
+            }
+            travelled += length;
+        }
+        None
+    }
+
+    /// Where a piece starts along the trace.
+    fn start_of(&self, at: usize) -> f64 {
+        if self.sound {
+            if at == 0 { 0.0 } else { self.ends[at - 1] }
+        } else {
+            self.pieces[..at]
+                .iter()
+                .fold(0.0, |travelled, (_, _, length)| travelled + length)
+        }
+    }
+
+    /// The point at the abscissa, clamped to the trace's ends (see [`point_at`]).
+    fn point(&self, s: f64) -> [f64; 2] {
+        let Some(first) = self.trace.first() else {
+            return [0.0, 0.0];
+        };
+        if s <= 0.0 {
+            return *first;
+        }
+        match self.piece_at(s) {
+            Some(at) => {
+                let ([x0, y0], [x1, y1], length) = self.pieces[at];
+                let t = (s - self.start_of(at)) / length;
+                [x0 + (x1 - x0) * t, y0 + (y1 - y0) * t]
+            }
+            None => *self.trace.last().unwrap_or(first),
+        }
+    }
+
+    /// The unit tangent at the abscissa, taken on the segment that contains it,
+    /// or on the last one past the end.
+    ///
+    /// At a vertex the tangent jumps - there are two, one per side. The
+    /// *incoming* segment's is returned, and that choice beats an average: a
+    /// bisector would give a crossline perpendicular to neither segment, hence
+    /// oblique to the section it crosses.
+    fn tangent(&self, s: f64) -> [f64; 2] {
+        let at = self.piece_at(s).or_else(|| self.pieces.len().checked_sub(1));
+        match at {
+            Some(at) => {
+                let (a, b, length) = self.pieces[at];
+                [(b[0] - a[0]) / length, (b[1] - a[1]) / length]
+            }
+            None => [1.0, 0.0],
+        }
+    }
 }
 
 /// A **crossline**: the plan trace of a section perpendicular to the leading
@@ -489,6 +573,18 @@ pub fn crosslines(trace: &[[f64; 2]], spacing: f64, half_width: f64) -> Result<C
     // stopped there; the last multiple is dropped if it is within half a step
     // of the end, where the two crosslines would overlap without showing
     // anything more.
+    //
+    // A spacing so small that the trace would hold more than
+    // [`MOST_CROSSLINES`] is refused by name, before any is placed: the loop
+    // below would otherwise grow without bound on a typo (a spacing in the wrong
+    // unit) and the check of every pair would never end.
+    let wanted = total / spacing;
+    if wanted > MOST_CROSSLINES as f64 {
+        return Err(format!(
+            "a spacing of {spacing} on a trace of {total} would place about {wanted:.0} crosslines where {MOST_CROSSLINES} is the most - a spacing of at least {:.3} places that many or fewer",
+            total / MOST_CROSSLINES as f64
+        ));
+    }
     let mut abscissas: Vec<f64> = Vec::new();
     let mut at = 0.0;
     while at < total {
@@ -503,11 +599,13 @@ pub fn crosslines(trace: &[[f64; 2]], spacing: f64, half_width: f64) -> Result<C
     }
     abscissas.push(total);
 
+    // The trace read once: each abscissa finds its segment by a binary search.
+    let walk = Walk::new(trace);
     let lines: Vec<Crossline> = abscissas
         .iter()
         .map(|&s| {
-            let centre = point_at(trace, s);
-            let [tx, ty] = tangent_at(&segments, s);
+            let centre = walk.point(s);
+            let [tx, ty] = walk.tangent(s);
             // The normal in plan: the tangent turned a quarter turn. Its
             // direction does not matter - the crossline is symmetric - but it
             // is the **same** everywhere, which keeps the crosslines consistent
@@ -533,9 +631,33 @@ pub fn crosslines(trace: &[[f64; 2]], spacing: f64, half_width: f64) -> Result<C
     // bend, but a trace that folds back on itself - a hairpin, a trace that
     // recrosses - makes crosslines far apart in s run through each other, with
     // perfectly tame neighbours. Checking only the neighbours would read as
-    // "verified", and the square over a few dozen crosslines costs nothing.
+    // "verified". Every pair is still the question, and it is answered without
+    // the square: the crosslines' boxes are filed in the grid of buckets, and a
+    // crossline is tested against those whose box its own meets (a crossing
+    // needs the boxes to meet), in the order of the pairs - so the first pair
+    // refused is the one the loop over every pair found.
+    let boxes: Vec<buckets::Bounds> = lines
+        .iter()
+        .map(|line| {
+            let t = line.trace;
+            ([t[0].min(t[2]), t[1].min(t[3])], [t[0].max(t[2]), t[1].max(t[3])])
+        })
+        .collect();
+    let index = buckets::Grid::new(&boxes);
+    // The exact test treats two lines within a picometre of one line as carried
+    // by it; the windows are grown past that.
+    let far = boxes
+        .iter()
+        .flat_map(|(low, high)| low.iter().chain(high.iter()))
+        .fold(0.0f64, |m, v| m.max(v.abs()));
+    let pad = 1e-9 * (1.0 + far + half_width);
     for (at, one) in lines.iter().enumerate() {
-        for next in &lines[at + 1..] {
+        let (low, high) = boxes[at];
+        for next_at in index.query([low[0] - pad, low[1] - pad], [high[0] + pad, high[1] + pad]) {
+            if next_at <= at {
+                continue;
+            }
+            let next = &lines[next_at];
             let Some(reach) = crossing_reach(&one.trace, &next.trace) else {
                 continue;
             };
@@ -561,25 +683,6 @@ pub fn crosslines(trace: &[[f64; 2]], spacing: f64, half_width: f64) -> Result<C
         ));
     }
     Ok(Crosslines { lines, notes })
-}
-
-/// The unit tangent at abscissa `s`, taken on the segment that contains it.
-///
-/// At a vertex the tangent jumps - there are two, one per side. The *incoming*
-/// segment's is returned, and that choice beats an average: a bisector would
-/// give a crossline perpendicular to neither segment, hence oblique to the
-/// section it crosses.
-fn tangent_at(segments: &[([f64; 2], [f64; 2], f64)], s: f64) -> [f64; 2] {
-    let mut travelled = 0.0;
-    let mut last = [1.0, 0.0];
-    for &(a, b, length) in segments {
-        last = [(b[0] - a[0]) / length, (b[1] - a[1]) / length];
-        if s <= travelled + length {
-            return last;
-        }
-        travelled += length;
-    }
-    last
 }
 
 /// Do two crosslines run through each other, and how far from their trace?
@@ -682,6 +785,36 @@ mod tests {
                 .flatten()
                 .all(|i| (*i as usize) < patch.points.len())
         );
+    }
+
+    /// [geometry G14] A panel between two spans of 20 000 points: each curve is read
+    /// in one pass and each vertex placed by a binary search on the trace. The
+    /// panel is one slab of the right thickness, and the time bound (a pass takes
+    /// milliseconds, the rescans billions of steps) cannot be crossed by a loaded
+    /// machine.
+    #[test]
+    fn a_panel_between_long_spans_is_made_in_one_pass() {
+        let n = 20_000usize;
+        let long_trace: Vec<[f64; 2]> = (0..=n)
+            .map(|i| [i as f64, (i as f64 * 0.01).sin() * 5.0])
+            .collect();
+        let span = |z: f64| -> Vec<[f64; 2]> { (0..=n).map(|i| [i as f64 * 1.0005, z]).collect() };
+        let upper = Curve {
+            spans: vec![span(-100.0)],
+            notes: Vec::new(),
+        };
+        let lower = Curve {
+            spans: vec![span(-130.0)],
+            notes: Vec::new(),
+        };
+        let start = std::time::Instant::now();
+        let made = panel(&upper, &lower, &long_trace);
+        assert_eq!(made.patches.len(), 1, "{:?}", made.notes);
+        assert!(!made.patches[0].inverted);
+        assert!(made.patches[0].points.len() >= 2 * n);
+        assert!(start.elapsed().as_secs() < 10, "{:?}", start.elapsed());
+        // Break it: place each vertex with the walk from the start of the trace and
+        // read `z_at` per step again, and the time passes the bound.
     }
 
     #[test]
@@ -810,6 +943,95 @@ mod tests {
     /// answer is known without the code is the only one that can contradict it.
     fn ell() -> Vec<[f64; 2]> {
         vec![[0.0, 0.0], [10.0, 0.0], [10.0, 10.0]]
+    }
+
+    /// `point_at` as it was written: the walk from the start of the trace.
+    fn point_by_walk(trace: &[[f64; 2]], s: f64) -> [f64; 2] {
+        let Some(first) = trace.first() else {
+            return [0.0, 0.0];
+        };
+        if s <= 0.0 {
+            return *first;
+        }
+        let mut travelled = 0.0;
+        for pair in trace.windows(2) {
+            let ([x0, y0], [x1, y1]) = (pair[0], pair[1]);
+            let length = (x1 - x0).hypot(y1 - y0);
+            if length < 1e-12 {
+                continue;
+            }
+            if s <= travelled + length {
+                let t = (s - travelled) / length;
+                return [x0 + (x1 - x0) * t, y0 + (y1 - y0) * t];
+            }
+            travelled += length;
+        }
+        *trace.last().unwrap_or(first)
+    }
+
+    /// [geometry G14] The binary search finds the segment the walk finds, bit for
+    /// bit: on a trace with a repeated point (no length), at every vertex, past
+    /// both ends, on `NaN`, and on a trace with a coordinate that is not finite.
+    #[test]
+    fn a_point_by_search_is_the_walks_point() {
+        let trace = vec![
+            [0.0, 0.0],
+            [3.0, 4.0],
+            [3.0, 4.0],
+            [3.0, 10.0],
+            [-2.0, 10.5],
+            [-2.0, -8.0],
+        ];
+        let walk = Walk::new(&trace);
+        let mut probes: Vec<f64> = (-20..=420).map(|k| k as f64 * 0.1).collect();
+        probes.extend([
+            5.0,
+            11.0,
+            16.0,
+            16.0 + 5.0 * 1.0,
+            f64::NAN,
+            f64::INFINITY,
+            -f64::INFINITY,
+        ]);
+        for s in probes {
+            let (got, want) = (walk.point(s), point_by_walk(&trace, s));
+            assert!(
+                (got[0] == want[0] || (got[0].is_nan() && want[0].is_nan()))
+                    && (got[1] == want[1] || (got[1].is_nan() && want[1].is_nan())),
+                "s = {s}: {got:?} against {want:?}"
+            );
+        }
+        assert_eq!(point_at(&[], 1.0), [0.0, 0.0]);
+        let broken = vec![[0.0, 0.0], [f64::NAN, 1.0], [5.0, 5.0]];
+        for s in [0.5, 2.0, 7.0] {
+            let (got, want) = (point_at(&broken, s), point_by_walk(&broken, s));
+            assert_eq!(format!("{got:?}"), format!("{want:?}"), "s = {s}");
+        }
+        // Break it: search `ends` with `s >= *end` and a point on a vertex
+        // moves to the next segment (and the exact-vertex probes disagree).
+    }
+
+    /// [geometry G14] A spacing that would place more crosslines than the most is
+    /// refused by name before any is placed (it used to grow without bound); a
+    /// fence of a few thousand crosslines is checked without the square over its
+    /// pairs (the hairpin test below keeps the first pair refused).
+    #[test]
+    fn crosslines_are_bounded_and_their_pairs_found_without_the_square() {
+        let long = vec![[0.0, 0.0], [50_000.0, 0.0]];
+        let refusal = crosslines(&long, 1e-6, 10.0).unwrap_err();
+        assert!(
+            refusal.contains("crosslines where 20000 is the most"),
+            "{refusal}"
+        );
+        let start = std::time::Instant::now();
+        let fence = crosslines(&long, 10.0, 4.0).unwrap();
+        assert_eq!(fence.lines.len(), 5001);
+        // 5 001 crosslines: the square is 12.5 million tests, a pass a few thousand.
+        // The bound is far above the pass and could not be crossed by a loaded machine.
+        assert!(start.elapsed().as_secs() < 10, "{:?}", start.elapsed());
+        // Break it: take the pairs `(at, at + 1)` only, and the hairpin test below
+        // no longer refuses a trace whose neighbours are tame; drop the cap and the
+        // first call never returns.
     }
 
     #[test]

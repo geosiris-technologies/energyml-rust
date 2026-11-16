@@ -24,6 +24,7 @@
 //! decide, and *refuse rather than draw* says which way to fall.
 
 use crate::Error;
+use crate::vector::plan::segments_meet;
 
 /// How many consecutive segments share one bounding box.
 ///
@@ -154,38 +155,6 @@ fn bounds(points: impl IntoIterator<Item = [f64; 2]>) -> [[f64; 2]; 2] {
 /// the segments.
 fn overlap(a: &[[f64; 2]; 2], b: &[[f64; 2]; 2]) -> bool {
     a[0][0] <= b[1][0] && b[0][0] <= a[1][0] && a[0][1] <= b[1][1] && b[0][1] <= a[1][1]
-}
-
-/// Signed area of the triangle `a b c`: > 0 anticlockwise, < 0 clockwise,
-/// 0 collinear.
-fn orient(a: [f64; 2], b: [f64; 2], c: [f64; 2]) -> f64 {
-    (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
-}
-
-/// Whether `c` lies on the closed segment `a`-`b`, `c` being collinear with it.
-fn on_segment(a: [f64; 2], b: [f64; 2], c: [f64; 2]) -> bool {
-    c[0] >= a[0].min(b[0]) && c[0] <= a[0].max(b[0]) && c[1] >= a[1].min(b[1]) && c[1] <= a[1].max(b[1])
-}
-
-/// Whether the closed segments `a`-`b` and `c`-`d` share at least one point.
-///
-/// The textbook orientation test, endpoints included: a proper crossing has
-/// `c` and `d` on opposite sides of `ab` **and** `a`, `b` on opposite sides of
-/// `cd`; the collinear cases are settled by a bounding check.
-fn segments_meet(a: [f64; 2], b: [f64; 2], c: [f64; 2], d: [f64; 2]) -> bool {
-    let o1 = orient(a, b, c);
-    let o2 = orient(a, b, d);
-    let o3 = orient(c, d, a);
-    let o4 = orient(c, d, b);
-    if ((o1 > 0.0 && o2 < 0.0) || (o1 < 0.0 && o2 > 0.0))
-        && ((o3 > 0.0 && o4 < 0.0) || (o3 < 0.0 && o4 > 0.0))
-    {
-        return true;
-    }
-    (o1 == 0.0 && on_segment(a, b, c))
-        || (o2 == 0.0 && on_segment(a, b, d))
-        || (o3 == 0.0 && on_segment(c, d, a))
-        || (o4 == 0.0 && on_segment(c, d, b))
 }
 
 #[cfg(test)]

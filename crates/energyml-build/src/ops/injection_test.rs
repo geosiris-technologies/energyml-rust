@@ -60,6 +60,9 @@ use energyml_storage::epc::core_props::w3cdtf;
 use energyml_witsml_2_1 as witsml;
 
 use super::prodml_doublet::{Standard, class_of, titled};
+
+/// The most samples a test is written with, as a doublet's head series.
+const MOST_SAMPLES: usize = 100_000;
 use super::prodml_writer::{Writer, instant};
 use super::witsml_logs::{json_number, reference_from};
 use crate::declare::{Inputs, ObjectIn, ObjectRef, Params};
@@ -142,18 +145,14 @@ struct Measured {
 
 /// The kind the standard dictionary holds under `title`, or a refusal.
 fn standard_kind(title: &str) -> Result<eml::DataObjectReference, Refusal> {
-    energyml_domain::property_kind::with_default(|dictionary| {
-        dictionary
-            .by_title(title)
-            .first()
-            .map(|kind| crate::crs::reference_to(&kind.uuid, "eml23.PropertyKind", &kind.title))
-    })
-    .ok_or_else(|| {
-        Refusal::new(
-            "refused",
-            format!("the dictionary in use holds no kind called `{title}`"),
-        )
-    })
+    super::blocks::standard_kind(title)
+        .map(|(uuid, named)| crate::crs::reference_to(&uuid, "eml23.PropertyKind", &named))
+        .ok_or_else(|| {
+            Refusal::new(
+                "refused",
+                format!("the dictionary in use holds no kind called `{title}`"),
+            )
+        })
 }
 
 /// A unit code as the schema spells it.
@@ -275,6 +274,20 @@ impl Operation for InjectionTest {
                 "sampleMinutes",
                 format!(
                     "{} min does not divide a step of {step_minutes} min: a sample would straddle two rates",
+                    params.sample_minutes
+                ),
+            ));
+        }
+        // Bounded **before** any allocation, in floats (an absurd `stepHours`
+        // would saturate an integer cast): the same ceiling a doublet's head
+        // series keeps, for the same reason.
+        let samples = params.steps.len() as f64 * per_step;
+        if samples > MOST_SAMPLES as f64 {
+            return Err(Refusal::on(
+                "sampleMinutes",
+                format!(
+                    "{} step(s) of {step_hours} h at {} min make {samples} samples, past the {MOST_SAMPLES} this writes: sample less often, or shorten the steps",
+                    params.steps.len(),
                     params.sample_minutes
                 ),
             ));

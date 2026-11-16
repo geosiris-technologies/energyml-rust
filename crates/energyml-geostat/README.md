@@ -7,7 +7,7 @@ Conventions: a `NaN` sample is set aside and counted, never averaged; refusals a
 ## Modules
 
 - Interpolation: `idw` (inverse-distance weighting), `kriging` (ordinary kriging with variance), `variogram` (empirical variogram and models), `rbf` (radial basis functions), `mba` (multilevel B-splines), `mba_frame` (MBA in a tilted local frame).
-- Meshing and shapes: `triangulate` (2D Delaunay, exact predicates, constrained edges), `isocontour` (marching triangles), `resample`, `densify`, `loft`, `outline`, `extend`, `cells`, `nodes`.
+- Meshing and shapes: `triangulate` (2D Delaunay, exact predicates, constrained edges), `isocontour` (marching triangles), `isosurface` (marching tetrahedra over a lattice, a named answer when nothing is cut), `resample`, `densify`, `loft`, `outline`, `extend`, `cells`, `nodes`.
 - Tools: `measure` (areas, lengths, volumes), `barrier` (fault traces as visibility barriers), and a private dense LU solver.
 
 `energyml-analysis` re-exports every module, so `energyml_analysis::kriging::...` keeps resolving.

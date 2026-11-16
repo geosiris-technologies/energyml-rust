@@ -25,6 +25,8 @@
 //! forbids it, and a folded surface is a legitimate result; [`flipped`] counts
 //! them, so that the operation **says** it rather than refuses.
 
+use crate::Error;
+
 /// Polylines once nodes are taken out.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ErasedLines {
@@ -126,8 +128,41 @@ pub fn erase_from_lines(points: &[[f64; 3]], runs: &[u32], closed: &[bool], gone
     out
 }
 
+/// A triangulated surface without the nodes `gone` flags, or the named
+/// refusal [`Error::NodeOutOfRange`] when a triangle names a node past
+/// `points` - the same check [`crate::extend::extend_surface`] makes, so that
+/// a malformed input is refused and does not index out of bounds.
+pub fn try_erase_from_surface(
+    points: &[[f64; 3]],
+    triangles: &[[u32; 3]],
+    gone: &[bool],
+) -> Result<ErasedSurface, Error> {
+    for t in triangles {
+        if let Some(&at) = t.iter().find(|&&v| v as usize >= points.len()) {
+            return Err(Error::NodeOutOfRange {
+                at: at as usize,
+                nodes: points.len(),
+            });
+        }
+    }
+    Ok(erase_checked(points, triangles, gone))
+}
+
 /// A triangulated surface without the nodes `gone` flags.
+///
+/// This form has no way to refuse: a triangle that names a node past `points`
+/// can be kept by nobody, so it is removed and counted in `removed`. A caller
+/// that wants the refusal calls [`try_erase_from_surface`].
 pub fn erase_from_surface(points: &[[f64; 3]], triangles: &[[u32; 3]], gone: &[bool]) -> ErasedSurface {
+    let in_range = |t: &&[u32; 3]| t.iter().all(|&v| (v as usize) < points.len());
+    let valid: Vec<[u32; 3]> = triangles.iter().filter(in_range).copied().collect();
+    let mut made = erase_checked(points, &valid, gone);
+    made.removed += triangles.len() - valid.len();
+    made
+}
+
+/// [`erase_from_surface`] on triangles whose nodes are all in range.
+fn erase_checked(points: &[[f64; 3]], triangles: &[[u32; 3]], gone: &[bool]) -> ErasedSurface {
     let is_gone = |at: u32| gone.get(at as usize).copied().unwrap_or(false);
     let kept: Vec<[u32; 3]> = triangles
         .iter()
@@ -258,6 +293,23 @@ mod tests {
         // Taking out the centre takes every triangle: the corners are orphans.
         let hole = erase_from_surface(&points, &triangles, &flags(5, &[4]));
         assert_eq!((hole.removed, hole.orphans, hole.points.len()), (4, 4, 0));
+    }
+
+    /// [geostat-proj-roundtrip S16] A triangle naming a node past the points
+    /// is a named refusal, not an index out of bounds (`erase_from_surface`
+    /// panicked on `used[v as usize]`).
+    #[test]
+    fn a_triangle_past_the_points_is_refused_not_a_panic() {
+        let points = [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]];
+        let triangles = [[0u32, 1, 2], [0, 1, 7]];
+        assert_eq!(
+            try_erase_from_surface(&points, &triangles, &flags(3, &[])),
+            Err(Error::NodeOutOfRange { at: 7, nodes: 3 })
+        );
+        // The form with no way to refuse removes the triangle and says so.
+        let made = erase_from_surface(&points, &triangles, &flags(3, &[]));
+        assert_eq!((made.removed, made.triangles.len(), made.points.len()), (1, 1, 3));
+        // Break it: index `used[v as usize]` without the range check.
     }
 
     #[test]

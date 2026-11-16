@@ -77,6 +77,7 @@ use serde_json::{Value, json};
 
 use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
+use energyml_geometry::vector;
 
 use crate::declare::{Inputs, Params, Shape, Suggestions, known_of};
 use crate::operation::{
@@ -86,6 +87,10 @@ use crate::pieces::{Pieces, Ref};
 
 use super::support;
 use super::written::{NamingParams, RepresentedParams};
+
+/// The most child nodes a window may be refined into: a refinement typo
+/// (`ri = 1000`) is refused by name before the memory is asked for.
+const MOST_CHILD_NODES: usize = 20_000_000;
 
 /// The operation.
 pub struct LocalGrid;
@@ -128,16 +133,6 @@ pub struct LocalGridInputs {
     /// the parent `IjkGridRepresentation` the window is cut from - an object of the package, named by uuid in `ParentWindow`
     #[input(types = "resqml22.IjkGridRepresentation", topology = "hexahedra")]
     pub parent: Shape,
-}
-
-/// The title the object behind a shape carries, or the shape's name.
-fn title_of(shape: &Shape) -> String {
-    shape
-        .known
-        .as_ref()
-        .and_then(|known| known.reference.as_ref())
-        .map(|r| r.title.clone())
-        .unwrap_or_else(|| shape.name.clone())
 }
 
 /// The parent as the geometry reader hands it: one patch of hexahedra over
@@ -187,7 +182,7 @@ fn parent_grid(shape: &Shape) -> Result<ParentGrid<'_>, Refusal> {
             "parent",
             format!(
                 "`{}` reads as {} cell(s) for a {ni}×{nj}×{nk} grid and does not say which are missing: a window cannot find its cells",
-                title_of(shape),
+                shape.title(),
                 cells.len()
             ),
         ));
@@ -412,15 +407,9 @@ fn interpolate(
 /// independently when a package is read back.
 fn oriented(node: [u32; 8], points: &[[f64; 3]]) -> [u32; 8] {
     let p = |n: u32| points[n as usize];
-    let sub = |a: [f64; 3], b: [f64; 3]| [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
     let (c0, c1, c3, c4) = (p(node[0]), p(node[1]), p(node[3]), p(node[4]));
-    let (e1, e2, e3) = (sub(c1, c0), sub(c3, c0), sub(c4, c0));
-    let cross = [
-        e1[1] * e2[2] - e1[2] * e2[1],
-        e1[2] * e2[0] - e1[0] * e2[2],
-        e1[0] * e2[1] - e1[1] * e2[0],
-    ];
-    let dot = cross[0] * e3[0] + cross[1] * e3[1] + cross[2] * e3[2];
+    let (e1, e2, e3) = (vector::sub(c1, c0), vector::sub(c3, c0), vector::sub(c4, c0));
+    let dot = vector::dot(vector::cross(e1, e2), e3);
     if dot >= 0.0 {
         node
     } else {
@@ -535,7 +524,7 @@ impl Operation for LocalGrid {
                     name,
                     format!(
                         "names parent cell {hi}, and `{}` has {extent} cell(s) along this axis (0..{extent})",
-                        title_of(&parent)
+                        parent.title()
                     ),
                 ));
             }
@@ -557,10 +546,38 @@ impl Operation for LocalGrid {
                 "a refinement of zero would cut a parent cell into no child cell",
             ));
         }
+        // **The child's size is bounded before anything is allocated**: `ri`,
+        // `rj` and `rk` have no maximum of their own, and a typo (`ri = 1000`)
+        // would otherwise exhaust the memory, or wrap the `u32` corner indices
+        // below. Counted with checked products, as `usize` is 32 bits in wasm.
+        let child_nodes = span_i
+            .checked_mul(ri)
+            .zip(span_j.checked_mul(rj))
+            .zip(span_k.checked_mul(rk))
+            .and_then(|((ni, nj), nk)| {
+                ni.saturating_add(1)
+                    .checked_mul(nj.saturating_add(1))
+                    .and_then(|plane| plane.checked_mul(nk.saturating_add(1)))
+            });
+        if child_nodes.is_none_or(|nodes| nodes > MOST_CHILD_NODES) {
+            let slot = if ri >= rj && ri >= rk {
+                "ri"
+            } else if rj >= rk {
+                "rj"
+            } else {
+                "rk"
+            };
+            return Err(Refusal::on(
+                slot,
+                format!(
+                    "a window of {span_i} × {span_j} × {span_k} parent cell(s) refined {ri} × {rj} × {rk} would make more than {MOST_CHILD_NODES} child nodes: refine less, or take a smaller window"
+                ),
+            ));
+        }
         cx.stop_if_cancelled()?;
 
         // -- the window's lattice, read off the parent's own cells ---------------------------
-        let window = window_of(&grid, &title_of(&parent), [i0, j0, k0], [i1, j1, k1])?;
+        let window = window_of(&grid, &parent.title(), [i0, j0, k0], [i1, j1, k1])?;
         cx.stop_if_cancelled()?;
 
         // -- the child's nodes, trilinearly interpolated in the parent's lattice ------------
@@ -676,7 +693,7 @@ impl Operation for LocalGrid {
             key: "window",
             detail: format!(
                 "parent `{}` cells I {i0}..={i1}, J {j0}..={j1}, K {k0}..={k1} ({span_i} × {span_j} × {span_k}), refined {ri} × {rj} × {rk} → {ni} × {nj} × {nk} = {} child cell(s)",
-                title_of(&parent),
+                parent.title(),
                 ni * nj * nk
             ),
         }];

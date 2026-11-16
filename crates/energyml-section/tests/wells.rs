@@ -25,11 +25,12 @@ use energyml_core::value::Reflect;
 use energyml_domain::color::{self, Decorated, GraphicalSet, Rgba, Scope};
 use energyml_domain::reproject::NoReprojection;
 use energyml_domain::source::{ObjectSource, Prefetched};
+use energyml_domain::well_strata::StrataCache;
 use energyml_eml_2_3 as eml23;
 use energyml_resqml_2_2 as resqml22;
 use energyml_section::model::{System, WellKind};
 use energyml_section::read::Scene;
-use energyml_section::read::wells::{WellContext, read_well, read_well_with};
+use energyml_section::read::wells::{WellContext, read_well, read_well_cached, read_well_with};
 use energyml_storage::array::ArrayLocation;
 
 const PCRS: &str = "aaaaaaaa-0000-4000-8000-00000000000a";
@@ -250,6 +251,7 @@ fn package() -> Prefetched {
             abstract_vertical_crs: Some(eml23::AbstractVerticalCrs::VerticalEpsgCrs(
                 eml23::VerticalEpsgCrs { epsg_code: 5714 },
             )),
+            uom: eml23::LengthUomExt::M,
             ..Default::default()
         }),
         Box::new(eml23::ProjectedCrs {
@@ -430,6 +432,36 @@ fn without_a_chain_a_frame_takes_the_trajectory_it_hangs_on() {
 }
 
 // -- the strata ------------------------------------------------------------------
+
+/// Reading wells through one `StrataCache` (an operation reading many wells of one package) answers what a read of
+/// each well alone answers, the second read of a frame included.
+///
+/// To make it fail: pass the cache a stale answer (key the cached rank by something coarser than its uri), or make
+/// `read_well_with` build its cache differently from `read_well_cached`.
+#[test]
+fn a_shared_strata_cache_gives_the_answers_of_a_read_alone() {
+    let system = lambert();
+    let scene = Scene {
+        system: Some(&system),
+        time_factor: None,
+        reprojector: &NoReprojection,
+    };
+    let sets = graphics();
+    let context = WellContext {
+        graphics: &sets,
+        frames_of: None,
+        index: None,
+        colour_of: None,
+    };
+    let alone = read_well_with(&package(), "s1", F_STATING, &scene, &context).expect("read");
+    let cache = StrataCache::new();
+    for _ in 0..2 {
+        let cached = read_well_cached(&package(), "s1", F_STATING, &scene, &context, &cache).expect("read");
+        assert_eq!(spans(&cached.intervals), spans(&alone.intervals));
+        assert_eq!(cached.strata, alone.strata);
+        assert!(!cached.intervals.is_empty());
+    }
+}
 
 /// A frame that states its units gives them as intervals along its MD - the
 /// colour of each from the package's graphics when the caller has them, and

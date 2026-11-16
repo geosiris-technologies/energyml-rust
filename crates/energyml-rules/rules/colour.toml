@@ -302,3 +302,28 @@ refs = [
 at = [
   { type = "view", key = "scene.property-paint" },
 ]
+
+[[rule]]
+id = "house/colour/log-mapping-is-log-of-value"
+theme = "colour"
+status = "active"
+stance = "interpreted"
+level = 1
+since = "2026-11-14"
+title = "A logarithmic mapping places the log of the value, over MinMax or else over the map's own range"
+text = """
+Under UseLogarithmicMapping the log of the value is placed on the map: between the logs of MinMax when it is given, and between the logs of the map's first and last index when it is not - the same stand-in the linear mapping already uses. A range that reaches zero has no logarithm and is refused by name. The logarithmic spacing between two stops is the map's InterpolationMethod, a different thing."""
+why = """
+The Technical Reference says the log of the property values is mapped with the index of the color map, and gives no base: placing the log between two bounds needs none. Taking the map's range when MinMax is absent is what the linear case does already."""
+rulings = [
+  { by = "maintainer", on = "2026-11-14" },
+]
+refs = [
+  { kind = "spec", doc = "RESQML TRG 2.2", at = "§4.5 p. 56", note = "UseLogarithmicMapping, MinMax" },
+  { kind = "spec", doc = "RESQML TRG 2.2", at = "§4.7 p. 58, §4.23 p. 74", note = "InterpolationMethod" },
+  { kind = "code", path = "crates/energyml-domain/src/color.rs", at = "ColorMap::try_sample" },
+  { kind = "design", path = "docs/adr/0025-log-mapping-of-a-colour-map.md" },
+]
+at = [
+  { type = "view", key = "scene.property-paint" },
+]

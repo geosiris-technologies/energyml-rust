@@ -84,6 +84,12 @@ pkg.referenced_by(uri)        # the other direction (reads every object: no pack
 needed, missing = pkg.needs([uri])   # the closure: what an extraction or a copy must carry
 ```
 
+`referenced_by` and `needs` read every object, and **refuse** (an exception that
+names the unreadable objects) when one cannot be read: the unreadable part might
+be the one that points at the target, and "nothing depends on it" would be a
+wrong answer to give before a deletion or a cut. Repair or remove the named part
+first.
+
 `present` says whether the package holds the target; a dangling reference keeps
 its entry. A well-known `PropertyKind` from the Energistics dictionary is never
 reported as dangling.
@@ -151,6 +157,8 @@ values, dimensions = pkg.read_array_part(ref, start=[1, 0], count=[1, 3])   # a 
 pkg.write_array(ref, np.asarray(points, dtype=np.float64).ravel(), [len(points), 3])
 ```
 
+An HDF5 string dataset comes out as a `list[str]`, not a numpy array.
+
 Arrays are **flat copies** (a view would outlive the memory it points to). The
 dtype decides what is written (float32/64, int8-64, uint8-64); anything else is
 refused by name. A shape that disagrees with the number of values is refused,
@@ -203,6 +211,27 @@ done = pkg.rename_data_file("survey.h5", "survey_2026.h5")
 ```
 
 Quote first; the operation refuses as a whole rather than doing part.
+
+## Repairing the declared data files
+
+```python
+files = pkg.array_files()                 # what `energyml h5` prints; changes nothing
+# [{"declared": "survey.h5", "pointers": 12, "found": {"path": ..., "origin": ..., "agrees": False},
+#   "example": "/RESQML/...", "proxies": [...]}, ...]   ("found" is None when the search failed)
+pkg.pin_data_file("survey.h5", "/data/dataset_7.dat")   # say where a missing file is, then ask again
+done = pkg.repair_arrays("fixed.epc")     # what `energyml h5 --fix` does; None = nothing to fix
+print(done["renamed"], done["declarations"], done["lost"])
+```
+
+The bridge carries no logic of its own: the survey, the rewrite and the verdict
+are `energyml_storage::repair`'s, the same ones the command line uses. `lost` is
+read back from the written package; non-zero means the repair did not repair
+(the package uses an `externalResource` relationship the writer does not
+reproduce).
+
+`referenced_by(uri)` answers for **that uri**: when a package holds two
+versions of one uuid, an object that names version 2 is not reported as
+pointing at version 1.
 
 ## Examples
 

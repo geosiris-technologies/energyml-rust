@@ -25,11 +25,15 @@
 //! The same split as `energyml-sheet` (`Board` → `layout` → `svg::write`), the
 //! precedent of a drawing computed in Rust.
 //!
+//! [`along_well`] is the geosteering section: a curtain along a well, its own
+//! model, the shared drawing (`energyml_sheet::draw`).
+//!
 //! # No native dependency
 //!
 //! wasm is a hard requirement (see ADR-0007): everything here is
 //! computation over a `ValueSource`, and the SVG is a `String`.
 
+pub mod along_well;
 pub mod assemble;
 pub mod crosses;
 pub mod erosion;
@@ -58,13 +62,13 @@ pub fn compute(
     inputs: &Inputs,
     mut read_one: impl FnMut(&Asked, &[SectionTrace]) -> Contribution,
 ) -> Result<Catalogue, InputsError> {
-    let (sections, _) = crosses::traces(inputs)?;
+    let (sections, notes) = crosses::traces(inputs)?;
     let contributions: Vec<Contribution> = inputs
         .objects
         .iter()
         .map(|asked| read_one(asked, &sections))
         .collect();
-    assemble::assemble(inputs, &contributions)
+    assemble::assemble_with(inputs, sections, notes, &contributions)
 }
 
 /// One package handed to [`compute_packages`]: the store id its objects are

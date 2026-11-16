@@ -33,6 +33,11 @@ Built with the features: `hdf5`, `png`. How each command is used, with examples,
 - [`energyml import`](#energyml-import) - Read a GeoJSON and write the EnergyML objects it describes
 - [`energyml create`](#energyml-create) - Create objects through one door: list what an input allows, plan it, write it
 - [`energyml terrain`](#energyml-terrain) - A digital elevation model from a catalogue source, written as a 2D grid - the quote without `--out`
+- [`energyml view`](#energyml-view) - The views of a package as pictures: what each view can show, what it takes, its SVG, and its PNG on demand
+- [`energyml view list`](#energyml-view-list) - What each view can show in a package, from its index alone (no array is read)
+- [`energyml view about`](#energyml-view-about) - What a view takes: its objects and its settings, with their defaults
+- [`energyml view draw`](#energyml-view-draw) - Draw one view as SVG - and as PNG, the SVG rasterised, with `--png`
+- [`energyml view redraw`](#energyml-view-redraw) - Draw a view again from the request its SVG keeps, over a package: on the same package, the same bytes
 
 ## `energyml`
 
@@ -69,6 +74,7 @@ Commands:
   import      Read a GeoJSON and write the EnergyML objects it describes
   create      Create objects through one door: list what an input allows, plan it, write it
   terrain     A digital elevation model from a catalogue source, written as a 2D grid - the quote without `--out`
+  view        The views of a package as pictures: what each view can show, what it takes, its SVG, and its PNG on demand
   help        Print this message or the help of the given subcommand(s)
 
 Options:
@@ -93,11 +99,13 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -155,11 +163,13 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -227,11 +237,13 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -294,11 +306,13 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -355,11 +369,13 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -421,11 +437,13 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -489,11 +507,13 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -549,11 +569,13 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -621,11 +643,13 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -688,11 +712,13 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -757,11 +783,13 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -912,11 +940,13 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -969,11 +999,13 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -1029,11 +1061,13 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -1096,11 +1130,13 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -1160,11 +1196,13 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -1223,11 +1261,13 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -1294,11 +1334,13 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -1363,11 +1405,13 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -1432,11 +1476,13 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -1485,11 +1531,13 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -1545,12 +1593,12 @@ Options:
           Keep no property - what a preview asks for
 
       --page <N>
-          How many entities per page
+          How many entities per page (at least 1)
           
           [default: 1000]
 
       --most <N>
-          A ceiling in entities. The harvest stops there, and says so
+          A ceiling in entities (at least 1). The harvest stops there, and says so
 
       --lenient
           Read parts that break the schema instead of refusing them.
@@ -1573,11 +1621,13 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -1645,11 +1695,13 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -1801,11 +1853,13 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -1885,11 +1939,13 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -1984,11 +2040,13 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -2082,11 +2140,13 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -2170,11 +2230,337 @@ Options:
           
           Repeatable, and **the name is optional**:
           
-          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong.
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
+
+      --log <FILTER>
+          Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
+          
+          Nothing is shown by default. The same as the `ENERGYML_LOG` environment variable, which this flag overrides. Spans say how long each step took (`time.busy`). stdout is never touched, so a script reading a result is not disturbed.
+
+      --log-format <FORMAT>
+          How `--log` writes a line: `text` (default) or `json`, one object per line. Overrides `ENERGYML_LOG_FORMAT`
+          
+          [possible values: text, json]
+
+  -h, --help
+          Print help (see a summary with '-h')
+```
+
+## `energyml view`
+
+```text
+The views of a package as pictures: what each view can show, what it takes, its SVG, and its PNG on demand
+
+Usage: energyml view [OPTIONS] <COMMAND>
+
+Commands:
+  list    What each view can show in a package, from its index alone (no array is read)
+  about   What a view takes: its objects and its settings, with their defaults
+  draw    Draw one view as SVG - and as PNG, the SVG rasterised, with `--png`
+  redraw  Draw a view again from the request its SVG keeps, over a package: on the same package, the same bytes
+  help    Print this message or the help of the given subcommand(s)
+
+Options:
+      --lenient
+          Read parts that break the schema instead of refusing them.
+          
+          Two kinds of defect are read past. An absent required element comes back as its default; a value that is *there* and unreadable - a word outside a closed enumeration, a number that is not a number, an undefined entity, an `xsi:type` naming an unknown subtype of a concrete base - is replaced, and the string that was in the file is reported.
+          
+          Every one of them is reported. Use it to get at the contents of a package whose producer wrote something wrong; do not use it for anything that will be written back, since what comes out is not what the document said.
+          
+          Still refused in both modes: malformed XML, bad encoding, and an `xsi:type` on a purely abstract choice - there is nothing to fall back to there.
+
+      --strict
+          Refuse a part that omits something the schema requires.
+          
+          By default an absent required element is filled with its default and reported, because refusing costs every field the part *did* carry - a package whose producer left out `Citation.Originator` is otherwise unreadable in its entirety, geometry included.
+          
+          Use this when the objects will be **written back**: read tolerantly, they hold values nobody wrote, and saving puts those on disk.
+
+      --h5 <[NAME=]PATH>
+          An HDF5 file to read arrays from, whatever the package says.
+          
+          Repeatable, and **the name is optional**:
+          
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
+          
+          The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
+          
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
+
+      --log <FILTER>
+          Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
+          
+          Nothing is shown by default. The same as the `ENERGYML_LOG` environment variable, which this flag overrides. Spans say how long each step took (`time.busy`). stdout is never touched, so a script reading a result is not disturbed.
+
+      --log-format <FORMAT>
+          How `--log` writes a line: `text` (default) or `json`, one object per line. Overrides `ENERGYML_LOG_FORMAT`
+          
+          [possible values: text, json]
+
+  -h, --help
+          Print help (see a summary with '-h')
+```
+
+## `energyml view list`
+
+```text
+What each view can show in a package, from its index alone (no array is read)
+
+Usage: energyml view list [OPTIONS] <FILE>
+
+Arguments:
+  <FILE>
+          The EPC file
+
+Options:
+      --object <URI|UUID>
+          Only the offers that show this object (a uri, or a bare uuid)
+
+      --json
+          Print the offers as JSON
+
+      --lenient
+          Read parts that break the schema instead of refusing them.
+          
+          Two kinds of defect are read past. An absent required element comes back as its default; a value that is *there* and unreadable - a word outside a closed enumeration, a number that is not a number, an undefined entity, an `xsi:type` naming an unknown subtype of a concrete base - is replaced, and the string that was in the file is reported.
+          
+          Every one of them is reported. Use it to get at the contents of a package whose producer wrote something wrong; do not use it for anything that will be written back, since what comes out is not what the document said.
+          
+          Still refused in both modes: malformed XML, bad encoding, and an `xsi:type` on a purely abstract choice - there is nothing to fall back to there.
+
+      --strict
+          Refuse a part that omits something the schema requires.
+          
+          By default an absent required element is filled with its default and reported, because refusing costs every field the part *did* carry - a package whose producer left out `Citation.Originator` is otherwise unreadable in its entirety, geometry included.
+          
+          Use this when the objects will be **written back**: read tolerantly, they hold values nobody wrote, and saving puts those on disk.
+
+      --h5 <[NAME=]PATH>
+          An HDF5 file to read arrays from, whatever the package says.
+          
+          Repeatable, and **the name is optional**:
+          
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
+          
+          The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
+          
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
+
+      --log <FILTER>
+          Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
+          
+          Nothing is shown by default. The same as the `ENERGYML_LOG` environment variable, which this flag overrides. Spans say how long each step took (`time.busy`). stdout is never touched, so a script reading a result is not disturbed.
+
+      --log-format <FORMAT>
+          How `--log` writes a line: `text` (default) or `json`, one object per line. Overrides `ENERGYML_LOG_FORMAT`
+          
+          [possible values: text, json]
+
+  -h, --help
+          Print help (see a summary with '-h')
+```
+
+## `energyml view about`
+
+```text
+What a view takes: its objects and its settings, with their defaults
+
+Usage: energyml view about [OPTIONS] <VIEW>
+
+Arguments:
+  <VIEW>
+          The view (`energyml view list` names them)
+
+Options:
+      --lenient
+          Read parts that break the schema instead of refusing them.
+          
+          Two kinds of defect are read past. An absent required element comes back as its default; a value that is *there* and unreadable - a word outside a closed enumeration, a number that is not a number, an undefined entity, an `xsi:type` naming an unknown subtype of a concrete base - is replaced, and the string that was in the file is reported.
+          
+          Every one of them is reported. Use it to get at the contents of a package whose producer wrote something wrong; do not use it for anything that will be written back, since what comes out is not what the document said.
+          
+          Still refused in both modes: malformed XML, bad encoding, and an `xsi:type` on a purely abstract choice - there is nothing to fall back to there.
+
+      --strict
+          Refuse a part that omits something the schema requires.
+          
+          By default an absent required element is filled with its default and reported, because refusing costs every field the part *did* carry - a package whose producer left out `Citation.Originator` is otherwise unreadable in its entirety, geometry included.
+          
+          Use this when the objects will be **written back**: read tolerantly, they hold values nobody wrote, and saving puts those on disk.
+
+      --h5 <[NAME=]PATH>
+          An HDF5 file to read arrays from, whatever the package says.
+          
+          Repeatable, and **the name is optional**:
+          
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
+          
+          The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
+          
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
+
+      --log <FILTER>
+          Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
+          
+          Nothing is shown by default. The same as the `ENERGYML_LOG` environment variable, which this flag overrides. Spans say how long each step took (`time.busy`). stdout is never touched, so a script reading a result is not disturbed.
+
+      --log-format <FORMAT>
+          How `--log` writes a line: `text` (default) or `json`, one object per line. Overrides `ENERGYML_LOG_FORMAT`
+          
+          [possible values: text, json]
+
+  -h, --help
+          Print help (see a summary with '-h')
+```
+
+## `energyml view draw`
+
+```text
+Draw one view as SVG - and as PNG, the SVG rasterised, with `--png`
+
+Usage: energyml view draw [OPTIONS] --svg <FILE.svg> <VIEW> <FILE>
+
+Arguments:
+  <VIEW>
+          The view
+
+  <FILE>
+          The EPC file
+
+Options:
+      --object <URI|UUID>
+          An object the view shows, by uri or bare uuid; repeated, in the order of the view's slots
+
+      --set <NAME=VALUE>
+          A setting, `NAME=VALUE`, read by the nature the view declares (`energyml view about VIEW`); repeatable
+
+      --size <WxH>
+          The size of the picture in pixels, `WIDTHxHEIGHT`; left out, the view's own
+
+      --proposed
+          Fill the settings not given with what the view proposes for a first drawing (a value the file does not state); each one is written as a note, `proposed: NAME=VALUE - why`. A setting given by `--set` is kept
+
+      --svg <FILE.svg>
+          Where the SVG is written
+
+      --png <FILE.png>
+          Also write the PNG: the SVG rasterised (built with `--features png`; refused by name otherwise)
+
+      --png-scale <PNG_SCALE>
+          With `--png`: how many pixels per pixel of the SVG (2: sharp on a phone)
+          
+          [default: 2]
+
+      --lenient
+          Read parts that break the schema instead of refusing them.
+          
+          Two kinds of defect are read past. An absent required element comes back as its default; a value that is *there* and unreadable - a word outside a closed enumeration, a number that is not a number, an undefined entity, an `xsi:type` naming an unknown subtype of a concrete base - is replaced, and the string that was in the file is reported.
+          
+          Every one of them is reported. Use it to get at the contents of a package whose producer wrote something wrong; do not use it for anything that will be written back, since what comes out is not what the document said.
+          
+          Still refused in both modes: malformed XML, bad encoding, and an `xsi:type` on a purely abstract choice - there is nothing to fall back to there.
+
+      --strict
+          Refuse a part that omits something the schema requires.
+          
+          By default an absent required element is filled with its default and reported, because refusing costs every field the part *did* carry - a package whose producer left out `Citation.Originator` is otherwise unreadable in its entirety, geometry included.
+          
+          Use this when the objects will be **written back**: read tolerantly, they hold values nobody wrote, and saving puts those on disk.
+
+      --h5 <[NAME=]PATH>
+          An HDF5 file to read arrays from, whatever the package says.
+          
+          Repeatable, and **the name is optional**:
+          
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
+          
+          The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
+          
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
+
+      --log <FILTER>
+          Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
+          
+          Nothing is shown by default. The same as the `ENERGYML_LOG` environment variable, which this flag overrides. Spans say how long each step took (`time.busy`). stdout is never touched, so a script reading a result is not disturbed.
+
+      --log-format <FORMAT>
+          How `--log` writes a line: `text` (default) or `json`, one object per line. Overrides `ENERGYML_LOG_FORMAT`
+          
+          [possible values: text, json]
+
+  -h, --help
+          Print help (see a summary with '-h')
+```
+
+## `energyml view redraw`
+
+```text
+Draw a view again from the request its SVG keeps, over a package: on the same package, the same bytes
+
+Usage: energyml view redraw [OPTIONS] --from-svg <FILE.svg> --svg <FILE.svg> <FILE>
+
+Arguments:
+  <FILE>
+          The EPC file the drawing is made again over
+
+Options:
+      --from-svg <FILE.svg>
+          The drawing whose request is made again
+
+      --svg <FILE.svg>
+          Where the SVG is written
+
+      --png <FILE.png>
+          Also write the PNG: the SVG rasterised (built with `--features png`; refused by name otherwise)
+
+      --png-scale <PNG_SCALE>
+          With `--png`: how many pixels per pixel of the SVG (2: sharp on a phone)
+          
+          [default: 2]
+
+      --lenient
+          Read parts that break the schema instead of refusing them.
+          
+          Two kinds of defect are read past. An absent required element comes back as its default; a value that is *there* and unreadable - a word outside a closed enumeration, a number that is not a number, an undefined entity, an `xsi:type` naming an unknown subtype of a concrete base - is replaced, and the string that was in the file is reported.
+          
+          Every one of them is reported. Use it to get at the contents of a package whose producer wrote something wrong; do not use it for anything that will be written back, since what comes out is not what the document said.
+          
+          Still refused in both modes: malformed XML, bad encoding, and an `xsi:type` on a purely abstract choice - there is nothing to fall back to there.
+
+      --strict
+          Refuse a part that omits something the schema requires.
+          
+          By default an absent required element is filled with its default and reported, because refusing costs every field the part *did* carry - a package whose producer left out `Citation.Originator` is otherwise unreadable in its entirety, geometry included.
+          
+          Use this when the objects will be **written back**: read tolerantly, they hold values nobody wrote, and saving puts those on disk.
+
+      --h5 <[NAME=]PATH>
+          An HDF5 file to read arrays from, whatever the package says.
+          
+          Repeatable, and **the name is optional**:
+          
+          - `--h5 path/to/data.h5` offers the file without naming it. Offers are opened in the order given and the first that holds the dataset wins. - `--h5 model.h5=path/to/renamed.h5` pins a path to the name the document uses, for when you know which name is wrong. The text before the first `=` is a name only when it is a bare file name: a path that contains `=` (`--h5 /data/run=1/x.h5`) is a path to offer.
+          
+          The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
+          
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.

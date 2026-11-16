@@ -13,8 +13,8 @@
 
 use energyml_build::operation::{Choices, Fitness, Identity, Plan, Purpose, Registry, When};
 use energyml_build::pieces::{Pieces, Source};
-use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
+use std::sync::Arc;
 
 fn when() -> When {
     When {
@@ -27,7 +27,7 @@ fn shape(points: Vec<[f64; 3]>, topology: Topology, closed: Option<Vec<bool>>) -
     Pieces::empty().with(
         "shape",
         Source::Shape {
-            geometry: Geometry {
+            geometry: Arc::new(Geometry {
                 kind: "test",
                 patches: vec![Patch {
                     index: 0,
@@ -36,7 +36,7 @@ fn shape(points: Vec<[f64; 3]>, topology: Topology, closed: Option<Vec<bool>>) -
                     topology,
                     closed: Vec::new(),
                 }],
-            },
+            }),
             closed,
         },
     )
@@ -78,7 +78,7 @@ fn plan(bag: &Pieces, choices: Choices) -> Plan {
 
 fn count(plan: &Plan, name: &str) -> Option<f64> {
     plan.activity.parameters.iter().find_map(|p| match p {
-        Parameter::Double { title, value, .. } if title == name => Some(*value),
+        other if other.title() == name => other.number(),
         _ => None,
     })
 }

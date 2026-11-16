@@ -14,6 +14,7 @@ use energyml_build::operation::{Applies, Choices, Identity, Plan, Purpose, Regis
 use energyml_build::pieces::{Known, Pieces, Ref, Source};
 use energyml_domain::color::Hsv;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
+use std::sync::Arc;
 
 fn when() -> When {
     When {
@@ -51,7 +52,7 @@ fn surface(vertical_up: Option<bool>) -> Pieces {
         .with(
             "shape",
             Source::Shape {
-                geometry: pyramid(),
+                geometry: Arc::new(pyramid()),
                 closed: None,
             },
         )

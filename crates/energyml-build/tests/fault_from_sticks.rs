@@ -24,6 +24,7 @@
 //! second time sticks already in the package.
 
 use std::collections::BTreeSet;
+use std::sync::Arc;
 
 use serde_json::json;
 
@@ -160,18 +161,14 @@ fn recorded(plan: &Plan, title: &str) -> Vec<Parameter> {
     plan.activity
         .parameters
         .iter()
-        .filter(|one| match one {
-            Parameter::Double { title: t, .. }
-            | Parameter::Text { title: t, .. }
-            | Parameter::Object { title: t, .. } => t == title,
-        })
+        .filter(|one| one.title() == title)
         .cloned()
         .collect()
 }
 
 fn number(plan: &Plan, title: &str) -> f64 {
     match recorded(plan, title).as_slice() {
-        [Parameter::Double { value, .. }] => *value,
+        [one] if one.number().is_some() => one.number().unwrap_or_default(),
         other => panic!("`{title}` recorded as {other:?}"),
     }
 }
@@ -180,7 +177,7 @@ fn number(plan: &Plan, title: &str) -> f64 {
 fn line(points: Vec<[f64; 3]>) -> Source {
     let runs = vec![points.len() as u32];
     Source::Shape {
-        geometry: Geometry {
+        geometry: Arc::new(Geometry {
             kind: "test",
             patches: vec![Patch {
                 index: 0,
@@ -189,7 +186,7 @@ fn line(points: Vec<[f64; 3]>) -> Source {
                 topology: Topology::Polylines(runs),
                 closed: Vec::new(),
             }],
-        },
+        }),
         closed: None,
     }
 }

@@ -17,10 +17,18 @@
 //! | [`property`] | what do these numbers hang on, and how many should there be |
 //! | [`property_kind`] | what kind of quantity is it, and what is it a kind *of* |
 //! | [`color`] | what colour is this drawn in, and who said so |
-//! | [`table`] | what does the integer 3 mean in this property |
+//! | [`palettes`] | what colour is this drawn in when the file says none |
+//! | [`table`] | what does the integer 3 mean here, and which row does this cell name |
+//! | [`table_structure`] | how these tables hold together: links, row trees, key-value sheets |
+//! | [`forest`] | which node hangs under which, and which loop |
+//! | [`md_extent`] | from which MD to which, and on which reference |
 //! | [`well_strata`] | which unit is this well in, from which MD to which |
+//! | [`well_members`] | what does this well have: trajectories, frames, tops, properties |
 //! | [`strata_by_md`] | and on its other frames and trajectories, looked up by MD |
 //! | [`series`] | what does this log or time series say, sample by sample |
+//! | [`along_md`] | where an MD falls between the nodes, and what the value is there |
+//! | [`component_axes`] | what each component of a vector property stands for |
+//! | [`activity`] | what an activity did, with which parameters, and what its template says of them |
 //!
 //! # The rule the whole crate follows
 //!
@@ -54,6 +62,8 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+pub mod activity;
+pub mod along_md;
 pub mod attachments;
 pub mod check;
 pub mod color;
@@ -63,6 +73,7 @@ pub mod color_inherit;
 /// The colour of an object per target - walked once, resumed on demand, kept
 /// between questions and invalidated by the objects a change touched.
 pub mod color_walks;
+pub mod component_axes;
 pub mod crs;
 /// The narrow XML reader and the `PropertyKindDictionary` scan built on it.
 ///
@@ -76,22 +87,30 @@ mod scan {
     include!("dictionary_xml.rs");
 }
 pub mod error;
+pub mod forest;
 pub mod geolts;
 pub mod geolts_rank;
 /// What an object inherits, by which path - the order of ADR-0009, over the
 /// package index.
 pub mod inherit;
 pub mod integrity;
+pub mod md_extent;
 pub mod metadata;
 /// What the module keeps of a package: links and property sheets, never the
 /// objects (ADR-0010).
 pub mod package_index;
+pub mod palettes;
 pub mod property;
 pub mod property_kind;
 /// Recording that an operation happened: the canonical activity templates, and
 /// the activity built from one. See the module for why it is here rather than
 /// in the JavaScript face.
 pub mod provenance;
+pub mod provenance_graph;
+
+// Provenance a package records outside its activities (the NWDF tables of the
+// UDAR converter), shown as written and compared with the activities.
+pub mod provenance_verbatim;
 pub mod reproject;
 pub mod rules;
 pub mod select;
@@ -103,9 +122,13 @@ pub mod stats;
 pub mod strata_by_md;
 pub mod stratigraphy;
 pub mod table;
+pub mod table_structure;
 pub mod units;
 pub mod values;
 pub mod water_analysis;
+/// Who a wellbore has: its trajectories, frames, marker frames and properties,
+/// from the inventory and the references alone (ADR 0040).
+pub mod well_members;
 /// Which stratigraphic unit each interval of a wellbore frame belongs to, and
 /// the colour the file gives it - what a well is coloured by, section by
 /// section.

@@ -8,6 +8,8 @@
 //! at a regular spacing. A constrained triangulation then meets the trace with
 //! exactly those vertices, on both sides - the same count by construction.
 
+use crate::vector::plan;
+
 /// The polyline resampled at `spacing`, by arc length **in plan view**, ends
 /// kept; z follows the line.
 ///
@@ -67,15 +69,7 @@ pub fn plan_distance(p: [f64; 2], lines: &[Vec<[f64; 3]>]) -> f64 {
         }
         for pair in line.windows(2) {
             let (a, b) = ([pair[0][0], pair[0][1]], [pair[1][0], pair[1][1]]);
-            let (dx, dy) = (b[0] - a[0], b[1] - a[1]);
-            let len2 = dx * dx + dy * dy;
-            let t = if len2 > 0.0 {
-                (((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / len2).clamp(0.0, 1.0)
-            } else {
-                0.0
-            };
-            let q = [a[0] + dx * t, a[1] + dy * t];
-            best = best.min((p[0] - q[0]).hypot(p[1] - q[1]));
+            best = best.min(plan::distance_to_segment(p, a, b));
         }
     }
     best

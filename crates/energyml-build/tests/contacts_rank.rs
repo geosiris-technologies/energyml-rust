@@ -25,6 +25,7 @@
 //! showed far from the origin.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::sync::Arc;
 use std::sync::Once;
 
 use serde_json::{Value, json};
@@ -190,7 +191,7 @@ fn frame(bag: Pieces, at: usize, title: &str, units: &[Option<Ref>]) -> Pieces {
     bag.with(
         name.clone(),
         Source::Shape {
-            geometry,
+            geometry: Arc::new(geometry),
             closed: None,
         },
     )

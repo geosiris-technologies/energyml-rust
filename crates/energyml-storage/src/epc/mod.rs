@@ -35,6 +35,7 @@ pub mod header;
 pub mod media;
 pub mod overlay;
 pub mod package;
+mod raw_xml;
 pub mod revision;
 pub mod write;
 mod writer;
@@ -52,7 +53,7 @@ use energyml_core::reflect::TypeInfo;
 use energyml_core::registry::{DynObject, ReadMode, Registry};
 
 use crate::array::Resolution;
-use crate::backend::Origin;
+use crate::backend::{ArrayDeparture, Origin};
 use energyml_core::value::Reflect;
 
 use crate::array::{ArrayData, ArrayLocation, ArrayMetadata, ByteOrder, ProxyResolver};
@@ -283,6 +284,10 @@ fn normal_version(version: Option<&str>) -> Option<String> {
         .map(str::to_string)
 }
 
+/// What [`EpcStore::array_departures`] is built from: for each `(declared
+/// name, file read)`, why that file, and the datasets that came from it.
+type DepartureLog = std::collections::BTreeMap<(String, PathBuf), (Origin, BTreeSet<String>)>;
+
 /// An EPC file, open for reading.
 ///
 /// Reading only, in this pass. The in-memory layer that makes an open package
@@ -314,6 +319,13 @@ pub struct EpcStore {
     /// opened: the fallback taken for a missing HDF5 proxy is discovered the
     /// first time an array is located.
     diagnostics: Mutex<Vec<Diagnostic>>,
+    /// The arrays read from a file the document did not name, by `(declared
+    /// name, file read)`: why that file, and which datasets came from it.
+    ///
+    /// Kept apart from `diagnostics` because those hold one sentence per array
+    /// (the dataset is in the sentence), where a person wants one line per
+    /// fallback. See [`EpcStore::array_departures`].
+    departures: Mutex<DepartureLog>,
     /// Which file each `(declared name, dataset)` pair was actually found in.
     ///
     /// The search opens files to ask what they hold; without this, a package
@@ -427,6 +439,15 @@ pub struct EpcStore {
     /// PDF should not have that turned into `application/octet-stream` because
     /// the name ended in `.PDF`.
     attachment_types: std::collections::BTreeMap<String, String>,
+    /// `(declared_files, attachment_types)` as they were when the open
+    /// transaction started, put back by a rollback. Both are bookkeeping the
+    /// overlay does not layer, so a rollback that ignored them would leave the
+    /// names of files and the content types of attachments the transaction had
+    /// changed (`[storage-2 S14]`). `None` outside a transaction.
+    transaction_snapshot: Option<(
+        std::collections::BTreeMap<String, String>,
+        std::collections::BTreeMap<String, String>,
+    )>,
     /// In-place edits whose `LINKS_OUT` is **provisional**: the journal said the
     /// references may have moved because the path could not say otherwise, and
     /// the references the object held *before* the edit are kept here so the
@@ -565,6 +586,7 @@ impl EpcStore {
             entries: Vec::new(),
             by_uuid: HashMap::new(),
             diagnostics: Mutex::new(diagnostics),
+            departures: Mutex::new(DepartureLog::new()),
             array_files: Mutex::new(HashMap::new()),
             external_resources: Mutex::new(HashMap::new()),
             external_files: OnceLock::new(),
@@ -579,6 +601,7 @@ impl EpcStore {
             backends: crate::backend::Backends::compiled_in(),
             declared_files: std::collections::BTreeMap::new(),
             attachment_types: std::collections::BTreeMap::new(),
+            transaction_snapshot: None,
             pending_edits: Mutex::new(Vec::new()),
             unsettled: BTreeSet::new(),
             lenient: false,
@@ -789,6 +812,8 @@ impl EpcStore {
         reference: bool,
     ) -> Result<Live<'_>> {
         let version = normal_version(object_version);
+        let canonical = self.canonical_type(qualified_type);
+        let qualified_type = canonical.as_deref();
         let given = match qualified_type {
             Some(qualified_type) => identifiers::EtpUri::object_versioned(
                 self.dataspace_path(),
@@ -895,13 +920,29 @@ impl EpcStore {
     fn locate(&self, uri: &str) -> Result<Live<'_>> {
         self.in_this_dataspace(uri)?;
         let address = address_of(uri)?;
+        let canonical = self.canonical_type(address.qualified_type.as_deref());
         Self::choose(
-            self.live_for(&address.uuid, address.qualified_type.as_deref())?,
-            address.qualified_type.as_deref(),
+            self.live_for(&address.uuid, canonical.as_deref())?,
+            canonical.as_deref(),
             address.version.as_deref(),
             uri,
             false,
         )
+    }
+
+    /// A qualified type as the entries of this store spell it: its version
+    /// normalized to the schema version by the registry
+    /// ([`Registry::canonical_qualified_type`]), so that a reference whose
+    /// `ContentType` says `version=2.0.1` (`resqml201.obj_X`) names the object
+    /// that says `resqml20.obj_X`. A spelling the registry does not know stays as
+    /// written: a type a release apart still resolves while there is a single
+    /// candidate, and the checker reports it.
+    fn canonical_type(&self, qualified_type: Option<&str>) -> Option<String> {
+        qualified_type.map(|written| {
+            self.registry
+                .canonical_qualified_type(written)
+                .unwrap_or_else(|_| written.to_string())
+        })
     }
 
     /// The one entry of `live` that an address (or a reference) names - or a
@@ -1333,6 +1374,12 @@ impl EpcStore {
     /// Both are the price of being able to fix a file no parser will touch.
     /// [`EpcStore::staged_part_parses`] answers the first question a caller
     /// should ask before saving.
+    ///
+    /// A part the store holds as an object - read from the archive or put in
+    /// this session - is **replaced by these bytes** in the save: the part is
+    /// written once, with the posted bytes, and the object's relationships and
+    /// content type are kept. (It used to be written twice, the object and the
+    /// bytes under one name, and the archive refused the duplicate.)
     pub fn set_raw_part(&mut self, part: &str, bytes: Vec<u8>) {
         self.overlay.set_raw(part, bytes);
         // A part's bytes are what `get_object` reads, and a part name carries
@@ -1908,9 +1955,32 @@ impl EpcStore {
         // the writer can see its references and rebuild its `.rels` - and where
         // it is placed under the part name its type and uuid dictate, which for
         // a part the inventory had lost is not the name it arrived under.
+        //
+        // The bytes are let go **before** the put, so that a save the put
+        // triggers (`SavePolicy::OnChange`) does not write the wreck beside the
+        // object. But the put can refuse the object (a uuid no part can carry,
+        // a container's contained object, a version clash) and a refusal that
+        // left the bytes cleared and the part superseded made the part vanish
+        // from the saved package, silently. So a refusal puts both back
+        // (`[storage-2 S1]`). A put that **did** write the object and failed
+        // only in the save after it is not undone: the object is there.
+        let was_superseded = self.overlay.is_superseded(part);
         self.overlay.clear_raw(part);
         self.overlay.supersede(part);
-        self.put(object)?;
+        // After the two above: clearing the bytes is itself journaled, and what
+        // has to be told apart is whether the *put* wrote anything.
+        let revision = self.overlay.revision();
+        if let Err(refusal) = self.put(object) {
+            if self.overlay.revision() == revision {
+                if let Some(bytes) = previous {
+                    self.overlay.set_raw(part, bytes);
+                }
+                if !was_superseded {
+                    self.overlay.unsupersede(part);
+                }
+            }
+            return Err(refusal);
+        }
         Ok(info.qualified_type.unwrap_or(info.name).to_string())
     }
 
@@ -2166,19 +2236,7 @@ impl EpcStore {
             tracing::info_span!("epc.write_arrays", file = file_name, datasets = items.len()).entered();
         let checked: Vec<Result<()>> = items
             .iter()
-            .map(|(path_in_file, data)| {
-                let promised: i64 = data.metadata.dimensions.iter().product::<i64>().max(0);
-                if promised as usize != data.values.len() {
-                    return Err(Error::ExternalData {
-                        location: format!("{file_name}:{path_in_file}"),
-                        reason: ExternalDataReason::ShapeDisagrees {
-                            promised,
-                            held: data.values.len(),
-                        },
-                    });
-                }
-                Ok(())
-            })
+            .map(|(path_in_file, data)| check_shape(file_name, path_in_file, data))
             .collect();
         let refuse_all = |why: String| -> Vec<Result<()>> {
             items
@@ -2261,16 +2319,7 @@ impl EpcStore {
         // zeros at the end. Every writer gets this - the command line, the
         // build layer, the Python bridge - because it is the file that would be
         // wrong, not one caller.
-        let promised: i64 = data.metadata.dimensions.iter().product::<i64>().max(0);
-        if promised as usize != data.values.len() {
-            return Err(Error::ExternalData {
-                location: format!("{file_name}:{path_in_file}"),
-                reason: ExternalDataReason::ShapeDisagrees {
-                    promised,
-                    held: data.values.len(),
-                },
-            });
-        }
+        check_shape(file_name, path_in_file, data)?;
         let probe = ArrayLocation {
             file: file_name.to_string(),
             path_in_file: path_in_file.to_string(),
@@ -2344,7 +2393,9 @@ impl EpcStore {
         // neighbour is a *recovery*, and handing one back unopened would be the
         // silent-wrong-file mistake this whole design is arranged against (ADR-0005) -
         // those go through the search, which asks before it answers.
-        let candidates = self.external.candidates(&declared, self.path.as_deref());
+        // `stated_candidates`: the folder is not read for a guess that is thrown
+        // away at the first stated file ([storage-1 S1]).
+        let candidates = self.external.stated_candidates(&declared, self.path.as_deref());
         // Kept so that "nothing can read this format" does not come out as
         // "the file is not there". A build with no HDF5 cannot read the array
         // whether or not the file is on the disk, and sending someone to look
@@ -2428,6 +2479,13 @@ impl EpcStore {
             }
 
             if candidate.origin.is_a_departure() {
+                self.departures
+                    .lock()
+                    .expect("the departures lock is never held across a panic")
+                    .entry((declared.clone(), candidate.path.clone()))
+                    .or_insert_with(|| (candidate.origin, BTreeSet::new()))
+                    .1
+                    .insert(dataset.clone());
                 self.record(Diagnostic::warning(
                     &location.field_path,
                     match declared.is_empty() {
@@ -2471,6 +2529,22 @@ impl EpcStore {
         // *reason* stays [`ExternalDataReason::FileMissing`], because that is
         // what tells the caller to try another candidate or ask for the file;
         // only the display string carries the how-hard-it-looked detail.
+        // A path the caller offered that is not on disk never reached the
+        // candidates, so "0 candidate file(s)" would hide the one thing they
+        // most need to hear: that the file they pointed at is not there.
+        let not_found = self.external.missing_offers();
+        let not_found = if not_found.is_empty() {
+            String::new()
+        } else {
+            format!(
+                "; offered by the caller and not found on disk: {}",
+                not_found
+                    .iter()
+                    .map(|path| format!("`{}`", path.display()))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
+        };
         let detail = match (opened, &no_backend) {
             // Zero opens *and* no backend anywhere: the search never asked a
             // question, it had nothing to ask it with.
@@ -2479,12 +2553,12 @@ impl EpcStore {
                 location.mime.as_deref().unwrap_or("this format")
             ),
             (0, None) => format!(
-                "`{dataset}` is in none of the {} candidate file(s) for `{declared}`",
+                "`{dataset}` is in none of the {} candidate file(s) for `{declared}`{not_found}",
                 candidates.len()
             ),
             (n, _) => format!(
                 "`{dataset}` is in none of the {} candidate file(s) for `{declared}`; \
-                 {n} of them were opened and did not hold it",
+                 {n} of them were opened and did not hold it{not_found}",
                 candidates.len()
             ),
         };
@@ -3294,7 +3368,11 @@ impl EpcStore {
                 .get(uuid)
                 .into_iter()
                 .flatten()
-                .any(|made| made.slot == uuid);
+                // A removed entry no longer holds its slot (`remove` leaves its
+                // `made` record, which a rollback needs).
+                .any(|made| {
+                    made.slot == uuid && matches!(self.overlay.get(&made.slot), Some(Change::Put(_)))
+                });
         if taken {
             slot_key(uuid, qualified_type, version)
         } else {
@@ -3390,9 +3468,10 @@ impl EpcStore {
             .iter()
             .map(|one| (one.slot.to_string(), one.summary.uri.clone()))
             .collect();
-        if let Some(list) = self.made.get_mut(&uuid) {
-            list.retain(|made| made.slot != slot);
-        }
+        // **`made` is left alone.** It is not rolled back with a transaction,
+        // and `live_of` already ignores an entry whose layer says `Removed`:
+        // dropping it here made a rollback bring the object back into the layer
+        // without the entry that lets a lookup find it (`[storage-2 S2]`).
         self.overlay
             .set_what(&slot, Some(uri), Change::Removed, What::REMOVED);
         self.moved_uris(&uuid, &slot, &before);
@@ -3433,12 +3512,15 @@ impl EpcStore {
     /// One layer more on the in-memory stack, and nothing on disk. ETP v1.2
     /// forbids nesting, so a second call is an error.
     pub fn start_transaction(&mut self) -> Result<()> {
-        self.overlay.start_transaction()
+        self.overlay.start_transaction()?;
+        self.transaction_snapshot = Some((self.declared_files.clone(), self.attachment_types.clone()));
+        Ok(())
     }
 
     /// Merge the transaction into the changes below it.
     pub fn commit_transaction(&mut self) -> Result<()> {
         self.overlay.commit_transaction()?;
+        self.transaction_snapshot = None;
         self.after_change()
     }
 
@@ -3464,6 +3546,10 @@ impl EpcStore {
             .collect();
         self.unsettled.extend(held);
         self.overlay.rollback_transaction()?;
+        if let Some((declared_files, attachment_types)) = self.transaction_snapshot.take() {
+            self.declared_files = declared_files;
+            self.attachment_types = attachment_types;
+        }
         for uuid in touched {
             self.reconcile_uris(&uuid);
         }
@@ -3710,6 +3796,27 @@ impl EpcStore {
             .lock()
             .expect("the diagnostics lock is never held across a panic")
             .clone()
+    }
+
+    /// The arrays that were read from a file the document does not name, one
+    /// entry per `(name the document wrote, file read)`, in that order.
+    ///
+    /// Empty while every array was read from the file its package names.
+    /// Filled as arrays are read: ask after the reading, not before. What a
+    /// face prints so that no number comes from somewhere unexpected without
+    /// the person being told; see [`ArrayDeparture`].
+    pub fn array_departures(&self) -> Vec<ArrayDeparture> {
+        self.departures
+            .lock()
+            .expect("the departures lock is never held across a panic")
+            .iter()
+            .map(|((declared, path), (origin, datasets))| ArrayDeparture {
+                declared: declared.clone(),
+                path: path.clone(),
+                origin: *origin,
+                arrays: datasets.len(),
+            })
+            .collect()
     }
 
     /// Record a departure, once. The same fallback taken for three hundred
@@ -4885,28 +4992,55 @@ fn address_of(uri: &str) -> Result<Address> {
 /// The uuid an address names - an ETP URI, or a bare uuid for the caller who
 /// has one in hand.
 fn uuid_in_uri(uri: &str) -> Result<String> {
-    if let Ok(parsed) = identifiers::EtpUri::parse(uri)
-        && let Some(uuid) = parsed.uuid
-    {
-        return Ok(uuid);
-    }
-    let trimmed = uri.trim();
-    if identifiers::is_uuid(trimmed) {
-        return Ok(trimmed.to_string());
-    }
-    Err(Error::BadUri {
-        uri: uri.to_string(),
-        reason: "expected an ETP data-object URI or a bare uuid".to_string(),
-    })
+    // The one reading of an address (`address_of`), lowercase.
+    address_of(uri).map(|address| address.uuid)
 }
 
-fn local_name(raw: &[u8]) -> String {
-    String::from_utf8_lossy(raw.rsplit(|b| *b == b':').next().unwrap_or_default()).into_owned()
+use raw_xml::local_name;
+
+/// The shape an array promises must be the number of values it holds.
+///
+/// **The one check for every writer** ([`EpcStore::write_array_to`] and
+/// [`EpcStore::write_arrays_to`]): a shape promising more numbers than there
+/// are writes without error in some formats and reads back with zeros at the
+/// end. The product is checked: on hostile dimensions it overflows to a value
+/// no length can equal, so a wrong shape never wraps into a passing one.
+fn check_shape(file_name: &str, path_in_file: &str, data: &crate::array::ArrayData) -> Result<()> {
+    let promised: i64 = data
+        .metadata
+        .dimensions
+        .iter()
+        .try_fold(1i64, |product, &dimension| product.checked_mul(dimension))
+        .map_or(i64::MAX, |product| product.max(0));
+    if usize::try_from(promised).ok() != Some(data.values.len()) {
+        return Err(Error::ExternalData {
+            location: format!("{file_name}:{path_in_file}"),
+            reason: ExternalDataReason::ShapeDisagrees {
+                promised,
+                held: data.values.len(),
+            },
+        });
+    }
+    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_shape_whose_product_overflows_is_refused_not_wrapped() {
+        use crate::array::{ArrayData, ArrayMetadata, ArrayValues};
+        let data = |dimensions: Vec<i64>, values: usize| ArrayData {
+            metadata: ArrayMetadata::new(dimensions, "double"),
+            values: ArrayValues::F64(vec![0.0; values]),
+        };
+        assert!(check_shape("a.h5", "/x", &data(vec![2, 3], 6)).is_ok());
+        assert!(check_shape("a.h5", "/x", &data(vec![2, 3], 5)).is_err());
+        // 2^32 * 2^32 wraps to 0 in a release build, and an empty array then passed.
+        assert!(check_shape("a.h5", "/x", &data(vec![1 << 32, 1 << 32], 0)).is_err());
+        // Break it: compute the product with `.product::<i64>()` again.
+    }
 
     #[test]
     fn a_missing_capability_never_comes_out_as_a_missing_file() {

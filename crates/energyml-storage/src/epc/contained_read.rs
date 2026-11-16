@@ -90,13 +90,7 @@ pub(crate) struct Scope {
     pub schema_version: Option<String>,
 }
 
-/// A raw attribute value, unescaped (a namespace uri never needs more).
-fn unescape(raw: &[u8]) -> String {
-    let text = String::from_utf8_lossy(raw);
-    quick_xml::escape::unescape(&text)
-        .map(|unescaped| unescaped.into_owned())
-        .unwrap_or_else(|_| text.into_owned())
-}
+use super::raw_xml::unescape_attr as unescape;
 
 /// The [`Scope`] at the start of each wanted element, in the order of `entries`,
 /// from **one** pass over `part`; the pass stops at the last wanted start.
@@ -351,13 +345,9 @@ fn fresh_prefix(bound: &[(String, String)], wanted: &str) -> String {
         .unwrap_or_else(|| base.to_string())
 }
 
-/// Escape a value written between double quotes.
-fn escape_attr(value: &str) -> String {
-    value
-        .replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('"', "&quot;")
-}
+// A value written between double quotes: the one door,
+// `energyml_core::xml::escape_attr`.
+use energyml_core::xml::escape_attr;
 
 /// Write one namespace declaration.
 fn push_declaration(out: &mut String, prefix: &str, uri: &str) {

@@ -177,3 +177,79 @@ fn an_update_that_touches_a_uuid_held_twice_rebuilds_and_still_agrees() {
         "three versions, three nodes"
     );
 }
+
+/// `dependents_of` answers for the entry its uri names, and agrees with
+/// `graph::dependents_of_uri` over the same objects (two readers of one fact).
+///
+/// Break it: read the address as a uuid again in `dependents_of` (`id_of` on
+/// the lower-cased uuid); both versions then answer with both horizons.
+#[test]
+fn the_dependents_of_one_version_are_not_those_of_the_other() {
+    let store = package();
+    let index = PackageIndex::build(&store, store.revision());
+    let read = store.read_objects(None).0;
+    let summaries = store.resources();
+    let uri_of = |version: Option<&str>| -> String {
+        summaries
+            .iter()
+            .find(|one| {
+                one.uuid == S
+                    && match version {
+                        Some(v) => one.uri.contains(&format!("version='{v}'")),
+                        None => !one.uri.contains("version="),
+                    }
+            })
+            .expect("the entry is held")
+            .uri
+            .clone()
+    };
+    let uuids = |pointers: Vec<energyml_storage::graph::Pointer>| {
+        let mut out: Vec<String> = pointers.into_iter().map(|p| p.uuid).collect();
+        out.sort();
+        out
+    };
+    for (version, who) in [(Some("2"), H), (None, H0)] {
+        let uri = uri_of(version);
+        let from_index = uuids(index.dependents_of(&uri));
+        let from_objects = uuids(graph::dependents_of_uri(
+            read.iter()
+                .map(|(summary, object)| (summary, object.as_reflect())),
+            &uri,
+        ));
+        assert_eq!(from_index, from_objects, "the two readers disagree on {uri}");
+        assert_eq!(from_index, vec![who.to_string()], "{uri}");
+    }
+}
+
+/// `_data` follows the version a reference names: two versions of one uuid give
+/// two different `_data`, one for each horizon that points at one of them.
+///
+/// Break it: index `ObjectsInMemory` by uuid alone again (first object wins);
+/// both horizons then carry the same version in `_data`.
+#[test]
+fn two_versions_of_one_uuid_give_two_data() {
+    let store = package();
+    let read = store.read_objects(None).0;
+    let source =
+        energyml_core::json::ObjectsInMemory::new(read.iter().map(|(_, object)| object.as_reflect()));
+    let version_in_data = |uuid: &str| -> Option<String> {
+        let (_, horizon) = read
+            .iter()
+            .find(|(summary, _)| summary.uuid == uuid)
+            .expect("the horizon is held");
+        let document = energyml_core::json::write_value_with(horizon.as_reflect(), &source);
+        document["InterpretedFeature"]["_data"]["objectVersion"]
+            .as_str()
+            .map(str::to_string)
+    };
+    assert_eq!(version_in_data(H), Some("2".to_string()), "H names version 2");
+    assert_eq!(
+        version_in_data(H0),
+        None,
+        "H0 names none: it resolves to the surface that declares none, not to version 2"
+    );
+    // And the version-less one is there at all: `_data` is present for H0.
+    let (_, horizon) = read.iter().find(|(summary, _)| summary.uuid == H0).unwrap();
+    let document = energyml_core::json::write_value_with(horizon.as_reflect(), &source);
+    assert!(document["InterpretedFeature"]["_data"].is_object(), "{document}");
+}

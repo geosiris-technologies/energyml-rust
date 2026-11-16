@@ -79,6 +79,7 @@
 //! **by name** rather than read into sections nobody can show.
 
 use std::collections::{BTreeSet, HashMap};
+use std::sync::{Mutex, OnceLock};
 
 use energyml_core::identity;
 use energyml_core::registry::DynObject;
@@ -472,6 +473,37 @@ pub struct Known<'a> {
     pub units: &'a [(String, String)],
 }
 
+/// What a front end painting many frames of one package pays **once**, not per frame.
+///
+/// Three things were read again at each call: a stratigraphic rank (its object, then each of its units, parsed by
+/// [`crate::stratigraphy::columns`]), the package's colour sets read as one ([`GraphicalSet::merged`], a deep copy
+/// of every set), and a frame's `NodeMd` array (read again for each property and each rank asked of one frame). A
+/// cache holds all three for the frames it is passed to ([`of_frame_cached`]); [`of_frame`] builds an empty one per call, so it reads what it needs once per
+/// call, as before.
+///
+/// **It is tied to one state of the package**, the one `source` and `known` describe: nothing invalidates it, so
+/// a caller that changes the package (or hands another [`Known`]) builds a new cache. Only a rank that was read
+/// successfully is kept: a refusal is read again, so a rank added later is found.
+#[derive(Default)]
+pub struct StrataCache {
+    ranks: Mutex<HashMap<String, stratigraphy::ColumnRank>>,
+    merged: OnceLock<GraphicalSet>,
+    /// A frame's measured depths, by `uuid|version`.
+    node_mds: Mutex<HashMap<String, Vec<f64>>>,
+}
+
+impl StrataCache {
+    /// An empty cache.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The package's colour sets read as one, merged on the first ask.
+    fn merged(&self, known: &Known<'_>) -> &GraphicalSet {
+        self.merged.get_or_init(|| merged_graphics(known))
+    }
+}
+
 /// `&dyn ArraySource` seen as an [`ObjectSource`].
 ///
 /// Spelled out rather than upcast: trait upcasting is stable from Rust 1.86,
@@ -523,6 +555,18 @@ pub fn of_frame(
     source: &dyn ArraySource,
     known: &Known<'_>,
 ) -> Result<Strata, Refusal> {
+    of_frame_cached(frame, wanted, source, known, &StrataCache::new())
+}
+
+/// [`of_frame`] for a caller that reads **many frames of one package**: the ranks and the merged colours are read
+/// through `cache` and so once, not once per frame (see [`StrataCache`]). Same answer as [`of_frame`].
+pub fn of_frame_cached(
+    frame: &dyn Reflect,
+    wanted: &Wanted<'_>,
+    source: &dyn ArraySource,
+    known: &Known<'_>,
+    cache: &StrataCache,
+) -> Result<Strata, Refusal> {
     let info = frame.type_info();
     let title = identity::title_of_reflect(frame)
         .filter(|title| !title.is_empty())
@@ -542,10 +586,41 @@ pub fn of_frame(
             "states no NodeMd, so it is not a wellbore frame and has no measured-depth interval to colour",
         ));
     };
-    let mds: Vec<f64> = match values::read(node_md, source, NODE_MD)? {
-        Values::Floating(values) => values,
-        Values::Integer(values) => values.into_iter().map(|value| value as f64).collect(),
-        _ => return Err(Refusal::defect(format!("`{title}`.NodeMd"), "holds no numbers")),
+    // The array is read once per frame (and version) through the cache; a frame with no uuid is not kept.
+    let md_key = identity::uuid_of_reflect(frame)
+        .filter(|uuid| !uuid.is_empty())
+        .map(|uuid| {
+            format!(
+                "{}|{}",
+                uuid.to_ascii_lowercase(),
+                identity::object_version_of_reflect(frame).unwrap_or_default()
+            )
+        });
+    let held_mds = md_key.as_ref().and_then(|key| {
+        cache
+            .node_mds
+            .lock()
+            .expect("the depth memory is never held across a panic")
+            .get(key)
+            .cloned()
+    });
+    let mds: Vec<f64> = match held_mds {
+        Some(mds) => mds,
+        None => {
+            let read: Vec<f64> = match values::read(node_md, source, NODE_MD)? {
+                Values::Floating(values) => values,
+                Values::Integer(values) => values.into_iter().map(|value| value as f64).collect(),
+                _ => return Err(Refusal::defect(format!("`{title}`.NodeMd"), "holds no numbers")),
+            };
+            if let Some(key) = md_key {
+                cache
+                    .node_mds
+                    .lock()
+                    .expect("the depth memory is never held across a panic")
+                    .insert(key, read.clone());
+            }
+            read
+        }
     };
     if mds.len() < 2 {
         return Err(Refusal::absent(
@@ -563,9 +638,11 @@ pub fn of_frame(
     let mut notes = Vec::new();
     let read = match wanted {
         Wanted::IntervalUnits { rank } => {
-            interval_units(frame, &title, &mds, *rank, source, known, &mut notes)?
+            interval_units(frame, &title, &mds, *rank, source, known, cache, &mut notes)?
         }
-        Wanted::Category { property } => category(*property, &uuid, &title, &mds, source, known, &mut notes)?,
+        Wanted::Category { property } => {
+            category(*property, &uuid, &title, &mds, source, known, cache, &mut notes)?
+        }
     };
 
     let sections: Vec<Section> = read
@@ -631,6 +708,39 @@ pub fn states_units(frame: &dyn Reflect) -> bool {
         .any(|name| frame.field(name).is_some_and(|value| !value.is_empty()))
 }
 
+/// The distinct stratigraphic ranks a frame's mappings name, read on the document alone (no array opened): each as
+/// `(uuid, uri)`, the uuid lower case.
+///
+/// The uuid is what [`Wanted`] asks by and what tells two ranks apart; the uri is what the rank's header is read by (a
+/// reference that names no type has no uri: its uuid is then its address). *Which* ranks are named, never their
+/// indices, their units or their colours. The one reading of the two spellings (`MAPPINGS`, `ORGANISATION`), for
+/// every caller that lists ranks.
+pub fn ranks_of_frame(frame: &dyn Reflect) -> Vec<(String, String)> {
+    let maps: Vec<&dyn Reflect> = match MAPPINGS.iter().find_map(|name| frame.field(name)) {
+        Some(FieldValue::List(items)) => items.into_iter().filter_map(|item| item.as_object()).collect(),
+        Some(FieldValue::Object(one)) => vec![one],
+        _ => Vec::new(),
+    };
+    let mut ranks: Vec<(String, String)> = Vec::new();
+    for map in maps {
+        let Some(reference) = ORGANISATION.iter().find_map(|name| match map.field(name) {
+            Some(FieldValue::Object(reference)) => Some(reference),
+            _ => None,
+        }) else {
+            continue;
+        };
+        let Some(uuid) = identity::uuid_of_reflect(reference) else {
+            continue;
+        };
+        let uri = identity::uri_of_reflect(reference).unwrap_or_else(|| uuid.to_string());
+        let uuid = uuid.to_ascii_lowercase();
+        if !uuid.is_empty() && !ranks.iter().any(|(known, _)| *known == uuid) {
+            ranks.push((uuid, uri));
+        }
+    }
+    ranks
+}
+
 /// Where an interval is, for a message: its rank and its two MDs.
 fn interval(title: &str, mds: &[f64], at: usize) -> String {
     format!(
@@ -641,6 +751,7 @@ fn interval(title: &str, mds: &[f64], at: usize) -> String {
 }
 
 /// The frame's `IntervalStratigraphicUnits`, merged - or only the rank asked.
+#[allow(clippy::too_many_arguments)]
 fn interval_units(
     frame: &dyn Reflect,
     title: &str,
@@ -648,6 +759,7 @@ fn interval_units(
     rank: Option<&str>,
     source: &dyn ArraySource,
     known: &Known<'_>,
+    cache: &StrataCache,
     notes: &mut Vec<String>,
 ) -> Result<Read, Refusal> {
     let intervals = mds.len() - 1;
@@ -719,8 +831,7 @@ fn interval_units(
     }
 
     let objects = Objects(source);
-    let merged = merged_graphics(known);
-    let cascade = Cascade::new(&merged);
+    let cascade = Cascade::new(cache.merged(known));
     let mut units: Vec<Unit> = Vec::new();
     let mut position_of: HashMap<String, usize> = HashMap::new();
     // Per interval, each unit it is given and the mapping that gave it.
@@ -728,7 +839,7 @@ fn interval_units(
     let mut ranks: Vec<String> = Vec::new();
 
     for (which, (rank_uuid, rank_uri, runs)) in kept.iter().enumerate() {
-        let ranked = read_rank(rank_uuid, rank_uri.as_deref(), title, source)?;
+        let ranked = read_rank(rank_uuid, rank_uri.as_deref(), title, source, cache)?;
         notes.extend(ranked.notes.iter().cloned());
         ranks.push(rank_uuid.clone());
 
@@ -823,6 +934,33 @@ fn interval_units(
 /// about itself over what a reference cached, and says which units it could
 /// not find.
 fn read_rank(
+    rank_uuid: &str,
+    rank_uri: Option<&str>,
+    title: &str,
+    source: &dyn ArraySource,
+    cache: &StrataCache,
+) -> Result<stratigraphy::ColumnRank, Refusal> {
+    // Keyed by what the mapping names the rank by: its uri (version included), else its uuid.
+    let key = rank_uri.unwrap_or(rank_uuid).to_string();
+    if let Some(known) = cache
+        .ranks
+        .lock()
+        .expect("the rank memory is never held across a panic")
+        .get(&key)
+    {
+        return Ok(known.clone());
+    }
+    let read = read_rank_uncached(rank_uuid, rank_uri, title, source)?;
+    cache
+        .ranks
+        .lock()
+        .expect("the rank memory is never held across a panic")
+        .insert(key, read.clone());
+    Ok(read)
+}
+
+/// [`read_rank`] without the memory: the rank object, then its units, through the source.
+fn read_rank_uncached(
     rank_uuid: &str,
     rank_uri: Option<&str>,
     title: &str,
@@ -933,18 +1071,10 @@ fn unit_runs(indices: &dyn Reflect, source: &dyn ArraySource, what: &str) -> Res
         .collect())
 }
 
-/// The declared `NullValue` of an integer array, when it has one.
-fn null_value(array: &dyn Reflect) -> Option<i64> {
-    match array.field("NullValue") {
-        Some(FieldValue::Scalar(scalar)) => scalar.as_f64().map(|value| value as i64),
-        _ => None,
-    }
-}
-
 /// An integer array as the file states it: `None` where it holds its declared
 /// `NullValue` - or a `NaN`, for a producer that stored indices as floats.
 fn integers(array: &dyn Reflect, source: &dyn ArraySource, at: &str) -> Result<Vec<Option<i64>>, Refusal> {
-    let null = null_value(array);
+    let null = values::null_value(array);
     match values::read(array, source, at)? {
         Values::Integer(values) => Ok(values
             .into_iter()
@@ -972,7 +1102,7 @@ fn integers(array: &dyn Reflect, source: &dyn ArraySource, at: &str) -> Result<V
 /// A numeric array as the file states it: `None` for its declared
 /// `NullValue` and for a `NaN` - how the corpus writes *no value here*.
 fn numbers(array: &dyn Reflect, source: &dyn ArraySource, at: &str) -> Result<Vec<Option<f64>>, Refusal> {
-    let null = null_value(array);
+    let null = values::null_value(array);
     match values::read(array, source, at)? {
         Values::Integer(values) => Ok(values
             .into_iter()
@@ -987,6 +1117,7 @@ fn numbers(array: &dyn Reflect, source: &dyn ArraySource, at: &str) -> Result<Ve
 }
 
 /// A category property on the frame's intervals, and the rows its codes name.
+#[allow(clippy::too_many_arguments)]
 fn category(
     property: &dyn Reflect,
     frame: &str,
@@ -994,6 +1125,7 @@ fn category(
     mds: &[f64],
     source: &dyn ArraySource,
     known: &Known<'_>,
+    cache: &StrataCache,
     notes: &mut Vec<String>,
 ) -> Result<Read, Refusal> {
     let intervals = mds.len() - 1;
@@ -1065,50 +1197,24 @@ fn category(
     // front end's `categories` parse it, so a text key that reads as a number
     // matches the same rows in both.
     let key_column = lookup.key_columns.first().copied();
-    let key_of = |row: usize| -> Option<f64> {
-        let column = key_column?;
-        lookup
-            .rows
-            .cell(row, column)?
-            .to_string()
-            .trim()
-            .parse::<f64>()
-            .ok()
-    };
+    // Which row each code names, **built once**: first row wins, as the
+    // duplicate-key note below says. A scan per interval parsed every key of the
+    // table again and again (a `String` per probe).
+    let mut row_of_code: HashMap<u64, usize> = HashMap::new();
+    if key_column.is_some() {
+        for row in 0..lookup.rows.rows {
+            if let Some(code) = key_number(&lookup, key_column, row).filter(|code| !code.is_nan()) {
+                row_of_code.entry(code_bits(code)).or_insert(row);
+            }
+        }
+    }
     if !lookup.duplicate_keys().is_empty() {
         notes.push(format!(
             "table {table_uuid} repeats a key; the first row holding it is the one a code names"
         ));
     }
 
-    let mut units = Vec::with_capacity(lookup.rows.rows);
-    for row in 0..lookup.rows.rows {
-        let cells: Vec<String> = (0..lookup.titles.len())
-            .filter(|column| !lookup.key_columns.contains(column))
-            .filter_map(|column| lookup.rows.cell(row, column))
-            .map(|cell| cell_text(&cell))
-            .filter(|text| !text.is_empty())
-            .collect();
-        // The row's number is what the front end's legend keys it on: the key,
-        // the position where the key does not read as a number.
-        let code = key_of(row).unwrap_or(row as f64);
-        let label = if cells.is_empty() {
-            number(code)
-        } else {
-            cells.join(JOIN)
-        };
-        let (uuid, by_title) = unit_titled(&cells, &label, known, notes);
-        units.push(Unit {
-            code,
-            uuid,
-            uri: None,
-            title: label,
-            rank: None,
-            colour: None,
-            colour_from: None,
-            by_title,
-        });
-    }
+    let (mut units, unit_of_row) = category_units(&lookup, key_column, &table_uuid, known, notes);
 
     let Some(patch) = read.patches.first() else {
         return Err(Refusal::absent(what, "states no values"));
@@ -1138,11 +1244,14 @@ fn category(
             continue;
         };
         let row = match key_column {
-            Some(_) => (0..lookup.rows.rows).find(|row| key_of(*row) == Some(*value)),
+            Some(_) => row_of_code.get(&code_bits(*value)).copied(),
             // No key column: the position is all the document offers.
             None => (value.fract() == 0.0 && *value >= 0.0 && (*value as usize) < lookup.rows.rows)
                 .then_some(*value as usize),
         };
+        // A row of a keyed table whose key reads as no number made no unit: it
+        // is not one a stored value can name.
+        let row = row.and_then(|row| unit_of_row.get(row).copied().flatten());
         let Some(row) = row else {
             return Err(Refusal::defect(
                 interval(title, mds, at),
@@ -1163,8 +1272,7 @@ fn category(
     // The colours: the property's own map first - the author's word about
     // these codes - then the unit a row was matched to.
     let objects = Objects(source);
-    let merged = merged_graphics(known);
-    let cascade = Cascade::new(&merged);
+    let cascade = Cascade::new(cache.merged(known));
     let map = property_map(&read, frame, &objects, known, &cascade, notes);
     for unit in &mut units {
         if let Some((map, scaling, from)) = &map
@@ -1189,6 +1297,85 @@ fn category(
         units,
         named,
     })
+}
+
+/// A code as a hash key: its bits, `-0.0` being `0.0` (they are equal as
+/// numbers, so they name the same row).
+fn code_bits(code: f64) -> u64 {
+    if code == 0.0 {
+        0.0f64.to_bits()
+    } else {
+        code.to_bits()
+    }
+}
+
+/// The number a row's key reads as: the key cell's text, trimmed, parsed - the
+/// way the front end's `categories` parse it. `None` for a table with no key
+/// column and for a key that does not read as a number.
+fn key_number(lookup: &Lookup, key_column: Option<usize>, row: usize) -> Option<f64> {
+    let column = key_column?;
+    lookup
+        .rows
+        .cell(row, column)?
+        .to_string()
+        .trim()
+        .parse::<f64>()
+        .ok()
+}
+
+/// One unit per row of a category table, and, for each row, the index of its
+/// unit in the list (`None` for a row that made none).
+///
+/// The row's number is what the front end's legend keys it on: the key, or the
+/// rank of the row **in a table that has no key**. A row of a *keyed* table
+/// whose key does not read as a number makes **no unit**: its rank would be a
+/// code no stored value can reach (a stored value is compared with the keys),
+/// and it could collide with a real key. The note says which row.
+fn category_units(
+    lookup: &Lookup,
+    key_column: Option<usize>,
+    table_uuid: &str,
+    known: &Known<'_>,
+    notes: &mut Vec<String>,
+) -> (Vec<Unit>, Vec<Option<usize>>) {
+    let mut units = Vec::with_capacity(lookup.rows.rows);
+    let mut unit_of_row = vec![None; lookup.rows.rows];
+    for (row, unit_slot) in unit_of_row.iter_mut().enumerate() {
+        let cells: Vec<String> = (0..lookup.titles.len())
+            .filter(|column| !lookup.key_columns.contains(column))
+            .filter_map(|column| lookup.rows.cell(row, column))
+            .map(|cell| cell_text(&cell))
+            .filter(|text| !text.is_empty())
+            .collect();
+        let code = match key_number(lookup, key_column, row) {
+            Some(code) => code,
+            None if key_column.is_some() => {
+                notes.push(format!(
+                    "table {table_uuid} row {row}: its key does not read as a number, so no code names it"
+                ));
+                continue;
+            }
+            None => row as f64,
+        };
+        let label = if cells.is_empty() {
+            number(code)
+        } else {
+            cells.join(JOIN)
+        };
+        let (uuid, by_title) = unit_titled(&cells, &label, known, notes);
+        *unit_slot = Some(units.len());
+        units.push(Unit {
+            code,
+            uuid,
+            uri: None,
+            title: label,
+            rank: None,
+            colour: None,
+            colour_from: None,
+            by_title,
+        });
+    }
+    (units, unit_of_row)
 }
 
 /// The unit of the package whose title a table row carries - when exactly one
@@ -1389,11 +1576,61 @@ fn cell_text(cell: &Cell) -> String {
     }
 }
 
-/// A number without useless zeros - `10`, not `10.0`.
-fn number(value: f64) -> String {
-    if value == value.trunc() && value.abs() < 1e15 {
-        format!("{}", value as i64)
-    } else {
-        format!("{value}")
+// A number without useless zeros - `10`, not `10.0`: the one copy, in core.
+use energyml_core::text::plain_number as number;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::table::Rows;
+
+    fn keyed(keys: &[&str]) -> Lookup {
+        let names: Vec<String> = (0..keys.len()).map(|at| format!("unit {at}")).collect();
+        let rows = keys.len();
+        Lookup {
+            titles: vec![Some("code".into()), Some("name".into())],
+            key_columns: vec![0],
+            rows: Rows {
+                columns: vec![
+                    Some(Values::Text(keys.iter().map(|k| k.to_string()).collect())),
+                    Some(Values::Text(names)),
+                ],
+                per_row: vec![1, 1],
+                nulls: vec![None, None],
+                rows,
+                notes: Vec::new(),
+            },
+            notes: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn a_keyed_row_whose_key_is_not_a_number_names_no_code() {
+        // Common TRG 2.3 §9.1 p. 190: the key names the row. A key that reads as
+        // no number cannot be named by a stored value, so it makes no unit (its
+        // rank as a code could collide with a real key).
+        let table = keyed(&["1", "x", "3"]);
+        let mut notes = Vec::new();
+        let (units, unit_of_row) = category_units(&table, Some(0), "t1", &Known::default(), &mut notes);
+        let codes: Vec<f64> = units.iter().map(|unit| unit.code).collect();
+        assert_eq!(codes, vec![1.0, 3.0]);
+        assert_eq!(unit_of_row, vec![Some(0), None, Some(1)]);
+        assert!(
+            notes
+                .iter()
+                .any(|note| note.contains("row 1") && note.contains("key does not read as a number")),
+            "the row is named: {notes:?}"
+        );
+    }
+
+    #[test]
+    fn a_keyless_category_table_gives_each_row_its_rank_as_code() {
+        let mut table = keyed(&["a", "b"]);
+        table.key_columns.clear();
+        let mut notes = Vec::new();
+        let (units, _) = category_units(&table, None, "t1", &Known::default(), &mut notes);
+        let codes: Vec<f64> = units.iter().map(|unit| unit.code).collect();
+        assert_eq!(codes, vec![0.0, 1.0]);
+        assert!(notes.is_empty(), "{notes:?}");
     }
 }

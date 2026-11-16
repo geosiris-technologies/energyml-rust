@@ -513,6 +513,7 @@ fn object_with_an_offset_crs() -> energyml_geometry::SceneObject {
             time_uom: None,
             projected: CrsKind::Epsg(23031),
             vertical: CrsKind::Absent,
+            axes: energyml_domain::crs::AxisReading::NotStated,
         }),
         interpretation: None,
         feature: None,

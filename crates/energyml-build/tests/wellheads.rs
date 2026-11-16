@@ -35,7 +35,7 @@ fn well(bag: Pieces, name: &str, nodes: &[[f64; 3]], head: Option<[f64; 3]>, fra
     bag.with(
         name,
         Source::Shape {
-            geometry,
+            geometry: std::sync::Arc::new(geometry),
             closed: None,
         },
     )
@@ -245,7 +245,7 @@ fn placed_collars_are_written_under_the_identity_frame_of_the_wells_codes() {
         .with(
             "F1",
             Source::Shape {
-                geometry: Geometry {
+                geometry: std::sync::Arc::new(Geometry {
                     kind: "well",
                     patches: vec![Patch {
                         index: 0,
@@ -254,7 +254,7 @@ fn placed_collars_are_written_under_the_identity_frame_of_the_wells_codes() {
                         topology: Topology::Polylines(vec![2]),
                         closed: Vec::new(),
                     }],
-                },
+                }),
                 closed: None,
             },
         )
@@ -336,7 +336,7 @@ fn under_a_turned_frame_a_collar_is_written_where_its_datum_is() {
         .with(
             "path",
             Source::Shape {
-                geometry: Geometry {
+                geometry: std::sync::Arc::new(Geometry {
                     kind: "polyline",
                     patches: vec![Patch {
                         index: 0,
@@ -345,7 +345,7 @@ fn under_a_turned_frame_a_collar_is_written_where_its_datum_is() {
                         topology: Topology::Polylines(vec![3]),
                         closed: Vec::new(),
                     }],
-                },
+                }),
                 closed: None,
             },
         )

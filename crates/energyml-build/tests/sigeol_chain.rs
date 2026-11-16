@@ -10,6 +10,7 @@
 //! What each one needs to break is said on each.
 
 use serde_json::{Value, json};
+use std::sync::Arc;
 
 use energyml_build::geojson;
 use energyml_build::operation::{Choices, Identity, Plan, Registry, When};
@@ -64,7 +65,7 @@ fn files(named: &[(&str, Vec<geojson::Feature>)]) -> Pieces {
             format!("export{at}"),
             Source::Features {
                 name: (*name).into(),
-                features: items.clone(),
+                features: Arc::new(items.clone()),
             },
         );
     }
@@ -82,9 +83,7 @@ fn number(plan: &Plan, title: &str) -> f64 {
         .parameters
         .iter()
         .find_map(|one| match one {
-            energyml_domain::provenance::Parameter::Double {
-                title: name, value, ..
-            } if name == title => Some(*value),
+            other if other.title() == title => other.number(),
             _ => None,
         })
         .unwrap_or_else(|| panic!("no `{title}` in the activity"))
@@ -313,7 +312,7 @@ fn imported(passes: &[(f64, f64)]) -> Plan {
         "features",
         Source::Features {
             name: "Borehole.json".into(),
-            features: read.features,
+            features: Arc::new(read.features),
         },
     );
     Registry::new()
@@ -428,7 +427,7 @@ fn enrich(csv: &str, known: Known) -> Plan {
             "table",
             Source::Table {
                 name: "passes.csv".into(),
-                table,
+                table: Arc::new(table),
                 template: osdu::from_json(&template).expect("a template"),
             },
         )
@@ -486,4 +485,33 @@ fn the_csv_enrichment_lands_on_the_imported_frame_without_moving_a_node() {
             .count();
         assert_eq!(frames, 0, "{log:?}: the frame stays the one the import wrote");
     }
+}
+
+/// `[build-ops-3 S2]`: when no group can be placed in the target system the
+/// plan is refused, instead of succeeding with the CRS and a table of units
+/// and no point set at all.
+///
+/// Break it: remove the "no group could be placed" refusal in
+/// `sigeol::plan_of`; the plan then comes back `Ok` with an empty set of
+/// point sets (and a `not-placed` note per group).
+#[test]
+fn a_plan_that_places_no_group_is_refused_not_an_empty_success() {
+    let pieces = files(&[(
+        "GeologicUnit_Bartonien_olderNamedAge_ZONE_2.json",
+        features(&[unit(
+            "1",
+            "Marnes et Caillasses",
+            ("Bartonien", 37.8),
+            ("Lutétien", 47.8),
+        )]),
+    )]);
+    let made = plan_units(
+        &pieces,
+        Choices::new().set("stage", "Bartonien").set("project", 999_999),
+    );
+    assert!(
+        made.is_err(),
+        "an unknown target system writes nothing, so it must refuse: {:?}",
+        made.map(|plan| plan.objects.len())
+    );
 }

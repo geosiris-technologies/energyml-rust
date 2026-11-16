@@ -123,6 +123,11 @@ impl Wfs {
                     collection.name
                 )));
             };
+            // Before the request, as the doc above says: a degenerate area is a
+            // named refusal, not `POLYGON(())` sent to the server.
+            area.validate().map_err(|why| {
+                Error::Refused(format!("the area of `{}` is not usable: {why}", collection.name))
+            })?;
             clauses.push(format!(
                 "Intersects(\"{}\",SRID=4326;{})",
                 filter.property,
@@ -132,6 +137,12 @@ impl Wfs {
 
         for term in &query.terms {
             let declared = self.declared(collection, term)?;
+            declared.kind.check(&term.value).map_err(|why| {
+                Error::Refused(format!(
+                    "the value of `{}` in `{}` is not usable: {why}",
+                    term.name, collection.name
+                ))
+            })?;
             clauses.push(format!("\"{}\"='{}'", declared.property, escape(&term.value)));
         }
 

@@ -4,6 +4,8 @@ From an EnergyML representation to points, indices and a coordinate reference sy
 
 `scene::of_package` reads a whole package into scene objects with their properties and colours, so every face gets the same answer.
 
+Around a well, `around_well` gives the frame of a hole (its high side), polar layers, transverse grids, envelopes and the 2D projections of a well; a convention the file does not state is refused until the caller declares it.
+
 ## Features
 
 | Feature | Default | Effect |

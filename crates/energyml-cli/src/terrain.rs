@@ -17,9 +17,9 @@ use std::time::Instant;
 
 use anyhow::{Context, Result, bail};
 use clap::Parser;
+use energyml_build::apply;
 use energyml_build::operation::{Choices, Identity, Registry, When};
 use energyml_build::pieces::{Pieces, Source};
-use energyml_build::{apply, epc};
 use energyml_domain::reproject::Reprojector;
 use energyml_providers::terrain::{self, TerrainCatalogue};
 use energyml_providers::transport::{Native, Transport};
@@ -67,7 +67,7 @@ pub struct TerrainArgs {
 pub fn run(args: TerrainArgs) -> Result<ExitCode> {
     let mut catalogue = TerrainCatalogue::builtin().map_err(|why| anyhow::anyhow!("{why}"))?;
     if let Some(path) = &args.catalogue {
-        let text = std::fs::read_to_string(path).with_context(|| format!("lecture de {}", path.display()))?;
+        let text = std::fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
         let user =
             TerrainCatalogue::parse(&text).map_err(|why| anyhow::anyhow!("{}: {why}", path.display()))?;
         catalogue = catalogue.with_user(user);
@@ -128,7 +128,7 @@ pub fn run(args: TerrainArgs) -> Result<ExitCode> {
     // Four bytes a node, and the header: a ceiling that names a typo, never the data.
     let most = (u64::from(ask.width) * u64::from(ask.height) * 4 + (1 << 20)) as usize;
     let raster = terrain::read_answer(answer, most).map_err(|why| anyhow::anyhow!("{why}"))?;
-    let lattice = terrain::lattice_of(&raster).map_err(|why| anyhow::anyhow!("{why}"))?;
+    let (lattice, voids) = terrain::lattice_with_voids(&raster).map_err(|why| anyhow::anyhow!("{why}"))?;
     let holes = lattice.z.iter().filter(|z| !z.is_finite()).count();
     println!(
         "\nreceived {} × {} values in {:.2}s, {} without a value",
@@ -139,7 +139,6 @@ pub fn run(args: TerrainArgs) -> Result<ExitCode> {
     );
     // Why they have no value: the file's own no-data is expected, the others are
     // what the service did and are said, not hidden.
-    let (_, voids) = terrain::voids_of(&raster);
     if voids.undeclared + voids.blended_ring > 0 {
         println!(
             "            of which {} below {} m that the file does not declare and {} neighbours of such a pixel (the service's resampling)",
@@ -174,14 +173,8 @@ pub fn run(args: TerrainArgs) -> Result<ExitCode> {
         choices = choices.set("dataFile", format!("{stem}.h5"));
     }
     for one in &args.choices {
-        let Some((name, value)) = one.split_once('=') else {
-            bail!("`--set {one}`: expected `name=value`");
-        };
-        let value: serde_json::Value = match serde_json::from_str(value) {
-            Ok(json @ (serde_json::Value::Number(_) | serde_json::Value::Bool(_))) => json,
-            _ => serde_json::Value::String(value.to_string()),
-        };
-        choices = choices.set(name, value);
+        let (name, value) = super::target::parse_choice(one)?;
+        choices = choices.set(&name, value);
     }
 
     let pieces = Pieces::empty().with("lattice", Source::Lattice(lattice));
@@ -209,28 +202,9 @@ pub fn run(args: TerrainArgs) -> Result<ExitCode> {
         println!("  [{}] {}", note.key, note.detail);
     }
 
-    let name = out
-        .file_name()
-        .map(|n| n.to_string_lossy().to_string())
-        .unwrap_or_else(|| out.display().to_string());
-    let mut store = epc::open(
-        args.into.as_deref(),
-        &name,
-        std::sync::Arc::new(super::registry::all()),
-    )
-    .with_context(|| match &args.into {
-        Some(path) => format!("opening {}", path.display()),
-        None => "making an empty package".to_string(),
-    })?;
-    let parent = out
-        .parent()
-        .filter(|p| !p.as_os_str().is_empty())
-        .unwrap_or(std::path::Path::new("."));
-    store.external_files_mut().set_root(parent);
+    let mut store = super::target::open(args.into.as_deref(), &out)?;
     let made = apply::apply(&plan, &mut store, &when);
-    store
-        .save_as(&out, &energyml_storage::SaveOptions::default())
-        .with_context(|| format!("writing {}", out.display()))?;
+    super::target::save(&store, &out)?;
     println!("\n{} object(s) written to {}", made.written.len(), out.display());
     for why in &made.refused {
         eprintln!("  [refused] {why}");
@@ -246,17 +220,25 @@ pub fn run(args: TerrainArgs) -> Result<ExitCode> {
 }
 
 /// `x_min,y_min,x_max,y_max`.
+///
+/// `f64::from_str` accepts `NaN` and `inf`, which would flow into the
+/// reprojection and the request URL: they are refused by name here.
 fn parse_area(text: &str) -> Result<[f64; 4]> {
     let numbers: Vec<f64> = text
         .split(',')
         .map(|one| {
-            one.trim()
+            let number = one
+                .trim()
                 .parse::<f64>()
-                .with_context(|| format!("`{one}` is not a number"))
+                .with_context(|| format!("`{one}` is not a number"))?;
+            if !number.is_finite() {
+                bail!("`--area {text}`: `{}` is not a finite number", one.trim());
+            }
+            Ok(number)
         })
         .collect::<Result<_>>()?;
     let Ok(area) = <[f64; 4]>::try_from(numbers) else {
-        bail!("`--area {text}` : quatre nombres attendus, x_min,y_min,x_max,y_max");
+        bail!("`--area {text}`: four numbers expected, x_min,y_min,x_max,y_max");
     };
     Ok(area)
 }
@@ -302,4 +284,32 @@ fn list(catalogue: &TerrainCatalogue, area_wgs84: Option<[f64; 4]>) {
             area[0], area[1], area[2], area[3]
         );
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_area;
+
+    #[test]
+    fn a_well_formed_area_is_read() {
+        assert_eq!(parse_area("1, 2,3.5,4").unwrap(), [1.0, 2.0, 3.5, 4.0]);
+    }
+
+    #[test]
+    fn a_non_finite_coordinate_is_refused_by_name() {
+        for bad in ["NaN,0,1,1", "0,inf,1,1", "0,0,1,-infinity"] {
+            let why = parse_area(bad).expect_err(bad).to_string();
+            assert!(why.contains("not a finite number"), "{bad}: {why}");
+        }
+    }
+
+    #[test]
+    fn the_wrong_count_is_refused_in_english() {
+        let why = parse_area("1,2,3").unwrap_err().to_string();
+        assert!(why.contains("four numbers expected"), "{why}");
+        assert!(!why.contains("attendus"), "{why}");
+    }
+
+    // Break it: remove the `is_finite` test (the second test fails: NaN is
+    // accepted), or put the French sentence back (the third fails).
 }

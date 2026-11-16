@@ -37,7 +37,6 @@ use energyml_build::apply::apply;
 use energyml_build::operation::{Choices, Error, Identity, Numbers, Plan, Refusal, Registry, When};
 use energyml_build::pieces::{Known, Pieces, Ref, Source};
 use energyml_domain::crs::VerticalQuantity;
-use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 use energyml_storage::EpcStore;
 
@@ -180,7 +179,7 @@ fn bag(geometry: Geometry, qualified_type: &str, from: &Known, to: &Known) -> Pi
         .with(
             "shape",
             Source::Shape {
-                geometry,
+                geometry: Arc::new(geometry),
                 closed: None,
             },
         )
@@ -235,9 +234,7 @@ fn reported(plan: &Plan, title: &str) -> Option<f64> {
         .parameters
         .iter()
         .find_map(|parameter| match parameter {
-            Parameter::Double {
-                title: named, value, ..
-            } if named == title => Some(*value),
+            other if other.title() == title => other.number(),
             _ => None,
         })
 }

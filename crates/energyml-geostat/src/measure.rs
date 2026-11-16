@@ -56,6 +56,7 @@
 //! nothing.
 
 use crate::Error;
+use crate::vector::{cross, dot, norm, sub};
 
 /// A point, `[x, y, z]`.
 pub type Point = [f64; 3];
@@ -97,26 +98,6 @@ pub struct Volumes {
     /// Cells of zero volume - collapsed, a pinch-out. Kept at zero, and
     /// counted.
     pub flat: usize,
-}
-
-fn sub(a: Point, b: Point) -> Point {
-    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
-}
-
-fn cross(a: Point, b: Point) -> Point {
-    [
-        a[1] * b[2] - a[2] * b[1],
-        a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0],
-    ]
-}
-
-fn dot(a: Point, b: Point) -> f64 {
-    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-}
-
-fn norm(a: Point) -> f64 {
-    dot(a, a).sqrt()
 }
 
 fn finite(p: &Point) -> bool {

@@ -778,3 +778,21 @@ fn a_2d_grid_is_a_fillable_surface_a_fault_and_an_ijk_grid_are_not() {
     });
     assert_eq!(feature, Some(Some("feature-1".to_string())));
 }
+
+#[test]
+fn assembling_with_the_traces_already_computed_gives_the_same_catalogue() {
+    let i = inputs(vec![[0.0, 0.0], [100.0, 0.0]]);
+    let w = well(
+        "w1",
+        WellKind::Frame,
+        Some("wb"),
+        [30.0, 5.0, 10.0],
+        vec![[30.0, 5.0, 10.0], [40.0, 5.0, -90.0]],
+    );
+    let contributions = wells(vec![w]);
+    let (sections, notes) = energyml_section::crosses::traces(&i).expect("traces");
+    let once =
+        energyml_section::assemble::assemble_with(&i, sections, notes, &contributions).expect("assembles");
+    assert_eq!(once, assemble(&i, &contributions).expect("assembles"));
+    // Break it: let `assemble_with` drop the `notes` it is handed.
+}

@@ -13,6 +13,7 @@ use energyml_build::operation::{Applies, Category, Choices, Identity, Need, Purp
 use energyml_build::pieces::{Known, Pieces, Ref, Source};
 use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
+use std::sync::Arc;
 
 fn when() -> When {
     When {
@@ -30,7 +31,7 @@ fn samples() -> Pieces {
         .with(
             "shape",
             Source::Shape {
-                geometry: Geometry {
+                geometry: Arc::new(Geometry {
                     kind: "cloud",
                     patches: vec![Patch {
                         index: 0,
@@ -39,7 +40,7 @@ fn samples() -> Pieces {
                         topology: Topology::Points,
                         closed: Vec::new(),
                     }],
-                },
+                }),
                 closed: None,
             },
         )
@@ -65,14 +66,7 @@ fn samples() -> Pieces {
 }
 
 fn titles(parameters: &[Parameter]) -> Vec<&str> {
-    parameters
-        .iter()
-        .map(|p| match p {
-            Parameter::Double { title, .. }
-            | Parameter::Text { title, .. }
-            | Parameter::Object { title, .. } => title.as_str(),
-        })
-        .collect()
+    parameters.iter().map(Parameter::title).collect()
 }
 
 /// **An activity records what the run used, and only that.** The defect this

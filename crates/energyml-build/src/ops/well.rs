@@ -51,8 +51,10 @@
 
 use serde_json::{Value, json};
 
+use energyml_analysis::well_plan;
 use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::Topology;
+use energyml_geometry::vector::distance;
 
 use crate::crs::FrameKind;
 use crate::declare::{Choice, Features, Inputs, ObjectRef, Params, Shape as ShapeIn, Suggestions};
@@ -231,7 +233,7 @@ pub(crate) fn polylines_of(trace: Option<&ShapeIn>, features: Option<&Features>)
         }
     }
     if let Some(collection) = features {
-        for feature in &collection.features {
+        for feature in collection.features.iter() {
             if matches!(feature.shape, Shape::Lines) {
                 for part in &feature.parts {
                     found.push(Found::Foreign(part.clone()));
@@ -284,10 +286,6 @@ pub(crate) fn topmost(zs: &[f64], vertical_up: Option<bool>) -> f64 {
         Some(false) => zs.iter().copied().fold(f64::INFINITY, f64::min),
         _ => zs.iter().copied().fold(f64::NEG_INFINITY, f64::max),
     }
-}
-
-fn distance(a: [f64; 3], b: [f64; 3]) -> f64 {
-    ((a[0] - b[0]).powi(2) + (a[1] - b[1]).powi(2) + (a[2] - b[2]).powi(2)).sqrt()
 }
 
 /// Measured depth at each point: the drop from the ground to the first, then
@@ -352,11 +350,27 @@ fn tangents(points: &[[f64; 3]]) -> Vec<[f64; 3]> {
 
 /// The frame's nodes: one per control point, or every `spacing` of MD from
 /// the first to the last, the last always included.
-fn frame_mds(mds: &[f64], spacing: Option<f64>) -> Vec<f64> {
+///
+/// A spacing that would place more than [`well_plan::MOST_STATIONS`] nodes - the
+/// bound `well-from-plan` keeps for its stations - is refused by name, before any
+/// is placed: a spacing of a millimetre typed for a metre would otherwise push
+/// millions of nodes into a vector with no end.
+fn frame_mds(mds: &[f64], spacing: Option<f64>) -> Result<Vec<f64>, Error> {
     let Some(step) = spacing.filter(|s| s.is_finite() && *s > 0.0) else {
-        return mds.to_vec();
+        return Ok(mds.to_vec());
     };
     let (first, last) = (mds[0], mds[mds.len() - 1]);
+    let wanted = ((last - first) / step).ceil() + 1.0;
+    if wanted > well_plan::MOST_STATIONS as f64 {
+        return Err(Error::from(Refusal::on(
+            "spacing",
+            format!(
+                "a frame node every {step} of MD on a hole of {} would place about {wanted:.0} nodes, more than the {} one frame may hold - take a larger spacing",
+                last - first,
+                well_plan::MOST_STATIONS
+            ),
+        )));
+    }
     let mut out = Vec::new();
     let mut md = first;
     while md < last - step * 1e-9 {
@@ -364,7 +378,7 @@ fn frame_mds(mds: &[f64], spacing: Option<f64>) -> Vec<f64> {
         md += step;
     }
     out.push(last);
-    out
+    Ok(out)
 }
 
 fn floats(file: &str, path: &str, count: usize) -> Value {
@@ -776,7 +790,7 @@ pub fn write(well: &Wellbore<'_>, identity: &Identity, rank: &mut usize) -> Resu
     });
 
     // -- the frame ---------------------------------------------------------
-    let nodes = frame_mds(&mds, well.spacing);
+    let nodes = frame_mds(&mds, well.spacing)?;
     let derived_frame = support::next_uuid(identity, &format!("well-frame:{}", well.seed), rank)?;
     let frame_uuid = well.keep.map(|(_, one)| one.to_string()).unwrap_or(derived_frame);
     let frame_title = format!("{title} - frame");
@@ -884,24 +898,7 @@ impl Operation for WellFromPolyline {
         // `Geographic2dCrs`'s horizontal axes are degrees, and every hole comes
         // out between a hundred and ten thousand times longer than the model
         // is wide, in a package `check` validates.
-        if frame.kind == Some(FrameKind::Geographic) {
-            let (slot, what) = match written.frame.crs.as_ref() {
-                Some(_) => (
-                    "crs",
-                    format!(
-                        "the frame `{}` named",
-                        frame.crs["Title"].as_str().unwrap_or_default()
-                    ),
-                ),
-                None => ("project", "the frame created without `project`".to_string()),
-            };
-            return Err(Refusal::on(
-                slot,
-                format!(
-                    "a wellbore is a vertical extent, and {what} measures its horizontal axes in degrees while its depths are linear: every hole would be written between a hundred and ten thousand times longer than the model is wide, which no reader can reconcile - name a projected system in `project` (EPSG:2154 for mainland France), or a LocalEngineeringCompoundCrs as `crs`"
-                ),
-            ));
-        }
+        super::blocks::refuse_degrees(&frame, written.frame.crs.is_some(), "a wellbore", "hole")?;
         let line: Vec<[f64; 3]> = found.placed_in(&frame)?;
         let known: Option<&Known> = cx.known().into_iter().next();
         let vertical_up = if frame.objects.is_empty() {
@@ -951,47 +948,22 @@ impl Operation for WellFromPolyline {
             None => {
                 let feature_uuid = support::next_uuid(identity, &format!("well-feature:{seed}"), &mut rank)?;
                 let feature_title = format!("{title} - feature");
-                objects.push(NewObject {
-                    uuid: feature_uuid.clone(),
-                    qualified_type: "resqml22.WellboreFeature".to_string(),
-                    role: "feature".to_string(),
-                    title: feature_title.clone(),
-                    json: json!({
-                        "$type": "resqml22.WellboreFeature",
-                        "uuid": feature_uuid,
-                        "schemaVersion": "2.2",
-                        "Citation": support::citation(when, &feature_title),
-                        "IsWellKnown": false,
-                    }),
-                });
                 let uuid = support::next_uuid(identity, &format!("well-interpretation:{seed}"), &mut rank)?;
                 let interpretation_title = format!("{title} - interpretation");
-                objects.push(NewObject {
-                    uuid: uuid.clone(),
-                    qualified_type: "resqml22.WellboreInterpretation".to_string(),
-                    role: "interpretation".to_string(),
-                    title: interpretation_title.clone(),
-                    json: json!({
-                        "$type": "resqml22.WellboreInterpretation",
-                        "uuid": uuid,
-                        "schemaVersion": "2.2",
-                        "Citation": support::citation(when, &interpretation_title),
-                        "Domain": "depth",
-                        "IsDrilled": false,
-                        "InterpretedFeature": {
-                            "$type": "eml23.DataObjectReference",
-                            "Uuid": feature_uuid,
-                            "QualifiedType": "resqml22.WellboreFeature",
-                            "Title": feature_title,
-                        },
-                    }),
-                });
-                json!({
-                    "$type": "eml23.DataObjectReference",
-                    "Uuid": uuid,
-                    "QualifiedType": "resqml22.WellboreInterpretation",
-                    "Title": interpretation_title,
-                })
+                let (pair, interpretation) = super::blocks::wellbore_pair(
+                    &feature_uuid,
+                    &feature_title,
+                    &uuid,
+                    &interpretation_title,
+                    |name| support::citation(when, name),
+                    super::blocks::WellboreFlags {
+                        is_well_known: Some(false),
+                        is_drilled: Some(false),
+                        ..Default::default()
+                    },
+                );
+                objects.extend(pair);
+                interpretation
             }
         };
 
@@ -1112,5 +1084,33 @@ impl Operation for WellFromPolyline {
             count("frameNodeCount", "frame nodes"),
             count("mdMax", "the deepest measured depth"),
         ])
+    }
+}
+
+#[cfg(test)]
+mod frame_tests {
+    use super::*;
+
+    /// [build-ops-3 S3] A spacing of a millimetre on a hole of 3000 m is refused by
+    /// name before any node is placed (it was an endless loop and an unbounded
+    /// vector); an ordinary spacing, none, and a spacing that does not divide the
+    /// hole keep their nodes, the last always included.
+    #[test]
+    fn a_spacing_that_would_place_millions_of_nodes_is_refused() {
+        let mds = [0.0, 1000.0, 3000.0];
+        let refused = frame_mds(&mds, Some(1e-9)).unwrap_err();
+        assert!(refused.to_string().contains("`spacing`"), "{refused}");
+        assert!(refused.to_string().contains("take a larger spacing"), "{refused}");
+        assert!(
+            frame_mds(&mds, Some(1e-3)).is_err(),
+            "three million nodes is past the bound"
+        );
+        let ordinary = frame_mds(&mds, Some(1000.0)).unwrap();
+        assert_eq!(ordinary, vec![0.0, 1000.0, 2000.0, 3000.0]);
+        let uneven = frame_mds(&mds, Some(1300.0)).unwrap();
+        assert_eq!(uneven, vec![0.0, 1300.0, 2600.0, 3000.0]);
+        assert_eq!(frame_mds(&mds, None).unwrap(), mds.to_vec());
+        assert_eq!(frame_mds(&mds, Some(f64::NAN)).unwrap(), mds.to_vec());
+        // Break it: drop the bound and the first call never returns.
     }
 }

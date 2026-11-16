@@ -489,11 +489,5 @@ fn aliases(object: &dyn Reflect) -> Vec<(String, String)> {
         .collect()
 }
 
-/// A number without useless zeros.
-fn number(value: f64) -> String {
-    if value == value.trunc() && value.abs() < 1e15 {
-        format!("{}", value as i64)
-    } else {
-        format!("{value}")
-    }
-}
+// A number without useless zeros: the one copy, in core.
+use energyml_core::text::plain_number as number;

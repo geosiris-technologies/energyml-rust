@@ -846,6 +846,26 @@ pub fn of_representation(
     source: &dyn ArraySource,
     known: &Known<'_>,
 ) -> Result<Painting, Refusal> {
+    of_representation_cached(
+        target,
+        frames_of,
+        rank,
+        source,
+        known,
+        &well_strata::StrataCache::new(),
+    )
+}
+
+/// [`of_representation`] for a caller painting **many representations of one package**: the ranks and the merged
+/// colours go through `cache` ([`well_strata::StrataCache`]) and are read once, not once per frame.
+pub fn of_representation_cached(
+    target: &dyn Reflect,
+    frames_of: &dyn Fn(&str) -> Vec<Box<dyn DynObject>>,
+    rank: Option<&str>,
+    source: &dyn ArraySource,
+    known: &Known<'_>,
+    cache: &well_strata::StrataCache,
+) -> Result<Painting, Refusal> {
     let wanted = Wanted::IntervalUnits { rank };
     let key = target.type_info().type_key;
     // A frame that states units says for itself; anything that is neither a
@@ -853,7 +873,7 @@ pub fn of_representation(
     // A frame that states none is not read here: its `NodeMd` is read below,
     // once there is something to look it up in.
     if key != TRAJECTORY && (key != FRAME || well_strata::states_units(target)) {
-        match well_strata::of_frame(target, &wanted, source, known) {
+        match well_strata::of_frame_cached(target, &wanted, source, known, cache) {
             Ok(strata) => return Ok(Painting::Own(strata)),
             Err(refusal) if refusal.is_absence() && key == FRAME => {}
             Err(refusal) => return Err(refusal),
@@ -887,7 +907,7 @@ pub fn of_representation(
         {
             continue;
         }
-        match well_strata::of_frame(frame, &wanted, source, known) {
+        match well_strata::of_frame_cached(frame, &wanted, source, known, cache) {
             Ok(strata) => read.push((strata, md_reference(frame, source)?)),
             Err(refusal) if refusal.is_absence() => {}
             Err(refusal) => return Err(refusal),
@@ -925,30 +945,12 @@ fn title_of(object: &dyn Reflect) -> String {
 }
 
 fn reference_of(object: &dyn Reflect, field: &str) -> Option<String> {
-    let FieldValue::Object(reference) = object.field(field)? else {
-        return None;
-    };
-    identity::uuid_of_reflect(reference)
-        .filter(|uuid| !uuid.is_empty())
-        .map(str::to_string)
+    identity::reference_uuid(object, field)
 }
 
-fn string_of(object: &dyn Reflect, field: &str) -> Option<String> {
-    match object.field(field)? {
-        FieldValue::Scalar(scalar) => scalar
-            .as_str()
-            .map(str::to_string)
-            .filter(|text| !text.trim().is_empty()),
-        _ => None,
-    }
-}
-
-fn number_of(object: &dyn Reflect, field: &str) -> Option<f64> {
-    match object.field(field)? {
-        FieldValue::Scalar(scalar) => scalar.as_f64(),
-        _ => None,
-    }
-}
+// The readers of a field are the door's (ADR 0046), under the names this file
+// already uses.
+use energyml_core::reflect::fields::{number as number_of, text as string_of};
 
 fn doubles(array: &dyn Reflect, source: &dyn ArraySource, at: &str) -> Result<Vec<f64>, Refusal> {
     match values::read(array, source, at)? {

@@ -48,7 +48,7 @@
 //! two kinds titled `X` and two titled `Y`, with different uuids.
 
 use std::collections::HashMap;
-use std::sync::{OnceLock, RwLock};
+use std::sync::{Mutex, OnceLock, RwLock};
 
 use energyml_core::value::{Reflect, Scalar};
 
@@ -407,10 +407,23 @@ pub fn set_default(dictionary: Dictionary) {
 ///
 /// Built over an [`ObjectSource`] - the package - and a dictionary, in that
 /// order of authority.
+///
+/// **A kind object of the package is read once per resolver.** A package has
+/// tens of thousands of properties sharing a few dozen kinds, and a resolver
+/// is typically asked once per property: the `PropertyKind` objects it found
+/// in the package (and the absence of those it did not) are remembered for
+/// the life of the resolver, so each is fetched and parsed once however many
+/// properties follow it. What is remembered is only what the **package**
+/// said; the dictionary is consulted afresh on every call (so
+/// [`set_default`] still takes effect at once). The memory cannot go stale
+/// because it lives no longer than the resolver, which borrows the source for
+/// that whole time: build a new resolver after a source has changed.
 pub struct Resolver<'a> {
     objects: &'a dyn ObjectSource,
     dictionary: Option<&'a Dictionary>,
     depth_limit: usize,
+    /// What the package held for an address (`u:<uri>|<uuid>` or `i:<uuid>`, as asked).
+    package_kinds: Mutex<HashMap<String, Option<Kind>>>,
 }
 
 impl<'a> Resolver<'a> {
@@ -420,6 +433,7 @@ impl<'a> Resolver<'a> {
             objects,
             dictionary: None,
             depth_limit: 64,
+            package_kinds: Mutex::default(),
         }
     }
 
@@ -430,6 +444,7 @@ impl<'a> Resolver<'a> {
             objects,
             dictionary: Some(dictionary),
             depth_limit: 64,
+            package_kinds: Mutex::default(),
         }
     }
 
@@ -510,12 +525,7 @@ impl<'a> Resolver<'a> {
         dictionary: &Dictionary,
         notes: &mut Vec<String>,
     ) -> Result<Kind> {
-        let held = match uri {
-            Some(uri) => self.objects.object_at(uri),
-            None => self.objects.object(uuid),
-        };
-        if let Some(object) = held {
-            let kind = from_object(object.as_reflect(), uuid);
+        if let Some(kind) = self.package_kind(uuid, uri) {
             if let Some(entry) = dictionary.by_uuid(uuid)
                 && !entry.title.eq_ignore_ascii_case(&kind.title)
             {
@@ -548,6 +558,33 @@ impl<'a> Resolver<'a> {
                 ""
             }
         )))
+    }
+
+    /// The kind the **package** holds for an address, read through the source
+    /// once per resolver (see the type's documentation for why that is safe).
+    fn package_kind(&self, uuid: &str, uri: Option<&str>) -> Option<Kind> {
+        let key = match uri {
+            Some(uri) => format!("u:{uri}|{uuid}"),
+            None => format!("i:{uuid}"),
+        };
+        if let Some(known) = self
+            .package_kinds
+            .lock()
+            .expect("the kind memory is never held across a panic")
+            .get(&key)
+        {
+            return known.clone();
+        }
+        let held = match uri {
+            Some(uri) => self.objects.object_at(uri),
+            None => self.objects.object(uuid),
+        };
+        let kind = held.map(|object| from_object(object.as_reflect(), uuid));
+        self.package_kinds
+            .lock()
+            .expect("the kind memory is never held across a panic")
+            .insert(key, kind.clone());
+        kind
     }
 
     /// A RESQML 2.0.1 standard name.
@@ -657,21 +694,23 @@ fn from_object(object: &dyn Reflect, uuid: &str) -> Kind {
     let mut parent_ref: Option<&dyn Reflect> = object
         .field("Parent")
         .and_then(|f| f.as_object())
-        .filter(|reference| uuid_of_reference(*reference).is_some());
+        .filter(|reference| energyml_core::identity::non_empty_uuid_of_reflect(*reference).is_some());
 
     if parent_ref.is_none()
         && let Some(inner) = object.field("ParentPropertyKind").and_then(|f| f.as_object())
     {
         parent_ref = Some(inner)
-            .filter(|reference| uuid_of_reference(*reference).is_some())
+            .filter(|reference| energyml_core::identity::non_empty_uuid_of_reflect(*reference).is_some())
             .or_else(|| {
                 inner
                     .field("LocalPropertyKind")
                     .and_then(|f| f.as_object())
-                    .filter(|reference| uuid_of_reference(*reference).is_some())
+                    .filter(|reference| {
+                        energyml_core::identity::non_empty_uuid_of_reflect(*reference).is_some()
+                    })
             });
     }
-    let parent = parent_ref.and_then(uuid_of_reference);
+    let parent = parent_ref.and_then(energyml_core::identity::non_empty_uuid_of_reflect);
     let parent_uri = parent_ref.and_then(energyml_core::identity::uri_of_reflect);
 
     Kind {
@@ -689,21 +728,9 @@ fn from_object(object: &dyn Reflect, uuid: &str) -> Kind {
     }
 }
 
-fn text(object: &dyn Reflect, field: &str) -> Option<String> {
-    match object.field(field)?.as_scalar()? {
-        Scalar::Str(s) if !s.is_empty() => Some(s.to_string()),
-        Scalar::Str(_) => None,
-        other => Some(other.to_string()),
-    }
-}
-
-/// The uuid a reference names - the identity layer's reading, so every
-/// spelling of the field is one answer.
-fn uuid_of_reference(object: &dyn Reflect) -> Option<String> {
-    energyml_core::identity::uuid_of_reflect(object)
-        .filter(|uuid| !uuid.is_empty())
-        .map(str::to_string)
-}
+// The readers of a field are the door's (ADR 0046), under the names this file
+// already uses.
+use energyml_core::reflect::fields::text;
 
 #[cfg(test)]
 mod tests {
@@ -1002,7 +1029,8 @@ pub enum KindIssue {
     ///
     /// Common TRG §11.9 anticipates it: *"if there is no match in the
     /// Energistics Unit of Measure Dictionary, then this attribute is purely
-    /// for human information"*. This build carries four unit families, so most
+    /// for human information"*. This build carries a few unit families
+    /// ([`crate::units::Dimension::ALL`]), so most
     /// classes fall here until the unit dictionary is vendored.
     QuantityClassNotCheckable {
         /// The class as the kind declares it.
@@ -1048,8 +1076,9 @@ impl std::fmt::Display for KindIssue {
             KindIssue::QuantityClassNotCheckable { class, uom } => write!(
                 f,
                 "`{uom}` against the quantity class `{class}` was not checked: this build converts \
-                 four families of unit, and `{class}` is not one of them (the Energistics unit \
-                 dictionary is not vendored yet)"
+                 {} families of unit, and `{class}` is not one of them (the Energistics unit \
+                 dictionary is not vendored yet)",
+                crate::units::Dimension::ALL.len()
             ),
         }
     }
@@ -1063,13 +1092,13 @@ impl std::fmt::Display for KindIssue {
 /// checks by hand.
 fn dimension_of_class(class: &str) -> Option<crate::units::Dimension> {
     use crate::units::Dimension;
-    match class.trim().to_ascii_lowercase().as_str() {
-        "length" => Some(Dimension::Length),
-        "plane angle" | "angle" => Some(Dimension::PlaneAngle),
-        "pressure" => Some(Dimension::Pressure),
-        "time" => Some(Dimension::Time),
-        _ => None,
+    let class = class.trim().to_ascii_lowercase();
+    // `angle` is an alias of `plane angle`; every other family answers to its
+    // own `class_name`, so the list is held once, in `units`.
+    if class == "angle" {
+        return Some(Dimension::PlaneAngle);
     }
+    Dimension::ALL.iter().copied().find(|d| d.class_name() == class)
 }
 
 /// Check one property against the three rules the guides state.
@@ -1107,7 +1136,7 @@ pub fn check(resolution: &Resolution, uom: Option<&str>) -> Vec<KindIssue> {
                     out.push(KindIssue::UomOutsideQuantityClass {
                         uom: uom.to_string(),
                         class: class.to_string(),
-                        found: found.map(|d| format!("{d:?}").to_lowercase()),
+                        found: found.map(|d| d.class_name().to_string()),
                     });
                 }
             }
