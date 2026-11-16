@@ -14,6 +14,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
+use energyml_core::identifiers;
 use energyml_core::value::{FieldValue, OwnedValue, Reflect};
 
 use crate::Resolution;
@@ -127,6 +128,16 @@ impl Fixed {
 /// The caller reopens `out` with its own reading switches and asks
 /// [`Fixed::lost`] for the verdict.
 pub fn fix(store: &mut EpcStore, rows: &BTreeMap<String, Row>, out: &Path) -> Result<Option<Fixed>> {
+    // Carry over every file name the package *had*, before anything is renamed. A save regenerates the `.rels` from
+    // what the store knows, and what it knows about external files is `declared_files` - so a name only ever read out
+    // of a `.rels` is dropped unless it is put back. Put back **after** the renaming, it wrote the old name over the
+    // new one of every proxy (a resqml 2.0.1 array keeps its file name in its proxy's `.rels`, not in the object), and
+    // the repaired package still declared the old name.
+    let known: Vec<(String, String)> = store.external_file_map().into_iter().collect();
+    for (uuid, file) in known {
+        store.register_external_file(&uuid, file);
+    }
+
     let mut declarations = 0usize;
     let mut renamed = Vec::new();
     for (declared, row) in rows {
@@ -135,11 +146,6 @@ pub fn fix(store: &mut EpcStore, rows: &BTreeMap<String, Row>, out: &Path) -> Re
             continue;
         }
         let name = found.name();
-
-        for proxy in &row.proxies {
-            store.register_external_file(proxy, name.clone());
-            declarations += 1;
-        }
 
         let users: Vec<String> = store
             .resources()
@@ -157,6 +163,14 @@ pub fn fix(store: &mut EpcStore, rows: &BTreeMap<String, Row>, out: &Path) -> Re
             })
             .map(|summary| summary.uri.clone())
             .collect();
+
+        // The proxies take the new name only now: registered before, they made the objects that reach the file through
+        // them resolve to the new name already, so those objects left `users` and kept the old name where they write
+        // it (the fesapi trick: the file name in a proxy reference's `UUID`).
+        for proxy in &row.proxies {
+            store.register_external_file(proxy, name.clone());
+            declarations += 1;
+        }
         for uri in users {
             let object = store.edit(&uri)?;
             if rename_uris(object, declared, &name) > 0 {
@@ -168,15 +182,6 @@ pub fn fix(store: &mut EpcStore, rows: &BTreeMap<String, Row>, out: &Path) -> Re
 
     if declarations == 0 {
         return Ok(None);
-    }
-
-    // Carry over every file name the package *had*. A save regenerates the
-    // `.rels` from what the store knows, and what it knows about external files
-    // is `declared_files` - so a name only ever read out of a `.rels` is dropped
-    // unless it is put back first.
-    let known: Vec<(String, String)> = store.external_file_map().into_iter().collect();
-    for (uuid, file) in known {
-        store.register_external_file(&uuid, file);
     }
 
     let before = unresolved_pointers(store);
@@ -220,6 +225,19 @@ pub fn rename_uris(object: &mut dyn Reflect, from: &str, to: &str) -> usize {
                 }
                 continue;
             }
+        }
+        // The fesapi trick, read by `EpcStore::external_file_for` (step 2): a proxy reference whose `UUID` holds the
+        // file name itself. The reader takes it as the file's name, so the repair rewrites it where the reader reads
+        // it; only when `from` is not a uuid and the field says exactly `from`, so a real uuid is never touched.
+        if name.eq_ignore_ascii_case("UUID")
+            && !identifiers::is_uuid(from)
+            && let Some(FieldValue::Scalar(scalar)) = object.field(name)
+            && scalar.to_string() == from
+        {
+            if object.set_field(name, OwnedValue::Str(to.to_string())).is_ok() {
+                changed += 1;
+            }
+            continue;
         }
         // Descend. `field_object_mut` is the only mutable way in, so a list is
         // walked by index rather than by iterator.
