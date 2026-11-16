@@ -2450,6 +2450,9 @@ Options:
       --size <WxH>
           The size of the picture in pixels, `WIDTHxHEIGHT`; left out, the view's own
 
+      --proposed
+          Fill the settings not given with what the view proposes for a first drawing (a value the file does not state); each one is written as a note, `proposed: NAME=VALUE - why`. A setting given by `--set` is kept
+
       --svg <FILE.svg>
           Where the SVG is written
 

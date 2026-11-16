@@ -214,7 +214,11 @@ fn draw(kinds: &ViewKinds, args: DrawArgs, modes: &Modes) -> Result<()> {
     let store = open(&args.file, modes)?;
     let proposed = args.proposed;
     let picture = with_context(&store, |cx| {
-        let ask = if proposed { with_proposals(kinds, ask, cx)? } else { ask };
+        let ask = if proposed {
+            with_proposals(kinds, ask, cx)?
+        } else {
+            ask
+        };
         energyml_views::draw_svg(kinds, &ask, cx)
     })?;
     write(&picture, &args.out)

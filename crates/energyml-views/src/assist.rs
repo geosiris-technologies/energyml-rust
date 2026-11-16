@@ -214,7 +214,7 @@ pub(crate) fn axis_tables(cx: &ViewContext<'_>) -> Vec<AxisTable> {
             continue;
         };
         out.push(AxisTable {
-            title: node.title.clone().unwrap_or_else(|| uri.clone()),
+            title: node.title.as_deref().map(str::to_string).unwrap_or_else(|| uri.clone()),
             uri,
             rows,
             keys,

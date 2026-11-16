@@ -222,7 +222,11 @@ fn two_tables_that_go_are_a_choice_so_no_links_are_proposed_but_both_are_candida
         axes_table(store, 2, "second axes");
     });
     let found = assisted(&opened, &curtain_ask());
-    assert_eq!(proposed(&found, "curtain_links"), None, "two tables: the person chooses");
+    assert_eq!(
+        proposed(&found, "curtain_links"),
+        None,
+        "two tables: the person chooses"
+    );
     // The roles do not depend on the tables.
     assert_eq!(proposed(&found, "slow_axis"), Some(&json!("high_side")));
     for dimension in &found.dimensions {
@@ -270,12 +274,18 @@ fn a_table_of_the_wrong_length_or_shape_is_not_a_candidate_nor_proposed() {
     let found = assisted(&opened, &curtain_ask());
     for dimension in &found.dimensions {
         assert!(
-            dimension.candidates.iter().all(|candidate| candidate.table != table_uri(2)),
+            dimension
+                .candidates
+                .iter()
+                .all(|candidate| candidate.table != table_uri(2)),
             "five rows is not three positions: {:?}",
             dimension.candidates
         );
         assert!(
-            dimension.candidates.iter().all(|candidate| candidate.column != "k"),
+            dimension
+                .candidates
+                .iter()
+                .all(|candidate| candidate.column != "k"),
             "a key column is not a column of positions"
         );
         assert!(
@@ -303,9 +313,10 @@ fn the_hole_alone_proposes_nothing() {
     let hole = ViewAsk::new(ID).object(frame_uri());
     assert_eq!(assisted(&opened, &hole), Assist::default());
     // An object the package does not hold, a view with nothing to propose: nothing either, no refusal.
-    let gone = ViewAsk::new(ID)
-        .object(frame_uri())
-        .object(uri("resqml22.ContinuousProperty", "99999999-9999-4999-8999-999999999999"));
+    let gone = ViewAsk::new(ID).object(frame_uri()).object(uri(
+        "resqml22.ContinuousProperty",
+        "99999999-9999-4999-8999-999999999999",
+    ));
     assert_eq!(assisted(&opened, &gone), Assist::default());
     // A view that is not in the registry is the one refusal.
     let unknown = ViewAsk::new("nowhere");
@@ -428,8 +439,14 @@ fn the_help_of_the_links_names_the_shape_the_section_reads() {
         .find(|setting| setting.name == "curtain_links")
         .expect("declared")
         .about;
-    assert!(about.contains(r#"{"table": {"table": uri, "column": title, "dim": n}}"#), "{about}");
-    assert!(about.contains("paired-property") && about.contains("witsml-channel"), "{about}");
+    assert!(
+        about.contains(r#"{"table": {"table": uri, "column": title, "dim": n}}"#),
+        "{about}"
+    );
+    assert!(
+        about.contains("paired-property") && about.contains("witsml-channel"),
+        "{about}"
+    );
     assert!(!about.contains(r#""kind""#), "the old, wrong shape: {about}");
     // Break it: write `{"kind": "table", ...}` back into the help.
 }
