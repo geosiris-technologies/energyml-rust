@@ -39,3 +39,14 @@ release = false
 name = "energyml-cli"
 # The binary release is built by workflows/release-cli.yml from the energyml-cli-v* tag.
 git_release_enable = false
+# Not published by the workflow for 0.4.0: it depends on energyml-views, which is not on
+# crates.io yet. A maintainer publishes it by hand right after energyml-views (see
+# docs/releasing.md, "first publication"); the mark goes once both are out.
+publish = false
+
+[[package]]
+name = "energyml-views"
+# A new crate: its first publication is done once by a maintainer with a short-lived token,
+# then trusted publishing is configured on crates.io and this mark is removed (docs/releasing.md).
+# Its version and changelog still move with the release.
+publish = false
