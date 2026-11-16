@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-mcp-v0.3.0...energyml-mcp-v0.4.0) - 2026-11-16
 
+### Added
+
+- *(storage)* [**breaking**] give every edge a kind, EML and PRODML by the WITSML rule
+
 ### Fixed
 
 - *(deps)* take rmcp 3.10, which closes RUSTSEC-2026-0457, -0461 and -0462
