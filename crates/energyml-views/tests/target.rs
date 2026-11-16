@@ -678,7 +678,10 @@ fn the_target_proposes_the_first_node_the_convention_and_even_sectors_and_draws_
     assert!(found.dimensions.is_empty());
     assert!(found.proposals.iter().all(|proposal| !proposal.why.is_empty()));
     // Without them the drawing is refused; with them it draws the four sectors.
-    assert!(matches!(refused(&opened, &bare), ViewRefusal::MissingSetting { .. } | ViewRefusal::Computing { .. }));
+    assert!(matches!(
+        refused(&opened, &bare),
+        ViewRefusal::MissingSetting { .. } | ViewRefusal::Computing { .. }
+    ));
     let list = drawn(&opened, &with_proposals(&opened, bare)).list;
     assert_eq!(sectors(&list).len(), 4);
     // Break it: propose the last node, or leave `regular_sectors` out (the proposed request would be refused).
@@ -689,7 +692,13 @@ fn a_property_of_angles_that_pairs_with_the_radius_is_proposed_as_angles_instead
     let (opened, uris) = world(
         50.0,
         vec![
-            property(SECTORS, "radii", "m", 4, vec![1.0, 2.0, 3.0, 4.0, 1.0, 2.0, 3.0, 4.0]),
+            property(
+                SECTORS,
+                "radii",
+                "m",
+                4,
+                vec![1.0, 2.0, 3.0, 4.0, 1.0, 2.0, 3.0, 4.0],
+            ),
             property(ANGLES, "angles", "dega", 4, [45.0, 135.0, 225.0, 315.0].repeat(2)),
         ],
     );
@@ -697,15 +706,28 @@ fn a_property_of_angles_that_pairs_with_the_radius_is_proposed_as_angles_instead
     let found = energyml_views::assist(&kinds(), &bare, &opened.context(&NO_MAPS)).expect("a known view");
     let angles = opened.index.uri_of(&uris[1]).expect("in the index");
     assert_eq!(proposal(&found, "angles"), Some(&json!(angles)));
-    assert_eq!(proposal(&found, "regular_sectors"), None, "the sectors are not declared even");
+    assert_eq!(
+        proposal(&found, "regular_sectors"),
+        None,
+        "the sectors are not declared even"
+    );
     // The offer says it too, in words, and does not ask for the angles.
     let offer = kinds()
         .offers(&opened.index)
         .into_iter()
         .find(|offer| offer.objects == vec![opened.index.uri_of(&uris[0]).expect("in the index").to_string()])
         .expect("the radii are offered");
-    assert!(offer.proposed.iter().any(|words| words.contains("`angles`")), "{:?}", offer.proposed);
-    assert!(!offer.proposed.iter().any(|words| words.contains("regular_sectors")));
+    assert!(
+        offer.proposed.iter().any(|words| words.contains("`angles`")),
+        "{:?}",
+        offer.proposed
+    );
+    assert!(
+        !offer
+            .proposed
+            .iter()
+            .any(|words| words.contains("regular_sectors"))
+    );
     // The proposals draw: the angles of the file place the sectors.
     let list = drawn(&opened, &with_proposals(&opened, bare)).list;
     assert_eq!(sectors(&list).len(), 4);

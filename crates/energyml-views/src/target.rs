@@ -180,10 +180,12 @@ impl ViewKind for Target {
                 }
                 match angle_properties(index, &uri).as_slice() {
                     [] => proposed.push(
-                        "the sectors (`regular_sectors`): evenly spread, the file gives no angles".to_string(),
+                        "the sectors (`regular_sectors`): evenly spread, the file gives no angles"
+                            .to_string(),
                     ),
                     [_] => proposed.push(
-                        "the angles of the sectors (`angles`): the only property that pairs with it".to_string(),
+                        "the angles of the sectors (`angles`): the only property that pairs with it"
+                            .to_string(),
                     ),
                     several => missing.push(format!(
                         "which angles pair with it (`angles`): {}",
@@ -239,7 +241,8 @@ impl ViewKind for Target {
             [] => proposals.push(Proposal {
                 setting: "regular_sectors".to_string(),
                 value: Value::Bool(true),
-                why: "no property of angles pairs with it: the sectors are declared evenly spread".to_string(),
+                why: "no property of angles pairs with it: the sectors are declared evenly spread"
+                    .to_string(),
             }),
             [angles] => proposals.push(Proposal {
                 setting: "angles".to_string(),

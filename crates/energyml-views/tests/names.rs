@@ -9,7 +9,10 @@ fn every_built_in_view_has_a_name_of_its_own_that_is_not_its_id() {
     for id in kinds.ids() {
         let name = kinds.name_of(id).expect("a view of the registry has a name");
         assert!(!name.trim().is_empty(), "`{id}` has an empty name");
-        assert_ne!(name, id, "`{id}` is named by its identity: a name is for a person");
+        assert_ne!(
+            name, id,
+            "`{id}` is named by its identity: a name is for a person"
+        );
         assert!(!seen.contains(&name), "`{name}` names two views");
         seen.push(name);
     }

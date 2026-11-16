@@ -488,7 +488,11 @@ fn an_offer_whose_curtain_links_are_proposable_proposes_them_and_the_roles_and_s
     let opened = package_with(|store| axes_table(store, 1, "UDAR transverse axes"));
     let offer = curtain_offer(&opened);
     assert_eq!(offer.part.as_deref(), Some("the curtain a matrix"));
-    assert!(offer.title.ends_with("the curtain a matrix"), "the title is untouched: {}", offer.title);
+    assert!(
+        offer.title.ends_with("the curtain a matrix"),
+        "the title is untouched: {}",
+        offer.title
+    );
     assert!(
         offer.proposed.iter().any(|words| words.contains("slow_axis")),
         "the roles are proposed: {:?}",
