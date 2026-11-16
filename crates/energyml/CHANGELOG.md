@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-v0.3.0...energyml-v0.4.0) - 2026-11-16
+
+### Added
+
+- *(sheet)* [**breaking**] the well sheet drawn through the display list and its one SVG writer; the well-sheet view
+
+### Other
+
+- *(core)* one copy of each text helper - XML escaping, base64, the civil calendar, JSON quoting, plain and short numbers
+- *(gallery)* choose the well sheet by its colours, and say why it has few
+- *(gallery)* the well sheet and the three geostatistics images
+- *(readme)* link Andesite Studio, refresh versions and crate list
+
 ## [0.3.0](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-v0.2.0...energyml-v0.3.0) - 2026-10-16
 
 ### Fixed

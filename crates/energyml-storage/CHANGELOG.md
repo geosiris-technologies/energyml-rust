@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-storage-v0.3.0...energyml-storage-v0.4.0) - 2026-11-16
+
+### Added
+
+- *(storage)* count the arrays read from another file, name an offered file that is missing
+
+### Fixed
+
+- *(storage)* the repair of array files rewrites a proxy reference that holds the file name in its UUID
+- the joins of the finishing lot
+- a grid column is judged where the path meets it, bytes posed on an object part replace it in the save, a negative count of cuts is refused
+- *(core,storage)* no write before the check, no part lost, and a transaction rolls everything back
+- *(storage)* [**breaking**] read HDF5 strings as text, and refuse rather than empty a column
+
+### Other
+
+- one bucket grid in geostat replaces the full scans of the fault, section, fence and grid code
+- *(domain,storage,build)* fewer copies of whole buffers
+- the clippy findings of wave B (an auto-deref, a slice from a reference, find on a dyn iterator, a comparison that says NaN)
+- the export run and the h5 repair live in the library, the faces only call them; one reading of --h5
+- *(core)* reading a field of a reflected object goes through one door, energyml_core::reflect::fields
+- *(core)* one parser of an ETP uri, a content type and a qualified type; a reference and its object share one uri
+- *(core)* one copy of each text helper - XML escaping, base64, the civil calendar, JSON quoting, plain and short numbers
+- format and clippy on the first wave, and three test fixes (float tolerance, a share without a rule, a doc comment)
+
 ## [0.3.0](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-storage-v0.2.0...energyml-storage-v0.3.0) - 2026-10-16
 
 ### Added
