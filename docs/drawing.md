@@ -111,6 +111,37 @@ that fits is untouched. `max_text_x(&list)` is the measure a test holds a view t
 the band of notes under the picture itself, so the page grows by its lines.
 Rotated texts (axis titles) are not broken.
 
+## Hit testing
+
+`hit(&list, x, y)` answers with the topmost keyed element under a point: last
+layer, last element, last item, lines held within `HIT_SLOP` (3 units) of
+their axis. A face that points with a mouse uses `hit_within(&list, x, y, grab)`
+instead, where `grab` is the grab distance in units of the page (pixels for a
+page in pixels; 0 or a value that is not a finite positive number means 0).
+
+What `hit_within` holds: a fill (a rectangle, a polygon, a path, a sector, an
+image) that contains the point, or a line, an outline, a disc, a symbol or a
+text at no more than `grab` from the point (plus half the stroke width for a
+line or an outline). The rule between several candidates:
+
+1. a line, an outline, a disc, a symbol or a text held within `grab` beats a
+   fill that contains the point;
+2. then the highest layer;
+3. then the nearest (a fill that contains the point is at distance 0);
+4. then the element drawn last.
+
+An element without a key is never held; a layer's clip holds nothing outside it.
+`Hit` carries the layer, the element, the key and, on an image, the pixel.
+`hit` itself is unchanged (plain order of drawing, its own slop): its answers
+differ from `hit_within(.., 0.0)` when a fill is drawn over a line.
+
+`outline(&list, layer, element)` gives the SVG path commands (`M`, `L`, `Z`, two
+decimals, units of the page) that trace an element: rectangles, polylines,
+polygons, flattened paths, discs and sectors in segments, symbols, images (their
+rectangle) and texts (their box measured by `draw::text`, rotated like the text).
+A face strokes it over the picture to highlight the element; `None` for an index
+out of range or an element with nothing to trace.
+
 ## Rasters
 
 `draw::raster` paints value grids and quadrilaterals into an RGBA image through a

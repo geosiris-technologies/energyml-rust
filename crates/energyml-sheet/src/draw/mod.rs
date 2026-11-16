@@ -26,7 +26,7 @@ pub mod svg;
 pub mod text;
 pub mod ticks;
 
-pub use hit::{Hit, hit};
+pub use hit::{Hit, hit, hit_within, outline};
 pub use list::{
     Anchor, Colour, DisplayList, Element, FontWeight, Hatch, Item, Layer, LineCap, LineJoin, PageUnit, Paint,
     PathData, Rect, Segment, Stroke, SymbolKind, TextStyle,

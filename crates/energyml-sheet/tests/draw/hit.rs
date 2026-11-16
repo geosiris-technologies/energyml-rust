@@ -7,6 +7,7 @@ use std::sync::Arc;
 use energyml_sheet::draw::text::string_width_pt;
 use energyml_sheet::draw::{
     Anchor, Colour, DisplayList, Element, Item, Layer, PageUnit, Paint, Raster, Rect, Stroke, TextStyle, hit,
+    hit_within, outline,
 };
 
 const RED: Colour = Colour::rgb(255, 0, 0);
@@ -246,4 +247,158 @@ fn a_non_finite_point_hits_nothing() {
     )]);
     assert_eq!(hit(&list, f64::NAN, 5.0), None);
     assert_eq!(hit(&list, 5.0, f64::INFINITY), None);
+}
+
+fn line_at(y: f64) -> Item {
+    Item::Polyline {
+        points: vec![[0.0, y], [100.0, y]],
+        stroke: Stroke::solid(RED, 1.0),
+    }
+}
+
+/// The numbers of a path string, in order (letters and separators dropped).
+fn numbers(commands: &str) -> Vec<f64> {
+    commands
+        .split(|c: char| c.is_ascii_alphabetic() || c == ',' || c.is_whitespace())
+        .filter(|s| !s.is_empty())
+        .map(|s| s.parse().expect("a number"))
+        .collect()
+}
+
+/// A line 2 px above a point lying on a fill: held with a grab of 4 (2 <= 0.5 + 4),
+/// not with a grab of 1 (2 > 0.5 + 1), where the fill under the point wins.
+/// Breaks if: a fill is ranked over a line, or the grab distance is ignored.
+#[test]
+fn a_line_within_the_grab_beats_the_fill_under_the_point() {
+    let list = list_of(vec![layer_of(
+        "l",
+        vec![
+            Element::keyed("line", "well", vec![line_at(48.0)]),
+            Element::keyed("fill", "bar", vec![filled_rect(0.0, 50.0, 100.0, 40.0)]),
+        ],
+    )]);
+    assert_eq!(hit_within(&list, 50.0, 50.0, 4.0).map(|h| h.key), Some("line"));
+    assert_eq!(hit_within(&list, 50.0, 50.0, 1.0).map(|h| h.key), Some("fill"));
+    // Break it: rank by drawing order only (the fill, drawn last, would win with a grab of 4).
+}
+
+/// Two fills that both contain the point: the one drawn last is on top.
+/// Breaks if: the walk takes the first of equals.
+#[test]
+fn of_two_overlapping_fills_the_topmost_wins() {
+    let list = list_of(vec![layer_of(
+        "l",
+        vec![
+            Element::keyed("under", "bar", vec![filled_rect(0.0, 0.0, 50.0, 50.0)]),
+            Element::keyed("over", "bar", vec![filled_rect(10.0, 10.0, 50.0, 50.0)]),
+        ],
+    )]);
+    assert_eq!(hit_within(&list, 30.0, 30.0, 4.0).map(|h| h.key), Some("over"));
+    let upper = list_of(vec![
+        layer_of(
+            "a",
+            vec![Element::keyed(
+                "up",
+                "bar",
+                vec![filled_rect(0.0, 0.0, 50.0, 50.0)],
+            )],
+        ),
+        layer_of(
+            "b",
+            vec![Element::keyed(
+                "low",
+                "bar",
+                vec![filled_rect(0.0, 0.0, 50.0, 50.0)],
+            )],
+        ),
+    ]);
+    assert_eq!(hit_within(&upper, 30.0, 30.0, 4.0).map(|h| h.layer), Some(1));
+    // Break it: keep the first element of equal rank instead of the last.
+}
+
+/// Two lines of one layer, both held: the nearer wins whatever the order.
+/// Breaks if: the distance is not compared.
+#[test]
+fn of_two_held_lines_of_one_layer_the_nearest_wins() {
+    let list = list_of(vec![layer_of(
+        "l",
+        vec![
+            Element::keyed("near", "well", vec![line_at(52.0)]),
+            Element::keyed("far", "well", vec![line_at(55.0)]),
+        ],
+    )]);
+    assert_eq!(hit_within(&list, 50.0, 50.0, 6.0).map(|h| h.key), Some("near"));
+    // Break it: pick the last held line (it would answer "far").
+}
+
+/// Non finite coordinates and a clipped layer hold nothing; a bad grab counts as 0.
+/// Breaks if: the clip is ignored or a NaN grab is let through.
+#[test]
+fn hit_within_refuses_what_hit_refuses() {
+    let mut layer = layer_of(
+        "l",
+        vec![Element::keyed(
+            "r",
+            "bar",
+            vec![filled_rect(0.0, 0.0, 100.0, 100.0)],
+        )],
+    );
+    layer.clip = Some(Rect {
+        x: 0.0,
+        y: 0.0,
+        w: 50.0,
+        h: 50.0,
+    });
+    let list = list_of(vec![layer]);
+    assert_eq!(hit_within(&list, 75.0, 75.0, 4.0), None);
+    assert_eq!(hit_within(&list, f64::NAN, 5.0, 4.0), None);
+    assert_eq!(hit_within(&list, 25.0, 25.0, f64::NAN).map(|h| h.key), Some("r"));
+    // Break it: drop the clip test in `hit_within`.
+}
+
+/// The outline of a rectangle is its four corners, closed.
+/// Breaks if: a corner is missing, or the path is not closed.
+#[test]
+fn the_outline_of_a_rectangle_passes_through_its_four_corners() {
+    let list = list_of(vec![layer_of(
+        "l",
+        vec![Element::keyed(
+            "r",
+            "bar",
+            vec![filled_rect(10.0, 20.0, 30.0, 40.0)],
+        )],
+    )]);
+    let d = outline(&list, 0, 0).expect("a rectangle has an outline");
+    let n = numbers(&d);
+    for corner in [[10.0, 20.0], [40.0, 20.0], [40.0, 60.0], [10.0, 60.0]] {
+        assert!(
+            n.chunks(2).any(|c| c == corner),
+            "corner {corner:?} missing from {d}"
+        );
+    }
+    assert!(d.starts_with('M') && d.ends_with('Z'), "{d}");
+    assert_eq!(outline(&list, 0, 5), None);
+    assert_eq!(outline(&list, 3, 0), None);
+    // Break it: write the rectangle with three corners.
+}
+
+/// Every corner of the outline of a disc lies on its radius, to a tolerance.
+/// Breaks if: the segments are drawn at another radius (or about another centre).
+#[test]
+fn the_outline_of_a_disc_stays_at_its_radius() {
+    let disc = Item::Circle {
+        centre: [50.0, 40.0],
+        radius: 20.0,
+        fill: Some(Paint::Solid(RED)),
+        stroke: None,
+    };
+    let list = list_of(vec![layer_of("l", vec![Element::keyed("d", "dot", vec![disc])])]);
+    let d = outline(&list, 0, 0).expect("a disc has an outline");
+    let n = numbers(&d);
+    assert!(n.len() >= 16, "enough segments to look round");
+    for c in n.chunks(2) {
+        let r = (c[0] - 50.0).hypot(c[1] - 40.0);
+        assert!((r - 20.0).abs() < 0.05, "corner {c:?} at {r}");
+    }
+    // Break it: use `radius + 1.0` in the outline.
 }
