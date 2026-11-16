@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-providers-v0.3.0...energyml-providers-v0.4.0) - 2026-11-16
+
+### Fixed
+
+- *(analysis,geostat,export)* local kriging, folded faces, outline simplification and the exported formats say what is true
+
+### Other
+
+- *(analysis)* one reading of a fault trace and one hanging-wall rule; one table of hexahedron faces; one sample check for the interpolators
+
 ## [0.3.0](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-providers-v0.2.0...energyml-providers-v0.3.0) - 2026-10-16
 
 ### Fixed

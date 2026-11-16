@@ -22,10 +22,10 @@ autotests = false
 
 [dependencies]
 energyml-core = { workspace = true }
-energyml-storage = { path = "../energyml-storage", version = "0.3.0" }
-energyml-domain = { path = "../energyml-domain", version = "0.3.0" }
+energyml-storage = { path = "../energyml-storage", version = "0.4.0" }
+energyml-domain = { path = "../energyml-domain", version = "0.4.0" }
 # `vector`: the one place the vector arithmetic is written; pure Rust, no native dependency.
-energyml-geostat = { path = "../energyml-geostat", version = "0.3.0" }
+energyml-geostat = { path = "../energyml-geostat", version = "0.4.0" }
 thiserror = "2.0"
 
 [dev-dependencies]
