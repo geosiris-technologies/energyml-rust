@@ -68,6 +68,10 @@ impl ViewKind for ImageTrack {
         ID
     }
 
+    fn name(&self) -> &'static str {
+        "Image track"
+    }
+
     fn about(&self) -> &'static str {
         "a property with several values per element on a wellbore frame as an image: depth down, one component of the matrix across, the value as a colour"
     }
@@ -155,6 +159,8 @@ impl ViewKind for ImageTrack {
                 objects: vec![node.uri.to_string()],
                 title: node.title.as_deref().unwrap_or(&node.uuid).to_string(),
                 missing: Vec::new(),
+                proposed: Vec::new(),
+                part: None,
             })
             .collect()
     }

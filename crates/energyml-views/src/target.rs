@@ -18,6 +18,7 @@ use energyml_domain::along_md::{
 use energyml_domain::component_axes::{AxisLink, AxisSources, AxisSubject, AxisValues};
 use energyml_domain::package_index::{NodeState, PackageIndex};
 use energyml_domain::palettes::Reading;
+use energyml_domain::property::kinship::Kinship;
 use energyml_domain::series::matrix::{RowSupport, read_matrix};
 use energyml_domain::units::{self, Dimension};
 use energyml_domain::{property, strata_by_md};
@@ -32,6 +33,7 @@ use energyml_sheet::draw::{
 };
 use serde_json::Value;
 
+use crate::assist::{Assist, Proposal};
 use crate::colour::{ValueColours, value_colours};
 use crate::kind::{Drawn, ObjectSlot, Offer, Request, ViewContext, ViewKind, ViewNote, local_type};
 use crate::refusal::ViewRefusal;
@@ -68,6 +70,10 @@ pub struct Target;
 impl ViewKind for Target {
     fn id(&self) -> &'static str {
         ID
+    }
+
+    fn name(&self) -> &'static str {
+        "Target"
     }
 
     fn about(&self) -> &'static str {
@@ -158,17 +164,94 @@ impl ViewKind for Target {
                         )
                 })
             })
-            .map(|node| Offer {
-                view: ID,
-                objects: vec![node.uri.to_string()],
-                title: node.title.as_deref().unwrap_or(&node.uuid).to_string(),
-                missing: vec![
+            .map(|node| {
+                let uri = node.uri.to_string();
+                let mut missing = Vec::new();
+                let mut proposed = vec![
                     "the angle convention (`origin`, `sense`, `viewed_from`): the file does not state it"
                         .to_string(),
-                    "the measured depth (`md`)".to_string(),
-                ],
+                ];
+                // The first node of the frame is read by `assist` through the source; the index tells whether the
+                // property hangs on a frame at all.
+                if on_a_wellbore_frame(index, &uri) {
+                    proposed.push("the measured depth (`md`): the first node of the frame".to_string());
+                } else {
+                    missing.push("the measured depth (`md`)".to_string());
+                }
+                match angle_properties(index, &uri).as_slice() {
+                    [] => proposed.push(
+                        "the sectors (`regular_sectors`): evenly spread, the file gives no angles".to_string(),
+                    ),
+                    [_] => proposed.push(
+                        "the angles of the sectors (`angles`): the only property that pairs with it".to_string(),
+                    ),
+                    several => missing.push(format!(
+                        "which angles pair with it (`angles`): {}",
+                        several.join(", ")
+                    )),
+                }
+                Offer {
+                    view: ID,
+                    objects: vec![uri],
+                    title: node.title.as_deref().unwrap_or(&node.uuid).to_string(),
+                    missing,
+                    proposed,
+                    part: None,
+                }
             })
             .collect()
+    }
+
+    fn assist(&self, objects: &[String], cx: &ViewContext<'_>) -> Assist {
+        let Some(first) = objects.iter().find_map(|name| {
+            let node = cx.index.node(name.trim())?;
+            (node.state == NodeState::Present && TYPES.contains(&local_type(&node.qualified_type)))
+                .then(|| node.uri.to_string())
+        }) else {
+            return Assist::default();
+        };
+        let mut proposals = Vec::new();
+        // The measured depth: the first node of the frame, as `frame_mds` reads them.
+        if let Ok((_, mds)) = frame_mds(cx, &first)
+            && let Some(md) = mds.first().copied().filter(|md| md.is_finite())
+        {
+            proposals.push(Proposal {
+                setting: "md".to_string(),
+                value: Value::from(md),
+                why: "the first node of the frame: a depth to look at first".to_string(),
+            });
+        }
+        // The convention: a declaration, the file never states it.
+        for (setting, word) in [
+            ("origin", ORIGINS[0]),
+            ("sense", SENSES[0]),
+            ("viewed_from", VIEWED_FROM[0]),
+        ] {
+            proposals.push(Proposal {
+                setting: setting.to_string(),
+                value: Value::from(word),
+                why: "a declaration: the file does not state the angle convention".to_string(),
+            });
+        }
+        // The sectors: the angles of the one property that pairs with the first, else sectors declared even. Several
+        // candidates are a choice for the person, never a guess.
+        match angle_properties(cx.index, &first).as_slice() {
+            [] => proposals.push(Proposal {
+                setting: "regular_sectors".to_string(),
+                value: Value::Bool(true),
+                why: "no property of angles pairs with it: the sectors are declared evenly spread".to_string(),
+            }),
+            [angles] => proposals.push(Proposal {
+                setting: "angles".to_string(),
+                value: Value::from(angles.clone()),
+                why: "the only property of angles that pairs with it on the frame".to_string(),
+            }),
+            _ => {}
+        }
+        Assist {
+            proposals,
+            dimensions: Vec::new(),
+        }
     }
 
     fn draw(&self, request: &Request, cx: &ViewContext<'_>) -> Result<Drawn, ViewRefusal> {
@@ -347,6 +430,31 @@ impl ViewKind for Target {
         )?;
         Ok(Drawn { list, notes })
     }
+}
+
+/// Whether the property hangs on a wellbore frame, as its sheet says (no object is read).
+fn on_a_wellbore_frame(index: &PackageIndex, property: &str) -> bool {
+    index
+        .sheet(property)
+        .and_then(|sheet| sheet.supporting_representation.as_deref())
+        .and_then(|support| index.node(support))
+        .is_some_and(|node| local_type(&node.qualified_type) == "WellboreFrameRepresentation")
+}
+
+/// The properties of angles that pair with this one, as the index says (`PolarPair`: a radius and its angles on the
+/// same frame), by full uri.
+fn angle_properties(index: &PackageIndex, property: &str) -> Vec<String> {
+    let Some(uri) = index.uri_of(property) else {
+        return Vec::new();
+    };
+    index
+        .siblings(uri)
+        .into_iter()
+        .filter_map(|sibling| match sibling.kinship {
+            Kinship::PolarPair { radius, angles } if radius.eq_ignore_ascii_case(uri) => Some(angles),
+            _ => None,
+        })
+        .collect()
 }
 
 /// Where the MD asked falls among the nodes.

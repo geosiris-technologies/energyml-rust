@@ -31,3 +31,12 @@ view for the first time: a refusal shows nothing, and nothing says what to give.
 - A first drawing exists for a package with one table of axes, and what is proposed is visible and replaceable.
 - A package with several tables never gets a silent choice.
 - A view that has nothing to propose costs nothing: the default method answers an empty `Assist`.
+
+## Addendum (16/11/2026): names, parts, and the offers
+
+- A view has a name (`ViewKind::name`, `ViewKinds::name_of`) and an `Offer` a `part` and a list `proposed`: what
+  `assist` proposes leaves `missing`, so a face does not show as a gap what it will fill. An offer is built from the
+  index alone and says `proposed` only for what `assist` is sure to propose (it errs on the side of `missing`).
+- `target` proposes the first node of the frame as `md`, the angle convention (`high_side`, `clockwise`,
+  `looking_downhole`, a declaration) and, for the sectors, the one property of angles that pairs with the property
+  (`angles`) or else `regular_sectors`.

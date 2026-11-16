@@ -60,6 +60,10 @@ impl ViewKind for MdCoverage {
         ID
     }
 
+    fn name(&self) -> &'static str {
+        "MD coverage"
+    }
+
     fn about(&self) -> &'static str {
         "which objects cover which measured depths of a well: a band per MD reference, a bar per object at its extent, hatching for an extent inherited through a link"
     }
@@ -106,6 +110,8 @@ impl ViewKind for MdCoverage {
                 objects: vec![well.key],
                 title: well.title,
                 missing: Vec::new(),
+                proposed: Vec::new(),
+                part: None,
             })
             .collect()
     }

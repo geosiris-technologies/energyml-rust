@@ -73,6 +73,28 @@ For the curtain of `along-well`:
 that a face never writes the JSON shape itself: `[{"table": {"table": uri, "column": title, "dim": n}}, ...]`
 (a link may also be a `paired-property` or a `witsml-channel`).
 
+For the target (`target`): `md` is the first node of the frame (`frame_mds`), `origin=high_side`, `sense=clockwise` and
+`viewed_from=looking_downhole` are a declaration of the angle convention, and the sectors are `regular_sectors=true`
+only when no property of angles pairs with the property on the frame; when exactly one does, it is proposed as
+`angles` instead. With several, nothing is proposed: the offer names them as a choice. The drawing says the
+proposals in its notes, like any other.
+
+## Names, parts and what an offer proposes
+
+A view has a short readable name (`ViewKind::name`, `ViewKinds::name_of(id)`: `Along the well`, `Target`), what a
+face shows instead of the technical id. An `Offer` adds two fields to the objects and the `title`:
+
+- `part`: what the view shows of its objects when it is not the whole object (`the hole`, `the curtain Rh`);
+  `None` for the object itself. A face puts it after the name of the view, never the title of the object it is
+  already looking at.
+- `proposed`: what the request should give but that `assist` proposes, in words. These entries are **not** in
+  `missing`, which keeps only what nobody proposes. An offer is made from the index alone, so it says
+  `proposed` only for what `assist` is sure to propose: the roles of a curtain, its links when one table of the
+  package goes with it (the row count of each table must be known without reading an array), the convention, the
+  sectors, and the first node as `md` when the property hangs on a wellbore frame.
+
+`energyml view list` prints the name, the part, then a `proposed` line and a `needs` line for each entry.
+
 ## The views
 
 | View | Objects | Shows |

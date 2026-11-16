@@ -44,6 +44,10 @@ impl ViewKind for TableCurve {
         ID
     }
 
+    fn name(&self) -> &'static str {
+        "Table curve"
+    }
+
     fn about(&self) -> &'static str {
         "the curves of a table (KrPc, PVT): one curve per pair of numeric columns, a legend per column with its unit, a second ordinate axis when two families of units cross"
     }
@@ -93,6 +97,8 @@ impl ViewKind for TableCurve {
                 objects: vec![uri.to_string()],
                 title: table_name(sheet),
                 missing: Vec::new(),
+                proposed: Vec::new(),
+                part: None,
             })
             .collect();
         offers.sort_by(|a, b| a.objects.cmp(&b.objects));

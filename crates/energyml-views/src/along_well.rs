@@ -61,6 +61,10 @@ impl ViewKind for AlongWell {
         ID
     }
 
+    fn name(&self) -> &'static str {
+        "Along the well"
+    }
+
     fn about(&self) -> &'static str {
         "a vertical section along a well (MD against TVD, developed or vertical section) with the curtain of a cube either side of the hole, the boundaries of a depth of detection, the horizons the curtain cuts and the tops of the hole"
     }
@@ -217,6 +221,8 @@ impl ViewKind for AlongWell {
                 objects: vec![frame.clone()],
                 title: format!("{name}: the hole"),
                 missing: Vec::new(),
+                proposed: Vec::new(),
+                part: Some("the hole".to_string()),
             });
             for (property, needs) in section::offers(index, &frame).curtains {
                 let property_name = index
@@ -224,15 +230,33 @@ impl ViewKind for AlongWell {
                     .and_then(|found| found.title.as_deref())
                     .unwrap_or(&property)
                     .to_string();
-                let mut missing = vec![
-                    "the roles and signs of the curtain's two dimensions (slow_axis, slow_sign, fast_axis, fast_sign): the file does not state them".to_string(),
+                // What `assist` proposes for this curtain, known from the index alone: the roles always (a
+                // declaration), the links when exactly one table goes with the curtain.
+                let links_proposed = needs.contains(&section::CandidateNeedAsk::Axes)
+                    && curtain_shape(index, &frame, &property)
+                        .is_some_and(|(sizes, _)| assist::links_are_proposable(index, &sizes));
+                let mut proposed = vec![
+                    "the roles and signs of the curtain's two dimensions (slow_axis, slow_sign, fast_axis, fast_sign): the file does not state them"
+                        .to_string(),
                 ];
-                missing.extend(needs.iter().map(need_in_words));
+                if links_proposed {
+                    proposed.push(
+                        "the axes of the curtain (curtain_links): the only table of the package that goes with it"
+                            .to_string(),
+                    );
+                }
+                let missing = needs
+                    .iter()
+                    .filter(|need| !(links_proposed && matches!(need, section::CandidateNeedAsk::Axes)))
+                    .map(need_in_words)
+                    .collect();
                 out.push(Offer {
                     view: ID,
                     objects: vec![frame.clone(), property],
                     title: format!("{name}: the curtain {property_name}"),
                     missing,
+                    proposed,
+                    part: Some(format!("the curtain {property_name}")),
                 });
             }
         }

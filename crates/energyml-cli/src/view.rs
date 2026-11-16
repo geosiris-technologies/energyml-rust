@@ -136,7 +136,21 @@ fn list(kinds: &ViewKinds, args: ListArgs, modes: &Modes) -> Result<()> {
         println!("no view can show anything of this package");
     }
     for offer in &offers {
-        println!("{:<18} {}  {}", offer.view, offer.title, offer.objects.join(" "));
+        let name = kinds.name_of(offer.view).unwrap_or(offer.view);
+        let part = offer
+            .part
+            .as_deref()
+            .map(|part| format!(" - {part}"))
+            .unwrap_or_default();
+        println!(
+            "{:<18} {name}{part}: {}  {}",
+            offer.view,
+            offer.title,
+            offer.objects.join(" ")
+        );
+        for proposed in &offer.proposed {
+            println!("{:<18}   proposed {proposed}", "");
+        }
         for missing in &offer.missing {
             println!("{:<18}   needs {missing}", "");
         }

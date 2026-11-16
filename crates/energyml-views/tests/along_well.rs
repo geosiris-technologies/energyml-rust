@@ -158,14 +158,21 @@ fn the_hole_and_each_curtain_candidate_are_offered_with_what_is_missing() {
         .iter()
         .find(|offer| offer.objects == vec![frame_uri(), matrix_uri()])
         .expect("the matrix is offered as a curtain");
+    // Updated for Y1: the roles are now proposed by `assist` (they left `missing`); no table of this package
+    // goes with the curtain, so its axes stay missing.
     assert!(
-        curtain.missing.iter().any(|words| words.contains("slow_axis")),
-        "the roles are the caller's: {:?}",
+        curtain.proposed.iter().any(|words| words.contains("slow_axis")),
+        "the roles are proposed: {:?}",
+        curtain.proposed
+    );
+    assert!(
+        !curtain.missing.iter().any(|words| words.contains("slow_axis")),
+        "a proposed role is not missing: {:?}",
         curtain.missing
     );
     assert!(
         curtain.missing.iter().any(|words| words.contains("axes")),
-        "the file gives no axis: {:?}",
+        "the file gives no axis and no table goes: {:?}",
         curtain.missing
     );
     assert!(offers.iter().all(|offer| offer.view == ID));

@@ -6,6 +6,7 @@ mod colour;
 mod fixtures;
 mod image_track;
 mod md_coverage;
+mod names;
 mod picture;
 mod property_insight;
 mod provenance_graph;

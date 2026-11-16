@@ -474,3 +474,77 @@ fn drawing_with_every_proposal_applied_succeeds_and_draws_the_curtain() {
     // Break it: propose the links with the columns swapped across dimensions of unequal sizes, or drop the roles
     // from the proposals (the draw would be refused for `slow_axis`).
 }
+
+fn curtain_offer(opened: &Opened) -> energyml_views::Offer {
+    kinds()
+        .offers(&opened.index)
+        .into_iter()
+        .find(|offer| offer.objects == vec![frame_uri(), matrix_uri()])
+        .expect("the matrix is offered as a curtain")
+}
+
+#[test]
+fn an_offer_whose_curtain_links_are_proposable_proposes_them_and_the_roles_and_says_what_it_shows() {
+    let opened = package_with(|store| axes_table(store, 1, "UDAR transverse axes"));
+    let offer = curtain_offer(&opened);
+    assert_eq!(offer.part.as_deref(), Some("the curtain a matrix"));
+    assert!(offer.title.ends_with("the curtain a matrix"), "the title is untouched: {}", offer.title);
+    assert!(
+        offer.proposed.iter().any(|words| words.contains("slow_axis")),
+        "the roles are proposed: {:?}",
+        offer.proposed
+    );
+    assert!(
+        offer.proposed.iter().any(|words| words.contains("curtain_links")),
+        "the links are proposed: {:?}",
+        offer.proposed
+    );
+    assert!(
+        offer.missing.is_empty(),
+        "what is proposed is not missing: {:?}",
+        offer.missing
+    );
+    // The offer never promises what `assist` does not give.
+    let found = assisted(&opened, &curtain_ask());
+    assert!(proposed(&found, "curtain_links").is_some() && proposed(&found, "slow_axis").is_some());
+    // The hole alone shows the hole.
+    let hole = kinds()
+        .offers(&opened.index)
+        .into_iter()
+        .find(|offer| offer.objects == vec![frame_uri()])
+        .expect("the hole is offered");
+    assert_eq!(hole.part.as_deref(), Some("the hole"));
+    assert!(hole.proposed.is_empty() && hole.missing.is_empty());
+    // Break it: leave the links in `missing` whatever the tables, or write `part` from the title of the frame.
+}
+
+#[test]
+fn an_offer_with_no_table_that_goes_keeps_the_links_missing_and_proposes_only_the_roles() {
+    for tables in [0, 2] {
+        let opened = package_with(|store| {
+            for n in 1..=tables {
+                axes_table(store, n, "axes");
+            }
+        });
+        let offer = curtain_offer(&opened);
+        assert!(
+            offer.missing.iter().any(|words| words.contains("curtain_links")),
+            "{tables} table(s): the links stay missing: {:?}",
+            offer.missing
+        );
+        assert!(
+            !offer.proposed.iter().any(|words| words.contains("curtain_links")),
+            "{tables} table(s): {:?}",
+            offer.proposed
+        );
+        assert!(offer.proposed.iter().any(|words| words.contains("slow_axis")));
+        assert!(
+            !offer.missing.iter().any(|words| words.contains("slow_axis")),
+            "the roles are proposed, not missing: {:?}",
+            offer.missing
+        );
+        // And `assist` agrees: no links proposed.
+        assert!(proposed(&assisted(&opened, &curtain_ask()), "curtain_links").is_none());
+    }
+    // Break it: say the links are proposed whenever a table exists (two tables would then promise a choice made).
+}

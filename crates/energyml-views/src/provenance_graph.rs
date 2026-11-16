@@ -53,6 +53,10 @@ impl ViewKind for ProvenanceView {
         ID
     }
 
+    fn name(&self) -> &'static str {
+        "Provenance graph"
+    }
+
     fn about(&self) -> &'static str {
         "where each object of a package comes from: the activities that read and wrote it, the files they read, the representations that carry it; the whole package, or the graph around one object"
     }
@@ -117,6 +121,8 @@ impl ViewKind for ProvenanceView {
             objects: Vec::new(),
             title: format!("the provenance of the package ({activities} activities)"),
             missing: Vec::new(),
+            proposed: Vec::new(),
+            part: None,
         }]
     }
 

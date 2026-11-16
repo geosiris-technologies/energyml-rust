@@ -78,6 +78,10 @@ impl ViewKind for SurveyQc {
         ID
     }
 
+    fn name(&self) -> &'static str {
+        "Survey QC"
+    }
+
     fn about(&self) -> &'static str {
         "the control of a directional survey: plan and vertical section, inclination, azimuth and dogleg severity against MD, and the gap with a trajectory; rejected stations and stated values the recomputation contradicts are marked"
     }

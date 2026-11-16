@@ -49,8 +49,14 @@ pub struct Offer {
     pub objects: Vec<String>,
     /// What it would show, in words (the titles of the objects).
     pub title: String,
-    /// What a request must still give (a setting the file does not say), in words; empty: ready.
+    /// What a request must still give and nobody proposes (a setting the file does not say), in words; empty: ready.
     pub missing: Vec<String>,
+    /// What a request should give but that [`crate::assist`] proposes for a first drawing, in words: the entries
+    /// that left `missing`. A proposal is always said as one.
+    pub proposed: Vec<String>,
+    /// What the view shows of its objects when it is not the whole object (`the curtain Rh`, `the hole`); `None`
+    /// for the object itself.
+    pub part: Option<String>,
 }
 
 /// The offers of a view that shows **one object** of a few types: every present node whose local type is in `types`
@@ -71,6 +77,8 @@ pub fn offers_of_types(
             objects: vec![node.uri.to_string()],
             title: node.title.as_deref().unwrap_or(&node.uuid).to_string(),
             missing: Vec::new(),
+            proposed: Vec::new(),
+            part: None,
         })
         .collect()
 }
@@ -155,6 +163,11 @@ impl Request {
 pub trait ViewKind: Send + Sync {
     /// Its id, `kebab-case`, in the registry and in a drawing's metadata.
     fn id(&self) -> &'static str;
+    /// Its name, short and readable, in English (`Along the well`): what a face shows instead of the id. The id
+    /// by default.
+    fn name(&self) -> &'static str {
+        self.id()
+    }
     /// What it shows, in one sentence.
     fn about(&self) -> &'static str;
     /// The objects it takes, slot by slot, in order.
@@ -223,6 +236,12 @@ impl ViewKinds {
             .iter()
             .find(|kind| kind.id() == id)
             .map(|kind| kind.as_ref())
+    }
+
+    /// The name of the view of this id (the first registered): [`ViewKind::name`]. `None` for a view the registry
+    /// does not hold.
+    pub fn name_of(&self, id: &str) -> Option<&'static str> {
+        self.find(id).map(|kind| kind.name())
     }
 
     /// Every id, one each, in the order they are tried.

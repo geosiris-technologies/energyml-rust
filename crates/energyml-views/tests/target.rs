@@ -184,14 +184,22 @@ fn only_properties_with_a_value_per_sector_on_the_nodes_are_offered() {
     let objects: Vec<&str> = offers.iter().map(|offer| offer.objects[0].as_str()).collect();
     let expected = opened.index.uri_of(&uris[0]).expect("in the index");
     assert_eq!(objects, vec![expected], "{objects:?}");
+    // Updated for Y1: the convention is proposed (a declaration), no longer missing; the first node of the
+    // frame stands for `md`.
     assert!(
         offers[0]
-            .missing
+            .proposed
             .iter()
             .any(|need| need.contains("angle convention")),
-        "the convention is never in the file: {:?}",
+        "the convention is proposed, never read: {:?}",
+        offers[0].proposed
+    );
+    assert!(
+        offers[0].missing.is_empty(),
+        "nothing is left for the person to find: {:?}",
         offers[0].missing
     );
+    assert_eq!(offers[0].part, None, "a target shows the property whole");
     // Break it: offer every property, whatever its shape.
 }
 
@@ -633,4 +641,73 @@ fn no_text_of_the_picture_leaves_the_page() {
         crate::fixtures::assert_texts_in_page(&list, "target");
     }
     // Break it: take `fit_to_page` out of `draw_list`; the title then runs past a 260 wide page.
+}
+
+fn proposal<'a>(found: &'a energyml_views::Assist, setting: &str) -> Option<&'a serde_json::Value> {
+    found
+        .proposals
+        .iter()
+        .find(|proposal| proposal.setting == setting)
+        .map(|proposal| &proposal.value)
+}
+
+/// The request with every proposal for a setting it does not give.
+fn with_proposals(opened: &Opened, mut ask: ViewAsk) -> ViewAsk {
+    let found = energyml_views::assist(&kinds(), &ask, &opened.context(&NO_MAPS)).expect("a known view");
+    for proposal in found.proposals {
+        if !ask.settings.contains_key(&proposal.setting) {
+            ask = ask.set(proposal.setting, proposal.value);
+        }
+    }
+    ask
+}
+
+#[test]
+fn the_target_proposes_the_first_node_the_convention_and_even_sectors_and_draws_with_them() {
+    let (opened, uris) = world(50.0, vec![sectors_property([10.0, 20.0, 30.0, 40.0])]);
+    let bare = ViewAsk::new("target").object(&uris[0]);
+    let found = energyml_views::assist(&kinds(), &bare, &opened.context(&NO_MAPS)).expect("a known view");
+    // The nodes are at MD 20 and 80: the first one.
+    assert_eq!(proposal(&found, "md"), Some(&json!(20.0)));
+    assert_eq!(proposal(&found, "origin"), Some(&json!("high_side")));
+    assert_eq!(proposal(&found, "sense"), Some(&json!("clockwise")));
+    assert_eq!(proposal(&found, "viewed_from"), Some(&json!("looking_downhole")));
+    // No property of angles on the frame: the sectors are declared even, and no `angles` is invented.
+    assert_eq!(proposal(&found, "regular_sectors"), Some(&json!(true)));
+    assert_eq!(proposal(&found, "angles"), None);
+    assert!(found.dimensions.is_empty());
+    assert!(found.proposals.iter().all(|proposal| !proposal.why.is_empty()));
+    // Without them the drawing is refused; with them it draws the four sectors.
+    assert!(matches!(refused(&opened, &bare), ViewRefusal::MissingSetting { .. } | ViewRefusal::Computing { .. }));
+    let list = drawn(&opened, &with_proposals(&opened, bare)).list;
+    assert_eq!(sectors(&list).len(), 4);
+    // Break it: propose the last node, or leave `regular_sectors` out (the proposed request would be refused).
+}
+
+#[test]
+fn a_property_of_angles_that_pairs_with_the_radius_is_proposed_as_angles_instead_of_even_sectors() {
+    let (opened, uris) = world(
+        50.0,
+        vec![
+            property(SECTORS, "radii", "m", 4, vec![1.0, 2.0, 3.0, 4.0, 1.0, 2.0, 3.0, 4.0]),
+            property(ANGLES, "angles", "dega", 4, [45.0, 135.0, 225.0, 315.0].repeat(2)),
+        ],
+    );
+    let bare = ViewAsk::new("target").object(&uris[0]);
+    let found = energyml_views::assist(&kinds(), &bare, &opened.context(&NO_MAPS)).expect("a known view");
+    let angles = opened.index.uri_of(&uris[1]).expect("in the index");
+    assert_eq!(proposal(&found, "angles"), Some(&json!(angles)));
+    assert_eq!(proposal(&found, "regular_sectors"), None, "the sectors are not declared even");
+    // The offer says it too, in words, and does not ask for the angles.
+    let offer = kinds()
+        .offers(&opened.index)
+        .into_iter()
+        .find(|offer| offer.objects == vec![opened.index.uri_of(&uris[0]).expect("in the index").to_string()])
+        .expect("the radii are offered");
+    assert!(offer.proposed.iter().any(|words| words.contains("`angles`")), "{:?}", offer.proposed);
+    assert!(!offer.proposed.iter().any(|words| words.contains("regular_sectors")));
+    // The proposals draw: the angles of the file place the sectors.
+    let list = drawn(&opened, &with_proposals(&opened, bare)).list;
+    assert_eq!(sectors(&list).len(), 4);
+    // Break it: propose `regular_sectors` whatever the siblings.
 }

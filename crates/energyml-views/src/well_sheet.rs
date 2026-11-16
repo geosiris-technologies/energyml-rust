@@ -42,6 +42,10 @@ impl ViewKind for WellSheet {
         ID
     }
 
+    fn name(&self) -> &'static str {
+        "Well sheet"
+    }
+
     fn about(&self) -> &'static str {
         "a well's drilling sheet: the measured depth column, the stratigraphy and the interval properties of a wellbore frame as bands, on a page in millimetres"
     }

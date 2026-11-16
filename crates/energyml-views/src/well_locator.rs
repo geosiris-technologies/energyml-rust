@@ -41,6 +41,10 @@ impl ViewKind for WellLocator {
         ID
     }
 
+    fn name(&self) -> &'static str {
+        "Well locator"
+    }
+
     fn about(&self) -> &'static str {
         "a well laid flat - MD bar, MD against TVD, developed, plan or vertical section - with the interval a frame carries data over, and a mark at a measured depth"
     }

@@ -83,6 +83,10 @@ impl ViewKind for PropertyInsight {
         ID
     }
 
+    fn name(&self) -> &'static str {
+        "Property insight"
+    }
+
     fn about(&self) -> &'static str {
         "the automatic analysis of a property: its shape in facts, the distribution of its values (log when they span decades), its relation with a sister property, and the axis along which it varies most"
     }

@@ -52,6 +52,10 @@ impl ViewKind for TableSchemaView {
         ID
     }
 
+    fn name(&self) -> &'static str {
+        "Table schema"
+    }
+
     fn about(&self) -> &'static str {
         "how the tables of a package hold together: a box per table with its key column marked, an arrow per link (key, rank, own rows, title, object uris, lookup of a property)"
     }
@@ -99,6 +103,8 @@ impl ViewKind for TableSchemaView {
             objects: Vec::new(),
             title: format!("the schema of the {tables} tables of the package"),
             missing: Vec::new(),
+            proposed: Vec::new(),
+            part: None,
         }]
     }
 

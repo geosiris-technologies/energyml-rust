@@ -14,14 +14,14 @@
 //! A proposal is made from the package alone and decides nothing: the request keeps what it gives, and a view that
 //! has nothing to propose answers [`Assist::default`].
 
-use energyml_domain::package_index::NodeState;
+use energyml_domain::package_index::{NodeState, PackageIndex};
 use energyml_domain::table::Table;
 use energyml_domain::values::{self, Family};
 use energyml_section::along_well::AxisLinkAsk;
 use serde_json::Value;
 
 use crate::ask::ViewAsk;
-use crate::kind::{ViewContext, ViewKinds};
+use crate::kind::{ViewContext, ViewKinds, local_type};
 use crate::refusal::ViewRefusal;
 
 /// A value the file does not state, proposed for a first drawing; always said as a proposal.
@@ -257,4 +257,33 @@ impl AxisTable {
     pub(crate) fn links(&self) -> Vec<(usize, AxisColumn)> {
         self.columns().enumerate().collect()
     }
+}
+
+/// Whether [`assist`] will propose the links of a curtain whose dimensions have these sizes, **from the index
+/// alone** (an offer has no array source): exactly one `ColumnBasedTable` goes with the curtain by the convention of
+/// ADR 0029 (one key column, one numeric value column per dimension and nothing else, as many rows as every dimension
+/// has positions), and no other table has a row count the index cannot tell (an external array: its header is
+/// read at drawing time, so the answer is left to the drawing). It is the cautious side of [`the_table_that_fits`]:
+/// what an offer says is proposed is always proposed by `assist`, never the other way round.
+pub(crate) fn links_are_proposable(index: &PackageIndex, sizes: &[usize]) -> bool {
+    let mut fits = 0;
+    for (_, sheet) in index.tables() {
+        if local_type(&sheet.qualified_type) != "ColumnBasedTable" {
+            continue;
+        }
+        let Some(rows) = sheet.row_count() else {
+            return false;
+        };
+        let keys = sheet.columns.iter().filter(|column| column.key).count();
+        let values: Vec<_> = sheet.columns.iter().filter(|column| !column.key).collect();
+        let numeric = values.iter().all(|column| {
+            column.title.is_some()
+                && column.values_per_row == 1
+                && matches!(column.family, Some(Family::Floating | Family::Integer))
+        });
+        if keys == 1 && values.len() == sizes.len() && numeric && sizes.iter().all(|&size| size == rows) {
+            fits += 1;
+        }
+    }
+    fits == 1
 }
