@@ -68,6 +68,10 @@ struct DrawArgs {
     /// The size of the picture in pixels, `WIDTHxHEIGHT`; left out, the view's own.
     #[arg(long, value_name = "WxH")]
     size: Option<String>,
+    /// Fill the settings not given with what the view proposes for a first drawing (a value the file does not
+    /// state); each one is written as a note, `proposed: NAME=VALUE - why`. A setting given by `--set` is kept.
+    #[arg(long)]
+    proposed: bool,
     #[command(flatten)]
     out: Output,
 }
@@ -208,8 +212,33 @@ fn draw(kinds: &ViewKinds, args: DrawArgs, modes: &Modes) -> Result<()> {
         ask = ask.sized(width, height);
     }
     let store = open(&args.file, modes)?;
-    let picture = with_context(&store, |cx| energyml_views::draw_svg(kinds, &ask, cx))?;
+    let proposed = args.proposed;
+    let picture = with_context(&store, |cx| {
+        let ask = if proposed { with_proposals(kinds, ask, cx)? } else { ask };
+        energyml_views::draw_svg(kinds, &ask, cx)
+    })?;
     write(&picture, &args.out)
+}
+
+/// The request with every proposal of the view for a setting it does not give, each written as a note on stderr:
+/// a value proposed is always said so, never presented as read from the file.
+fn with_proposals(
+    kinds: &ViewKinds,
+    mut ask: ViewAsk,
+    cx: &ViewContext<'_>,
+) -> Result<ViewAsk, energyml_views::ViewRefusal> {
+    for proposal in energyml_views::assist(kinds, &ask, cx)?.proposals {
+        if ask.settings.contains_key(&proposal.setting) {
+            continue;
+        }
+        let shown = match proposal.value.as_str() {
+            Some(word) => word.to_string(),
+            None => proposal.value.to_string(),
+        };
+        eprintln!("note: proposed: {}={shown} - {}", proposal.setting, proposal.why);
+        ask = ask.set(proposal.setting, proposal.value);
+    }
+    Ok(ask)
 }
 
 fn redraw(kinds: &ViewKinds, args: RedrawArgs, modes: &Modes) -> Result<()> {

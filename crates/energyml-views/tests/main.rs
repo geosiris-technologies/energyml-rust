@@ -1,6 +1,7 @@
 //! The tests of `energyml-views`: one binary, one module per subject.
 
 mod along_well;
+mod assist;
 mod colour;
 mod fixtures;
 mod image_track;

@@ -63,7 +63,8 @@ What the file does not say, the request does (the rule of
   of each, are the caller's declaration (`roles`). The note "the roles and signs ... are
   the caller's declaration" is written on every curtain made this way.
 - **The lateral row.** `lateral_index` picks the row of the lateral dimension that is
-  shown. A plane that is off the hole is drawn in the plane of the hole and says so
+  shown; left out, the view takes the middle row (row 0 is the edge of the cube, off the
+  plane of the hole). A plane that is off the hole is drawn in the plane of the hole and says so
   (a note), and only in `md_tvd` and `developed`: in any other projection it is refused
   (`LateralNotPlaced`).
 

@@ -35,6 +35,7 @@
 
 pub mod along_well;
 pub mod ask;
+pub mod assist;
 pub mod colour;
 pub mod graph;
 pub mod image_track;
@@ -55,6 +56,7 @@ pub mod well_locator;
 pub mod well_sheet;
 
 pub use ask::ViewAsk;
+pub use assist::{Assist, AxisColumn, DimensionAxes, Proposal, assist, axis_links_read, axis_links_value};
 pub use colour::{ColourDoor, ColourSource, NoColourMaps, PackageColours, ValueColours, value_colours};
 pub use kind::{Drawn, ObjectSlot, Offer, Request, ViewContext, ViewKind, ViewKinds, ViewNote, local_type};
 pub use picture::{Picture, draw_list, draw_svg, png, read_ask, redraw, write_svg};

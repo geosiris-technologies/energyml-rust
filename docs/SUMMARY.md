@@ -89,3 +89,4 @@
 - [0044 The vectors in geostat](adr/0044-vectors-in-geostat.md)
 - [0045 Text and numbers, one copy each](adr/0045-text-and-numbers-one-copy.md)
 - [0046 Reading a field through one door](adr/0046-reading-a-field-through-one-door.md)
+- [0047 A view proposes, and says so](adr/0047-a-view-proposes-and-says-so.md)

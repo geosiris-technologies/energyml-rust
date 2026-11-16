@@ -13,11 +13,17 @@ energyml view draw  well-locator package.epc \
     --object "eml:///resqml22.WellboreFrameRepresentation(9ccdea13-638d-5d72-8c08-c82163596218)" \
     --set mode=plan --set md=3050 \
     --svg locator.svg --png locator.png --png-scale 2
+energyml view draw  along-well package.epc --proposed \
+    --object "eml:///resqml22.WellboreFrameRepresentation(9ccdea13-638d-5d72-8c08-c82163596218)" \
+    --object "eml:///resqml22.ContinuousProperty(13568c0a-a6f8-593a-a171-83828de41874)" \
+    --svg section.svg          # a first drawing, the proposals said as notes
 energyml view redraw package.epc --from-svg locator.svg --svg again.svg
 ```
 
 - `--object` takes a full uri, or a bare uuid that the package index turns into one.
 - `--set NAME=VALUE` is read by the nature the view declares: a number, a word of a list, `true`, or JSON.
+- `--proposed` fills the settings you did not give with what the view proposes (see [Proposals](#proposals)); a
+  setting given with `--set` is kept. Each proposal is written on stderr as a note, `proposed: NAME=VALUE - why`.
 - `--png` needs a build with `--features png`. It is the SVG just written, rasterised.
 - A refusal says which object, which setting and why, and nothing is written. A part the view left out, with the
   rest drawn, is a note: on stderr, and in a band under the picture.
@@ -38,6 +44,34 @@ let picture = draw_svg(&ViewKinds::with_builtins(), &ask, cx)?;
 The context (`ViewContext`) holds the package (an `ArraySource`), its index (`PackageIndex`), the colour door
 (`PackageColours` over `energyml_cache`, or `NoColourMaps`) and the palettes. A face that draws the display list
 itself asks `draw_list`; a view of the caller's is registered with `ViewKinds::register` and tried first.
+
+## Proposals
+
+Some values are not in the file and a view refuses to draw without them (the roles of the two dimensions of a
+curtain, the table that holds its coordinates). A **proposal** is a value the view offers for such a setting, from the
+package alone, so that a first drawing exists and can then be corrected: `assist(&kinds, &ask, cx)` returns the
+proposals (`Proposal { setting, value, why }`) and the dimensions the view needs declared (`DimensionAxes`: the
+dimension, its size, the settings that hold its role, and the numeric columns of the package's tables that have
+exactly that many rows, as `AxisColumn`).
+
+A proposal is never presented as read from the file. It is always said where it shows: the command line writes a
+note for each, a form marks the field as proposed and shows the reason, and a person's own value replaces it. A view
+with nothing to propose (the hole of `along-well`, with no property) answers an empty `Assist`.
+
+For the curtain of `along-well`:
+
+- `curtain_links` is proposed when the file links no axis and **one** table of the package goes with the curtain
+  (one key column, one numeric value column per dimension, the right number of rows): dimension `i` takes the
+  `i`-th value column ([ADR 0029](adr/0029-convention-b-links-by-qualifier-facet.md)). With two such tables nothing
+  is proposed, and both are candidates for the person to choose.
+- `slow_axis=high_side`, `slow_sign=positive`, `fast_axis=right`, `fast_sign=positive` are a declaration: the file
+  does not state the roles of the dimensions.
+- `lateral_index`, left out, is the middle row of the lateral dimension (the one not along the high side), not row
+  0, which is the edge of the cube and off the plane of the hole.
+
+`axis_links_value` writes the links setting from `(dimension, column)` pairs and `axis_links_read` reads it back, so
+that a face never writes the JSON shape itself: `[{"table": {"table": uri, "column": title, "dim": n}}, ...]`
+(a link may also be a `paired-property` or a `witsml-channel`).
 
 ## The views
 

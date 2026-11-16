@@ -10,13 +10,14 @@
 //!
 //! [`ViewAsk`]: crate::ViewAsk
 
-use energyml_domain::package_index::{NodeState, PackageIndex};
+use energyml_domain::package_index::{CandidateNeed, CandidateRole, NodeState, PackageIndex};
 use energyml_domain::palettes::Reading;
 use energyml_domain::stats::scale::ScaleKind;
 use energyml_geometry::around_well::projection::WellProjections;
 use energyml_section::along_well as section;
 use serde_json::Value;
 
+use crate::assist::{self, Assist, DimensionAxes, Proposal};
 use crate::colour::value_colours;
 use crate::kind::{Drawn, ObjectSlot, Offer, Request, ViewContext, ViewKind, ViewNote, local_type};
 use crate::refusal::ViewRefusal;
@@ -139,7 +140,7 @@ impl ViewKind for AlongWell {
             .default(Value::from(DEFAULT_SOURCE)),
             ViewSetting::json(
                 "curtain_links",
-                "the axes of the curtain, declared: a list of `{\"kind\": \"table\" | \"paired-property\" | \"witsml-channel\", ...}` as the section reads them, tried before the file's own convention",
+                "the axes of the curtain, declared: a list of `{\"table\": {\"table\": uri, \"column\": title, \"dim\": n}}`, `{\"paired-property\": {\"property\": uri, \"dim\": n}}` or `{\"witsml-channel\": {\"channel\": uri}}` (one per dimension, the dimensions counted from 0), tried before the file's own convention",
             ),
             ViewSetting::choice(
                 "slow_axis",
@@ -163,10 +164,9 @@ impl ViewKind for AlongWell {
             ),
             ViewSetting::integer(
                 "lateral_index",
-                "the row shown along the lateral dimension of the curtain",
+                "the row shown along the lateral dimension of the curtain (the one not declared along the high side); none: the middle row, the plane nearest the hole when the offsets are centred on it (row 0 is the edge of the cube, off the plane of the hole)",
             )
-            .bounds(Some(0.0), None)
-            .default(Value::from(0)),
+            .bounds(Some(0.0), None),
             ViewSetting::json(
                 "boundaries",
                 "the boundaries of a depth of detection: `{\"radius\": uri, \"angle\": uri, \"mode\": \"in-plane\" | \"projected\"}`, the two properties full uris of the package",
@@ -303,7 +303,10 @@ impl ViewKind for AlongWell {
                         (axis_of(slow_axis), sign_of(slow_sign)),
                         (axis_of(fast_axis), sign_of(fast_sign)),
                     ],
-                    lateral_index: settings.integer("lateral_index").unwrap_or(0).max(0) as usize,
+                    lateral_index: match settings.integer("lateral_index") {
+                        Some(given) => given.max(0) as usize,
+                        None => middle_row(cx.index, frame, property, slow_axis).unwrap_or(0),
+                    },
                 })
             }
         };
@@ -397,6 +400,112 @@ impl ViewKind for AlongWell {
         list.title = format!("{ID} - {projection}");
         Ok(Drawn { list, notes })
     }
+
+    fn assist(&self, objects: &[String], cx: &ViewContext<'_>) -> Assist {
+        let Some((frame, property)) = frame_and_property(objects, cx.index) else {
+            return Assist::default();
+        };
+        // Only a curtain has anything to declare: the hole alone proposes nothing.
+        let Some((sizes, needs)) = curtain_shape(cx.index, &frame, &property) else {
+            return Assist::default();
+        };
+        let tables = assist::axis_tables(cx);
+        let dimensions: Vec<DimensionAxes> = sizes
+            .iter()
+            .enumerate()
+            .map(|(dim, &size)| DimensionAxes {
+                dim,
+                size,
+                links_setting: "curtain_links",
+                // Dimension 0 is the slow one, 1 the fast one: the order of `CurtainAsk::roles`.
+                axis_setting: ROLE_SETTINGS[dim].0,
+                sign_setting: ROLE_SETTINGS[dim].1,
+                candidates: assist::columns_of_size(&tables, size),
+            })
+            .collect();
+
+        let mut proposals = Vec::new();
+        // The links: only when the file links none (the index says the axes are needed) and exactly one table
+        // fits every dimension, one value column per dimension in the order of the dimensions (ADR 0029).
+        if needs.contains(&CandidateNeed::Axes)
+            && let Some(table) = assist::the_table_that_fits(&tables, &sizes)
+        {
+            proposals.push(Proposal {
+                setting: "curtain_links".to_string(),
+                value: assist::axis_links_value(&table.links()),
+                why: format!(
+                    "the only table of the package that goes with the curtain ({}, {} rows, one value column per dimension); the file does not link it",
+                    table.title, table.rows
+                ),
+            });
+        }
+        // The roles: a declaration, the file never states them.
+        for (setting, word) in [
+            ("slow_axis", AXES[0]),
+            ("slow_sign", SIGNS[0]),
+            ("fast_axis", AXES[1]),
+            ("fast_sign", SIGNS[0]),
+        ] {
+            proposals.push(Proposal {
+                setting: setting.to_string(),
+                value: Value::from(word),
+                why: "a declaration: the file does not say the roles of the dimensions".to_string(),
+            });
+        }
+        Assist {
+            proposals,
+            dimensions,
+        }
+    }
+}
+
+/// The settings of the role of dimension 0 (the slow one) and dimension 1 (the fast one): its axis, then its sign.
+const ROLE_SETTINGS: [(&str, &str); 2] = [("slow_axis", "slow_sign"), ("fast_axis", "fast_sign")];
+
+/// The frame and the curtain's property among objects given by full uri, found by their types.
+fn frame_and_property(objects: &[String], index: &PackageIndex) -> Option<(String, String)> {
+    let of_types = |types: &[&str]| {
+        objects.iter().find_map(|uri| {
+            let node = index.node(uri)?;
+            types
+                .contains(&local_type(&node.qualified_type))
+                .then(|| node.uri.to_string())
+        })
+    };
+    Some((of_types(FRAME_TYPES)?, of_types(PROPERTY_TYPES)?))
+}
+
+/// The dimensions of a curtain candidate and what the file leaves to declare, read from the index alone (the shape
+/// of a property is in its sheet: no array is read). `None` for a property that is not a matrix of two dimensions
+/// per node of this frame.
+fn curtain_shape(
+    index: &PackageIndex,
+    frame: &str,
+    property: &str,
+) -> Option<(Vec<usize>, Vec<CandidateNeed>)> {
+    let candidate = index
+        .shape_candidates(frame)
+        .into_iter()
+        .find(|candidate| candidate.uri == property)?;
+    match candidate.role {
+        CandidateRole::Matrix { dims } if dims.len() == 2 => {
+            let sizes = dims
+                .into_iter()
+                .map(usize::try_from)
+                .collect::<Result<Vec<usize>, _>>()
+                .ok()?;
+            Some((sizes, candidate.needs))
+        }
+        _ => None,
+    }
+}
+
+/// The middle row of the lateral dimension: the dimension the slow axis does not run along, which is the fast one
+/// when the slow dimension is along the high side. `None` when the index does not know the shape.
+fn middle_row(index: &PackageIndex, frame: &str, property: &str, slow_axis: &str) -> Option<usize> {
+    let (sizes, _) = curtain_shape(index, frame, property)?;
+    let lateral = if slow_axis == AXES[0] { 1 } else { 0 };
+    sizes.get(lateral).map(|size| size / 2)
 }
 
 /// A JSON setting read as the type the section takes; none when the setting is absent.

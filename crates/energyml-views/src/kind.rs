@@ -7,6 +7,7 @@ use energyml_domain::table::TableSheet;
 use energyml_sheet::draw::DisplayList;
 use serde::Serialize;
 
+use crate::assist::Assist;
 use crate::colour::ColourDoor;
 use crate::refusal::ViewRefusal;
 use crate::setting::{Settled, ViewSetting};
@@ -172,6 +173,13 @@ pub trait ViewKind: Send + Sync {
     ///
     /// The named refusal of what it lays out.
     fn draw(&self, request: &Request, cx: &ViewContext<'_>) -> Result<Drawn, ViewRefusal>;
+    /// What it proposes for a first drawing of these objects (full uris), and which dimensions of them it needs
+    /// declared, from the package alone ([`Assist`]). A proposal is a value the file does not state, always
+    /// said as one. Nothing by default.
+    fn assist(&self, objects: &[String], cx: &ViewContext<'_>) -> Assist {
+        let _ = (objects, cx);
+        Assist::default()
+    }
 }
 
 /// The views: the caller's tried first, then the built-ins.
