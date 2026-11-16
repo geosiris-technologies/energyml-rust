@@ -266,18 +266,19 @@ impl AxisTable {
 /// Whether [`assist`] will propose the links of a curtain whose dimensions have these sizes, **from the index
 /// alone** (an offer has no array source): exactly one `ColumnBasedTable` goes with the curtain by the convention of
 /// ADR 0029 (one key column, one numeric value column per dimension and nothing else, as many rows as every dimension
-/// has positions), and no other table has a row count the index cannot tell (an external array: its header is
-/// read at drawing time, so the answer is left to the drawing). It is the cautious side of [`the_table_that_fits`]:
-/// what an offer says is proposed is always proposed by `assist`, never the other way round.
+/// has positions). A table whose row count the index cannot tell (its columns in an external array, read at drawing
+/// time) is judged by its shape alone: the offer then says the links are proposed, and the drawing's `assist`
+/// checks the rows before it proposes them; a table whose rows do not fit leaves the links to the person, refused by
+/// name, never guessed.
 pub(crate) fn links_are_proposable(index: &PackageIndex, sizes: &[usize]) -> bool {
     let mut fits = 0;
     for (_, sheet) in index.tables() {
         if local_type(&sheet.qualified_type) != "ColumnBasedTable" {
             continue;
         }
-        let Some(rows) = sheet.row_count() else {
-            return false;
-        };
+        // A count of rows the index does not know (columns in an external file) does not rule the table out: its shape
+        // decides here, and the drawing's `assist` checks the rows before it proposes the links.
+        let rows = sheet.row_count();
         let keys = sheet.columns.iter().filter(|column| column.key).count();
         let values: Vec<_> = sheet.columns.iter().filter(|column| !column.key).collect();
         let numeric = values.iter().all(|column| {
@@ -285,7 +286,11 @@ pub(crate) fn links_are_proposable(index: &PackageIndex, sizes: &[usize]) -> boo
                 && column.values_per_row == 1
                 && matches!(column.family, Some(Family::Floating | Family::Integer))
         });
-        if keys == 1 && values.len() == sizes.len() && numeric && sizes.iter().all(|&size| size == rows) {
+        if keys == 1
+            && values.len() == sizes.len()
+            && numeric
+            && rows.is_none_or(|rows| sizes.iter().all(|&size| size == rows))
+        {
             fits += 1;
         }
     }
