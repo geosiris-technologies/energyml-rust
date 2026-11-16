@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- *(storage)* [**breaking**] give every edge a kind, EML and PRODML by the WITSML rule
 - *(storage)* count the arrays read from another file, name an offered file that is missing
 
 ### Fixed
