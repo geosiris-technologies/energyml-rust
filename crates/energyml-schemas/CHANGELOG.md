@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-schemas-v0.3.0...energyml-schemas-v0.4.0) - 2026-11-16
+
+### Other
+
+- an object or a colour map is read once per operation
+- *(readme)* link Andesite Studio, refresh versions and crate list
+
 ## [0.2.0](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-schemas-v0.1.2...energyml-schemas-v0.2.0) - 2026-10-15
 
 ### Other

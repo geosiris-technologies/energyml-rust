@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-build-v0.3.0...energyml-build-v0.4.0) - 2026-11-16
+
+### Added
+
+- *(build)* write a property of several values per element; combine, isosurface, table-link and along-well-view operations; stored views; ADR 0037 and 0039
+- *(build)* [**breaking**] integer parameters written as integers, every canonical template declares input and inputFile, the file a step read, and a recipe drafted back from a workflow
+- *(domain,geometry)* [**breaking**] the axis order of a CRS, the direction along a path, and one placed path for trajectories and surveys
+
+### Fixed
+
+- a grid column is judged where the path meets it, bytes posed on an object part replace it in the save, a negative count of cuts is refused
+- *(build)* a GeoJSON feature the reader refuses is left out and named in Read::warnings, not a refusal of the file
+- *(build)* the operations refuse by name what they used to drop, guess or overflow
+- *(build)* media writers declare no data object, and the table imports declare the frame they write
+- *(build)* the activities energyml-build writes follow their templates
+- *(domain)* re-export TallyRefusal from stats; give two provenance-graph tests a feature whose uuid no activity has; format, clippy and test fixes of the fourth wave
+
+### Other
+
+- the clippy findings of the finishing lot (a named type for the versions held in memory, let-else in two tests)
+- *(build)* [**breaking**] share the geometry, features and table of an input behind an Arc
+- the links rustdoc refuses under -D warnings, and the dates two Energistics citations lacked
+- one bucket grid in geostat replaces the full scans of the fault, section, fence and grid code
+- *(build)* reproject a whole array with one call to reproject_all instead of one call per point
+- *(domain,storage,build)* fewer copies of whole buffers
+- the clippy findings of wave B (an auto-deref, a slice from a reference, find on a dyn iterator, a comparison that says NaN)
+- *(build)* pass the citation function, not a borrow of it
+- build's mesh takes the hexahedron faces from energyml_geometry, the CLI's terrain reads the lattice and its voids together, and the CLI names a target package once
+- *(build)* one copy of each block the operations shared
+- *(core)* reading a field of a reflected object goes through one door, energyml_core::reflect::fields
+- *(geostat)* the vector arithmetic and the plan geometry in one module, energyml_geostat::vector
+- *(core)* one parser of an ETP uri, a content type and a qualified type; a reference and its object share one uri
+- *(core)* one copy of each text helper - XML escaping, base64, the civil calendar, JSON quoting, plain and short numbers
+- *(colours)* one reader and one writer of a hex colour, Rgba::parse and Rgba::to_hex*
+- *(build)* along-well-view calls section-view's uri resolution, part names and attachment writer instead of copies; format, clippy and test fixes of the fifth wave
+- one reading of NullValue, and text arrays through the Python bridge, the MCP tool and the CLI
+
 ## [0.3.0](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-build-v0.2.0...energyml-build-v0.3.0) - 2026-10-16
 
 ### Fixed
