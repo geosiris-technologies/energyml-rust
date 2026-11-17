@@ -44,7 +44,7 @@ thiserror = "2.0"
 # `raster-images`: resvg draws an `<image>` only with it (the rasters a view
 # embeds in its SVG). It also brings GIF, WebP and JPEG decoders, which
 # `draw::png` never reaches: its image resolver passes embedded PNG only.
-resvg = { version = "0.48", optional = true, default-features = false, features = ["text", "raster-images"] }
+resvg = { version = "0.50", optional = true, default-features = false, features = ["text", "raster-images"] }
 
 [features]
 default = []
