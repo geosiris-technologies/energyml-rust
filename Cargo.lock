@@ -325,9 +325,9 @@ dependencies = [
 
 [[package]]
 name = "crs-definitions"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d18c61d944a9f854f35279f9a5d75ab562fb076dab3f49e53d6f0edbff4f44ea"
+checksum = "ed764c927c2a19ec1cb85deb88e93560872c04653b0e9e63fbdf6a8edf968bcb"
 
 [[package]]
 name = "crypto-common"

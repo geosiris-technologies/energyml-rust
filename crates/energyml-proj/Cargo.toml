@@ -32,7 +32,7 @@ proj4rs = { version = "0.1.10", default-features = false }
 # pins. That version difference is the whole reason a model used to land 151 m
 # from where it belongs; see the crate docs. `wkt` off drops 4.8 MB of strings
 # nothing here reads - it matters for a wasm bundle.
-crs-definitions = { version = "0.5.0", default-features = false, features = [
+crs-definitions = { version = "0.6.0", default-features = false, features = [
     "proj4",
 ] }
 
