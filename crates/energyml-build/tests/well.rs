@@ -978,7 +978,9 @@ fn a_frames_nodes_land_on_the_trajectory_they_sample() {
         (
             "[[2.0,48.0,100],[2.001,48.0,-200],[2.003,48.001,-500]]",
             120.0,
-            "deviated",
+            // Not "deviated": `a_written_well_reads_back_through_the_geometry_reader` writes under that tag, and the two
+            // tests run at once in one process would empty each other's folder.
+            "deviated-from-a-hill",
         ),
     ] {
         let (trajectory, frame) = read_back(line, ground, tag);
