@@ -73,7 +73,7 @@ use energyml_geometry::geometry::{Geometry, Patch, Topology};
 use std::sync::Arc;
 
 use crate::declare::{Inputs, Params, Shape, Suggestions};
-use crate::operation::{About, Category, Context, Note, Operation, Plan, Refusal, Slot};
+use crate::operation::{About, Category, Context, Need, Note, Operation, Plan, Refusal, Slot};
 use crate::pieces::Pieces;
 
 use super::interpolate_mba::MbaFrame;
@@ -536,6 +536,34 @@ impl Operation for Resurface {
     }
 
     fn reports(&self) -> Vec<Slot> {
-        support::frame_reports(vec![])
+        let number = |name: &'static str, about: &'static str| {
+            Slot::optional(
+                name,
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                about,
+            )
+        };
+        let mut reports = support::frame_reports(vec![
+            Slot::optional("method", Need::Text, "the estimator that fitted the surface"),
+            number("levels", "levels of the multilevel fit"),
+            number("fitSampleCount", "nodes the fit read"),
+            Slot::optional(
+                "allDimensionsAreOrthogonal",
+                Need::Text,
+                "a grid: whether its axes are orthogonal, true or false",
+            ),
+        ]);
+        reports.extend(support::written_counts(&[
+            "nodeCount",
+            "fastestAxisCount",
+            "slowestAxisCount",
+            "pointCount",
+            "triangleCount",
+        ]));
+        reports
     }
 }

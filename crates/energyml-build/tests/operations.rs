@@ -62,7 +62,7 @@ fn export() -> String {
     format!(r#"{{"type":"FeatureCollection","features":[{a},{a},{b}]}}"#)
 }
 
-fn sigeol_pieces() -> Pieces {
+pub(crate) fn sigeol_pieces() -> Pieces {
     let collection = geojson::read(&export()).expect("a collection");
     Pieces::empty().with(
         "export",
@@ -1194,7 +1194,7 @@ fn column(name: &str, uuid: &str) -> serde_json::Value {
     })
 }
 
-fn bag_for(takes: &[energyml_build::operation::Slot]) -> Pieces {
+pub(crate) fn bag_for(takes: &[energyml_build::operation::Slot]) -> Pieces {
     use energyml_build::operation::Need;
     use energyml_geometry::geometry::{Geometry, Patch, Topology};
 

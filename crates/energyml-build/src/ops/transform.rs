@@ -680,7 +680,7 @@ impl Operation for Transform {
                 about,
             )
         };
-        support::frame_reports(vec![
+        let mut reports = support::frame_reports(vec![
             count("movedNodes", "nodes moved"),
             optional(
                 "flippedTriangles",
@@ -692,6 +692,8 @@ impl Operation for Transform {
             ),
             optional("pivotUsedY", "the pivot as used, y"),
             optional("pivotUsedZ", "the pivot as used, z"),
-        ])
+        ]);
+        reports.extend(support::every_written_count());
+        reports
     }
 }

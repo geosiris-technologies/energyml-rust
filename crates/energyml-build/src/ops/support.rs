@@ -729,6 +729,54 @@ pub fn frame_reports(mut own: Vec<Slot>) -> Vec<Slot> {
     out
 }
 
+/// The counts the shared writers (`triangles::write`, `polylines::write`,
+/// `pointset::write`, the grid writers) put in the activity, by name, with what
+/// each says.
+const WRITTEN_COUNTS: &[(&str, &str)] = &[
+    ("nodeCount", "a grid: nodes written"),
+    ("fastestAxisCount", "a grid: nodes along x"),
+    ("slowestAxisCount", "a grid: nodes along y"),
+    ("pointCount", "a cloud, polylines or triangles: nodes written"),
+    ("polylineCount", "polylines: lines written"),
+    ("closedCount", "polylines: closed lines written"),
+    ("triangleCount", "triangles: triangles written"),
+];
+
+/// **What an operation that calls a shared writer reports of the shape it
+/// wrote**, declared once: the writer records these counts whatever calls it, so
+/// the template of the caller must declare the ones its shapes can come to
+/// (common TRG 2.3 section 3.1, p. 40: a parameter must have an equivalent in
+/// the template). Optional: which counts exist depends on the shape written.
+///
+/// `which` names counts of [`WRITTEN_COUNTS`]; a name that is not one is a
+/// defect of the caller, said by a panic in tests rather than a silent gap.
+pub fn written_counts(which: &[&str]) -> Vec<Slot> {
+    which
+        .iter()
+        .map(|wanted| {
+            let &(name, about) = WRITTEN_COUNTS
+                .iter()
+                .find(|(known, _)| known == wanted)
+                .unwrap_or_else(|| panic!("`{wanted}` is not a count the shared writers record"));
+            Slot::optional(
+                name,
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                about,
+            )
+        })
+        .collect()
+}
+
+/// Every count of [`written_counts`], for an operation whose output can be any shape.
+pub fn every_written_count() -> Vec<Slot> {
+    let all: Vec<&str> = WRITTEN_COUNTS.iter().map(|(name, _)| *name).collect();
+    written_counts(&all)
+}
+
 /// A coordinate or a depth **as it enters a seed**: to the millimetre, never
 /// to the last bit.
 ///

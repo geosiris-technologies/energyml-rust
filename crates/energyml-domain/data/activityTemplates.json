@@ -6649,6 +6649,83 @@
       {
         "$type": "eml23.ParameterTemplate",
         "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "nodeCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "fastestAxisCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "slowestAxisCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "pointCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "polylineCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "closedCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "triangleCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
           "dataObject"
         ],
         "IsInput": true,
@@ -7283,6 +7360,83 @@
       {
         "$type": "eml23.ParameterTemplate",
         "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "nodeCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "fastestAxisCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "slowestAxisCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "pointCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "polylineCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "closedCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "triangleCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
           "dataObject"
         ],
         "IsInput": true,
@@ -7748,6 +7902,28 @@
       {
         "$type": "eml23.ParameterTemplate",
         "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "pointCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "triangleCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
           "dataObject"
         ],
         "IsInput": true,
@@ -7987,6 +8163,83 @@
         "MaxOccurs": 1,
         "MinOccurs": 1,
         "Title": "orphanNodes"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "nodeCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "fastestAxisCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "slowestAxisCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "pointCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "polylineCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "closedCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "triangleCount"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -8769,6 +9022,39 @@
         "MaxOccurs": 1,
         "MinOccurs": 1,
         "Title": "throughNodes"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "polylineCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "pointCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "closedCount"
       },
       {
         "$type": "eml23.ParameterTemplate",
@@ -17002,6 +17288,50 @@
       {
         "$type": "eml23.ParameterTemplate",
         "AllowedKind": [
+          "string"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "method"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "sampleCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "levels"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "pointCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
           "dataObject"
         ],
         "IsInput": true,
@@ -17233,6 +17563,105 @@
         "MaxOccurs": -1,
         "MinOccurs": 1,
         "Title": "output"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "method"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "levels"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "fitSampleCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "allDimensionsAreOrthogonal"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "nodeCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "fastestAxisCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "slowestAxisCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "pointCount"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": false,
+        "IsOutput": true,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "triangleCount"
       },
       {
         "$type": "eml23.ParameterTemplate",

@@ -65,7 +65,7 @@ use energyml_analysis::mba_frame::Frame as MeanFrame;
 use energyml_domain::provenance::Parameter;
 
 use crate::declare::{Field, Inputs, Params, Shape, Suggestions};
-use crate::operation::{About, Category, Context, Note, Operation, Plan, Refusal, Slot};
+use crate::operation::{About, Category, Context, Need, Note, Operation, Plan, Refusal, Slot};
 use crate::pieces::Pieces;
 
 use super::interpolate_mba::MbaFrame;
@@ -439,6 +439,23 @@ impl Operation for Estimate {
     }
 
     fn reports(&self) -> Vec<Slot> {
-        support::frame_reports(vec![])
+        let number = |name: &'static str, about: &'static str| {
+            Slot::optional(
+                name,
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                about,
+            )
+        };
+        let mut reports = support::frame_reports(vec![
+            Slot::optional("method", Need::Text, "the estimator that fitted the samples"),
+            number("sampleCount", "samples the fit read"),
+            number("levels", "levels of the multilevel fit"),
+        ]);
+        reports.extend(support::written_counts(&["pointCount"]));
+        reports
     }
 }

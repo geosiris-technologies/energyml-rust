@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- *(build)* the templates of `transform`, `densify`, `delete-nodes`, `loft`, `polyline-through`, `estimate` and `resurface` declare the parameters their activities record (the counts of the shape written by the shared writers, through one helper in the operations' support module, and the fit's `method`, `levels`, `sampleCount`, `fitSampleCount`, `allDimensionsAreOrthogonal`); found by running every operation and passing the conformance rule on what it wrote
+- *(build)* `apply` replaces a template of the operation that the package already holds when its content differs from the canonical one (title, allowed kinds, `MinOccurs`, `MaxOccurs` of each parameter), and says so in the new `Made::superseded`; a template of the same content is left alone, and an object that is not a template under the template's uuid is refused by name. Before, an older template was kept and every parameter it lacked read as a defect of the new activities. `Made` gains a public field.
+
 ## [0.4.0](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-build-v0.3.0...energyml-build-v0.4.0) - 2026-11-16
 
 ### Added

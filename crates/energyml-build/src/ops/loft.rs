@@ -174,7 +174,7 @@ impl Operation for Loft {
     }
 
     fn reports(&self) -> Vec<Slot> {
-        support::frame_reports(vec![Slot::required(
+        let mut reports = support::frame_reports(vec![Slot::required(
             "bandTriangles",
             Need::Number {
                 uom: None,
@@ -182,6 +182,8 @@ impl Operation for Loft {
                 most: None,
             },
             "triangles between the lines",
-        )])
+        )]);
+        reports.extend(support::written_counts(&["pointCount", "triangleCount"]));
+        reports
     }
 }

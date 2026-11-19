@@ -138,12 +138,14 @@ impl Operation for DeleteNodes {
                 about,
             )
         };
-        support::frame_reports(vec![
+        let mut reports = support::frame_reports(vec![
             count("deletedNodes", "nodes taken out"),
             count("droppedPieces", "pieces of line left with a single node, dropped"),
             count("removedTriangles", "triangles that named a node taken out"),
             count("orphanNodes", "nodes no triangle names any more, compacted away"),
-        ])
+        ]);
+        reports.extend(support::every_written_count());
+        reports
     }
 }
 

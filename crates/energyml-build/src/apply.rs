@@ -95,6 +95,14 @@ pub struct Made {
     /// manifest ([`crate::manifest`]) names it without deriving it a second
     /// time. A role the collection could not be written for is absent.
     pub collections: Vec<(String, String)>,
+    /// **The templates of this package replaced by the canonical one**, one
+    /// sentence each: which operation, and what differed (missing, extra or
+    /// changed parameters). The template of an operation has one uuid in every
+    /// package; one written by an older build and kept would judge today's
+    /// activities by yesterday's declaration. Replacing it is the right answer
+    /// and never a silent one. The replaced template is also in
+    /// [`Made::replaced`].
+    pub superseded: Vec<String>,
 }
 
 /// What the objects of a plan break in their schema - what [`Made::invalid`]
@@ -314,11 +322,20 @@ pub fn apply_under(
             return made;
         }
     };
-    // *Is there such an object*: the template is one per uuid, and the question is
-    // existence - what `find_by_uuid` is for.
-    if store.find_by_uuid(template_uuid).is_none() {
-        match provenance::template(recipe) {
-            Ok(template) => put(
+    // **The template is one per uuid, and what the package holds under that uuid
+    // is judged by its content, not by its presence.** A package written by an
+    // older build carries a template of this uuid that may declare fewer
+    // parameters than the operation writes today; the Activity written below
+    // would be judged against it, and every parameter the old one lacks would
+    // read as a defect of the Activity. So: absent, it is written; the same
+    // content, it is left alone (a package rewritten without change stays byte
+    // for byte); another content, it is replaced by the canonical one **and
+    // said** in `Made::superseded`; not a template, or not one object, it is
+    // refused by name.
+    match provenance::template(recipe) {
+        Err(why) => made.refused.push(why),
+        Ok(template) => match template_state(store, &registry, template, template_uuid) {
+            TemplateState::Absent => put(
                 store,
                 &registry,
                 template,
@@ -326,8 +343,32 @@ pub fn apply_under(
                 &mut made,
                 false,
             ),
-            Err(why) => made.refused.push(why),
-        }
+            TemplateState::Current => {}
+            TemplateState::Stale(difference) => {
+                let before = made.written.len();
+                put(
+                    store,
+                    &registry,
+                    template,
+                    "the canonical template",
+                    &mut made,
+                    false,
+                );
+                if made.written.len() > before {
+                    made.superseded.push(format!(
+                        "the package held a template of `{recipe}` that differs from the canonical one \
+                         and it was replaced: {difference}"
+                    ));
+                }
+            }
+            TemplateState::Refused(why) => {
+                made.refused.push(format!(
+                    "{why}; the activity of this run was not written, because it would be judged \
+                     against an object that is not this operation's template"
+                ));
+                return made;
+            }
+        },
     }
 
     let mut parameters = plan.activity.parameters.clone();
@@ -621,4 +662,152 @@ fn put(
 /// references to it cannot disagree.
 fn collection_title(activity: &str, role: &str, count: usize) -> String {
     format!("{activity} - {role} ({count} objects)")
+}
+
+/// What the package holds under the uuid of an operation's canonical template.
+enum TemplateState {
+    /// Nothing: the canonical template is written.
+    Absent,
+    /// A template with the same content (title, kinds, occurrences of each
+    /// parameter): left as it is.
+    Current,
+    /// A template whose content differs, and what differs.
+    Stale(String),
+    /// Something that is not one template this operation can be judged by.
+    Refused(String),
+}
+
+/// What a template says about each parameter, for what the conformance rule
+/// reads (common TRG 2.3 section 3.1 p. 40, section 3.10 p. 49): the kinds
+/// allowed (an empty list means any, so order and repeats do not count),
+/// `MinOccurs` (absent is zero) and `MaxOccurs` (absent or -1 is unbounded).
+///
+/// By title, the first one winning - as `conformance` looks a title up. What
+/// the rule does not read (citation, constraint text, direction flags,
+/// defaults) is not compared: a template that differs only there judges every
+/// activity the same.
+type Shape = (Vec<String>, i64, Option<i64>);
+
+fn template_shape(
+    template: &energyml_domain::activity::TemplateRecord,
+) -> std::collections::BTreeMap<String, Shape> {
+    let mut shape = std::collections::BTreeMap::new();
+    for parameter in &template.parameters {
+        let mut kinds: Vec<String> = parameter.allowed.iter().map(|kind| format!("{kind:?}")).collect();
+        kinds.sort();
+        kinds.dedup();
+        let min = parameter.min_occurs.unwrap_or(0).max(0);
+        let max = parameter.max_occurs.filter(|max| *max >= 0);
+        shape.entry(parameter.title.clone()).or_insert((kinds, min, max));
+    }
+    shape
+}
+
+fn describe_shape(shape: &Shape) -> String {
+    let kinds = if shape.0.is_empty() {
+        "any kind".to_string()
+    } else {
+        shape.0.join("/")
+    };
+    let max = shape.2.map_or("unbounded".to_string(), |max| max.to_string());
+    format!("{kinds}, {}..{max}", shape.1)
+}
+
+/// The canonical template of an operation against what the package holds under
+/// its uuid. The one place the comparison is made; `apply` only acts on the
+/// answer.
+fn template_state(
+    store: &EpcStore,
+    registry: &Arc<Registry>,
+    canonical: &serde_json::Value,
+    uuid: &str,
+) -> TemplateState {
+    let held = store.summaries_of(uuid);
+    let one = match held.as_slice() {
+        [] => return TemplateState::Absent,
+        [one] => one,
+        several => {
+            let uris: Vec<&str> = several.iter().map(|one| one.uri.as_str()).collect();
+            return TemplateState::Refused(format!(
+                "the package holds {} objects under the uuid {uuid} of the template ({}): which \
+                 one is the template is not guessed",
+                several.len(),
+                uris.join(", ")
+            ));
+        }
+    };
+    let object = match store.get_object(&one.uri) {
+        Ok(object) => object,
+        Err(e) => return TemplateState::Refused(format!("{} cannot be read: {e}", one.uri)),
+    };
+    let held_record = match energyml_domain::activity::read_template(object.as_reflect()) {
+        Ok(record) => record,
+        Err(why) => {
+            return TemplateState::Refused(format!(
+                "{} is under the uuid {uuid} of an activity template and is not one: {why}",
+                one.uri
+            ));
+        }
+    };
+    let canonical_record = match energyml_core::json::read_string(&canonical.to_string(), registry)
+        .map_err(|e| e.to_string())
+        .and_then(|document| {
+            energyml_domain::activity::read_template(document.root.as_reflect()).map_err(|e| e.to_string())
+        }) {
+        Ok(record) => record,
+        Err(why) => {
+            return TemplateState::Refused(format!("the canonical template did not read back: {why}"));
+        }
+    };
+    let (held_shape, canonical_shape) = (template_shape(&held_record), template_shape(&canonical_record));
+    if held_shape == canonical_shape {
+        return TemplateState::Current;
+    }
+    // A put replaces the (uuid, type) entry: a template of another release
+    // would be left beside the canonical one, two objects under one uuid.
+    // Refused rather than left so.
+    if canonical["$type"].as_str() != Some(one.qualified_type.as_str()) {
+        return TemplateState::Refused(format!(
+            "{} is a template of another release than the canonical {}, and it differs from it",
+            one.uri,
+            canonical["$type"].as_str().unwrap_or("template")
+        ));
+    }
+    let missing: Vec<&str> = canonical_shape
+        .keys()
+        .filter(|title| !held_shape.contains_key(*title))
+        .map(String::as_str)
+        .collect();
+    let extra: Vec<&str> = held_shape
+        .keys()
+        .filter(|title| !canonical_shape.contains_key(*title))
+        .map(String::as_str)
+        .collect();
+    let changed: Vec<String> = canonical_shape
+        .iter()
+        .filter_map(|(title, new)| {
+            let old = held_shape.get(title)?;
+            (old != new).then(|| {
+                format!(
+                    "`{title}` ({} became {})",
+                    describe_shape(old),
+                    describe_shape(new)
+                )
+            })
+        })
+        .collect();
+    let mut parts = Vec::new();
+    if !missing.is_empty() {
+        parts.push(format!("parameters it lacked: {}", missing.join(", ")));
+    }
+    if !extra.is_empty() {
+        parts.push(format!(
+            "parameters the canonical one does not have: {}",
+            extra.join(", ")
+        ));
+    }
+    if !changed.is_empty() {
+        parts.push(format!("parameters that changed: {}", changed.join("; ")));
+    }
+    TemplateState::Stale(parts.join("; "))
 }

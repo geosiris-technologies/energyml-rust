@@ -142,7 +142,7 @@ impl Operation for PolylineThrough {
     }
 
     fn reports(&self) -> Vec<Slot> {
-        support::frame_reports(vec![Slot::required(
+        let mut reports = support::frame_reports(vec![Slot::required(
             "throughNodes",
             Need::Number {
                 uom: None,
@@ -150,6 +150,12 @@ impl Operation for PolylineThrough {
                 most: None,
             },
             "nodes the line goes through",
-        )])
+        )]);
+        reports.extend(support::written_counts(&[
+            "polylineCount",
+            "pointCount",
+            "closedCount",
+        ]));
+        reports
     }
 }

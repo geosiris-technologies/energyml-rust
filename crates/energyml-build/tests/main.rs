@@ -90,6 +90,7 @@ mod prodml_rest;
 mod project;
 mod properties_from_table;
 mod property_time_series;
+mod provenance_conformance;
 mod provenance_writers;
 mod pta;
 mod purpose;

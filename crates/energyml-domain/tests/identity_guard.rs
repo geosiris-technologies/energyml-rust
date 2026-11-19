@@ -112,11 +112,6 @@ const RULES: &[Rule] = &[
 /// A file where a needle stays, and why. Each must still match something.
 const EXCEPTIONS: &[(&str, &str, &str)] = &[
     (
-        "energyml-build/src/apply.rs",
-        "find_by_uuid(",
-        "an existence check of the uuid a caller named for a template (`--set template=…`): *is there such an object*, which is what `find_by_uuid` answers, and never *which version*",
-    ),
-    (
         "energyml-domain/src/package_index.rs",
         "find_by_uuid(",
         "`PackageIndex::update` is given the **uuids** the change journal names; the store holding a uuid twice is decided before (`summaries_of`), and the update then rebuilds",
@@ -262,11 +257,11 @@ fn the_rule_names_a_forbidden_call_and_lets_an_adapter_through() {
         !is_adapter("energyml-geometry/src/scene.rs") && "store.lookup_uuid(&u)".contains(RULES[1].needle)
     );
     assert!(
-        allowed(rule, "energyml-build/src/apply.rs"),
+        allowed(rule, "energyml-domain/src/package_index.rs"),
         "an exception names its file"
     );
     assert!(
-        !allowed(rule, "energyml-build/src/read.rs"),
+        !allowed(rule, "energyml-domain/src/integrity.rs"),
         "another file of the same crate is not covered"
     );
     assert!("let found = store.find_by_uuid(&uuid);".contains(rule.needle));

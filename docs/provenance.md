@@ -15,7 +15,7 @@ the file does not make is **not guessed** (see
 ## What the library writes
 
 Every operation records an `Activity` against the canonical `ActivityTemplate`
-of that operation (see [Creating objects](creating-objects.md)). Three points are
+of that operation (see [Creating objects](creating-objects.md)). A few points are
 worth knowing when you read such a package:
 
 - **`input` and `inputFile` are declared in every canonical template.** The EML
@@ -31,6 +31,20 @@ worth knowing when you read such a package:
   `inputs = [{ file = ... }]` entry of a recipe) writes a `StringParameter` titled
   `inputFile`, whose value is `<slot>: <path>`, or just `<path>` when the recipe
   named no slot. The path is relative to the recipe, as the recipe wrote it.
+- **A template the package already holds is judged by its content.** The
+  template of an operation has one uuid in every package. When the package
+  holds none, the canonical one is written. When it holds one with the same
+  content - the same parameters, and for each its allowed kinds, `MinOccurs` and
+  `MaxOccurs`, the part the conformance rule reads - it is left as it is, so a
+  package rewritten without change stays byte for byte. When the content differs
+  (a package written by an older build that declared fewer parameters), it is
+  replaced by the canonical one and the run says so (`Made::superseded`, printed
+  by `energyml create`): which operation, and which parameters were missing,
+  extra or changed. An object that is not a template under that uuid, or several
+  objects under it, is refused by name and the activity of that run is not
+  written. An `Activity` written earlier is not rewritten: it is judged by the
+  new template, and a defect it had (an integer written as a double) is still
+  reported.
 
 ## What the library reads
 

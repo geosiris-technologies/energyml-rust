@@ -315,6 +315,10 @@ fn print_made(made: &apply::Made) {
             println!("    … and {} more", made.versioned.len() - SHOWN);
         }
     }
+    // A template of the package replaced by the canonical one is never silent.
+    for what in &made.superseded {
+        println!("  {what}");
+    }
     for why in &made.refused {
         eprintln!("  [refused] {why}");
     }

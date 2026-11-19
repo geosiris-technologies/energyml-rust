@@ -247,7 +247,7 @@ impl Operation for Densify {
     }
 
     fn reports(&self) -> Vec<Slot> {
-        support::frame_reports(vec![Slot::required(
+        let mut reports = support::frame_reports(vec![Slot::required(
             "addedNodes",
             Need::Number {
                 uom: None,
@@ -255,6 +255,8 @@ impl Operation for Densify {
                 most: None,
             },
             "nodes added",
-        )])
+        )]);
+        reports.extend(support::every_written_count());
+        reports
     }
 }
