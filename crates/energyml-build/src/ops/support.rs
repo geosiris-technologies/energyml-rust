@@ -748,7 +748,7 @@ const WRITTEN_COUNTS: &[(&str, &str)] = &[
 /// (common TRG 2.3 section 3.1, p. 40: a parameter must have an equivalent in
 /// the template). Optional: which counts exist depends on the shape written.
 ///
-/// `which` names counts of [`WRITTEN_COUNTS`]; a name that is not one is a
+/// `which` names counts the shared writers record; a name that is not one is a
 /// defect of the caller, said by a panic in tests rather than a silent gap.
 pub fn written_counts(which: &[&str]) -> Vec<Slot> {
     which
