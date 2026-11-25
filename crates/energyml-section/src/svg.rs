@@ -29,7 +29,8 @@
 use std::fmt::Write as _;
 
 use crate::layout::{
-    Anchor, Attr, LaidInterval, LaidObject, Layout, MARKERS_LAYER, RAMP_LAYER, Rect, STRATA_LAYER, Shape,
+    Anchor, Attr, CATEGORY_LAYER, LaidInterval, LaidObject, Layout, MARKERS_LAYER, RAMP_LAYER, Rect,
+    STRATA_LAYER, Shape,
 };
 use crate::model::LimitStyle;
 
@@ -81,7 +82,11 @@ pub fn write(layout: &Layout) -> String {
     // Inkscape's namespace, declared only when a group uses it: a drawing
     // without the strata legend is the bytes it always was.
     let has_strata = layout.layers.iter().any(|l| {
-        (l.name == STRATA_LAYER || l.name == MARKERS_LAYER || l.name == RAMP_LAYER) && !l.objects.is_empty()
+        (l.name == STRATA_LAYER
+            || l.name == MARKERS_LAYER
+            || l.name == RAMP_LAYER
+            || l.name == CATEGORY_LAYER)
+            && !l.objects.is_empty()
     });
     let inkscape = if has_strata {
         " xmlns:inkscape=\"http://www.inkscape.org/namespaces/inkscape\""
@@ -170,6 +175,8 @@ pub fn write(layout: &Layout) -> String {
             out.push_str("<g id=\"strata-legend\" data-legend=\"strata\" inkscape:groupmode=\"layer\" inkscape:label=\"Strata legend\">\n");
         } else if layer.name == MARKERS_LAYER {
             out.push_str("<g id=\"markers-legend\" data-legend=\"markers\" inkscape:groupmode=\"layer\" inkscape:label=\"Markers legend\">\n");
+        } else if layer.name == CATEGORY_LAYER {
+            out.push_str("<g id=\"category-legend\" data-legend=\"category\" inkscape:groupmode=\"layer\" inkscape:label=\"Category legend\">\n");
         } else if layer.name == RAMP_LAYER {
             out.push_str("<g id=\"ramp-legend\" data-legend=\"ramp\" inkscape:groupmode=\"layer\" inkscape:label=\"Ramp legend\">\n");
         } else {

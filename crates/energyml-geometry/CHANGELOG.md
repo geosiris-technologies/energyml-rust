@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- *(geometry)* the ramp of a scene's legend takes its colours from `energyml_domain::color::ValueColours`, the one door from a value to a colour (ADR 0056); the same colours
+
 ### Added
 
 - *(geometry)* `well::along_hole` and `well::AlongHole`: the one door for the point of a trajectory at a measured depth - its line when it has a `Geometry`, the vertical read from its datum (flagged `is_assumed`) when it has none; `well::frame` places its nodes through it; `well::path_of` keeps refusing the second case

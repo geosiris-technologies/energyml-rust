@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- *(section)* a stretch of a painted well that the paint has no value for is drawn as an unpainted well is (the view's colour, or its strata with `strata_for_unpainted`) instead of being left empty; `paint::gaps` names the stretches
+- *(section)* `View::strata_for_unpainted`: under scene colouring the wells with no paint keep their strata (intervals, ticks, strata legend); off by default and not written when off; ADR 0054
+- *(section)* the wells that carry a paint are drawn after the others of the section, so a frame drawn in its own colour does not hide the painted one
+- *(section)* a legend of categories, one per section (`View::category_legend`, `CategoryLegend`), under the other legends on the right, in a group of its own (`category-legend`); `limits::strata_limits`, the lines between the strata units a well shows as limits (`energyml_domain::limits`), drawn over any colour the well has; ADR 0054
+
 - *(section)* limits across a well (`View::limits`, `limit_style`, `limits::well_limits` from `energyml_domain::limits`), drawn over its strata and over a paint the scene lays along it; the strata ticks are one case of them and take the same colour and width (the default is the black line of one pixel they always were); a ramp legend, one per section (`View::ramp_legend`, `ramp::sampled`), whose steps and graduations are those of the legend along a well; ADR 0052
 
 ### Fixed

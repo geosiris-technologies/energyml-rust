@@ -38,6 +38,7 @@ extern crate self as energyml_core;
 pub mod any_xml;
 pub mod base64;
 pub mod calendar;
+pub mod color;
 #[cfg(feature = "json")]
 pub mod docs;
 pub mod error;

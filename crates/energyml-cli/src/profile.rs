@@ -13,7 +13,7 @@ use energyml_analysis::wells_profile;
 use energyml_geometry::{Placement, heads};
 use serde_json::{Value, json};
 
-use crate::{Modes, open};
+use crate::{Modes, layers, open};
 
 /// `energyml profile` arguments.
 #[derive(Parser)]
@@ -167,6 +167,14 @@ pub struct ProfileArgs {
         conflicts_with = "from_svg"
     )]
     fill: Option<String>,
+    /// With `--svg`: paint the wells along the property whose title contains `TITLE` (case ignored): it is looked for on the frames of each well and carried by measured depth onto the well the section keeps, and the strata lines of `--strata-ticks` stay over the paint. A category is coloured by the colour map put on its table, else by a palette (said), with a legend of its categories; a measure by the file's map or a palette, with a ramp legend. A well with no such property keeps its colour and is counted; a well where several properties of different titles fit is refused, naming them. Only for a section, not for `--draw plan`. A redraw (`--from-svg`) keeps what its own metadata says
+    #[arg(
+        long = "paint-wells",
+        value_name = "TITLE",
+        requires = "svg",
+        conflicts_with = "from_svg"
+    )]
+    paint_wells: Option<String>,
     /// With `--svg`: leave out what the drawing says about itself under its
     /// plot (refused objects, wells set aside, labels folded). The command
     /// still prints every refusal and note.
@@ -278,6 +286,8 @@ fn draw_svg(stores: &[crate::Opened], args: &ProfileArgs) -> Result<()> {
         .collect();
     let backend = energyml_proj::Proj4::new();
 
+    // What the paint of the wells said, printed with the rest of the answer.
+    let mut paint_lines: Vec<String> = Vec::new();
     let (svg, catalogue) = if let Some(from) = &args.from_svg {
         let text = std::fs::read_to_string(from).with_context(|| format!("reading {}", from.display()))?;
         (
@@ -420,6 +430,9 @@ fn draw_svg(stores: &[crate::Opened], args: &ProfileArgs) -> Result<()> {
                 .map_err(|why| anyhow!("`--marker {spec}`: {why}"))?;
             view.markers.push(marker);
         }
+        if let Some(title) = &args.paint_wells {
+            paint_lines = paint_wells(stores, &catalogue, &mut view, title, args.strata_ticks)?;
+        }
         (energyml_section::draw(&catalogue, &view), Some(catalogue))
     };
 
@@ -455,7 +468,120 @@ fn draw_svg(stores: &[crate::Opened], args: &ProfileArgs) -> Result<()> {
     for note in &catalogue.notes {
         println!("  note: {}", note.said);
     }
+    for line in &paint_lines {
+        println!("{line}");
+    }
     Ok(())
+}
+
+/// `--paint-wells`: the wells of the section drawn, painted along the property whose title fits, **by the
+/// library's door** (`energyml_views::paint_wells`); this only gathers the wells of each package, puts the answer
+/// in the view and says what became of each well. The strata lines (`View::limits`, ADR-0052) are laid over
+/// the paint when `--strata-ticks` is given, as they are over any colour.
+fn paint_wells(
+    stores: &[crate::Opened],
+    catalogue: &energyml_section::model::Catalogue,
+    view: &mut energyml_section::model::View,
+    title: &str,
+    strata_lines: bool,
+) -> Result<Vec<String>> {
+    use energyml_domain::package_index::PackageIndex;
+    use energyml_domain::palettes::Palettes;
+    use energyml_section::model::{Item, SectionKey, Target, WellItem};
+    use energyml_views::{PackageColours, PaintAsk, ViewContext, WellOutcome, WellPaints};
+
+    let section = match &view.target {
+        Target::Section {
+            key: SectionKey::Long,
+        } => &catalogue.long,
+        Target::Section { key } => catalogue
+            .crosses
+            .iter()
+            .find(|one| one.key == *key)
+            .ok_or_else(|| anyhow!("`--paint-wells`: the cross section drawn is not in the catalogue"))?,
+        Target::Plan => {
+            bail!("`--paint-wells` paints the wells of a section: use `--draw long` or `--draw cross:N`")
+        }
+    };
+    let wells: Vec<&WellItem> = section
+        .items
+        .iter()
+        .filter_map(|item| match item {
+            Item::Well(well) => Some(well),
+            _ => None,
+        })
+        .collect();
+    let palettes = Palettes::new();
+    let mut parts = Vec::new();
+    for (at, store) in stores.iter().enumerate() {
+        let id = format!("s{}", at + 1);
+        let theirs: Vec<&WellItem> = wells
+            .iter()
+            .copied()
+            .filter(|well| well.object.store == id)
+            .collect();
+        if theirs.is_empty() {
+            continue;
+        }
+        let epc: &energyml_storage::EpcStore = store;
+        let index = PackageIndex::build(epc, 0);
+        let cache = layers::cache_for("profile");
+        let colours = PackageColours {
+            cache: &cache,
+            store: epc,
+        };
+        let cx = ViewContext {
+            source: epc,
+            index: &index,
+            colours: &colours,
+            palettes: &palettes,
+        };
+        parts.push(
+            energyml_views::paint_wells(&cx, &theirs, &PaintAsk { title, palette: None })
+                .map_err(|why| anyhow!("`--paint-wells {title}`: {why}"))?,
+        );
+    }
+    let answer = WellPaints::merge(parts);
+    let mut lines = vec![format!(
+        "  paint-wells `{title}`: {} well(s) painted, {} without the property (kept their colour), {} refused",
+        answer.painted(),
+        answer.without_property(),
+        answer.refused().len()
+    )];
+    for one in &answer.results {
+        match &one.outcome {
+            WellOutcome::Painted {
+                property,
+                frames,
+                coloured,
+                nodes,
+            } => lines.push(format!(
+                "  painted: {} by `{property}` from {} ({coloured} of {nodes} node(s) coloured)",
+                one.well,
+                frames.join(", ")
+            )),
+            WellOutcome::WithoutProperty => {}
+            WellOutcome::Refused(why) => lines.push(format!("  refused: {}: {why}", one.well)),
+        }
+    }
+    for note in &answer.notes {
+        lines.push(format!("  note: {note}"));
+    }
+    if strata_lines {
+        for well in &wells {
+            let painted = answer.results.iter().any(|one| {
+                one.key == well.object.key() && matches!(one.outcome, WellOutcome::Painted { .. })
+            });
+            if painted {
+                let (limits, _unplaced) = energyml_section::limits::strata_limits(well);
+                if !limits.is_empty() {
+                    view.limits.push((well.object.key(), limits));
+                }
+            }
+        }
+    }
+    answer.apply(view);
+    Ok(lines)
 }
 
 fn to_json(answer: &wells_profile::WellsProfile) -> Value {

@@ -113,6 +113,12 @@ was shown. The crate has no native dependency and compiles to WebAssembly.
   are those of the strata ticks (a black line of one pixel by default).
 - **Ramp legend** (library: `View::ramp_legend`, `ramp::sampled`): the colours of a property's values, graduated, with its
   name and unit, one per section, on the right.
+- **Wells painted by a property** (`--paint-wells TITLE`; library: `energyml_views::paint_wells`, ADR 0054): the property whose
+  title contains `TITLE` (case ignored) is looked for on the frames of each well, carried by measured depth onto the well the
+  section keeps, and coloured by the package's colours - the map put on the table of a category, read by exact key, else a
+  palette, said in the output. A category gets a legend of its values (`View::category_legend`), a measure a ramp legend. A well
+  with no such property keeps its colour and is counted; a well where several properties of different titles fit is refused,
+  naming them. With `--strata-ticks` the lines between the strata units stay over the paint.
 - **Portions without strata** (`--unstratified hidden|solid|dashed|hatched`, with
   parameters such as `dashed:colour=#999999,dash=6,gap=4`): the library declares
   the available styles and their parameters, so an interface builds its form from

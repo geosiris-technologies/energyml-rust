@@ -156,6 +156,8 @@ pub fn view() -> View {
         limits: Vec::new(),
         limit_style: Default::default(),
         ramp_legend: None,
+        category_legend: None,
+        strata_for_unpainted: false,
     }
 }
 

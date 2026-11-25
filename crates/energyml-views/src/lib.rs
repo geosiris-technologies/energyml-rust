@@ -53,12 +53,20 @@ pub mod table_curve;
 pub mod table_schema;
 pub mod target;
 pub mod well_locator;
+pub mod well_paint;
 pub mod well_sheet;
 
 pub use ask::ViewAsk;
 pub use assist::{Assist, AxisColumn, DimensionAxes, Proposal, assist, axis_links_read, axis_links_value};
-pub use colour::{ColourDoor, ColourSource, NoColourMaps, PackageColours, ValueColours, value_colours};
+pub use colour::{
+    ColourDoor, ColourSource, NoColourMaps, PackageColours, ValueColours, category_colours,
+    category_colours_noted, value_colours, value_colours_noted,
+};
 pub use kind::{Drawn, ObjectSlot, Offer, Request, ViewContext, ViewKind, ViewKinds, ViewNote, local_type};
 pub use picture::{Picture, draw_list, draw_svg, png, read_ask, redraw, write_svg};
 pub use refusal::ViewRefusal;
 pub use setting::{SettingKind, Settled, ViewSetting};
+pub use well_paint::{
+    PaintAsk, PaintLegend, Part, Pick, WellOutcome, WellPaints, WellResult, WellValues, paint_wells,
+    well_values, wellbore_of,
+};

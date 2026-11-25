@@ -699,6 +699,11 @@ pub struct View {
     pub widths: Vec<(String, f64)>,
     /// How wells are coloured.
     pub well_colouring: WellColouring,
+    /// Under [`WellColouring::Scene`], the wells the scene paints nothing along keep **their strata**: a view that paints
+    /// some wells along a property does not turn the others into a flat colour. Off by default, and then **not written**
+    /// into the metadata, so earlier drawings keep their bytes; it means nothing under another colouring.
+    #[serde(default, skip_serializing_if = "is_off")]
+    pub strata_for_unpainted: bool,
     /// How wide a well is drawn, in pixels.
     pub well_width_px: f64,
     /// For each surface, which way its colour fills.
@@ -794,6 +799,11 @@ pub struct View {
     /// then **not written** into the metadata.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ramp_legend: Option<RampLegend>,
+    /// A legend of the categories a property paints - each value (a code, or its label) beside the
+    /// colour it is drawn in - on the right of the drawing, **one per section**, under the ramp legend
+    /// when there is one. Absent, and then **not written** into the metadata.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub category_legend: Option<CategoryLegend>,
 }
 
 /// The colour and the width of the lines drawn across a well at a limit.
@@ -898,6 +908,26 @@ pub struct RampLegend {
     /// The colour of each step of the ramp, from the lower bound up, `#rrggbb` or `#rrggbbaa`;
     /// `None` where the ramp has none. See [`crate::ramp::sampled`].
     pub colours: Vec<Option<String>>,
+}
+
+/// The legend of a categorical property: what each value that was painted is, and the colour it was painted in.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CategoryLegend {
+    /// The property's name.
+    pub title: String,
+    /// One line per category, in the order given.
+    pub entries: Vec<CategoryEntry>,
+}
+
+/// One line of a [`CategoryLegend`].
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CategoryEntry {
+    /// What the category is called: its label when its table gives one, else its code.
+    pub label: String,
+    /// The colour it is drawn in, `#rrggbb` or `#rrggbbaa`.
+    pub colour: String,
 }
 
 /// A named marker put on a set of objects: what the legend of markers lists.
@@ -1156,6 +1186,7 @@ impl View {
             unit_colours: Vec::new(),
             widths: Vec::new(),
             well_colouring: WellColouring::Strata,
+            strata_for_unpainted: false,
             well_width_px: 3.0,
             fills: Vec::new(),
             show: Show {
@@ -1185,6 +1216,7 @@ impl View {
             limits: Vec::new(),
             limit_style: LimitStyle::default(),
             ramp_legend: None,
+            category_legend: None,
         }
     }
 }

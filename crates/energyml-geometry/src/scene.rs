@@ -23,8 +23,10 @@
 //! everybody, invisibly.
 
 use energyml_core::value::{FieldValue, Reflect};
+use energyml_domain::color::ValueColours;
 use energyml_domain::crs::{self, Crs};
 use energyml_domain::metadata::{Metadata, Spec};
+use energyml_domain::palettes::Reading;
 
 use crate::error::{Error, Result};
 use crate::geometry::{self, Geometry, field_text};
@@ -542,7 +544,7 @@ pub fn colour_ramp(
     let Some(decision) = decision else {
         return Vec::new();
     };
-    let Paint::Mapped { map, scaling, .. } = &decision.paint else {
+    let Paint::Mapped { .. } = &decision.paint else {
         // A constant colour is not a ramp: it colours the object, not its
         // values, and the object's colour is already `energyml colors`.
         return Vec::new();
@@ -562,10 +564,15 @@ pub fn colour_ramp(
         _ => return Vec::new(),
     };
 
+    // The ramp of a measure: every value goes through the one door from a value to a colour, on the scale the file gives.
+    let Ok(door) = ValueColours::new(Some(&decision.paint), Reading::Continuous, None, None, &[], None)
+    else {
+        return Vec::new();
+    };
     (0..256)
         .filter_map(|step| {
             let value = low + (high - low) * (step as f64) / 255.0;
-            map.sample(Some(value), scaling)
+            door.colour(Some(value))
                 .map(|rgba| [rgba.r, rgba.g, rgba.b, rgba.a])
         })
         .collect()

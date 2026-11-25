@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- *(domain)* `color::ValueColours`, `ColourSource` and `ColourRefusal`: the one door from a value to a colour - a constant, a discrete map read by exact key with a palette over the keys for the missing ones, a measure on the file's scale, a palette on the caller's extent, a missing value by `NullColor`; the units of a wellbore go through it; ADR 0056
 - *(domain)* `frame_values`: the values of a property along a wellbore frame, read once - support, values, the row of the category table each code names, the value at an MD (never across a hole), a table column as a property, and the values carried onto another representation of the wellbore by MD; ADR 0049
 - *(domain)* `IndexableElement::is_frame_interval`, the one door for `intervals` and `intervals from datum`
 - *(domain)* `table::Lookup::read_described` and `table::ColumnMeta`: a table read with what each column says of itself; `table::CODE`
@@ -17,8 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- *(domain)* the hue of a colour is read in turns or in degrees from the values of its set of colours (a map, or the constant colours of a `GraphicalInformationSet`): fractions of a turn are brought to degrees, said in a note that goes with the decision, and warned by `check` (`colour-hue-in-turns`); ADR 0055
 - *(domain)* a frame whose properties say `intervals from datum` is tabulated one row per interval by `wellbore_table`, like `intervals`, instead of every one of its properties being refused (issue 34)
 - *(domain)* a property of several patches, several values per element or `RealizationIndices` is refused by name by `wellbore_table` and `well_strata`
+- *(domain)* a `ColorInformation` that names its colour map by `DiscreteColorMap` or `ContinuousColorMap` (the draft of RESQML 2.2) is read like one that says `ColorMap`: its entry no longer names no map
 
 ## [0.4.0](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-domain-v0.3.0...energyml-domain-v0.4.0) - 2026-11-16
 

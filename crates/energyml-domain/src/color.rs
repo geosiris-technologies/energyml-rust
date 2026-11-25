@@ -17,10 +17,14 @@
 //!
 //! **There is no RGB type.** Every colour in the standard is an `HsvColor`,
 //! and the schema puts **no bounds** on its four numbers - no
-//! `minInclusive`, no `maxInclusive`, just a link to Wikipedia. The corpus is
-//! consistent with hue in 0-360 and the rest in 0-1, so that is what [`Hsv`]
-//! validates, and a colour outside it is refused by name rather than silently
-//! producing a different one.
+//! `minInclusive`, no `maxInclusive`, just a link to Wikipedia (RESQML TRG 2.2
+//! section 4.21 `HsvColor`: *"Hue of the color in the HSV model"*, and nothing of its unit).
+//! Saturation, value and alpha are read in 0-1; the hue is read in degrees, 0-360, **unless
+//! the colours it belongs to say it is a fraction of a turn** - one producer writes
+//! 0.602 for a blue, which in degrees would be a red. The unit is decided by
+//! [`hue_unit`] (`energyml_core::color::hue_unit`, a pure function the translator shares), **by a set of colours and never by one colour alone**, and a reading in
+//! turns is always said (see [`HUE_IN_TURNS`]). A colour outside the bounds is
+//! refused by name rather than silently producing a different one.
 //!
 //! # What decides which colour applies - the cascade
 //!
@@ -71,9 +75,36 @@ use crate::scan;
 use crate::source::ObjectSource;
 use crate::table::Table;
 
+mod value_colours;
+pub use value_colours::{ColourRefusal, ColourSource, ValueColours};
+
 // ---------------------------------------------------------------------------
 // The colour itself
 // ---------------------------------------------------------------------------
+
+/// What a note says when the hues of a set of colours were read as fractions of a turn.
+pub const HUE_IN_TURNS: &str = "hue read as a fraction of a turn";
+
+pub use energyml_core::color::{HueUnit, hue_unit, to_degrees};
+
+/// Settle the hues of one set of colours: decide their unit ([`hue_unit`]) and, in turns, bring each to degrees.
+/// `Some(n)` is the number of hues that were read as fractions of a turn, for the note.
+fn settle_hues(colours: &mut [&mut Hsv]) -> Option<usize> {
+    let hues: Vec<f64> = colours.iter().map(|colour| colour.hue).collect();
+    let unit = hue_unit(&hues);
+    if unit != HueUnit::Turns {
+        return None;
+    }
+    for colour in colours.iter_mut() {
+        colour.hue = to_degrees(colour.hue, unit);
+    }
+    Some(hues.len())
+}
+
+/// The note of a set read in turns: what it was about and how many hues.
+fn turns_note(what: &str, count: usize) -> String {
+    format!("{what}: {HUE_IN_TURNS}: all {count} hues lie in 0-1")
+}
 
 /// A colour as the standard stores it.
 ///
@@ -82,7 +113,8 @@ use crate::table::Table;
 /// wrong colour.
 #[derive(Clone, PartialEq, Debug)]
 pub struct Hsv {
-    /// 0-360 degrees.
+    /// 0-360 degrees - whatever unit the file wrote it in ([`HueUnit`]): [`ColorMap::read`] and
+    /// [`GraphicalSet::read`] bring a hue written in turns to degrees.
     pub hue: f64,
     /// 0-1.
     pub saturation: f64,
@@ -424,8 +456,15 @@ pub struct ColorMap {
 }
 
 impl ColorMap {
-    /// Read a colour map object.
+    /// Read a colour map object. The hues are brought to degrees ([`HueUnit`]); [`ColorMap::read_noted`] says when
+    /// that took a reading in turns.
     pub fn read(object: &dyn Reflect) -> Result<ColorMap> {
+        ColorMap::read_noted(object).map(|(map, _)| map)
+    }
+
+    /// [`ColorMap::read`], and what it had to say: one note when the hues of the map (its entries and its null, above
+    /// and below colours, **all of them together**) were read as fractions of a turn.
+    pub fn read_noted(object: &dyn Reflect) -> Result<(ColorMap, Vec<String>)> {
         let name = object.type_info().name;
         let uuid = identity::uuid_of_reflect(object)
             .ok_or_else(|| Error::malformed(name, "a colour map with no uuid"))?
@@ -499,19 +538,44 @@ impl ColorMap {
                 None => Ok(None),
             }
         };
+        let mut null_color = optional_color("NullColor")?;
+        let mut above_max = optional_color("AboveMaxColor")?;
+        let mut below_min = optional_color("BelowMinColor")?;
+        let title = object
+            .field("Citation")
+            .and_then(|f| f.as_object())
+            .and_then(|citation| text(citation, "Title"));
 
-        Ok(ColorMap {
-            title: object
-                .field("Citation")
-                .and_then(|f| f.as_object())
-                .and_then(|citation| text(citation, "Title")),
-            continuous,
-            stops,
-            null_color: optional_color("NullColor")?,
-            above_max: optional_color("AboveMaxColor")?,
-            below_min: optional_color("BelowMinColor")?,
-            uuid,
-        })
+        // One unit for the whole map: the hues of its entries and of its three other colours, together.
+        let mut every: Vec<&mut Hsv> = stops.iter_mut().map(|stop| &mut stop.color).collect();
+        every.extend(null_color.iter_mut());
+        every.extend(above_max.iter_mut());
+        every.extend(below_min.iter_mut());
+        let notes: Vec<String> = settle_hues(&mut every)
+            .map(|count| {
+                turns_note(
+                    &format!(
+                        "colour map {uuid}{}",
+                        title.as_deref().map(|t| format!(" ({t})")).unwrap_or_default()
+                    ),
+                    count,
+                )
+            })
+            .into_iter()
+            .collect();
+
+        Ok((
+            ColorMap {
+                title,
+                continuous,
+                stops,
+                null_color,
+                above_max,
+                below_min,
+                uuid,
+            },
+            notes,
+        ))
     }
 
     /// The lowest and highest index of the stops.
@@ -1232,7 +1296,28 @@ impl GraphicalSet {
                 information,
             });
         }
+        // One unit for the constant colours of the whole set - a colour alone decides nothing - and a note when it is turns.
+        let mut constants: Vec<&mut Hsv> = Vec::new();
+        for entry in &mut set.entries {
+            if let Information::Default { elements, .. } = &mut entry.information {
+                constants.extend(
+                    elements
+                        .iter_mut()
+                        .filter_map(|info| info.constant_color.as_mut()),
+                );
+            }
+        }
+        if let Some(count) = settle_hues(&mut constants) {
+            let uuid = identity::uuid_of_reflect(object).unwrap_or_default();
+            set.notes
+                .push(turns_note(&format!("graphical information set {uuid}"), count));
+        }
         set
+    }
+
+    /// Whether the constant colours of this set were read as fractions of a turn ([`HUE_IN_TURNS`]).
+    pub fn hue_in_turns(&self) -> bool {
+        self.notes.iter().any(|note| note.contains(HUE_IN_TURNS))
     }
 
     /// Entries decorating one object, latest first.
@@ -1452,7 +1537,7 @@ struct MapMemory {
     /// The data address of the source the maps were read from.
     source: usize,
     /// `u:<uri>` or `i:<uuid>`, as the entry names the map.
-    by_address: HashMap<String, ColorMap>,
+    by_address: HashMap<String, (ColorMap, Vec<String>)>,
 }
 
 /// Which entries of a set target each object: lowercase uuid → positions, in
@@ -1798,11 +1883,18 @@ impl<'a> Cascade<'a> {
                         ));
                         continue;
                     };
-                    let map = ColorMap::read(object.as_reflect())?;
-                    self.maps.borrow_mut().by_address.insert(address, map.clone());
-                    map
+                    let read = ColorMap::read_noted(object.as_reflect())?;
+                    self.maps.borrow_mut().by_address.insert(address, read.clone());
+                    read
                 }
             };
+            // What reading the map had to say (its hues in turns) goes with every decision it gives.
+            let (map, read_notes) = map;
+            for note in read_notes {
+                if !notes.contains(&note) {
+                    notes.push(note);
+                }
+            }
             return Ok(Some(Decision {
                 paint: Paint::Mapped {
                     map: Box::new(map),
@@ -2139,7 +2231,13 @@ fn read_raw_entry(raw: &AnyXml, position: usize, notes: &mut Vec<String>) -> Ent
                 reverse: scan::element_text(content, "UseReverseMapping")
                     .is_some_and(|text| text.trim().eq_ignore_ascii_case("true")),
             },
-            map: scan::section(content, "ColorMap").and_then(|map| scan::element_text(map, "Uuid")),
+            // The reference to the map is `ColorMap` in the released schema; the 2.2 draft (`v2.2_dev3`) split it
+            // into `DiscreteColorMap` and `ContinuousColorMap`, and packages written against the draft carry those.
+            // One reference, whichever of the three names holds it.
+            map: ["ColorMap", "DiscreteColorMap", "ContinuousColorMap"]
+                .iter()
+                .find_map(|name| scan::section(content, name))
+                .and_then(|map| scan::element_text(map, "Uuid")),
             value_vector_index: raw_f64(content, "ValueVectorIndex").map(|v| v as u64),
         }
     } else {

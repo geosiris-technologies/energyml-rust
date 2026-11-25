@@ -99,6 +99,33 @@ pub fn check(nodes: usize, paint: &Paint, joints: &Joint) -> Result<(), String> 
     read(nodes, paint, joints).map(|_| ())
 }
 
+/// The stretches of a painted well that **carry no colour**: each run of consecutive nodes whose colour is absent
+/// (alpha under one half), as `(first node, node that closes the run)` - the stretch from the first to the closing node,
+/// which [`well_pieces`] leaves undrawn. What the drawing lays its own line under, so that a stretch the paint has no value
+/// for is a stretch drawn otherwise and never an absent well.
+///
+/// # Errors
+///
+/// The refusal [`check`] gives.
+pub fn gaps(nodes: usize, paint: &Paint, joints: &Joint) -> Result<Vec<(usize, usize)>, String> {
+    let Read { nodes: colours, .. } = read(nodes, paint, joints)?;
+    let count = colours.len();
+    let mut runs = Vec::new();
+    let mut k = 0;
+    while k + 1 < count {
+        if colours[k][3] < ABSENT_BELOW {
+            let first = k;
+            while k + 1 < count && colours[k][3] < ABSENT_BELOW {
+                k += 1;
+            }
+            runs.push((first, k));
+        } else {
+            k += 1;
+        }
+    }
+    Ok(runs)
+}
+
 /// A point of segment `a`-`b` at `t`, exact at both ends: two stretches that
 /// meet at a node meet on the very same point, which is what merging compares.
 fn at(a: [f64; 2], b: [f64; 2], t: f64) -> [f64; 2] {

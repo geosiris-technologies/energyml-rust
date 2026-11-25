@@ -90,9 +90,10 @@ mod scan {
 }
 pub mod error;
 pub mod forest;
-/// What a property is worth along a wellbore frame, read once: its support,
-/// its values, the row of its category table, the value at an MD, a table
-/// column as a property (ADR 0049).
+// What a property is worth along a wellbore frame, read once: its support,
+// its values, the row of its category table, the value at an MD, a table
+// column as a property (ADR 0049). The module's own `//!` is its documentation:
+// a `///` here would resolve its links in this scope.
 pub mod frame_values;
 pub mod geolts;
 pub mod geolts_rank;
@@ -100,9 +101,9 @@ pub mod geolts_rank;
 /// package index.
 pub mod inherit;
 pub mod integrity;
-/// The limits between two runs of values along a wellbore: classify a suite (units,
-/// codes, a table column, a threshold), find every switch with its rank, place each
-/// limit in MD (ADR 0051).
+// The limits between two runs of values along a wellbore: classify a suite (units,
+// codes, a table column, a threshold), find every switch with its rank, place each
+// limit in MD (ADR 0051). The module's own `//!` is its documentation.
 pub mod limits;
 pub mod md_extent;
 pub mod metadata;

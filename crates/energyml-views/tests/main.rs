@@ -17,4 +17,5 @@ mod table_curve;
 mod table_schema;
 mod target;
 mod well_locator;
+mod well_paint;
 mod well_sheet;

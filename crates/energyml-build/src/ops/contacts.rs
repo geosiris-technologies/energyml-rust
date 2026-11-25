@@ -27,8 +27,8 @@
 //! - **a unit that comes back lower in the same hole** (A, B, A) gives two tops
 //!   and two bases: one **point set** per unit and side still, whose points
 //!   carry their **rank** - 1 for the first top of the unit in that hole, 2 for
-//!   the second - in a `DiscreteProperty` (`rank`) written when any rank is above
-//!   1. Until then this was refused by name ("which of the two is *the* top is a
+//!   the second - in a `DiscreteProperty` (`rank`) written when any rank is above 1.
+//!   Until then this was refused by name ("which of the two is *the* top is a
 //!   geologist's call"); it is the person's call now, made with `which`: `all`
 //!   (the default), the `first` or the `last` of each unit and side in each hole.
 //!   A run with no repeated crossing writes what it always wrote (ADR 0053);

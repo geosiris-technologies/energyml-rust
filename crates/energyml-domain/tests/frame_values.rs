@@ -187,10 +187,10 @@ fn table(with_thickness: bool) -> eml23::ColumnBasedTable {
     }
 }
 
-fn asked<T: DynObject + 'static>(mds: &[f64], property: &T) -> Result<frame_values::FrameValues, Refusal>
-where
-    T: Clone,
-{
+fn asked<T: DynObject + Clone + 'static>(
+    mds: &[f64],
+    property: &T,
+) -> Result<frame_values::FrameValues, Refusal> {
     frame_values::of(
         &frame(mds),
         property.as_reflect(),

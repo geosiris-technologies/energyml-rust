@@ -1829,6 +1829,9 @@ Options:
       --fill <down|up|both>
           With `--svg`: fill from every surface that may be filled, in its own colour - `down` to the next line below, `up` to the next above, or `both`. Which surfaces may (a horizon, never a fault nor an IJK grid) and where each fill stops are the library's, as on the page's fill buttons. A redraw (`--from-svg`) keeps what its own metadata says
 
+      --paint-wells <TITLE>
+          With `--svg`: paint the wells along the property whose title contains `TITLE` (case ignored): it is looked for on the frames of each well and carried by measured depth onto the well the section keeps, and the strata lines of `--strata-ticks` stay over the paint. A category is coloured by the colour map put on its table, else by a palette (said), with a legend of its categories; a measure by the file's map or a palette, with a ramp legend. A well with no such property keeps its colour and is counted; a well where several properties of different titles fit is refused, naming them. Only for a section, not for `--draw plan`. A redraw (`--from-svg`) keeps what its own metadata says
+
       --hide-notes
           With `--svg`: leave out what the drawing says about itself under its plot (refused objects, wells set aside, labels folded). The command still prints every refusal and note
 

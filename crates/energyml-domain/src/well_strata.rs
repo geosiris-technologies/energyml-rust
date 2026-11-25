@@ -87,8 +87,11 @@ use energyml_core::identity;
 use energyml_core::registry::DynObject;
 use energyml_core::value::{FieldValue, Reflect};
 
-use crate::color::{Cascade, ColorMap, GraphicalSet, Level, Paint, Request, Rgba, Scaling, Scope};
+use crate::color::{
+    Cascade, ColorMap, GraphicalSet, Level, Paint, Request, Rgba, Scaling, Scope, ValueColours,
+};
 use crate::frame_values;
+use crate::palettes::Reading;
 use crate::property::PropertyKindRef;
 use crate::property_kind::Resolver;
 use crate::source::{ArraySource, ObjectSource};
@@ -1212,17 +1215,26 @@ fn category(
         &cascade,
         notes,
     );
+    // The one door from a code to a colour (`ValueColours`): a discrete map colours categories, and a category is
+    // its key - the entry that has it, never the nearest lower one -, with no palette, so that a key with no entry
+    // has no colour from the map (the unit's own colour is then asked, below). A continuous map is sampled by its own
+    // rule.
+    let door = map.as_ref().and_then(|(map, scaling, _, by_key)| {
+        let file = Paint::Mapped {
+            map: map.clone(),
+            scaling: *scaling,
+            value_vector_index: None,
+        };
+        let reading = if *by_key {
+            Reading::Categorical
+        } else {
+            Reading::Continuous
+        };
+        ValueColours::new(Some(&file), reading, None, None, &[], None).ok()
+    });
     for unit in &mut units {
-        if let Some((map, scaling, from, by_key)) = &map {
-            // A discrete map colours categories, and a category is its key: the colour of a key is the
-            // entry that has it - never the nearest lower one -, and a key with no entry has no colour
-            // from the map (the unit's own colour is then asked, below). A continuous map is sampled
-            // by its own rule.
-            let rgba = if *by_key {
-                map.sample_key(unit.code)
-            } else {
-                map.sample(Some(unit.code), scaling)
-            };
+        if let Some((_, _, from, by_key)) = &map {
+            let rgba = door.as_ref().and_then(|door| door.colour(Some(unit.code)));
             if let Some(rgba) = rgba {
                 unit.colour = Some(rgba);
                 unit.colour_from = Some(from.clone());

@@ -465,3 +465,358 @@ fn the_steps_and_the_graduations_are_the_ramps_own() {
     let back: View = serde_json::from_str(&serde_json::to_string(&v).unwrap()).unwrap();
     assert_eq!(back, v);
 }
+
+// -- the lines between strata, over any colour ---------------------------------------------
+
+/// The units a well shows give a line across it where one gives way to the next: the shared fixture has
+/// Bartonian from MD 0 to 100 and Lutetian from 100 to 300, so one line at MD 100, the first of its class, between
+/// the two units **by their titles**. A hole between two intervals gives none (no limit crosses a hole).
+///
+/// Break it: in `strata_limits`, give every interval the same class (`Class::Unit(String::new())`): no unit changes
+/// and no line is drawn.
+#[test]
+fn the_strata_give_a_line_where_one_unit_gives_way_to_the_next_and_none_over_a_hole() {
+    let mut a = well("A", 150.0, 12.0, Side::Left);
+    let (limits, unplaced) = energyml_section::limits::strata_limits(&a);
+    assert!(unplaced.is_empty(), "{unplaced:?}");
+    assert_eq!(limits.len(), 1, "{limits:?}");
+    assert_eq!(limits[0].at, LimitAt::Md(100.0));
+    assert_eq!(limits[0].rank, 1);
+    assert_eq!(limits[0].above.as_deref(), Some("Bartonian"));
+    assert_eq!(limits[0].below.as_deref(), Some("Lutetian"));
+
+    // A third unit that starts after a hole: nothing crosses the hole.
+    a.intervals.push(Interval {
+        from: 350.0,
+        to: 400.0,
+        colour: None,
+        unit: "Priabonian".into(),
+        unit_uri: None,
+    });
+    let (again, _) = energyml_section::limits::strata_limits(&a);
+    assert_eq!(again.len(), 1, "no line over the hole: {again:?}");
+
+    // And they are drawn over a well painted by the scene: the paint does not take them away.
+    let drawn = svg::write(&layout(
+        &catalogue(vec![Item::Well(a.clone())]),
+        &View {
+            well_colouring: WellColouring::Scene,
+            paints: vec![(
+                key_of("A"),
+                Paint {
+                    nodes: vec!["#00ff00ff".into(), "#ff0000ff".into(), "#0000ffff".into()],
+                    blend: Blend::Net,
+                },
+            )],
+            limits: vec![(key_of("A"), again)],
+            ..view()
+        },
+    ));
+    assert!(
+        group(&drawn, "limits").contains("data-limit-md=\"100\""),
+        "{drawn}"
+    );
+}
+
+// -- the legend of categories -----------------------------------------------------------------
+
+/// A section has one legend of categories, on the right: the property's name, then a swatch and a label per category,
+/// each its own object, in a group of its own. Nothing is drawn for no category, and it is said.
+///
+/// Break it: in `category_legend`, take the first entry's colour for every swatch.
+#[test]
+fn the_legend_of_categories_lists_each_value_painted_with_its_colour() {
+    let legend = CategoryLegend {
+        title: "Strati".to_string(),
+        entries: vec![
+            CategoryEntry {
+                label: "Lutetian".to_string(),
+                colour: "#ff0000".to_string(),
+            },
+            CategoryEntry {
+                label: "Bartonian".to_string(),
+                colour: "#00ff00".to_string(),
+            },
+        ],
+    };
+    let l = layout(
+        &one_well(),
+        &View {
+            category_legend: Some(legend.clone()),
+            ..view()
+        },
+    );
+    let layer = l
+        .layers
+        .iter()
+        .find(|layer| layer.name == "category-legend")
+        .expect("one layer");
+    let entries: Vec<&LaidObject> = layer
+        .objects
+        .iter()
+        .filter(|o| o.kind == "category-entry")
+        .collect();
+    assert_eq!(entries.len(), 2);
+    assert_eq!(entries[0].title, "Lutetian");
+    assert!(texts(entries[0]).contains(&"Lutetian"));
+    let fill = |o: &LaidObject| {
+        o.shapes.iter().find_map(|s| match s {
+            Shape::Polygon { fill, .. } => Some(fill.clone()),
+            _ => None,
+        })
+    };
+    assert_eq!(fill(entries[0]).as_deref(), Some("#ff0000"));
+    assert_eq!(fill(entries[1]).as_deref(), Some("#00ff00"));
+    let text = svg::write(&l);
+    assert!(text.contains("id=\"category-legend\""), "{text}");
+
+    // The metadata carries it and reads it back.
+    let v = View {
+        category_legend: Some(legend),
+        ..view()
+    };
+    let back: View = serde_json::from_str(&serde_json::to_string(&v).unwrap()).unwrap();
+    assert_eq!(back, v);
+
+    // No category: nothing is drawn, and the drawing says why.
+    let empty = layout(
+        &one_well(),
+        &View {
+            category_legend: Some(CategoryLegend {
+                title: "x".into(),
+                entries: Vec::new(),
+            }),
+            ..view()
+        },
+    );
+    assert!(
+        empty.warnings.iter().any(|w| w.contains("holds no category")),
+        "{:?}",
+        empty.warnings
+    );
+}
+
+// -- the wells that carry a paint are drawn over the others ---------------------------------------
+
+/// The frames of one wellbore lie at one place; the well that carries the paint is drawn **after** the ones that do not,
+/// whatever their order in the catalogue - none is dropped, and a well drawn in its own colour does not hide the paint.
+///
+/// Break it: in `layout`, draw `wells` in the catalogue's order (drop the two `filter`s of the loop over the wells).
+#[test]
+fn a_painted_well_is_drawn_after_the_wells_at_the_same_place() {
+    // A comes first in the catalogue and carries the paint; B, at the same place, has none.
+    let catalogue = catalogue(vec![
+        Item::Well(well("A", 150.0, 12.0, Side::Left)),
+        Item::Well(well("B", 150.0, 12.0, Side::Left)),
+    ]);
+    let painted = View {
+        well_colouring: WellColouring::Scene,
+        paints: vec![(
+            key_of("A"),
+            Paint {
+                nodes: vec!["#00ff00ff".into(), "#ff0000ff".into(), "#0000ffff".into()],
+                blend: Blend::Net,
+            },
+        )],
+        ..view()
+    };
+    let l = layout(&catalogue, &painted);
+    let layer = l
+        .layers
+        .iter()
+        .find(|layer| layer.name == "wells")
+        .expect("the wells");
+    let at = |name: &str| {
+        layer
+            .objects
+            .iter()
+            .position(|o| matches!(&o.attr, Attr::Key(k) if *k == key_of(name)))
+            .expect("the well is drawn")
+    };
+    assert_eq!(layer.objects.len(), 2, "no well is dropped");
+    assert!(at("B") < at("A"), "the painted well comes last, over the other");
+
+    // With no paint, the catalogue's order is kept.
+    let plain = layout(&catalogue, &view());
+    let layer = plain
+        .layers
+        .iter()
+        .find(|layer| layer.name == "wells")
+        .expect("the wells");
+    let first = layer
+        .objects
+        .iter()
+        .position(|o| matches!(&o.attr, Attr::Key(k) if *k == key_of("A")));
+    assert_eq!(first, Some(0));
+}
+
+// -- the wells the scene paints nothing along keep their strata -------------------------------------
+
+fn painted_a(strata_for_unpainted: bool) -> View {
+    View {
+        well_colouring: WellColouring::Scene,
+        strata_for_unpainted,
+        strata_legend: true,
+        paints: vec![(
+            key_of("A"),
+            Paint {
+                nodes: vec!["#00ff00ff".into(), "#ff0000ff".into(), "#0000ffff".into()],
+                blend: Blend::Net,
+            },
+        )],
+        ..view()
+    }
+}
+
+fn two_wells() -> Catalogue {
+    catalogue(vec![
+        Item::Well(well("A", 150.0, 12.0, Side::Left)),
+        Item::Well(well("B", 400.0, 12.0, Side::Left)),
+    ])
+}
+
+/// In a view that paints one well and asks that the others keep their strata, the second is drawn in the colours of its
+/// units (the shared fixture's Bartonian is `#aa0000`) and the strata legend lists them; without the request it is drawn in
+/// the scene's colour, as it always was.
+///
+/// Break it: in `strata_for`, answer `false` under `WellColouring::Scene` whatever the view asks.
+#[test]
+fn an_unpainted_well_keeps_its_strata_beside_a_painted_one() {
+    let intervals_of = |l: &Layout, name: &str| -> Vec<String> {
+        drawn(l, &key_of(name))
+            .intervals
+            .iter()
+            .map(|iv| iv.colour.clone())
+            .collect()
+    };
+
+    let kept = layout(&two_wells(), &painted_a(true));
+    assert!(
+        intervals_of(&kept, "B").iter().any(|colour| colour == "#aa0000"),
+        "{:?}",
+        intervals_of(&kept, "B")
+    );
+    let legend = kept
+        .layers
+        .iter()
+        .find(|layer| layer.name == "strata-legend")
+        .expect("the legend of the strata the unpainted well shows");
+    assert!(
+        legend.objects.iter().any(|o| o.title == "Bartonian"),
+        "{:?}",
+        legend.objects.iter().map(|o| &o.title).collect::<Vec<_>>()
+    );
+
+    let flat = layout(&two_wells(), &painted_a(false));
+    assert!(
+        intervals_of(&flat, "B").iter().all(|colour| colour != "#aa0000"),
+        "{:?}",
+        intervals_of(&flat, "B")
+    );
+    assert!(
+        flat.layers
+            .iter()
+            .find(|layer| layer.name == "strata-legend")
+            .is_none_or(|layer| layer.objects.is_empty()),
+        "no strata legend: nothing is coloured by strata"
+    );
+}
+
+/// The request is a field of the view that is **not written** when it is off - a drawing made without it keeps its bytes and
+/// a metadata without it reads as off - and is read back when it is on.
+///
+/// Break it: in `View`, drop `skip_serializing_if` on `strata_for_unpainted`.
+#[test]
+fn the_request_is_written_only_when_made_and_read_back() {
+    let off = serde_json::to_string(&view()).unwrap();
+    assert!(!off.contains("strataForUnpainted"), "{off}");
+    let back: View = serde_json::from_str(&off).unwrap();
+    assert!(!back.strata_for_unpainted);
+
+    let on = View {
+        strata_for_unpainted: true,
+        ..view()
+    };
+    let text = serde_json::to_string(&on).unwrap();
+    assert!(text.contains("\"strataForUnpainted\":true"), "{text}");
+    let back: View = serde_json::from_str(&text).unwrap();
+    assert_eq!(back, on);
+}
+
+// -- a stretch the paint has no value for is not an absent well --------------------------------------
+
+/// A well whose property covers only its lower part: the stretch above the first coloured node is drawn **in the colour of the
+/// view's wells with no paint** (never left empty), the lower one in the paint. With `strata_for_unpainted`, that
+/// stretch takes the well's strata where it has them.
+///
+/// Break it: in `laid_well`, leave out the polylines laid under the stretches `paint::gaps` names.
+#[test]
+fn a_stretch_with_no_value_keeps_the_line_of_an_unpainted_well() {
+    let cat = catalogue(vec![Item::Well(well("A", 150.0, 12.0, Side::Left))]);
+    // Node 0 (MD 0) has no value; nodes 1 and 2 are green.
+    let paint = Paint {
+        nodes: vec!["#00000000".into(), "#00ff00ff".into(), "#00ff00ff".into()],
+        blend: Blend::Net,
+    };
+    let scene = |strata_for_unpainted| View {
+        well_colouring: WellColouring::Scene,
+        strata_for_unpainted,
+        paints: vec![(key_of("A"), paint.clone())],
+        ..view()
+    };
+    let polylines = |l: &Layout| -> Vec<(String, usize)> {
+        drawn(l, &key_of("A"))
+            .shapes
+            .iter()
+            .filter_map(|shape| match shape {
+                Shape::Polyline { stroke, points, .. } => Some((stroke.clone(), points.len())),
+                _ => None,
+            })
+            .collect()
+    };
+
+    // What an unpainted well of the same view is drawn with.
+    let bare = layout(
+        &cat,
+        &View {
+            paints: Vec::new(),
+            ..scene(false)
+        },
+    );
+    let neutral = polylines(&bare)
+        .first()
+        .expect("the line of an unpainted well")
+        .0
+        .clone();
+
+    let l = layout(&cat, &scene(false));
+    assert!(
+        polylines(&l)
+            .iter()
+            .any(|(stroke, points)| *stroke == neutral && *points == 2),
+        "the stretch with no value: {:?}",
+        polylines(&l)
+    );
+    assert!(
+        drawn(&l, &key_of("A"))
+            .intervals
+            .iter()
+            .any(|iv| iv.colour.starts_with("#00ff00")),
+        "the lower part is painted"
+    );
+
+    // Keeping the strata: the same stretch is drawn in the colour of the unit it crosses (the fixture's Bartonian, MD 0-100).
+    let l = layout(&cat, &scene(true));
+    assert!(
+        drawn(&l, &key_of("A"))
+            .intervals
+            .iter()
+            .any(|iv| iv.unit == "Bartonian" && iv.colour == "#aa0000"),
+        "{:?}",
+        drawn(&l, &key_of("A"))
+            .intervals
+            .iter()
+            .map(|iv| (&iv.unit, &iv.colour))
+            .collect::<Vec<_>>()
+    );
+}

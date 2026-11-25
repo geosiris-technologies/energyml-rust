@@ -95,3 +95,6 @@
 - [0051 The limits between two runs of values](adr/0051-the-limits-between-two-runs-of-values.md)
 - [0052 Limits across a well and the ramp legend of a section](adr/0052-limits-across-a-well-and-the-ramp-legend-of-a-section.md)
 - [0053 Contacts read through the limits of the domain](adr/0053-contacts-read-through-the-limits-of-the-domain.md)
+- [0054 The colours along a borehole come through one door](adr/0054-the-colours-along-a-well-come-through-one-door.md)
+- [0055 The unit of a hue is read from the colours](adr/0055-the-unit-of-a-hue-is-read-from-the-colours.md)
+- [0056 One door from a value to a colour](adr/0056-one-door-from-a-value-to-a-colour.md)

@@ -26,11 +26,13 @@ const COLOURING: Layers = Layers::none().with_index().with_colours();
 /// - `export` - the scene's colour ramps, by `energyml_cache::colours::Colouring`;
 /// - `geometry` - the same scene reading (`scene::of_package`), so the same
 ///   colours should it be asked for them.
-/// - `view` - the colour of the values a view draws, by the same walk as `colors`.
+/// - `view` - the colour of the values a view draws, by the same walk as `colors`;
+/// - `profile` - the colour of the values painted along the wells of a section (`--paint-wells`), the same walk.
 pub const COMMANDS: &[(&str, Layers)] = &[
     ("colors", COLOURING),
     ("export", COLOURING),
     ("geometry", COLOURING),
+    ("profile", COLOURING),
     ("view", COLOURING),
 ];
 

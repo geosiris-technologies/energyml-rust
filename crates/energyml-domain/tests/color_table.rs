@@ -246,8 +246,7 @@ fn an_index_that_cannot_be_placed_is_refused_by_name() {
     let set = set_of(&[(TABLE, TABLE_22, MAP_OF_TABLE, Some(2))]);
     let refused = Cascade::new(&set)
         .table_decision(TABLE, &source(boxed(table_22(1))))
-        .err()
-        .expect("the table has columns 0 and 1");
+        .expect_err("the table has columns 0 and 1");
     let said = refused.to_string();
     assert!(
         said.contains("ValueVectorIndex") && said.contains('2') && said.contains("names no column"),
@@ -265,14 +264,12 @@ fn an_index_that_cannot_be_placed_is_refused_by_name() {
     let set = set_of(&[(TABLE, TABLE_22, MAP_OF_TABLE, Some(1))]);
     let refused = Cascade::new(&set)
         .table_decision(TABLE, &source(boxed(table_22(2))))
-        .err()
-        .expect("two key columns");
+        .expect_err("two key columns");
     assert!(refused.to_string().contains("keyed on 2 columns"), "{refused}");
 
     let refused = Cascade::new(&set)
         .table_decision(TABLE, &held(vec![boxed(map(MAP_OF_TABLE, true))]))
-        .err()
-        .expect("a table that is not there");
+        .expect_err("a table that is not there");
     assert!(refused.to_string().contains("does not hold"), "{refused}");
 
     // No index at all means the table as a whole: nothing to place, nothing refused.
@@ -484,4 +481,111 @@ fn a_discrete_map_on_the_property_is_read_by_key_too() {
         [Some("#ff0000ff".to_string()), Some("#00ff00ff".to_string()), None],
         "35 is above the last entry, 20: it is not green"
     );
+}
+
+// -- a package written against the draft of 2.2 --------------------------------------------
+
+const DRAFT_TABLE: &str = "c5543ff9-8ac2-44bd-9c04-a6281c7d8436";
+const DRAFT_MAP: &str = "b29851ae-2dd2-4e68-8250-6d6b274fdb45";
+
+/// The three objects as such a package writes them, in the shapes the draft of 2.2 (`v2.2_dev3`) gives: the
+/// `ColorInformation` names its map by an element called `DiscreteColorMap` (the released schema calls it `ColorMap`), the
+/// prefixes are declared on the entry itself, not on the root, and the table lists its `Column` before its `KeyColumn`.
+fn draft_objects() -> Vec<Box<dyn DynObject>> {
+    let read = |content_type: &str, xml: &str| {
+        energyml_schemas::all()
+            .read_xml(content_type, xml.as_bytes())
+            .expect("the object reads")
+    };
+    let table = format!(
+        r####"<?xml version="1.0" encoding="UTF-8"?>
+<eml:ColumnBasedTable xmlns:eml="http://www.energistics.org/energyml/data/commonv2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" uuid="{DRAFT_TABLE}" schemaVersion="2.3" objectVersion="0">
+  <eml:Citation><eml:Title>codes</eml:Title><eml:Originator>test</eml:Originator><eml:Creation>2021-05-18T22:31:17Z</eml:Creation><eml:Format>test</eml:Format></eml:Citation>
+  <eml:Existence>actual</eml:Existence>
+  <eml:Column>
+    <eml:ValueCountPerRow>1</eml:ValueCountPerRow>
+    <eml:PropertyKind><eml:Uuid>5f78f66a-ed1b-4827-a868-beb989febb31</eml:Uuid><eml:QualifiedType>eml23.PropertyKind</eml:QualifiedType><eml:Title>code</eml:Title></eml:PropertyKind>
+    <eml:Values xsi:type="eml:StringXmlArray"><eml:CountPerValue>1</eml:CountPerValue><eml:Values>Q</eml:Values><eml:Values>N1</eml:Values><eml:Values>Socle</eml:Values><eml:Values>Alter_MC</eml:Values><eml:Values>UND</eml:Values></eml:Values>
+  </eml:Column>
+  <eml:KeyColumn>
+    <eml:ValueCountPerRow>1</eml:ValueCountPerRow>
+    <eml:PropertyKind><eml:Uuid>2bcbe7d8-cd41-4758-a88f-242781e7f495</eml:Uuid><eml:QualifiedType>eml23.PropertyKind</eml:QualifiedType><eml:Title>classification index</eml:Title></eml:PropertyKind>
+    <eml:Values xsi:type="eml:IntegerXmlArray"><eml:CountPerValue>1</eml:CountPerValue><eml:NullValue>-1</eml:NullValue><eml:Values>0 1 2 3 4</eml:Values></eml:Values>
+  </eml:KeyColumn>
+</eml:ColumnBasedTable>"####
+    );
+    let entries: String = (0..5)
+        .map(|index| {
+            format!(
+                "<resqml:Entry><resqml:index>{index}</resqml:index><resqml:Hsv><resqml:Alpha>1</resqml:Alpha>\
+                 <resqml:Hue>0.{index}</resqml:Hue><resqml:Saturation>1</resqml:Saturation>\
+                 <resqml:Value>1</resqml:Value></resqml:Hsv></resqml:Entry>"
+            )
+        })
+        .collect();
+    let map = format!(
+        r####"<?xml version="1.0" encoding="UTF-8"?>
+<resqml:DiscreteColorMap xmlns:resqml="http://www.energistics.org/energyml/data/resqmlv2" xmlns:eml="http://www.energistics.org/energyml/data/commonv2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" uuid="{DRAFT_MAP}" schemaVersion="2.2" objectVersion="0">
+  <eml:Citation><eml:Title>colours</eml:Title><eml:Originator>test</eml:Originator><eml:Creation>2021-05-18T22:31:17Z</eml:Creation><eml:Format>test</eml:Format></eml:Citation>
+  <eml:Existence>actual</eml:Existence>
+  {entries}
+</resqml:DiscreteColorMap>"####
+    );
+    vec![
+        read("application/x-eml+xml;version=2.3;type=ColumnBasedTable", &table),
+        read("application/x-resqml+xml;version=2.2;type=DiscreteColorMap", &map),
+    ]
+}
+
+fn draft_set() -> GraphicalSet {
+    let xml = format!(
+        r####"<?xml version="1.0" encoding="UTF-8"?>
+<eml:GraphicalInformationSet xmlns:eml="http://www.energistics.org/energyml/data/commonv2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" uuid="4d4d5555-a3bd-47ef-b559-99c25a9d0558" schemaVersion="2.3" objectVersion="0">
+  <eml:Citation><eml:Title>a set</eml:Title><eml:Originator>test</eml:Originator><eml:Creation>2021-05-18T22:34:10Z</eml:Creation><eml:Format>test</eml:Format></eml:Citation>
+  <eml:Existence>actual</eml:Existence>
+  <eml:GraphicalInformation xsi:type="resqmlv2:ColorInformation" xmlns:commonv2="http://www.energistics.org/energyml/data/commonv2" xmlns:resqmlv2="http://www.energistics.org/energyml/data/resqmlv2"><commonv2:TargetObject><commonv2:Uuid>{DRAFT_TABLE}</commonv2:Uuid><commonv2:ObjectVersion>0</commonv2:ObjectVersion><commonv2:QualifiedType>eml23.ColumnBasedTable</commonv2:QualifiedType><commonv2:Title>codes</commonv2:Title></commonv2:TargetObject><resqmlv2:UseLogarithmicMapping>false</resqmlv2:UseLogarithmicMapping><resqmlv2:UseReverseMapping>false</resqmlv2:UseReverseMapping><resqmlv2:ValueVectorIndex>1</resqmlv2:ValueVectorIndex><resqmlv2:DiscreteColorMap><commonv2:Uuid>{DRAFT_MAP}</commonv2:Uuid><commonv2:ObjectVersion>0</commonv2:ObjectVersion><commonv2:QualifiedType>resqml22.DiscreteColorMap</commonv2:QualifiedType><commonv2:Title>colours</commonv2:Title></resqmlv2:DiscreteColorMap>
+  </eml:GraphicalInformation>
+</eml:GraphicalInformationSet>"####
+    );
+    let object = energyml_schemas::all()
+        .read_xml(
+            "application/x-eml+xml;version=2.3;type=GraphicalInformationSet",
+            xml.as_bytes(),
+        )
+        .expect("the set reads");
+    GraphicalSet::read(object.as_reflect())
+}
+
+/// The colour map a package written against the draft of 2.2 puts on the table of its categories is **taken**: the
+/// entry names its map by `DiscreteColorMap` (not `ColorMap`), its prefixes are its own, `ValueVectorIndex` 1 is the
+/// column `Column` - the key column is column 0 - and the map's entries 0 to 4 are the keys of the table. The same
+/// answer in every cache that asks the cascade (`Cascade::table_decision` is the one door).
+///
+/// Break it: in `read_raw_entry`, look for the map under `ColorMap` alone: the entry then names no map, the table has no
+/// decision and the categories fall back to a palette.
+#[test]
+fn a_colour_map_named_by_the_draft_element_is_taken_for_the_table() {
+    let set = draft_set();
+    let objects = held(draft_objects());
+    let decision = Cascade::new(&set)
+        .table_decision(DRAFT_TABLE, &objects)
+        .expect("column 1 is the `Column`: the key column is column 0")
+        .expect("the entry names its map");
+    assert_eq!(decision.level, Level::CategoryTable);
+    let Paint::Mapped {
+        map,
+        value_vector_index,
+        ..
+    } = &decision.paint
+    else {
+        panic!("a colour map");
+    };
+    assert_eq!(*value_vector_index, Some(1));
+    for key in 0..5 {
+        assert!(
+            map.sample_key(f64::from(key)).is_some(),
+            "key {key} has its entry"
+        );
+    }
+    assert_eq!(map.sample_key(5.0), None, "5 is no key");
 }

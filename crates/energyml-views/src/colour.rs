@@ -4,15 +4,14 @@
 //! for the map the file gives an object. When it gives none, a palette of [`energyml_domain::palettes`] stands in,
 //! the default of the value's reading unless the request names one, and the legend says it is not from the file.
 //! A palette asked for by name wins over the file: it is the user's choice. Whichever paints, the value goes through
-//! [`ColorMap::sample`], the one rule: no colour is ever invented, and a value the map has no colour for is left
+//! [`energyml_domain::color::ValueColours`] (`ColorMap::sample`, or the entry that has the key for a category), the one rule: no colour is ever invented, and a value the map has no colour for is left
 //! transparent.
 
 use energyml_cache::Cache;
 use energyml_cache::colours::{Options, Wanted, decisions_of, of_package};
-use energyml_domain::color::{ColorMap, Paint, Rgba, Scaling};
+use energyml_domain::color::{ColourRefusal, Paint, Scaling};
 use energyml_domain::palettes::Reading;
 use energyml_storage::EpcStore;
-use serde::Serialize;
 
 use crate::kind::ViewContext;
 use crate::refusal::ViewRefusal;
@@ -25,6 +24,16 @@ pub trait ColourDoor {
     ///
     /// A package whose graphical information does not read, by its words.
     fn paint(&self, object_uri: &str) -> Result<Option<Paint>, String>;
+
+    /// [`ColourDoor::paint`], and what reading the colours had to say of themselves - the notes of the decision (a hue read
+    /// as a fraction of a turn, an entry that named no map). A door that has none says none.
+    ///
+    /// # Errors
+    ///
+    /// As [`ColourDoor::paint`].
+    fn paint_noted(&self, object_uri: &str) -> Result<(Option<Paint>, Vec<String>), String> {
+        self.paint(object_uri).map(|paint| (paint, Vec::new()))
+    }
 
     /// [`ColourDoor::paint`] for several objects at once: one entry per uri, in order, each what `paint` would
     /// have answered for it alone.
@@ -67,6 +76,20 @@ impl ColourDoor for PackageColours<'_> {
             .map(|decision| decision.paint))
     }
 
+    fn paint_noted(&self, object_uri: &str) -> Result<(Option<Paint>, Vec<String>), String> {
+        let wanted = Wanted {
+            object: Some(object_uri),
+            ..Wanted::default()
+        };
+        let report = of_package(self.cache, self.store, &wanted).map_err(|why| why.to_string())?;
+        Ok(report
+            .rows
+            .into_iter()
+            .find_map(|row| row.decision)
+            .map(|decision| (Some(decision.paint), decision.notes))
+            .unwrap_or((None, Vec::new())))
+    }
+
     /// One walk for every object: the package's sets are read once, not once per object
     /// ([`energyml_cache::colours::decisions_of`]).
     fn paint_all(&self, object_uris: &[&str]) -> Vec<Result<Option<Paint>, String>> {
@@ -80,79 +103,7 @@ impl ColourDoor for PackageColours<'_> {
     }
 }
 
-/// Where the colours of a picture come from: what its legend says.
-#[derive(Clone, Debug, PartialEq, Serialize)]
-pub enum ColourSource {
-    /// The map the file gives the object.
-    File,
-    /// A palette, by name: not from the file.
-    Palette(String),
-    /// The file's map, read **by key** (a category is the entry that has its key, never the nearest lower one), and
-    /// this palette for a key the map has no entry for: not from the file.
-    FileAndPalette(String),
-}
-
-impl ColourSource {
-    /// The legend's words.
-    pub fn says(&self) -> String {
-        match self {
-            ColourSource::File => "colours: the file's map".to_string(),
-            ColourSource::Palette(name) => format!("colours: palette {name} (not from the file)"),
-            ColourSource::FileAndPalette(name) => format!(
-                "colours: the file's map by key; palette {name} for a key it has no entry for (not from the file)"
-            ),
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
-enum Painting {
-    Constant([u8; 4]),
-    Mapped {
-        map: Box<ColorMap>,
-        scaling: Scaling,
-    },
-    /// A category: the entry of the map that has its key, else what `fallback` paints (a palette), else nothing.
-    ByKey {
-        map: Box<ColorMap>,
-        fallback: Option<Box<Painting>>,
-    },
-}
-
-impl Painting {
-    fn sample(&self, value: f64) -> Option<[u8; 4]> {
-        match self {
-            Painting::Constant(rgba) => Some(*rgba),
-            Painting::Mapped { map, scaling } => map
-                .sample(Some(value).filter(|v| !v.is_nan()), scaling)
-                .map(bytes),
-            Painting::ByKey { map, fallback } => map
-                .sample_key(value)
-                .map(bytes)
-                .or_else(|| fallback.as_ref().and_then(|fallback| fallback.sample(value))),
-        }
-    }
-}
-
-/// The colours of one picture's values.
-#[derive(Clone, Debug)]
-pub struct ValueColours {
-    painting: Painting,
-    /// Where they come from.
-    pub source: ColourSource,
-}
-
-impl ValueColours {
-    /// The colour of a value, RGBA; `None` where the map has none (a null value with no null colour).
-    pub fn sample(&self, value: f64) -> Option<[u8; 4]> {
-        self.painting.sample(value)
-    }
-}
-
-fn bytes(rgba: Rgba) -> [u8; 4] {
-    let channel = |value: f64| (value.clamp(0.0, 1.0) * 255.0).round() as u8;
-    [channel(rgba.r), channel(rgba.g), channel(rgba.b), channel(rgba.a)]
-}
+pub use energyml_domain::color::{ColourSource, ValueColours};
 
 /// The palette a view was asked for **by name**, the one reading of that request: the refusal when no palette has the
 /// name (it lists the known ones) and when the palette paints another reading (it lists those that fit `reading`;
@@ -189,6 +140,86 @@ pub fn palette_named(
     Ok(found)
 }
 
+/// The colours of **the categories** of `object` (a property that names a table), `keys` being the keys the caller will
+/// ask a colour of: the file's colour map on the table first, **read by exact key**; the palette that stands in is laid
+/// **over the keys** ([`energyml_domain::palettes::Palette::over_categories`]) - the colours in turn by the rank of
+/// the key, so that two categories never share the colour of the end of a ramp - and the source says so.
+///
+/// `palette` named: that palette, over the keys, and it wins over the file (the user's choice). A constant colour the
+/// file gives the object, or a continuous map, is read as [`value_colours`] reads it.
+///
+/// # Errors
+///
+/// [`ViewRefusal::Palette`] for an unknown palette, one of another reading, or no key to colour; the refusal of
+/// the colour door, by its words.
+pub fn category_colours(
+    cx: &ViewContext<'_>,
+    view: &str,
+    object: Option<&str>,
+    palette: Option<&str>,
+    keys: &[f64],
+) -> Result<ValueColours, ViewRefusal> {
+    category_colours_noted(cx, view, object, palette, keys, &mut Vec::new())
+}
+
+/// [`category_colours`], and what reading the package's colours said (`notes`: a hue read as a fraction of a turn).
+///
+/// # Errors
+///
+/// As [`category_colours`].
+pub fn category_colours_noted(
+    cx: &ViewContext<'_>,
+    view: &str,
+    object: Option<&str>,
+    palette: Option<&str>,
+    keys: &[f64],
+    notes: &mut Vec<String>,
+) -> Result<ValueColours, ViewRefusal> {
+    if let Some(name) = palette {
+        let found = palette_named(cx, name, Reading::Categorical, "this one")?;
+        return ValueColours::new(None, Reading::Categorical, Some(&found), None, keys, None)
+            .map_err(|why| refused(name, why));
+    }
+    let file = file_paint(cx, view, object, notes)?;
+    let stand_in = cx.palettes.default_for(Reading::Categorical);
+    ValueColours::new(
+        file.as_ref(),
+        Reading::Categorical,
+        stand_in.as_ref(),
+        None,
+        keys,
+        None,
+    )
+    .map_err(|why| refused("", why))
+}
+
+/// What the package's colours give `object`, with the notes of reading them; `None` for no object, or nothing in the
+/// package that colours it.
+fn file_paint(
+    cx: &ViewContext<'_>,
+    view: &str,
+    object: Option<&str>,
+    notes: &mut Vec<String>,
+) -> Result<Option<Paint>, ViewRefusal> {
+    let Some(uri) = object else {
+        return Ok(None);
+    };
+    let (found, said) = cx
+        .colours
+        .paint_noted(uri)
+        .map_err(|why| ViewRefusal::computing(view, why))?;
+    notes.extend(said);
+    Ok(found)
+}
+
+/// The refusal of a palette that cannot paint, by the words of the door.
+fn refused(asked: &str, why: ColourRefusal) -> ViewRefusal {
+    ViewRefusal::Palette {
+        asked: asked.to_string(),
+        why: why.to_string(),
+    }
+}
+
 /// The colours of the values of `object` (when it has one), over `bounds`, `logarithmic` or not.
 ///
 /// `palette` named: that palette, refused when no palette has the name or when it is for another reading. Else the
@@ -207,71 +238,49 @@ pub fn value_colours(
     logarithmic: bool,
     reading: Reading,
 ) -> Result<ValueColours, ViewRefusal> {
-    let by_palette = |name: &str| -> Result<ValueColours, ViewRefusal> {
-        let found = palette_named(cx, name, reading, "this one")?;
-        Ok(ValueColours {
-            painting: Painting::Mapped {
-                map: Box::new(found.ramp()),
-                scaling: Scaling {
-                    min_max: Some(bounds),
-                    logarithmic,
-                    reverse: false,
-                },
-            },
-            source: ColourSource::Palette(found.name.to_string()),
-        })
+    value_colours_noted(
+        cx,
+        view,
+        object,
+        palette,
+        bounds,
+        logarithmic,
+        reading,
+        &mut Vec::new(),
+    )
+}
+
+/// [`value_colours`], and what reading the package's colours said (`notes`: a hue read as a fraction of a turn).
+///
+/// # Errors
+///
+/// As [`value_colours`].
+#[allow(clippy::too_many_arguments)]
+pub fn value_colours_noted(
+    cx: &ViewContext<'_>,
+    view: &str,
+    object: Option<&str>,
+    palette: Option<&str>,
+    bounds: (f64, f64),
+    logarithmic: bool,
+    reading: Reading,
+    notes: &mut Vec<String>,
+) -> Result<ValueColours, ViewRefusal> {
+    // A scale of its own only for a palette: a map of the file keeps the scale the file gives it.
+    let scaling = Scaling {
+        min_max: Some(bounds),
+        logarithmic,
+        reverse: false,
     };
     if let Some(name) = palette {
-        return by_palette(name);
+        let found = palette_named(cx, name, reading, "this one")?;
+        return ValueColours::new(None, reading, Some(&found), Some(bounds), &[], Some(scaling))
+            .map_err(|why| refused(name, why));
     }
-    if let Some(uri) = object {
-        match cx
-            .colours
-            .paint(uri)
-            .map_err(|why| ViewRefusal::computing(view, why))?
-        {
-            // A **category** is placed by its key: the entry that has it, and no other. A key the map has no entry for
-            // takes the default palette of the reading, and the source says so.
-            Some(Paint::Mapped { map, .. })
-                if reading == Reading::Categorical && map.continuous.is_none() =>
-            {
-                return Ok(match cx.palettes.default_for(reading) {
-                    Some(default) => {
-                        let fallback = by_palette(default.name)?;
-                        ValueColours {
-                            painting: Painting::ByKey {
-                                map,
-                                fallback: Some(Box::new(fallback.painting)),
-                            },
-                            source: ColourSource::FileAndPalette(default.name.to_string()),
-                        }
-                    }
-                    None => ValueColours {
-                        painting: Painting::ByKey { map, fallback: None },
-                        source: ColourSource::File,
-                    },
-                });
-            }
-            Some(Paint::Mapped { map, scaling, .. }) => {
-                return Ok(ValueColours {
-                    painting: Painting::Mapped { map, scaling },
-                    source: ColourSource::File,
-                });
-            }
-            Some(Paint::Constant(rgba)) => {
-                return Ok(ValueColours {
-                    painting: Painting::Constant(bytes(rgba)),
-                    source: ColourSource::File,
-                });
-            }
-            None => {}
-        }
-    }
-    let Some(default) = cx.palettes.default_for(reading) else {
-        return Err(ViewRefusal::Palette {
-            asked: String::new(),
-            why: "no palette for this reading".to_string(),
-        });
-    };
-    by_palette(default.name)
+    let file = file_paint(cx, view, object, notes)?;
+    let stand_in = cx.palettes.default_for(reading);
+    // Categories the file's map has no entry for take the palette over the extent: this caller knows no key.
+    let own = file.is_none().then_some(scaling);
+    ValueColours::new(file.as_ref(), reading, stand_in.as_ref(), Some(bounds), &[], own)
+        .map_err(|why| refused("", why))
 }

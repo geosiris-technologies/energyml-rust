@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- *(views)* `paint_wells`: the colours along the wells a section keeps, by one door - a property chosen by a piece of its title on the frames of the well, carried by measured depth onto the nodes the section kept, coloured by the package's colours (the map put on the table of a category by exact key, else a palette, said), with its legend; several properties that fit are refused by name and a well without one is counted; ADR 0054
+- *(views)* a well painted along a property that holds no value at any of its nodes is refused with both counts: the nodes outside every frame that holds it, and the nodes with a null value
+- *(views)* `WellPaints::apply` asks that the wells nothing is painted along keep their strata (`View::strata_for_unpainted`); ADR 0054
+- *(views)* `value_colours` and `category_colours` are thin calls of `energyml_domain::color::ValueColours` (re-exported here with `ColourSource`); `ColourSource` no longer derives `Serialize`; ADR 0056
+- *(views)* `ColourDoor::paint_noted`, `value_colours_noted` and `category_colours_noted` give the notes of the colours (a hue read in turns), which `paint_wells` says
+- *(views)* `category_colours`: the colours of a category laid over its keys, one colour per key, whatever their number
+- *(views)* `paint_wells` names its legend by the property kind the wells share and says once, with a count, what the colours come from
+
 ### Fixed
 
 - *(views)* the image track offers a property on `intervals from datum` like one on `intervals`

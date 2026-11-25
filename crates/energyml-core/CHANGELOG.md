@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- *(core)* `color::hue_unit`, `color::to_degrees` and `color::HueUnit`: the unit of the hues of a set of colours, read from the numbers (ADR 0055)
+
 ## [0.4.0](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-core-v0.3.0...energyml-core-v0.4.0) - 2026-11-16
 
 ### Added

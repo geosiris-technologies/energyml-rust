@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- *(cli)* `energyml profile --svg --paint-wells TITLE` paints the wells of the section along the property whose title contains `TITLE`, with its legend, and prints how many wells were painted, had no such property or were refused; the strata lines stay over the paint with `--strata-ticks`; ADR 0054
+
 ## [0.4.0](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-cli-v0.3.0...energyml-cli-v0.4.0) - 2026-11-16
 
 ### Added

@@ -939,10 +939,10 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
             "limit style not drawn: {why}; the black line of one pixel is drawn"
         ));
     }
-    if unstratified == UnstratifiedStyle::Hidden && view.well_colouring == WellColouring::Strata {
+    if unstratified == UnstratifiedStyle::Hidden {
         let lost = wells
             .iter()
-            .filter(|w| !painted(view, w) && has_unstratified(w))
+            .filter(|w| strata_for(view, w) && has_unstratified(w))
             .count();
         if lost > 0 {
             warnings.push(format!(
@@ -956,7 +956,7 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
         && !strata.is_empty()
         && unstratified != UnstratifiedStyle::Hidden
         && !unstratified.is_default()
-        && wells.iter().any(|w| !painted(view, w) && has_unstratified(w)))
+        && wells.iter().any(|w| strata_for(view, w) && has_unstratified(w)))
     .then(|| unstratified.clone());
     // The markers: decided in the drawing's units, before the frame, because the
     // legend takes its room on the right.
@@ -974,6 +974,14 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
                 None
             }
         }
+    });
+    // The legend of categories: its rows are the entries the caller gave, none of them invented here.
+    let category = view.category_legend.as_ref().and_then(|legend| {
+        if legend.entries.is_empty() {
+            warnings.push("category legend not drawn: it holds no category".to_string());
+            return None;
+        }
+        Some(legend)
     });
     let strata_w = strata_width(&strata, no_strata.is_some(), view);
     let left_shift = if strata_w > 0.0 {
@@ -1028,7 +1036,8 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
     let legend_w = legend_width(&entries);
     let markers_w = marked.width();
     let ramp_w = if ramp.is_some() { RAMP_LEGEND_PX } else { 0.0 };
-    let right_w = legend_w.max(markers_w).max(ramp_w);
+    let category_w = category.map_or(0.0, category_legend_width);
+    let right_w = legend_w.max(markers_w).max(ramp_w).max(category_w);
     // The band above the plot is the wells' labels': room for
     // [`HEAD_BAND_LEVELS`] levels of them, so a crowded line of heads climbs
     // rather than spilling into the drawing.
@@ -1425,7 +1434,14 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
 
     // wells
     let mut well_objects = Vec::new();
-    for w in &wells {
+    // The wells a paint is laid along are drawn **after** the others: the frames of one wellbore lie at one place, and
+    // a well drawn in its own colour must not hide the one that carries the paint (no well is dropped, and each keeps
+    // its order among its kind).
+    for w in wells
+        .iter()
+        .filter(|w| !painted(view, w))
+        .chain(wells.iter().filter(|w| painted(view, w)))
+    {
         well_objects.push(laid_well(w, view, &unstratified, &map, &unit, &mut warnings));
     }
     // What the wells drew, read back for the strata legend: the units and the
@@ -1492,14 +1508,31 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
     // The ramp legend goes under them, on the same margin: one per section.
     if let Some((legend, scale)) = &ramp {
         let top = stacked_bottom.map_or(frame.y, |b| b + 8.0);
+        let objects = ramp_legend(
+            legend,
+            scale,
+            frame.x + frame.w + 12.0,
+            ramp_w,
+            top,
+            frame.y + frame.h,
+        );
+        stacked_bottom = objects.first().and_then(marking::bottom_of).or(stacked_bottom);
         layers.push(Layer {
             name: RAMP_LAYER,
             clipped: false,
-            objects: ramp_legend(
+            objects,
+        });
+    }
+    // The legend of categories, under the others on the same margin.
+    if let Some(legend) = category {
+        let top = stacked_bottom.map_or(frame.y, |b| b + 8.0);
+        layers.push(Layer {
+            name: CATEGORY_LAYER,
+            clipped: false,
+            objects: category_legend(
                 legend,
-                scale,
                 frame.x + frame.w + 12.0,
-                ramp_w,
+                category_w,
                 top,
                 frame.y + frame.h,
             ),
@@ -1973,6 +2006,19 @@ fn laid_well(
         let path_px: Vec<[f64; 2]> = w.path.iter().map(|&p| map.px(p)).collect();
         match crate::paint::well_pieces(&path_px, paint, &view.joints) {
             Ok(pieces) => {
+                // **A stretch the paint has no value for is drawn as an unpainted well is**: its line, in the colour
+                // of the view's wells with no paint, under the pieces - a hole in the data must not look like a well that
+                // is not there. (A gap the paint leaves inside a run of colour - a joint - stays a gap: it is not a node
+                // without a value.)
+                let gaps = crate::paint::gaps(w.path.len(), paint, &view.joints).unwrap_or_default();
+                for &(first, last) in &gaps {
+                    shapes.push(Shape::Polyline {
+                        points: path_px[first..=last].to_vec(),
+                        stroke: colour.clone(),
+                        width,
+                        dash: false,
+                    });
+                }
                 shapes.push(Shape::Circle {
                     c: map.px(w.head),
                     r: (width / 2.0 + 1.5).max(2.5),
@@ -1981,7 +2027,7 @@ fn laid_well(
                 let md = w.md.as_ref().filter(|md| md.len() == w.path.len());
                 // The writer's interval has a butt cap: a gap between two
                 // pieces stays a gap (a polyline's round cap would close it).
-                let intervals = pieces
+                let mut intervals: Vec<LaidInterval> = pieces
                     .into_iter()
                     .map(|piece| {
                         let (from, to) = match (md, piece.points.first(), piece.points.last()) {
@@ -2003,6 +2049,31 @@ fn laid_well(
                         }
                     })
                     .collect();
+                // Where the view asks that the wells with no paint keep their strata, the stretches with no value do too.
+                if let (true, Some(md)) = (view.strata_for_unpainted, md) {
+                    for &(first, last) in &gaps {
+                        for iv in &w.intervals {
+                            let (low, high) = (iv.from.max(md[first]), iv.to.min(md[last]));
+                            if high <= low {
+                                continue;
+                            }
+                            let points = map.points(&sub_path(&w.path, md, low, high));
+                            if points.len() < 2 {
+                                continue;
+                            }
+                            intervals.push(LaidInterval {
+                                from: low,
+                                to: high,
+                                unit: iv.unit.clone(),
+                                unit_uri: iv.unit_uri.clone(),
+                                colour: interval_colour(iv, &w.object.store, &colour, view, true),
+                                width,
+                                points,
+                                tick: None,
+                            });
+                        }
+                    }
+                }
                 return LaidObject {
                     attr: Attr::Key(key),
                     kind: "well".into(),
@@ -2022,7 +2093,7 @@ fn laid_well(
     // neutral grey) and shows wherever no interval is drawn over it - the dark
     // portions of a well with no strata information. Not a "no information"
     // style, only what lies under the intervals. Off: only the intervals draw.
-    if view.well_colouring != WellColouring::Strata || unstratified.is_default() {
+    if !strata_for(view, w) || unstratified.is_default() {
         // The line under the intervals - what a drawing always was, byte for byte.
         shapes.push(Shape::Polyline {
             points: path,
@@ -2049,8 +2120,8 @@ fn laid_well(
                 continue;
             }
             // Without a colour of its own, the interval takes the well's.
-            let drawn = interval_colour(iv, &w.object.store, &colour, view);
-            let tick = if view.strata_ticks && view.well_colouring == WellColouring::Strata {
+            let drawn = interval_colour(iv, &w.object.store, &colour, view, strata_for(view, w));
+            let tick = if view.strata_ticks && strata_for(view, w) {
                 let adjacent = last_to.is_some_and(|before| (before - iv.from).abs() < 1e-9);
                 if adjacent {
                     tick_across(&points, width)
@@ -2313,10 +2384,11 @@ fn own_colour(iv: &Interval, store: &str, view: &View) -> Option<String> {
 /// The colour an interval is drawn in: its own under strata colouring, the
 /// well's when the file gives it none or the wells are coloured another way.
 /// **The one place** it is decided - the strata legend asks the same.
-fn interval_colour(iv: &Interval, store: &str, well_colour: &str, view: &View) -> String {
-    match view.well_colouring {
-        WellColouring::Strata => own_colour(iv, store, view).unwrap_or_else(|| well_colour.to_string()),
-        _ => well_colour.to_string(),
+fn interval_colour(iv: &Interval, store: &str, well_colour: &str, view: &View, strata: bool) -> String {
+    if strata {
+        own_colour(iv, store, view).unwrap_or_else(|| well_colour.to_string())
+    } else {
+        well_colour.to_string()
     }
 }
 
@@ -3129,6 +3201,17 @@ fn strata_titles(entries: &[StrataEntry], view: &View) -> Vec<String> {
         .collect()
 }
 
+/// Whether this well is coloured by its strata: every well under strata colouring, and under scene colouring the wells
+/// the scene paints nothing along when the view asks that they keep theirs ([`View::strata_for_unpainted`]).
+/// **The one place** it is decided: the intervals, the ticks, the unstratified portions and the strata legend ask it.
+fn strata_for(view: &View, w: &WellItem) -> bool {
+    match view.well_colouring {
+        WellColouring::Strata => true,
+        WellColouring::Scene => view.strata_for_unpainted && !painted(view, w),
+        WellColouring::Side => false,
+    }
+}
+
 fn painted(view: &View, w: &WellItem) -> bool {
     paint_of(view, w).is_some_and(|(paint, _)| crate::paint::check(w.path.len(), paint, &view.joints).is_ok())
 }
@@ -3141,13 +3224,13 @@ fn painted(view: &View, w: &WellItem) -> bool {
 /// comes before the one under it in any well; where they disagree, or where no
 /// well relates two units, the first met (wells left to right) comes first.
 fn strata_units(wells: &[&WellItem], view: &View) -> Vec<StrataEntry> {
-    if view.well_colouring != WellColouring::Strata {
+    if !wells.iter().any(|w| strata_for(view, w)) {
         return Vec::new();
     }
     let mut nodes: Vec<StrataEntry> = Vec::new();
     let mut edges: Vec<(usize, usize)> = Vec::new();
     for w in wells {
-        if painted(view, w) || w.md.as_ref().is_none_or(|md| md.len() != w.path.len()) {
+        if !strata_for(view, w) || w.md.as_ref().is_none_or(|md| md.len() != w.path.len()) {
             continue;
         }
         let mut intervals: Vec<&Interval> = w
@@ -3158,7 +3241,7 @@ fn strata_units(wells: &[&WellItem], view: &View) -> Vec<StrataEntry> {
         intervals.sort_by(|a, b| a.from.total_cmp(&b.from));
         let mut previous: Option<usize> = None;
         for iv in intervals {
-            let colour = interval_colour(iv, &w.object.store, "", view);
+            let colour = interval_colour(iv, &w.object.store, "", view, true);
             let at = match nodes
                 .iter()
                 .position(|n| n.same_line(&iv.unit, &colour, iv.unit_uri.as_deref()))
@@ -3217,7 +3300,9 @@ fn has_unstratified(w: &WellItem) -> bool {
 
 /// Why the strata legend asked for is not drawn - one note, naming the cause.
 fn strata_refusal(wells: &[&WellItem], view: &View) -> String {
-    if view.well_colouring != WellColouring::Strata {
+    if view.well_colouring != WellColouring::Strata
+        && !(view.well_colouring == WellColouring::Scene && view.strata_for_unpainted)
+    {
         return "strata legend not drawn: the wells are not coloured by strata".to_string();
     }
     if wells.is_empty() {
@@ -3367,6 +3452,92 @@ fn strata_legend(
             fill: INK.into(),
         });
         out.push(decor("strata-none", String::new(), shapes));
+    }
+    out
+}
+
+/// The layer the legend of categories is written in (`svg.rs` gives it a group of its own).
+pub(crate) const CATEGORY_LAYER: &str = "category-legend";
+
+/// The width the legend of categories asks of the right margin, pixels: its widest line.
+fn category_legend_width(legend: &crate::model::CategoryLegend) -> f64 {
+    let widest = legend
+        .entries
+        .iter()
+        .map(|e| labels::width_px(&e.label, SMALL_PX) + 28.0)
+        .chain(std::iter::once(labels::width_px(&legend.title, FONT_PX) + 16.0))
+        .fold(0.0, f64::max);
+    (widest + 10.0).clamp(LEGEND_MIN_PX, LEGEND_MAX_PX)
+}
+
+/// The legend of categories, in a box at `x` from `top` down to at most `bottom`: the property's name,
+/// then a swatch and a label per category - **one object per category**, as the strata legend does. What
+/// does not fit is said on its last line. Nothing for no category: never an empty box.
+fn category_legend(
+    legend: &crate::model::CategoryLegend,
+    x: f64,
+    width: f64,
+    top: f64,
+    bottom: f64,
+) -> Vec<LaidObject> {
+    if legend.entries.is_empty() {
+        return Vec::new();
+    }
+    let LegendBox { shown, mut frame } = legend_box(
+        x,
+        width,
+        top,
+        bottom,
+        &labels::fit(&legend.title, FONT_PX, width - 12.0),
+        legend.entries.len(),
+        0,
+    );
+    if shown < legend.entries.len() {
+        frame.push(more_line(
+            x,
+            top,
+            shown,
+            format!("+ {} more categories", legend.entries.len() - shown),
+        ));
+    }
+    let decor = |name: &str, title: String, shapes: Vec<Shape>| LaidObject {
+        attr: Attr::Decor(name.into()),
+        kind: name.into(),
+        title,
+        highlighted: false,
+        at: None,
+        shapes,
+        intervals: Vec::new(),
+        limits: Vec::new(),
+    };
+    let mut out = vec![decor("category-box", String::new(), frame)];
+    for (i, e) in legend.entries.iter().take(shown).enumerate() {
+        let y = top + LINE_PX * (i as f64 + 2.0);
+        out.push(decor(
+            "category-entry",
+            e.label.clone(),
+            vec![
+                Shape::Polygon {
+                    points: vec![
+                        [x + 8.0, y - 9.0],
+                        [x + 22.0, y - 9.0],
+                        [x + 22.0, y - 1.0],
+                        [x + 8.0, y - 1.0],
+                    ],
+                    fill: e.colour.clone(),
+                    opacity: 1.0,
+                    stroke: Some("#666666".into()),
+                    dash: false,
+                },
+                Shape::Text {
+                    at: [x + 28.0, y],
+                    text: labels::fit(&e.label, SMALL_PX, (width - 28.0 - 6.0).max(20.0)),
+                    anchor: Anchor::Start,
+                    size: SMALL_PX,
+                    fill: INK.into(),
+                },
+            ],
+        ));
     }
     out
 }
