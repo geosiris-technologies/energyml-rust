@@ -29,8 +29,9 @@
 use std::fmt::Write as _;
 
 use crate::layout::{
-    Anchor, Attr, LaidInterval, LaidObject, Layout, MARKERS_LAYER, Rect, STRATA_LAYER, Shape,
+    Anchor, Attr, LaidInterval, LaidObject, Layout, MARKERS_LAYER, RAMP_LAYER, Rect, STRATA_LAYER, Shape,
 };
+use crate::model::LimitStyle;
 
 /// The script an SVG carries when `View::zoom_script` is on (it has to work
 /// outside a front end, when the user opens the SVG in a browser). Plain ES2015 in `zoom.js`; it reads the root's
@@ -79,10 +80,9 @@ pub fn write(layout: &Layout) -> String {
     let (f, win, scale) = (layout.frame, layout.window, layout.scale);
     // Inkscape's namespace, declared only when a group uses it: a drawing
     // without the strata legend is the bytes it always was.
-    let has_strata = layout
-        .layers
-        .iter()
-        .any(|l| (l.name == STRATA_LAYER || l.name == MARKERS_LAYER) && !l.objects.is_empty());
+    let has_strata = layout.layers.iter().any(|l| {
+        (l.name == STRATA_LAYER || l.name == MARKERS_LAYER || l.name == RAMP_LAYER) && !l.objects.is_empty()
+    });
     let inkscape = if has_strata {
         " xmlns:inkscape=\"http://www.inkscape.org/namespaces/inkscape\""
     } else {
@@ -132,6 +132,8 @@ pub fn write(layout: &Layout) -> String {
         fmt(h),
         escape(&layout.background)
     );
+    // The line across a well at a limit - the strata ticks and the view's own limits alike.
+    let limit_style = layout.metadata.view.limit_style.effective();
     let zoomable = layout.metadata.view.zoom_script;
     write_axes(&mut out, layout, zoomable);
 
@@ -168,11 +170,13 @@ pub fn write(layout: &Layout) -> String {
             out.push_str("<g id=\"strata-legend\" data-legend=\"strata\" inkscape:groupmode=\"layer\" inkscape:label=\"Strata legend\">\n");
         } else if layer.name == MARKERS_LAYER {
             out.push_str("<g id=\"markers-legend\" data-legend=\"markers\" inkscape:groupmode=\"layer\" inkscape:label=\"Markers legend\">\n");
+        } else if layer.name == RAMP_LAYER {
+            out.push_str("<g id=\"ramp-legend\" data-legend=\"ramp\" inkscape:groupmode=\"layer\" inkscape:label=\"Ramp legend\">\n");
         } else {
             let _ = writeln!(out, "<g data-layer=\"{}\"{}>", layer.name, clip);
         }
         for object in &layer.objects {
-            write_object(&mut out, object, zoom);
+            write_object(&mut out, object, zoom, &limit_style);
         }
         out.push_str("</g>\n");
     }
@@ -450,7 +454,7 @@ fn hatch_pattern(layout: &Layout) -> String {
     )
 }
 
-fn write_object(out: &mut String, o: &LaidObject, zoom: Zoom) {
+fn write_object(out: &mut String, o: &LaidObject, zoom: Zoom, style: &LimitStyle) {
     out.push_str("<g");
     match &o.attr {
         Attr::Key(key) => {
@@ -536,25 +540,53 @@ fn write_object(out: &mut String, o: &LaidObject, zoom: Zoom) {
     // inside the well's, so that they are one thing to select or delete.
     if o.intervals.iter().any(|iv| iv.tick.is_some()) {
         out.push_str("<g data-part=\"strata-ticks\">\n");
-        for [a, b] in o.intervals.iter().filter_map(|iv| iv.tick) {
-            // Counter-scaled around its middle, which is on the well: zoomed in,
-            // the tick stays a few pixels across the well rather than growing
-            // with the drawing - as wide as the well, which keeps its own width.
-            let middle = [(a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0];
-            let _ = writeln!(
-                out,
-                "<line x1=\"{}\" y1=\"{}\" x2=\"{}\" y2=\"{}\" stroke=\"#000000\" stroke-width=\"1\"{}{}/>",
-                fmt(a[0]),
-                fmt(a[1]),
-                fmt(b[0]),
-                fmt(b[1]),
-                non_scaling(zoom),
-                fixed(zoom, middle)
-            );
+        for ends in o.intervals.iter().filter_map(|iv| iv.tick) {
+            write_cross_line(out, ends, style, zoom, "");
+        }
+        out.push_str("</g>\n");
+    }
+    // The limits the view gives the well, over everything the well draws: a group of their own.
+    if !o.limits.is_empty() {
+        out.push_str("<g data-part=\"limits\">\n");
+        for limit in &o.limits {
+            let mut said = format!(" data-limit-rank=\"{}\"", limit.rank);
+            if let Some(md) = limit.md {
+                let _ = write!(said, " data-limit-md=\"{}\"", fmt(md));
+            }
+            if let Some(above) = &limit.above {
+                let _ = write!(said, " data-limit-above=\"{}\"", escape(above));
+            }
+            if let Some(below) = &limit.below {
+                let _ = write!(said, " data-limit-below=\"{}\"", escape(below));
+            }
+            write_cross_line(out, limit.ends, style, zoom, &said);
         }
         out.push_str("</g>\n");
     }
     out.push_str("</g>\n");
+}
+
+/// One line across a well, in the colour and the width of the view's limit style: counter-scaled
+/// around its middle, which is on the well - zoomed in, it stays a few pixels across the well rather
+/// than growing with the drawing, as wide as the well, which keeps its own width. `said` is the
+/// attributes that tell what the line is (a limit's rank and what it separates); the strata ticks say
+/// nothing more than their group.
+fn write_cross_line(out: &mut String, ends: [[f64; 2]; 2], style: &LimitStyle, zoom: Zoom, said: &str) {
+    let [a, b] = ends;
+    let middle = [(a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0];
+    let _ = writeln!(
+        out,
+        "<line x1=\"{}\" y1=\"{}\" x2=\"{}\" y2=\"{}\" stroke=\"{}\" stroke-width=\"{}\"{}{}{}/>",
+        fmt(a[0]),
+        fmt(a[1]),
+        fmt(b[0]),
+        fmt(b[1]),
+        escape(&style.colour),
+        fmt(style.width_px),
+        said,
+        non_scaling(zoom),
+        fixed(zoom, middle)
+    );
 }
 
 fn write_interval(out: &mut String, iv: &LaidInterval, zoom: Zoom) {

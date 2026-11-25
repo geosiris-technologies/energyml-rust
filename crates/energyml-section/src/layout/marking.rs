@@ -407,6 +407,7 @@ fn marked(name: &str, key: Option<&str>, kind: &str, title: &str, shapes: Vec<Sh
         at: None,
         shapes,
         intervals: Vec::new(),
+        limits: Vec::new(),
     }
 }
 
@@ -419,6 +420,7 @@ fn decor(name: &str, shapes: Vec<Shape>) -> LaidObject {
         at: None,
         shapes,
         intervals: Vec::new(),
+        limits: Vec::new(),
     }
 }
 

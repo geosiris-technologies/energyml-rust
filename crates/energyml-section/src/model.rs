@@ -776,6 +776,128 @@ pub struct View {
     /// their bytes.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub markers: Vec<Marker>,
+    /// The limits to draw across wells - where one unit, one category or one side of a
+    /// threshold ends and the next begins - by the key of the well: the output of
+    /// `energyml_domain::limits`, laid on the path by [`crate::limits::well_limits`]. Drawn over
+    /// the well whatever colours it (its strata, a property the scene paints along it, its own
+    /// colour). Empty, and then **not written** into the metadata.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub limits: Vec<(String, Vec<WellLimit>)>,
+    /// The colour and the width of every line across a well: the limits above **and** the
+    /// ticks at the boundaries between strata ([`View::strata_ticks`]), which are one case of
+    /// them. The default is the black line of one pixel the ticks always were, and then it is
+    /// **not written** into the metadata, so earlier drawings keep their bytes.
+    #[serde(default, skip_serializing_if = "LimitStyle::is_default")]
+    pub limit_style: LimitStyle,
+    /// A legend of a colour ramp - the colours of the values of a property, graduated, with
+    /// its name and its unit - on the right of the drawing, **one per section**. Absent, and
+    /// then **not written** into the metadata.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ramp_legend: Option<RampLegend>,
+}
+
+/// The colour and the width of the lines drawn across a well at a limit.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LimitStyle {
+    /// A hexadecimal colour: `#rgb`, `#rgba`, `#rrggbb` or `#rrggbbaa`.
+    pub colour: String,
+    /// The width, pixels, above 0 and at most [`MAX_WIDTH_PX`].
+    pub width_px: f64,
+}
+
+impl Default for LimitStyle {
+    fn default() -> Self {
+        LimitStyle {
+            colour: "#000000".to_string(),
+            width_px: 1.0,
+        }
+    }
+}
+
+impl LimitStyle {
+    /// Whether this is the black line of one pixel.
+    pub fn is_default(&self) -> bool {
+        *self == LimitStyle::default()
+    }
+
+    /// Why this style cannot be drawn, in a sentence; `None` when it can.
+    pub fn refusal(&self) -> Option<String> {
+        let digits = self.colour.strip_prefix('#').unwrap_or("");
+        let colour_ok =
+            matches!(digits.len(), 3 | 4 | 6 | 8) && digits.chars().all(|c| c.is_ascii_hexdigit());
+        if !colour_ok {
+            return Some(format!(
+                "the colour `{}` is not a hexadecimal colour (#rgb, #rgba, #rrggbb or #rrggbbaa)",
+                self.colour
+            ));
+        }
+        if !(self.width_px.is_finite() && self.width_px > 0.0 && self.width_px <= MAX_WIDTH_PX) {
+            return Some(format!(
+                "the width {} must be above 0 and at most {MAX_WIDTH_PX} px",
+                self.width_px
+            ));
+        }
+        None
+    }
+
+    /// This style when it can be drawn, else the default.
+    pub fn effective(&self) -> LimitStyle {
+        if self.refusal().is_none() {
+            self.clone()
+        } else {
+            LimitStyle::default()
+        }
+    }
+}
+
+/// Where a limit crosses a well.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum LimitAt {
+    /// At this measured depth, read on the well's own MDs.
+    Md(f64),
+    /// Between nodes `node` and `node + 1` of the well's path, at the fraction `t` of the way.
+    Node {
+        /// The node above.
+        node: usize,
+        /// The fraction of the way from `node` to `node + 1`, in `[0, 1]`.
+        t: f64,
+    },
+}
+
+/// One limit across a well: where, which one of its class, and between what.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WellLimit {
+    /// Where it crosses the well.
+    pub at: LimitAt,
+    /// Its rank among the limits of its class, from 1: the first top of the unit, the second...
+    pub rank: usize,
+    /// What lies above it, named; `None` when the producer does not say.
+    pub above: Option<String>,
+    /// What lies below it, named.
+    pub below: Option<String>,
+}
+
+/// The legend of a colour ramp: the colours a property's values take between its two
+/// bounds, as the caller sampled them, with the property's name and unit.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RampLegend {
+    /// The property's name.
+    pub title: String,
+    /// Its unit, when it has one.
+    pub uom: Option<String>,
+    /// Whether the scale is logarithmic (base 10).
+    pub log: bool,
+    /// The lower bound.
+    pub min: f64,
+    /// The upper bound.
+    pub max: f64,
+    /// The colour of each step of the ramp, from the lower bound up, `#rrggbb` or `#rrggbbaa`;
+    /// `None` where the ramp has none. See [`crate::ramp::sampled`].
+    pub colours: Vec<Option<String>>,
 }
 
 /// A named marker put on a set of objects: what the legend of markers lists.
@@ -1060,6 +1182,9 @@ impl View {
             unstratified: UnstratifiedStyle::default(),
             store_names: Vec::new(),
             markers: Vec::new(),
+            limits: Vec::new(),
+            limit_style: LimitStyle::default(),
+            ramp_legend: None,
         }
     }
 }

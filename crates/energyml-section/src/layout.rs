@@ -52,9 +52,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::model::{
     AxisMode, Catalogue, CutSource, EnvelopeItem, FORMAT, FillChoice, Inputs, Interval, Item, LabelMode,
-    Mark, NEUTRAL_COLOUR, Outcome, Paint, Plan, Section, SectionKey, Side, Target, TraceItem, TraceRole,
-    UnstratifiedStyle, View, WellColouring, WellItem, Window,
+    LimitAt, Mark, NEUTRAL_COLOUR, Outcome, Paint, Plan, RampLegend, Section, SectionKey, Side, Target,
+    TraceItem, TraceRole, UnstratifiedStyle, View, WellColouring, WellItem, WellLimit, Window,
 };
+use energyml_domain::stats::scale::Scale;
 use fill::Span;
 
 // ---------------------------------------------------------------------------
@@ -211,6 +212,26 @@ pub struct LaidObject {
     pub shapes: Vec<Shape>,
     /// For a well: one group per interval, with its unit.
     pub intervals: Vec<LaidInterval>,
+    /// For a well: the lines across it at the limits the view gives ([`View::limits`]), drawn over
+    /// its intervals - and over the pieces of a paint the scene lays along it.
+    pub limits: Vec<LaidLimit>,
+}
+
+/// One limit across a well, drawn: a short line across the path at the limit, in the colour and
+/// the width of [`View::limit_style`] (the strata ticks are a case of it).
+#[derive(Clone, Debug, PartialEq)]
+pub struct LaidLimit {
+    /// The two ends of the line, pixels: perpendicular to the path where it crosses, as wide as the
+    /// well and a little more.
+    pub ends: [[f64; 2]; 2],
+    /// The measured depth, when the well has MDs to read it on.
+    pub md: Option<f64>,
+    /// Its rank among the limits of its class, from 1.
+    pub rank: usize,
+    /// What lies above it.
+    pub above: Option<String>,
+    /// What lies below it.
+    pub below: Option<String>,
 }
 
 /// One stratigraphic interval of a well, drawn.
@@ -913,6 +934,11 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
         warnings.push(strata_refusal(&wells, view));
     }
     let unstratified = effective_style(view, &mut warnings);
+    if let Some(why) = view.limit_style.refusal() {
+        warnings.push(format!(
+            "limit style not drawn: {why}; the black line of one pixel is drawn"
+        ));
+    }
     if unstratified == UnstratifiedStyle::Hidden && view.well_colouring == WellColouring::Strata {
         let lost = wells
             .iter()
@@ -935,6 +961,20 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
     // The markers: decided in the drawing's units, before the frame, because the
     // legend takes its room on the right.
     let marked = marking::resolve(view, &wells, &traces, &mut warnings);
+    // The ramp legend: its scale is decided before the frame, since it takes its room on the right.
+    let ramp = view.ramp_legend.as_ref().and_then(|legend| {
+        if legend.colours.is_empty() {
+            warnings.push("ramp legend not drawn: it holds no colour".to_string());
+            return None;
+        }
+        match crate::ramp::scale_of(legend) {
+            Ok(scale) => Some((legend, scale)),
+            Err(why) => {
+                warnings.push(format!("ramp legend not drawn: {why}"));
+                None
+            }
+        }
+    });
     let strata_w = strata_width(&strata, no_strata.is_some(), view);
     let left_shift = if strata_w > 0.0 {
         strata_w + STRATA_GAP_PX
@@ -987,7 +1027,8 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
     }
     let legend_w = legend_width(&entries);
     let markers_w = marked.width();
-    let right_w = legend_w.max(markers_w);
+    let ramp_w = if ramp.is_some() { RAMP_LEGEND_PX } else { 0.0 };
+    let right_w = legend_w.max(markers_w).max(ramp_w);
     // The band above the plot is the wells' labels': room for
     // [`HEAD_BAND_LEVELS`] levels of them, so a crowded line of heads climbs
     // rather than spilling into the drawing.
@@ -1059,6 +1100,7 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
                 at: None,
                 shapes: polygons,
                 intervals: Vec::new(),
+                limits: Vec::new(),
             });
         }
         let lines: Vec<Shape> = top
@@ -1080,6 +1122,7 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
             at: None,
             shapes: lines,
             intervals: Vec::new(),
+            limits: Vec::new(),
         });
     }
     layers.push(Layer {
@@ -1126,6 +1169,7 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
                 at: None,
                 shapes,
                 intervals: Vec::new(),
+                limits: Vec::new(),
             });
         }
     }
@@ -1234,6 +1278,7 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
             at: None,
             shapes,
             intervals: Vec::new(),
+            limits: Vec::new(),
         });
     }
     // marks
@@ -1345,6 +1390,7 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
             at: None,
             shapes: mark_shapes,
             intervals: Vec::new(),
+            limits: Vec::new(),
         }]
     };
     // The marks' texts are where they are: the names placed after them keep clear.
@@ -1427,19 +1473,36 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
     // The legend of markers goes on the right, **under** the legend of codes: that
     // margin is already reserved for a legend, the strata legend owns the left, and
     // the drawing's own frame stays clear.
-    let codes_bottom = legend_box.as_ref().and_then(marking::bottom_of);
+    let mut stacked_bottom = legend_box.as_ref().and_then(marking::bottom_of);
     layers.push(Layer {
         name: "legend",
         clipped: false,
         objects: legend_box.into_iter().collect(),
     });
     if !marked.is_empty() {
-        let top = codes_bottom.map_or(frame.y, |b| b + 8.0);
+        let top = stacked_bottom.map_or(frame.y, |b| b + 8.0);
         let objects = marked.legend(frame.x + frame.w + 12.0, markers_w, top, frame.y + frame.h);
+        stacked_bottom = objects.first().and_then(marking::bottom_of).or(stacked_bottom);
         layers.push(Layer {
             name: MARKERS_LAYER,
             clipped: false,
             objects,
+        });
+    }
+    // The ramp legend goes under them, on the same margin: one per section.
+    if let Some((legend, scale)) = &ramp {
+        let top = stacked_bottom.map_or(frame.y, |b| b + 8.0);
+        layers.push(Layer {
+            name: RAMP_LAYER,
+            clipped: false,
+            objects: ramp_legend(
+                legend,
+                scale,
+                frame.x + frame.w + 12.0,
+                ramp_w,
+                top,
+                frame.y + frame.h,
+            ),
         });
     }
     if folded > 0 {
@@ -1576,6 +1639,7 @@ fn erosion_marks(
             at: None,
             shapes,
             intervals: Vec::new(),
+            limits: Vec::new(),
         });
     }
     out
@@ -1795,10 +1859,10 @@ fn well_colour(w: &WellItem, view: &View) -> String {
 
 /// Where each point of a surface's cut comes from (`SurfaceCut::sources`),
 /// parallel to its spans - what lets `paint::surfaces::trace_pieces` lay a
-/// per-node colour along it. **The catalogue's `TraceItem` does not carry it
-/// yet** (only `SurfaceCut` does, and `assemble` does not copy it): until the
-/// contract gives the item a `sources` field this answers `None`, and every
-/// surface is drawn in its flat colour. The one line to change is here.
+/// per-node colour along it. The catalogue's `TraceItem` carries it (`sources`,
+/// copied from the cut by `assemble`); an item with none - a catalogue made before
+/// the field, or a surface whose cut says nothing of where its points come from -
+/// answers `None`, and the surface is drawn in its flat colour.
 fn cut_sources(item: &TraceItem) -> Option<&[Vec<CutSource>]> {
     (!item.sources.is_empty()).then_some(item.sources.as_slice())
 }
@@ -1827,9 +1891,11 @@ fn source_of_span<'a>(
 fn paint_of<'a>(view: &'a View, w: &WellItem) -> Option<(&'a Paint, String)> {
     // **Only under scene colouring**, which is what it means: "the colour the
     // scene gives them". Under strata colouring the strata are what was asked,
-    // and a well the scene happens to paint kept neither its units nor its ticks
+    // and a well the scene happens to paint kept neither its units nor its strata ticks
     // (the black ticks at the stratigraphic changes would vanish and the colour would
-    // look uniform along the boreholes).
+    // look uniform along the boreholes). A painted well has no strata to tick, but the
+    // limits the view gives it ([`View::limits`]) are drawn over its paint all the same:
+    // they are what the paint does not say.
     if view.well_colouring != WellColouring::Scene {
         return None;
     }
@@ -1885,6 +1951,7 @@ fn laid_well(
     let highlighted = view.highlight.contains(&key);
     let width = width_of(view, &key, view.well_width_px.max(1.0));
     let path = map.points(&w.path);
+    let laid_limits = laid_limits(w, view, map, width, warnings);
     let mut shapes = Vec::new();
     if highlighted {
         shapes.push(Shape::Polyline {
@@ -1944,6 +2011,7 @@ fn laid_well(
                     at: Some(w.head),
                     shapes,
                     intervals,
+                    limits: laid_limits,
                 };
             }
             Err(why) => warnings.push(paint_refusal(w, &why)),
@@ -2014,6 +2082,7 @@ fn laid_well(
         at: Some(w.head),
         shapes,
         intervals,
+        limits: laid_limits,
     }
 }
 
@@ -2118,7 +2187,14 @@ const TICK_OVERHANG_PX: f64 = 2.0;
 /// little more. `None` when the piece has no direction.
 fn tick_across(points: &[[f64; 2]], width: f64) -> Option<[[f64; 2]; 2]> {
     let (a, b) = (points.first()?, points.get(1)?);
-    let (dx, dy) = (b[0] - a[0], b[1] - a[1]);
+    tick_through(*a, b[0] - a[0], b[1] - a[1], width)
+}
+
+/// The line across a path at `centre`, where the path goes `(dx, dy)`: perpendicular to it, centred
+/// on it, as wide as the well and a little more. **The one geometry of a line across a well**: the
+/// tick of a boundary between two strata ([`tick_across`]) and the line at a limit
+/// ([`laid_limits`]) are drawn by it. `None` when there is no direction.
+fn tick_through(centre: [f64; 2], dx: f64, dy: f64, width: f64) -> Option<[[f64; 2]; 2]> {
     let length = dx.hypot(dy);
     // A `NaN` length is no direction either: `is_finite` says so, `> 0.0` the rest.
     if !length.is_finite() || length <= 0.0 {
@@ -2126,7 +2202,97 @@ fn tick_across(points: &[[f64; 2]], width: f64) -> Option<[[f64; 2]; 2]> {
     }
     let half = width / 2.0 + TICK_OVERHANG_PX;
     let (nx, ny) = (-dy / length * half, dx / length * half);
-    Some([[a[0] - nx, a[1] - ny], [a[0] + nx, a[1] + ny]])
+    Some([[centre[0] - nx, centre[1] - ny], [centre[0] + nx, centre[1] + ny]])
+}
+
+/// The limits the view gives a well: its own key's first, then those of the objects folded into
+/// its line, as [`paint_of`] does.
+fn limits_of<'a>(view: &'a View, w: &WellItem) -> Option<&'a [WellLimit]> {
+    std::iter::once(w.object.key())
+        .chain(w.merged.iter().map(|o| o.key()))
+        .find_map(|key| {
+            view.limits
+                .iter()
+                .find(|(k, _)| *k == key)
+                .map(|(_, limits)| limits.as_slice())
+        })
+}
+
+/// Where a limit crosses the well's path, in pixels: the point, the direction the path goes there,
+/// and the MD when the well has them. `None` when the limit is not on the path - an MD outside the
+/// well's, a node it does not have, a path that is not a line there.
+fn along_path(
+    path_px: &[[f64; 2]],
+    md: Option<&[f64]>,
+    at: LimitAt,
+) -> Option<([f64; 2], f64, f64, Option<f64>)> {
+    let (segment, t) = match at {
+        LimitAt::Node { node, t } => {
+            if !t.is_finite() || !(0.0..=1.0).contains(&t) || node + 1 >= path_px.len() {
+                return None;
+            }
+            (node, t)
+        }
+        LimitAt::Md(value) => {
+            let md = md.filter(|md| md.len() == path_px.len() && md.len() > 1)?;
+            if !value.is_finite() {
+                return None;
+            }
+            let segment = (0..md.len() - 1).find(|&i| md[i] <= value && value <= md[i + 1])?;
+            let span = md[segment + 1] - md[segment];
+            let t = if span > 0.0 {
+                (value - md[segment]) / span
+            } else {
+                0.0
+            };
+            (segment, t)
+        }
+    };
+    let (a, b) = (path_px[segment], path_px[segment + 1]);
+    let (dx, dy) = (b[0] - a[0], b[1] - a[1]);
+    let measured = md
+        .filter(|md| md.len() == path_px.len())
+        .map(|md| md[segment] + (md[segment + 1] - md[segment]) * t);
+    Some(([a[0] + dx * t, a[1] + dy * t], dx, dy, measured))
+}
+
+/// The lines across a well at the limits the view gives it, laid on its path - one pixel per node, none
+/// merged, so a limit is read where the path really goes. A limit that is not on the path is not drawn
+/// and is counted in a note.
+fn laid_limits(
+    w: &WellItem,
+    view: &View,
+    map: &Map,
+    width: f64,
+    warnings: &mut Vec<String>,
+) -> Vec<LaidLimit> {
+    let Some(given) = limits_of(view, w) else {
+        return Vec::new();
+    };
+    let path_px: Vec<[f64; 2]> = w.path.iter().map(|&p| map.px(p)).collect();
+    let mut laid = Vec::new();
+    let mut lost = 0usize;
+    for limit in given {
+        let ends = along_path(&path_px, w.md.as_deref(), limit.at)
+            .and_then(|(centre, dx, dy, md)| tick_through(centre, dx, dy, width).map(|ends| (ends, md)));
+        match ends {
+            Some((ends, md)) => laid.push(LaidLimit {
+                ends,
+                md,
+                rank: limit.rank,
+                above: limit.above.clone(),
+                below: limit.below.clone(),
+            }),
+            None => lost += 1,
+        }
+    }
+    if lost > 0 {
+        warnings.push(format!(
+            "{lost} limit(s) of {} are not on its path and were not drawn",
+            well_name(&w.object)
+        ));
+    }
+    laid
 }
 
 /// The colour a unit is given **now** - [`View::unit_colours`], by the key of the
@@ -2382,6 +2548,7 @@ fn plan(catalogue: &Catalogue, view: &View) -> Layout {
                     dash: true,
                 }],
                 intervals: Vec::new(),
+                limits: Vec::new(),
             });
         }
     }
@@ -2406,6 +2573,7 @@ fn plan(catalogue: &Catalogue, view: &View) -> Layout {
                     at: None,
                     shapes,
                     intervals: Vec::new(),
+                    limits: Vec::new(),
                 });
             }
         }
@@ -2422,6 +2590,7 @@ fn plan(catalogue: &Catalogue, view: &View) -> Layout {
                 dash: false,
             }],
             intervals: Vec::new(),
+            limits: Vec::new(),
         });
     }
     lines.extend(directions);
@@ -2466,6 +2635,7 @@ fn plan(catalogue: &Catalogue, view: &View) -> Layout {
             at: Some(w.head),
             shapes,
             intervals: Vec::new(),
+            limits: Vec::new(),
         });
     }
     layers.push(Layer {
@@ -2791,6 +2961,7 @@ fn head_labels(
             at: None,
             shapes,
             intervals: Vec::new(),
+            limits: Vec::new(),
         });
     }
     (out, folded)
@@ -3115,6 +3286,7 @@ fn strata_legend(
         at: None,
         shapes,
         intervals: Vec::new(),
+        limits: Vec::new(),
     };
     if shown < entries.len() {
         frame.push(more_line(
@@ -3197,6 +3369,100 @@ fn strata_legend(
         out.push(decor("strata-none", String::new(), shapes));
     }
     out
+}
+
+/// The layer the ramp legend is written in (`svg.rs` gives it a group of its own).
+pub(crate) const RAMP_LAYER: &str = "ramp-legend";
+/// The room the ramp legend asks of the right margin, pixels.
+const RAMP_LEGEND_PX: f64 = 96.0;
+/// The longest a ramp is drawn, pixels.
+const RAMP_MAX_PX: f64 = 200.0;
+
+/// The ramp legend, in a box at `x` from `top` down to at most `bottom`: the property's name, its unit,
+/// then the ramp - one swatch per step, as [`crate::ramp`] cut it - graduated on the scale. The steps
+/// that have no colour are left blank. One object, `ramp-legend`.
+fn ramp_legend(
+    legend: &RampLegend,
+    scale: &Scale,
+    x: f64,
+    width: f64,
+    top: f64,
+    bottom: f64,
+) -> Vec<LaidObject> {
+    let heading = LINE_PX * 2.0 + 4.0;
+    let ramp = (bottom - top - heading - 10.0).clamp(30.0, RAMP_MAX_PX);
+    let height = heading + ramp + 10.0;
+    let left = x + 8.0;
+    let mut shapes = vec![Shape::Polygon {
+        points: vec![
+            [x, top],
+            [x + width, top],
+            [x + width, top + height],
+            [x, top + height],
+        ],
+        fill: "#ffffff".into(),
+        opacity: 0.92,
+        stroke: Some("#999999".into()),
+        dash: false,
+    }];
+    let room = (width - 12.0).max(20.0);
+    shapes.push(Shape::Text {
+        at: [left, top + LINE_PX],
+        text: labels::fit(&legend.title, FONT_PX, room),
+        anchor: Anchor::Start,
+        size: FONT_PX,
+        fill: INK.into(),
+    });
+    if let Some(uom) = &legend.uom {
+        shapes.push(Shape::Text {
+            at: [left, top + LINE_PX * 2.0],
+            text: labels::fit(&format!("({uom})"), SMALL_PX, room),
+            anchor: Anchor::Start,
+            size: SMALL_PX,
+            fill: INK.into(),
+        });
+    }
+    let ramp_top = top + heading;
+    let steps = legend.colours.len();
+    for (step, colour) in legend.colours.iter().enumerate() {
+        let Some(colour) = colour else { continue };
+        // The first step is the lower bound, at the bottom.
+        let (y1, y0) = (
+            ramp_top + ramp - step as f64 * ramp / steps as f64,
+            ramp_top + ramp - (step as f64 + 1.0) * ramp / steps as f64,
+        );
+        shapes.push(Shape::Polygon {
+            points: vec![
+                [left, y0],
+                [left + 14.0, y0],
+                [left + 14.0, y1 + 0.5],
+                [left, y1 + 0.5],
+            ],
+            fill: colour.clone(),
+            opacity: 1.0,
+            stroke: None,
+            dash: false,
+        });
+    }
+    for (fraction, name) in crate::ramp::graduations(scale, ramp) {
+        shapes.push(Shape::Text {
+            at: [left + 18.0, ramp_top + ramp * (1.0 - fraction) + 3.0],
+            text: name,
+            anchor: Anchor::Start,
+            size: SMALL_PX,
+            fill: INK.into(),
+        });
+    }
+    vec![LaidObject {
+        attr: Attr::Decor("ramp-legend".into()),
+        kind: "ramp-legend".into(),
+        title: legend.title.clone(),
+        highlighted: false,
+        at: None,
+        shapes,
+        intervals: Vec::new(),
+        limits: Vec::new(),
+    }]
 }
 
 /// The frame of a legend box and how many rows of it fit.
@@ -3360,5 +3626,6 @@ fn legend(mut entries: Vec<LegendEntry>, x: f64, width: f64, top: f64, bottom: f
         at: None,
         shapes,
         intervals: Vec::new(),
+        limits: Vec::new(),
     })
 }

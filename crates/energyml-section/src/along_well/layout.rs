@@ -7,13 +7,13 @@ use std::sync::Arc;
 
 use energyml_domain::ArraySource;
 use energyml_domain::stats::quantile::QuantileMethod;
-use energyml_domain::stats::scale::{Fraction, Scale, ScaleKind, auto_bounds, propose_log};
+use energyml_domain::stats::scale::{Scale, ScaleKind, auto_bounds, propose_log};
 use energyml_geometry::around_well::projection::WellProjections;
 use energyml_sheet::draw::list::{
     Anchor, Colour, DisplayList, Element, Item, Layer, PageUnit, Paint, Rect, Stroke, TextStyle,
 };
 use energyml_sheet::draw::svg::{self, Metadata};
-use energyml_sheet::draw::ticks::{label, log_label, log_ticks, nice_ticks};
+use energyml_sheet::draw::ticks::{label, nice_ticks};
 
 use super::horizons::PlacedMesh;
 use super::image::curtain_image;
@@ -391,15 +391,15 @@ fn legend_items(
     let Some(scale) = curtain_scale(model, ask)? else {
         return Ok(Vec::new());
     };
-    let (kind, min, max) = (scale.kind(), scale.min(), scale.max());
-
     let [x, y, w, h] = plot.frame;
     let left = x + w + 14.0;
     let ramp = h.min(200.0);
-    let steps = 32usize;
+    // The steps and the graduations are the ramp's own ([`crate::ramp`]): the section's legend cuts and
+    // graduates its ramp the same way.
+    let steps = crate::ramp::STEPS;
     let mut items = Vec::new();
     for step in 0..steps {
-        let value = scale.value_at((step as f64 + 0.5) / steps as f64);
+        let value = crate::ramp::value_at_step(&scale, step);
         if let Some(pixel) = colour(value) {
             items.push(Item::Rect {
                 rect: Rect {
@@ -414,20 +414,9 @@ fn legend_items(
             });
         }
     }
-    let target = (ramp / 40.0).max(1.0);
-    let graduations: Vec<(f64, String)> = match kind {
-        ScaleKind::Linear => nice_ticks(min, max, target)
-            .map(|ticks| ticks.values.iter().map(|v| (*v, label(*v, ticks.step))).collect())
-            .unwrap_or_default(),
-        ScaleKind::Log10 => log_ticks(min, max, target)
-            .map(|ticks| ticks.values.iter().map(|v| (*v, log_label(*v))).collect())
-            .unwrap_or_default(),
-    };
-    for (value, name) in graduations {
-        if let Fraction::At(fraction) = scale.fraction(value) {
-            let py = y + ramp * (1.0 - fraction);
-            items.push(text([left + 18.0, py + 3.0], name, Anchor::Start));
-        }
+    for (fraction, name) in crate::ramp::graduations(&scale, ramp) {
+        let py = y + ramp * (1.0 - fraction);
+        items.push(text([left + 18.0, py + 3.0], name, Anchor::Start));
     }
     Ok(items)
 }

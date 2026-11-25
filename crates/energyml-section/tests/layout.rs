@@ -153,6 +153,9 @@ pub fn view() -> View {
         unstratified: Default::default(),
         store_names: Vec::new(),
         markers: Vec::new(),
+        limits: Vec::new(),
+        limit_style: Default::default(),
+        ramp_legend: None,
     }
 }
 

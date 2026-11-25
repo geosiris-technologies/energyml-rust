@@ -107,6 +107,12 @@ was shown. The crate has no native dependency and compiles to WebAssembly.
 ## Options of the view
 
 - **Strata legend** (`--strata-legend`): one entry per unit and colour.
+- **Limits across a well** (library: `View::limits`, `View::limit_style`; ADR 0052): a line across a
+  well where one unit, one category or one side of a threshold ends and the next begins, taken from
+  `energyml_domain::limits`, over the well's strata or the paint the scene lays along it. The colour and the width
+  are those of the strata ticks (a black line of one pixel by default).
+- **Ramp legend** (library: `View::ramp_legend`, `ramp::sampled`): the colours of a property's values, graduated, with its
+  name and unit, one per section, on the right.
 - **Portions without strata** (`--unstratified hidden|solid|dashed|hatched`, with
   parameters such as `dashed:colour=#999999,dash=6,gap=4`): the library declares
   the available styles and their parameters, so an interface builds its form from

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- *(section)* limits across a well (`View::limits`, `limit_style`, `limits::well_limits` from `energyml_domain::limits`), drawn over its strata and over a paint the scene lays along it; the strata ticks are one case of them and take the same colour and width (the default is the black line of one pixel they always were); a ramp legend, one per section (`View::ramp_legend`, `ramp::sampled`), whose steps and graduations are those of the legend along a well; ADR 0052
+
+### Fixed
+
+- *(section)* the comment of `cut_sources` said `TraceItem` carries no `sources`; it does
+
 ## [0.4.0](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-section-v0.3.0...energyml-section-v0.4.0) - 2026-11-16
 
 ### Added
