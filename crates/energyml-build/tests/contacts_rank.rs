@@ -431,10 +431,9 @@ fn a_frame_without_the_unit_gives_no_point_and_is_counted() {
 }
 
 #[test]
-fn a_division_that_comes_back_in_one_hole_is_refused_by_name() {
-    // Named, three different divisions and no refusal; at the stage, the
-    // Lutetian twice in one hole - two tops, and which one is *the* top is a
-    // geologist's call.
+fn a_division_that_comes_back_in_one_hole_gives_two_ranked_contacts() {
+    // Named, three different divisions; at the stage, the Lutetian twice in
+    // one hole - two ranked tops, whichever is *the* top being `which`'s call.
     let pieces = frame(
         Pieces::empty(),
         0,
@@ -442,10 +441,16 @@ fn a_division_that_comes_back_in_one_hole_is_refused_by_name() {
         &units(&["Lutétien supérieur", "Yprésien", "Lutétien inférieur"]),
     );
     assert!(contacts(&pieces, json!({})).is_ok(), "named, three divisions");
-    let why = contacts(&pieces, json!({ "unit": "Lutétien" })).expect_err("the Lutetian twice in one hole");
-    assert!(
-        why.contains("`F1`") && why.contains("`Lutétien (stage)`") && why.contains("twice"),
-        "{why}"
+    let made = contacts(&pieces, json!({ "unit": "Lutétien" }))
+        .expect("the Lutetian twice in one hole: two ranked contacts");
+    assert_eq!(
+        points_of(&made, "Lutétien (stage) - base"),
+        Some(vec![node(0, 1)])
+    );
+    assert_eq!(points_of(&made, "Lutétien (stage) - top"), Some(vec![node(0, 2)]));
+    assert_eq!(
+        copied(&made, "Lutétien (stage) - top - rank"),
+        Some(Numbers::I64(vec![2]))
     );
 }
 

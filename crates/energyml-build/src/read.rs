@@ -240,6 +240,7 @@ pub fn pieces_of_object_in(
                 // A representation is no property: what a property states is
                 // asked of `known_of_object`, which a property reaches.
                 property: None,
+                labels: Vec::new(),
                 // Nor a unit or a column.
                 stratigraphy: None,
                 // Nor a time series.
@@ -449,8 +450,11 @@ fn known_of_object_but_whole(store: &EpcStore, key: &str, reach: Reach) -> Resul
     // then answer for it - a property taken for a coordinate system, which
     // `suggest_written` would offer as the frame of what is written.
     if is_property(&summary.qualified_type) {
+        let property = property_of(store, object.as_reflect(), reach);
+        let labels = labels_of(store, &property);
         return Ok(Known {
-            property: Some(property_of(store, object.as_reflect(), reach)),
+            property: Some(property),
+            labels,
             reference,
             ..Known::default()
         });
@@ -935,7 +939,8 @@ fn wellhead_of(store: &EpcStore, reflect: &dyn energyml_core::value::Reflect) ->
 
 /// **The hole a wellbore object runs along** - [`crate::pieces::Known::path`]:
 /// a trajectory's own line, or the line of the trajectory a frame names,
-/// through `energyml_geometry::well::path_of` and nothing else.
+/// through `energyml_geometry::well::path_of` (the strict reading) and
+/// `well::along_hole` (the one `well::frame` places its nodes with), and nothing else.
 ///
 /// `None` for what is neither - a type test on the class name, the release
 /// and the `obj_` of 2.0.1 aside. A trajectory whose line cannot be evaluated
@@ -967,11 +972,13 @@ fn path_of(
         Some(object) => object.as_reflect(),
         None if class == "WellboreTrajectoryRepresentation" => reflect,
         None => {
+            let missing = format!(
+                "the trajectory `{}` the frame names is not in the package",
+                trajectory.title
+            );
             return Some(crate::pieces::KnownPath {
-                path: Err(format!(
-                    "the trajectory `{}` the frame names is not in the package",
-                    trajectory.title
-                )),
+                path: Err(missing.clone()),
+                along: Err(missing),
                 trajectory,
                 md_uom: None,
                 datum: None,
@@ -995,12 +1002,30 @@ fn path_of(
     });
     let path = energyml_geometry::well::path_of(reflect, store)
         .map_err(|why| format!("`{}`: {why}", trajectory.title));
+    // The placement `well::frame` gives a node - the line, or the datum's vertical when there is no line.
+    let along = energyml_geometry::well::along_hole(reflect, store)
+        .map_err(|why| format!("`{}`: {why}", trajectory.title));
     Some(crate::pieces::KnownPath {
         trajectory,
         path,
+        along,
         md_uom,
         datum,
     })
+}
+
+/// The code and the label of each row of the table a property names - [`crate::pieces::Known::labels`].
+fn labels_of(store: &EpcStore, facts: &crate::pieces::KnownProperty) -> Vec<(f64, String)> {
+    let Some(lookup) = &facts.lookup else {
+        return Vec::new();
+    };
+    let Some(found) = summary_of_ref(store, lookup) else {
+        return Vec::new();
+    };
+    let Ok(object) = store.get_object(&found.uri) else {
+        return Vec::new();
+    };
+    energyml_domain::frame_values::category_labels(object.as_reflect(), store).unwrap_or_default()
 }
 
 /// The trajectory and the datum a frame names - their **references**, not

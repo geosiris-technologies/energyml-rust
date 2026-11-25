@@ -17,9 +17,9 @@
 //! length**, and `contacts-from-frames` finds its contacts in them exactly as
 //! it finds them in the frame's own: a contact is a node, found by its rank
 //! before any depth is read; the top takes the unit's first interval, the base
-//! its last; a unit that comes back lower in one hole is refused by name; the
-//! copies of the wells' properties come after every point set. Nothing of that
-//! is written twice.
+//! its last; a unit that comes back lower in one hole gives two ranked contacts
+//! (`energyml_domain::limits`); the copies of the wells' properties come after
+//! every point set. Nothing of that is written twice.
 //!
 //! # How an interval is read
 //!
@@ -106,9 +106,8 @@ impl Reading {
         }
     }
 
-    /// Whether a unit of a sequence has its top and base written, and is
-    /// refused when it comes back: every unit when named; at a rank, the
-    /// division read, never its neighbour.
+    /// Whether a unit of a sequence has its top and base written: every unit
+    /// when named; at a rank, the division read, never its neighbour.
     pub fn keeps(&self, unit: &Ref) -> bool {
         match self {
             Reading::Named => true,

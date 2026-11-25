@@ -237,6 +237,11 @@ pub struct Known {
     /// no property* are two different news, and the second one is not a
     /// refusal.
     pub property: Option<KnownProperty>,
+    /// The code and the label of each row of the table a **property** names (`CategoryLookup`), read at the boundary
+    /// by `energyml_domain::frame_values::category_labels` - the one reading of a category table. Empty for anything
+    /// that is no property, for a property with no table, for a table that does not read, and for a row with no
+    /// label. What lets an operation choose, and name, the classes of a categorical property by their words.
+    pub labels: Vec<(f64, String)>,
     /// **The package's ordered stratigraphy**, when the object is a
     /// stratigraphic unit or a column - its columns, ranks, units and the earth
     /// models already made of them, as `energyml_domain::stratigraphy::columns`
@@ -291,6 +296,14 @@ pub struct KnownPath {
     pub trajectory: Ref,
     /// Its line, in the local numbers of its CRS - **or why there is none**.
     pub path: Result<energyml_geometry::parametric::Path, String>,
+    /// The same hole **as `well::frame` places a node on it**: the line when the trajectory has a `Geometry`, and
+    /// when it has none the vertical reading from its datum, flagged as the assumption it is
+    /// ([`energyml_geometry::well::AlongHole::is_assumed`]) - or why there is none.
+    ///
+    /// [`KnownPath::path`] refuses the second case, for what writes a depth as data (`computed-tops`); this
+    /// is the one door for what places a point at a depth the way the well is drawn (`contacts-from-frames`,
+    /// interpolated).
+    pub along: Result<energyml_geometry::well::AlongHole, String>,
     /// The unit its measured depths count in - `MdInterval.Uom`.
     pub md_uom: Option<String>,
     /// The datum its measured depths count from - `MdInterval.Datum`.

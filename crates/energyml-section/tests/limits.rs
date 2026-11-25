@@ -343,8 +343,8 @@ fn the_ramp_legend_names_the_property_and_runs_from_low_at_the_bottom_to_high() 
     let said = texts(o);
     assert!(said.contains(&"Porosity") && said.contains(&"(v/v)"), "{said:?}");
     assert!(
-        said.contains(&"0") && said.contains(&"1"),
-        "graduated from 0 to 1: {said:?}"
+        said.contains(&"0.0") && said.contains(&"1.0"),
+        "graduated from 0 to 1, written as the view along a well writes its numbers: {said:?}"
     );
 
     // Swatches: the lowest step sits lowest on the drawing, the highest highest.

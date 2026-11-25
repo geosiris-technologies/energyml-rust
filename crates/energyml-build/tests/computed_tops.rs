@@ -82,6 +82,7 @@ fn well(path: Path, frame: Ref) -> Vec<(String, Source)> {
                 )),
                 path: Some(KnownPath {
                     trajectory: trajectory(),
+                    along: Ok(energyml_geometry::well::AlongHole::Line(path.clone())),
                     path: Ok(path),
                     md_uom: Some("m".into()),
                     datum: Some(Ref::new(

@@ -94,3 +94,4 @@
 - [0050 The colour of a category is carried by its table](adr/0050-the-colour-of-a-category-is-carried-by-its-table.md)
 - [0051 The limits between two runs of values](adr/0051-the-limits-between-two-runs-of-values.md)
 - [0052 Limits across a well and the ramp legend of a section](adr/0052-limits-across-a-well-and-the-ramp-legend-of-a-section.md)
+- [0053 Contacts read through the limits of the domain](adr/0053-contacts-read-through-the-limits-of-the-domain.md)

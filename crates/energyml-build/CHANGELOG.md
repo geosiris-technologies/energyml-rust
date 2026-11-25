@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- *(build)* `contacts-from-frames` reads a categorical property (`categoryKind`, `codes`, `labels` - the classes are titled with their label) or a threshold on a continuous one (`thresholdKind`, `threshold`, `thresholdSide`) as well as the units, places a contact on nodes `inside`, `outside` or `interpolated` (`place`; the interpolated point on the frame's trajectory at its measured depth, a frame without a readable trajectory refused alone), and keeps all, the first or the last contact of each class and side in each hole (`which`); each point carries its rank in a `rank` property of its point set, written when a class comes back; ADR 0053
+
+- *(build)* `contacts-from-frames`, interpolated, places a contact of a frame whose trajectory has no `Geometry` on the vertical read from its datum, as `well::frame` places the frame's nodes, and says so (`contacts-on-datum-vertical`); `KnownPath` gains `along`, the placement `well::frame` draws with, beside `path`, the strict line
+
+### Changed
+
+- *(build)* [**breaking**] `contacts-from-frames` no longer refuses a unit that comes back lower in the same hole (A, B, A): it gives two ranked tops and bases in the same point sets, and the run goes on; a frame the reading cannot treat is refused alone, named in the plan, and the others are read. Its runs, ranks and places are those of `energyml_domain::limits`; a run with no repeated crossing writes what it wrote before
+
 ### Fixed
 
 - *(build)* the templates of `transform`, `densify`, `delete-nodes`, `loft`, `polyline-through`, `estimate` and `resurface` declare the parameters their activities record (the counts of the shape written by the shared writers, through one helper in the operations' support module, and the fit's `method`, `levels`, `sampleCount`, `fitSampleCount`, `allDimensionsAreOrthogonal`); found by running every operation and passing the conformance rule on what it wrote

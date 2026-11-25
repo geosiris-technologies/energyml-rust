@@ -524,3 +524,37 @@ fn a_line_whose_crs_is_missing_reads_down_and_says_so() {
     let note = path.vertical_note().expect("a convention is said");
     assert!(note.contains("could not be read"), "{note}");
 }
+
+/// The one door for a point of a trajectory at a measured depth: with no `Geometry` it is the vertical below the datum,
+/// flagged as an assumption, and it is **the point `frame` places a node at** - the two asked, none copied - while
+/// `path_of`, the strict reading for what writes a depth as data, still refuses it.
+///
+/// Break it: in `frame`, place the nodes with `Anchor::at` directly again and change the sign of the depth there; the
+/// first assertion then fails.
+#[test]
+fn a_trajectory_without_geometry_is_placed_by_one_door_for_frame_and_for_its_other_readers() {
+    let along = well::along_hole(&trajectory(), &Wellsite).unwrap();
+    assert!(along.is_assumed());
+    let mds = [10.0, 20.0, 30.0];
+    let found = geometry::of(&frame_from(mds.to_vec()), &Wellsite).unwrap();
+    for (md, node) in mds.iter().zip(&found.patches[0].points) {
+        assert_eq!(&along.at(*md), node, "MD {md}");
+    }
+    let refused = well::path_of(&trajectory(), &Wellsite).unwrap_err();
+    assert!(format!("{refused}").contains("vertical reading"), "{refused}");
+}
+
+/// With a `Geometry` the door is the line itself, and not an assumption.
+///
+/// Break it: return `VerticalFromDatum` whatever the trajectory says in `along_hole_in`.
+#[test]
+fn a_trajectory_with_a_geometry_is_placed_on_its_line() {
+    let trajectory = deviated(0.0, [0.0, 100.0]);
+    let site = DeviatedSite(trajectory.clone());
+    let along = well::along_hole(&trajectory, &site).unwrap();
+    assert!(!along.is_assumed());
+    assert_eq!(
+        along.at(40.0),
+        well::path_of(&trajectory, &site).unwrap().at(40.0)
+    );
+}

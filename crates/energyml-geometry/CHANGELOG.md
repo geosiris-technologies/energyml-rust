@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- *(geometry)* `well::along_hole` and `well::AlongHole`: the one door for the point of a trajectory at a measured depth - its line when it has a `Geometry`, the vertical read from its datum (flagged `is_assumed`) when it has none; `well::frame` places its nodes through it; `well::path_of` keeps refusing the second case
+
 ## [0.4.0](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-geometry-v0.3.0...energyml-geometry-v0.4.0) - 2026-11-16
 
 ### Added

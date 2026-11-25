@@ -36,6 +36,7 @@ mod combine;
 mod computed_tops;
 mod conditions;
 mod contacts;
+mod contacts_limits;
 mod contacts_well_origin;
 mod cross_section;
 mod datum_in_compound;

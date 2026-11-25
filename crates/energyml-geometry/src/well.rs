@@ -99,9 +99,85 @@ pub fn head_of(trajectory: &dyn Reflect, source: &dyn ValueSource) -> Result<[f6
     Ok([anchor.x, anchor.y, anchor.elevation])
 }
 
+/// **How a trajectory places a measured depth** - the one door `frame` and every reader of *where is the hole at this
+/// depth* go through (`energyml-build`'s interpolated contacts): the trajectory's own line when it has a `Geometry`, and
+/// when it has none the vertical reading from its datum that this module documents.
+///
+/// The second is an **assumption** - the file says nothing of the hole's shape - and [`AlongHole::is_assumed`] says so:
+/// what is computed on it carries the assumption, and a caller that must not (a number written as data) refuses it by
+/// asking [`path_of`] instead, which does. The 3D view draws the well this way, so what is placed here is where the
+/// well is drawn.
+#[derive(Clone, Debug, PartialEq)]
+pub enum AlongHole {
+    /// The trajectory's `Geometry`, a line local to its CRS.
+    Line(crate::parametric::Path),
+    /// No `Geometry`: the vertical below the datum, placed, z up.
+    VerticalFromDatum(DatumVertical),
+}
+
+/// The vertical a no-`Geometry` trajectory is read as: from the datum's position down, in metres per unit of
+/// measured depth. Held by [`AlongHole::VerticalFromDatum`].
+#[derive(Clone, Debug, PartialEq)]
+pub struct DatumVertical(Anchor);
+
+impl AlongHole {
+    /// The point at a measured depth - what `frame` places a node at. The line's own numbers for a `Geometry`, placed z-up
+    /// from the datum for the vertical.
+    pub fn at(&self, md: f64) -> Point {
+        match self {
+            AlongHole::Line(path) => path.at(md),
+            AlongHole::VerticalFromDatum(vertical) => vertical.0.at(md),
+        }
+    }
+
+    /// Whether the placement is the vertical reading from the datum - an assumption of the file's silence, not a line
+    /// the file states.
+    pub fn is_assumed(&self) -> bool {
+        matches!(self, AlongHole::VerticalFromDatum(_))
+    }
+
+    /// The parameters of the line's knots, when it is a line that states them: the contract that the parameter **is**
+    /// the measured depth rests on them. `None` for the vertical, whose depth is its own parameter.
+    pub fn knots(&self) -> Option<&[f64]> {
+        match self {
+            AlongHole::Line(path) => path.knots(),
+            AlongHole::VerticalFromDatum(_) => None,
+        }
+    }
+}
+
+/// How `trajectory` places a measured depth - see [`AlongHole`].
+///
+/// # Errors
+///
+/// A line that does not read, a datum that does not read, depth bounds that contradict themselves, a trajectory with
+/// neither a `Geometry` nor depth bounds.
+pub fn along_hole(trajectory: &dyn Reflect, source: &dyn ValueSource) -> Result<AlongHole> {
+    along_hole_in(trajectory, source, "WellboreTrajectoryRepresentation")
+}
+
+/// [`along_hole`], the errors naming `at`.
+fn along_hole_in(trajectory: &dyn Reflect, source: &dyn ValueSource, at: &str) -> Result<AlongHole> {
+    match crate::geometry::field_object(trajectory, "Geometry") {
+        // The trajectory has a shape of its own. The parameter of its parametric line **is** the measured depth -
+        // RESQML says so, and the corpus confirms it: `acd2cdcf`'s parameters run 0...1000 and its frames sample
+        // 0, 200 ... 1000 of the same well. A log has to land *on* the well path, in the line's local CRS, the space
+        // the trajectory itself comes out in. The frame states no unit for `NodeMd`; the only MD unit in reach is the
+        // trajectory's, and both describe depths along one wellbore.
+        Some(geometry) => crate::parametric::Path::of_labelled(geometry, source, at).map(AlongHole::Line),
+        // No shape anywhere: the vertical reading this module documents, from the wellhead down. Its points are z-up by
+        // construction, matching `datum_trajectory`, so frame and well still agree with each other.
+        None => Anchor::of(trajectory, source, at)
+            .map(|anchor| AlongHole::VerticalFromDatum(DatumVertical(anchor))),
+    }
+}
+
 /// **A trajectory's own line, evaluable at any measured depth** - the reading
 /// `frame` places a frame's nodes with, for what needs a depth between two
 /// stations (a computed top).
+///
+/// For a caller that may carry the assumption - a point that says so - [`along_hole`] is the same placement as `frame`'s
+/// without the refusal; this one is for what writes a depth as a fact (`computed-tops`).
 ///
 /// Two refusals, and both are the file's silence rather than a gap here:
 ///
@@ -546,33 +622,9 @@ pub(crate) fn frame(representation: &dyn Reflect, source: &dyn ValueSource) -> R
     };
     let trajectory = trajectory.as_reflect();
 
-    // Two ways to place a measured depth, and which one applies is decided by
-    // the trajectory, not by the frame.
-    let points: Vec<Point> = match crate::geometry::field_object(trajectory, "Geometry") {
-        // The trajectory has a shape of its own. The parameter of its
-        // parametric line **is** the measured depth - RESQML says so, and the
-        // corpus confirms it: `acd2cdcf`'s parameters run 0…1000 and its
-        // frames sample 0, 200 … 1000 of the same well. So the frame's nodes
-        // are the line evaluated at its own MDs, in the line's local CRS,
-        // which is the space the trajectory itself comes out in - a log has to
-        // land *on* the well path, and that is the property that matters.
-        //
-        // The frame states no unit for `NodeMd`; the only MD unit in reach is
-        // the trajectory's, and both describe depths along the same wellbore,
-        // so they are read as being in it. A frame that meant something else
-        // would have no way to say so.
-        Some(geometry) => {
-            let line = crate::parametric::Line::single(geometry, source, at)?;
-            mds.iter().map(|md| line.at(*md)).collect()
-        }
-        // No shape anywhere: the vertical reading this module documents, from
-        // the wellhead down. Its points are z-up by construction, matching
-        // `datum_trajectory`, so frame and well still agree with each other.
-        None => {
-            let anchor = Anchor::of(trajectory, source, at)?;
-            mds.iter().map(|md| anchor.at(*md)).collect()
-        }
-    };
+    // Which way a measured depth is placed is decided by the trajectory, not by the frame ([`along_hole`]).
+    let along = along_hole_in(trajectory, source, at)?;
+    let points: Vec<Point> = mds.iter().map(|md| along.at(*md)).collect();
     let count = points.len() as u32;
     Ok(vec![Patch {
         index: 0,
@@ -975,6 +1027,7 @@ const MD_DATUM: &[&str] = &["Datum", "MdDatum"];
 const DATUM_TYPES: &[&str] = energyml_domain::crs::DATUM_TYPES;
 
 /// Where a well is, and how far down it runs.
+#[derive(Clone, Debug, PartialEq)]
 struct Anchor {
     x: f64,
     y: f64,

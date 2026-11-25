@@ -226,6 +226,30 @@ fn the_label_is_the_code_column_or_the_only_text_column() {
     );
 }
 
+/// The code of each row and its label: the key where the table has one, the rank where it has none, and nothing
+/// for a row with no label.
+///
+/// Break it: in `Categories::labels`, take `row as f64` for the code of a keyed table too.
+#[test]
+fn a_table_gives_the_code_and_the_label_of_each_row() {
+    assert_eq!(
+        facies().labels(),
+        vec![
+            (10.0, "Lutetian".to_string()),
+            (20.0, "Bartonian".to_string()),
+            (35.0, "Priabonian".to_string())
+        ]
+    );
+    let keyless = categories(
+        vec![col("name", false, Values::Text(vec!["a".into(), "b".into()]))],
+        "ColumnBasedTable",
+    );
+    assert_eq!(
+        keyless.labels(),
+        vec![(0.0, "a".to_string()), (1.0, "b".to_string())]
+    );
+}
+
 /// A table with no key is read by rank from 0, and never a keyed one: the one
 /// rule is `row_named_by`. A key column of text that reads as numbers names its
 /// rows by those numbers, after the exact match.

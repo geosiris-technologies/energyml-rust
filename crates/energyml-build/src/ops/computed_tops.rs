@@ -159,10 +159,13 @@ fn boundary_of(known: Option<&Known>) -> (resqml::GeologicBoundaryKind, Option<e
 /// The drawn nodes of the well against its line: equal when both were read in
 /// one frame. A frame's nodes are its `NodeMd` on the line, a trajectory's its
 /// knots.
-fn drawn_elsewhere(
+///
+/// The hole is [`AlongHole`], the placement `well::frame` draws with: for a vertical read from the datum
+/// the drawn nodes and the placement are one reading, and the comparison holds.
+pub(super) fn drawn_elsewhere(
     well: &Shape,
     known: &Known,
-    path: &energyml_geometry::parametric::Path,
+    path: &energyml_geometry::well::AlongHole,
 ) -> Option<(usize, f64)> {
     let nodes: Vec<[f64; 3]> = well
         .geometry
@@ -266,6 +269,7 @@ impl Operation for ComputedTops {
         let KnownPath {
             trajectory,
             path,
+            along,
             md_uom,
             datum,
         } = known.path.as_ref().ok_or_else(|| {
@@ -307,7 +311,12 @@ impl Operation for ComputedTops {
                     format!("`{md_uom}` is no length unit a marker can write: {why}"),
                 )
             })?;
-        if let Some((rank, gap)) = drawn_elsewhere(&well, known, path) {
+        // `path` is `Ok`, so `along` is the same line: the placement `well::frame` drew the shape with.
+        if let Some((rank, gap)) = along
+            .as_ref()
+            .ok()
+            .and_then(|along| drawn_elsewhere(&well, known, along))
+        {
             return Err(Refusal::on(
                 "well",
                 format!(

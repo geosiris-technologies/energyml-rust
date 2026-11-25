@@ -24,9 +24,45 @@
 //! - **two point sets per unit**, its top and its base, **even when they hold
 //!   the same points** as the neighbour's: the base of A and the top of B part
 //!   where erosion took something away, and that is what one wants to see;
-//! - **a unit that comes back lower in the same hole** (A, B, A) would give two
-//!   tops for one hole: refused by name - which of the two is *the* top is a
-//!   geologist's call, not this module's.
+//! - **a unit that comes back lower in the same hole** (A, B, A) gives two tops
+//!   and two bases: one **point set** per unit and side still, whose points
+//!   carry their **rank** - 1 for the first top of the unit in that hole, 2 for
+//!   the second - in a `DiscreteProperty` (`rank`) written when any rank is above
+//!   1. Until then this was refused by name ("which of the two is *the* top is a
+//!   geologist's call"); it is the person's call now, made with `which`: `all`
+//!   (the default), the `first` or the `last` of each unit and side in each hole.
+//!   A run with no repeated crossing writes what it always wrote (ADR 0053);
+//!
+//! # What else it can read: a categorical property, a threshold
+//!
+//! The units are one reading of a suite along a well. Two more, over the frames'
+//! properties (`properties`), by the **kind** of the property (its uuid):
+//!
+//! - `categoryKind`: a discrete property of that kind - on nodes or on
+//!   intervals - whose **codes** are the classes (`codes` and `labels` keep some of
+//!   them, by number or by the label their table gives, as a union); the top and
+//!   the base of each class are written, titled with its label when the table has
+//!   one, after the kind and the code otherwise;
+//! - `thresholdKind` and `threshold`: a continuous property, whose values are
+//!   `AtOrAbove` the threshold (`value >= threshold`) or `Below` it; the side
+//!   named by `thresholdSide` has its contacts written.
+//!
+//! The classes, the runs, the rank of each limit and its place come from
+//! `energyml_domain::limits` (ADR 0051): this module keeps no rule of its own for
+//! a run. On nodes, `place` says where a contact sits - `inside` the run it bounds,
+//! `outside` it, or `interpolated`, linearly in measured depth between the two
+//! nodes where the threshold is crossed, never over a gap the median step of the
+//! frame forbids. An interpolated point lies **on the trajectory** the frame names,
+//! at that measured depth (`Known::path`, placed as `well::frame` places a node: the
+//! line that draws the well, or the vertical read from its datum when the trajectory has
+//! no geometry, and the plan says so) - never on
+//! the chord between the two nodes, which on a deviated hole is beside the well -,
+//! and the properties copied onto it are read **at its MD**
+//! (`FrameValues::at_md`): a continuous one interpolated, a discrete one null (a code
+//! is held at its node). A frame the reading cannot treat - no such property, two,
+//! one that does not read, and, for an interpolation, no trajectory to place the point
+//! on or one drawn in another frame than its line - is **refused
+//! alone**, named with its reason in the plan, and the others are read.
 //!
 //! Each point set represents a `HorizonInterpretation` of a `BoundaryFeature`
 //! named after the unit and the side, derived from the unit's own uuid: the top
@@ -144,20 +180,23 @@
 //!   *beside* them, after every one, so a run with it off writes fewer
 //!   objects, never different ones.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
+use energyml_domain::frame_values::{FrameValues, Side as WhichInterval, Support};
+use energyml_domain::limits::{Anchor, Class, Classification, LimitKind, Spot, Threshold, transitions};
+use energyml_domain::property::IndexableElement;
 use energyml_domain::provenance::Parameter;
 use energyml_domain::values::Values;
 use energyml_eml_2_3 as eml;
 use energyml_resqml_2_2 as resqml;
 use serde_json::{Value, json};
 
-use crate::declare::{ChartTerm, Inputs, ObjectIn, Params, Shape, Suggestions};
+use crate::declare::{ChartTerm, Choice, Inputs, ObjectIn, Params, Shape, Suggestions};
 use crate::operation::{
     About, ActivityDraft, Category, Context, Dataset, Dropped, Need, NewObject, Note, Numbers, Operation,
     Output, Plan, Refusal, Slot,
 };
-use crate::pieces::{KnownProperty, Pieces, Ref};
+use crate::pieces::{Known, KnownProperty, Pieces, Ref};
 
 use super::contacts_rank::Reading;
 use super::support;
@@ -246,6 +285,52 @@ pub struct ContactsParams {
     /// with `rank` or `unit`: the language the chart's divisions are titled in - the one the units were written in, so the same setting as `stratigraphy-from-geolts` and `wells-and-properties-from-table`
     #[param(default = super::stratigraphy::Language::Fr, optional)]
     pub language: super::stratigraphy::Language,
+    /// read a categorical property of this kind instead of the units: the uuid of its property kind
+    ///
+    /// Each code it holds is a class, and its top and its base are written as a point set of that code, whatever
+    /// the code means: a facies, a lithology, a zone. The property is the one of that kind that hangs on the frame
+    /// (`properties`), on its nodes or on its intervals; a frame that carries none, or two, is refused **alone**
+    /// and named. Not with `rank` or `unit`, which read the units.
+    pub category_kind: Option<String>,
+    /// with `categoryKind`: the codes whose contacts are written
+    ///
+    /// With `labels`, **the union**: a class is kept when its code is named here or its label is named there. Neither
+    /// given, every code the property holds. The other codes are still classes, so the limit between a kept code and
+    /// another is a contact.
+    pub codes: Vec<i64>,
+    /// with `categoryKind`: the labels, in the table of the property, of the classes whose contacts are written
+    ///
+    /// A label no row of the table bears is refused by name, and a property whose table gives no label cannot be
+    /// chosen this way: the frame is refused alone. The point sets of a class are titled with its label when its table
+    /// gives one, and with the kind and the code otherwise.
+    pub labels: Vec<String>,
+    /// read a continuous property of this kind against a threshold instead of the units: the uuid of its property kind
+    ///
+    /// The values at or above the threshold (`value >= threshold`) are one class, the values below it the other;
+    /// the contacts written are those of the side `thresholdSide` names. A value that is null belongs to neither,
+    /// and no contact crosses it. Not with `rank` or `unit`.
+    pub threshold_kind: Option<String>,
+    /// with `thresholdKind`: the threshold, in the unit of the property
+    pub threshold: Option<f64>,
+    /// with `thresholdKind`: the side whose contacts are written - `at-or-above` (`value >= threshold`) or `below`
+    #[param(default = ThresholdSide::AtOrAbove, optional)]
+    pub threshold_side: ThresholdSide,
+    /// where a contact sits when the values hang on nodes: `inside` the run it bounds, `outside` it, or `interpolated` where the threshold is crossed
+    ///
+    /// On intervals a contact is the node that separates two of them and this means nothing. `interpolated` is
+    /// linear in measured depth between the two nodes, never over two nodes further apart than three times the
+    /// median step of the frame, and the point is **on the trajectory** at that measured depth, placed as `well::frame` places
+    /// a node (`energyml_geometry::well::along_hole`: the line that draws the well, or the vertical read from its datum
+    /// when the trajectory has no `Geometry`, which the plan says): a frame whose trajectory is missing, does not read or is drawn in another frame than its
+    /// line is refused alone, never placed on the chord between two nodes.
+    #[param(default = Place::Inside, optional)]
+    pub place: Place,
+    /// which contacts of a well are written: `all` (each with its rank), the `first` or the `last` of each class and side
+    ///
+    /// A class that comes back in one hole - A, B, A - gives two tops and a base each, in one point set each side,
+    /// the points carrying their rank (`rank` property, written when any rank is above 1).
+    #[param(default = Which::All, optional)]
+    pub which: Which,
 }
 
 /// What it takes.
@@ -303,6 +388,13 @@ struct Origin {
     /// The unit's own interval at that node: its **first** for a top, its
     /// **last** for a base.
     interval: usize,
+    /// Which run of its class this contact bounds, from 1 - the first top of the class in this hole, the second...
+    rank: usize,
+    /// The measured depth it was placed at, when the support has depths.
+    md: Option<f64>,
+    /// When the contact is between two nodes (`interpolated`): the node above, the node below and the fraction of the
+    /// way - `node` is then the node above.
+    between: Option<(usize, usize, f64)>,
 }
 
 /// The points of one side of one unit, and where each came from - two lists
@@ -336,6 +428,8 @@ struct Used {
     well: String,
     /// How many nodes it places.
     nodes: usize,
+    /// The measured depth of each node, when the frame states them.
+    mds: Option<Vec<f64>>,
 }
 
 /// A point set written, for the copies that go on it.
@@ -343,6 +437,518 @@ struct Written {
     key: (String, Side),
     uuid: String,
     title: String,
+}
+
+// -- what is read: the suites of classes, and the limits they give ----------------
+
+/// Which contacts of a well are written, among those a class gives it.
+///
+/// A class that comes back in one hole gives it **several tops and several bases**, each with its rank:
+/// the first top is the shallowest run's, the last the deepest's.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Choice)]
+pub enum Which {
+    /// Every contact, each with its rank.
+    All,
+    /// The first of each class and side: rank 1.
+    First,
+    /// The last of each class and side: the highest rank the well reaches for it.
+    Last,
+}
+
+/// The side of the threshold whose contacts are written.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Choice)]
+pub enum ThresholdSide {
+    /// `value >= threshold`: the top and the base of the stretches at or above it.
+    AtOrAbove,
+    /// `value < threshold`: the top and the base of the stretches below it.
+    Below,
+}
+
+/// Where on the nodes a contact sits, when the values hang on nodes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Choice)]
+pub enum Place {
+    /// On a node of the run the contact bounds: the first node of a top, the last of a base.
+    Inside,
+    /// On the neighbouring node, outside the run: the last node above a top, the first below a base.
+    Outside,
+    /// Where the threshold is crossed between the two nodes, linear in measured depth (a threshold only).
+    Interpolated,
+}
+
+impl Place {
+    fn anchor(self) -> Anchor {
+        match self {
+            Place::Inside => Anchor::Inside,
+            Place::Outside => Anchor::Outside,
+            Place::Interpolated => Anchor::Interpolated,
+        }
+    }
+}
+
+/// What the intervals or the nodes of a frame are read as.
+enum Mode {
+    /// The units the frames name, or a division of a chart: the reading `rank` and `unit` settle.
+    Units,
+    /// The codes of a categorical property of this kind, those named by number or by label, or every one.
+    Category {
+        kind: String,
+        codes: Vec<i64>,
+        labels: Vec<String>,
+    },
+    /// The two sides of a threshold on a continuous property of this kind.
+    Threshold {
+        kind: String,
+        at: f64,
+        side: ThresholdSide,
+    },
+}
+
+impl Mode {
+    /// The mode the settings ask for - or the refusal, on the setting at fault. One reading at a time.
+    fn of(params: &ContactsParams) -> Result<Mode, Refusal> {
+        let named = params.rank.is_some() || params.unit.is_some();
+        let mode = match (&params.category_kind, &params.threshold_kind) {
+            (Some(_), Some(_)) => {
+                return Err(Refusal::on(
+                    "thresholdKind",
+                    "a run reads one thing at a time: the units, a categorical property (`categoryKind`) or a threshold on a continuous one (`thresholdKind`)",
+                ));
+            }
+            (Some(kind), None) => {
+                if named {
+                    return Err(Refusal::on(
+                        "categoryKind",
+                        "`rank` and `unit` read the units the frames name; a categorical property is read instead of them, not with them",
+                    ));
+                }
+                Mode::Category {
+                    kind: kind.to_ascii_lowercase(),
+                    codes: params.codes.clone(),
+                    labels: params.labels.clone(),
+                }
+            }
+            (None, Some(kind)) => {
+                if named {
+                    return Err(Refusal::on(
+                        "thresholdKind",
+                        "`rank` and `unit` read the units the frames name; a threshold is read instead of them, not with them",
+                    ));
+                }
+                let Some(at) = params.threshold.filter(|at| at.is_finite()) else {
+                    return Err(Refusal::on(
+                        "threshold",
+                        "`thresholdKind` needs the threshold, a finite number in the unit of the property",
+                    ));
+                };
+                Mode::Threshold {
+                    kind: kind.to_ascii_lowercase(),
+                    at,
+                    side: params.threshold_side,
+                }
+            }
+            (None, None) => {
+                if !params.codes.is_empty() || !params.labels.is_empty() {
+                    return Err(Refusal::on(
+                        "codes",
+                        "`codes` and `labels` choose among the classes of `categoryKind`, which is not set",
+                    ));
+                }
+                if params.threshold.is_some() {
+                    return Err(Refusal::on(
+                        "threshold",
+                        "`threshold` is the threshold of `thresholdKind`, which is not set",
+                    ));
+                }
+                Mode::Units
+            }
+        };
+        if params.place == Place::Interpolated && !matches!(mode, Mode::Threshold { .. }) {
+            return Err(Refusal::on(
+                "place",
+                "`interpolated` places a contact where a threshold is crossed: it needs `thresholdKind`",
+            ));
+        }
+        Ok(mode)
+    }
+
+    /// What the seeds of the run's activity end with: nothing for the units, so the uuids are those of before.
+    fn seed(&self) -> String {
+        match self {
+            Mode::Units => String::new(),
+            Mode::Category { kind, codes, labels } => format!(":category:{kind}:{codes:?}:{labels:?}"),
+            Mode::Threshold { kind, at, side } => format!(":threshold:{kind}:{at:?}:{}", side.word()),
+        }
+    }
+}
+
+/// One frame read as a suite of classes: the classification, and which classes have their contacts written
+/// - each with the key of its point sets and the reference that names it.
+struct Suite {
+    classification: Classification,
+    kept: HashMap<Class, (String, Ref)>,
+    /// Where a contact sits among nodes.
+    anchor: Anchor,
+    /// The line of the hole, evaluable at a measured depth: what a contact **between two nodes** is placed on. Set when
+    /// the contacts are interpolated, and never replaced by the chord between two nodes. It is the placement
+    /// `well::frame` draws the nodes with (`energyml_geometry::well::along_hole`): the trajectory's line, or the
+    /// vertical from its datum when it has none - which `along.is_assumed()` says.
+    along: Option<energyml_geometry::well::AlongHole>,
+}
+
+/// A frame's units as suites of classes - one per sequence its reading gives. `Ok(None)`: the frame maps no
+/// interval to a unit. `Err`: why this frame cannot be read, which refuses it alone.
+fn unit_suites(
+    known: &Known,
+    nodes: &[[f64; 3]],
+    title: &str,
+    reading: &mut Reading,
+) -> Result<Option<Vec<Suite>>, String> {
+    let Some(units) = known.interval_units.as_ref() else {
+        return Ok(None);
+    };
+    if nodes.len() != units.len() + 1 {
+        return Err(format!(
+            "it has {} node(s) for {} interval(s) - an interval lies between two nodes, so where its contacts are cannot be read",
+            nodes.len(),
+            units.len()
+        ));
+    }
+    // The nodes' own numbers stand for their depths: only the order of the intervals matters here, and a contact
+    // between two intervals is the node that separates them.
+    let support = Support::Intervals {
+        top: (0..units.len()).map(|at| at as f64).collect(),
+        base: (1..=units.len()).map(|at| at as f64).collect(),
+    };
+    let mut suites = Vec::new();
+    for sequence in reading.sequences(units, title) {
+        let mut kept: HashMap<Class, (String, Ref)> = HashMap::new();
+        let classes: Vec<Option<Class>> = sequence
+            .iter()
+            .map(|unit| {
+                unit.as_ref().map(|unit| {
+                    let class = Class::Unit(unit.uuid.clone());
+                    // What lies outside the division read is its neighbour: it makes the division's contacts and
+                    // has none of its own.
+                    if reading.keeps(unit) {
+                        kept.entry(class.clone())
+                            .or_insert_with(|| (unit.uuid.clone(), unit.clone()));
+                    }
+                    class
+                })
+            })
+            .collect();
+        let classification = Classification::new(support.clone(), classes).map_err(|why| why.to_string())?;
+        suites.push(Suite {
+            classification,
+            kept,
+            anchor: Anchor::Inside,
+            along: None,
+        });
+    }
+    Ok(Some(suites))
+}
+
+/// A frame read through one property of the kind asked: its codes, or the two sides of a threshold. `Err`
+/// refuses the frame alone - it carries no such property, or two, or one this run cannot read.
+fn property_suites(
+    mode: &Mode,
+    place: Place,
+    shape: &Shape,
+    uuid: Option<&str>,
+    known: &Known,
+    nodes: &[[f64; 3]],
+    properties: &[ObjectIn],
+) -> Result<Vec<Suite>, String> {
+    let (kind, discrete) = match mode {
+        Mode::Category { kind, .. } => (kind, true),
+        Mode::Threshold { kind, .. } => (kind, false),
+        Mode::Units => return Err("this reads no property".to_string()),
+    };
+    let Some(uuid) = uuid else {
+        return Err("it names no uuid, so no property can be said to hang on it".to_string());
+    };
+    let mut candidates = properties.iter().filter_map(|input| {
+        let reference = input.known.reference.as_ref()?;
+        let facts = input.known.property.as_ref()?;
+        let supporting = facts.supporting.as_ref()?.uuid.to_ascii_lowercase();
+        let named = facts.kind.as_ref()?.uuid.to_ascii_lowercase();
+        (supporting == uuid && named == *kind).then_some((reference, facts, &input.known.labels))
+    });
+    let Some((reference, facts, table_labels)) = candidates.next() else {
+        return Err(format!("no property of the kind `{kind}` hangs on it"));
+    };
+    if candidates.next().is_some() {
+        return Err(format!(
+            "it carries several properties of the kind `{kind}`, and which one is the well's is not guessed: name the one to read in `properties`"
+        ));
+    }
+    let judged = judge(reference, facts, nodes.len())?;
+    if judged.discrete != discrete {
+        return Err(format!(
+            "`{}` is {}, and this reads {}",
+            reference.title,
+            if judged.discrete { "discrete" } else { "continuous" },
+            if discrete {
+                "a discrete property"
+            } else {
+                "a continuous one"
+            }
+        ));
+    }
+    let on_intervals = facts.indexable == "intervals";
+    let rows = if on_intervals {
+        nodes.len() - 1
+    } else {
+        nodes.len()
+    };
+    // The measured depths are the frame's own, when it states them; their order stands for them otherwise.
+    let mds: Vec<f64> = match known.node_mds.as_ref().filter(|mds| mds.len() == nodes.len()) {
+        Some(mds) => mds.clone(),
+        None if place == Place::Interpolated => {
+            return Err(
+                "it states no measured depth, and a contact between two nodes is placed by them".to_string(),
+            );
+        }
+        None => (0..nodes.len()).map(|at| at as f64).collect(),
+    };
+    let support = if on_intervals {
+        Support::Intervals {
+            top: mds[..rows].to_vec(),
+            base: mds[1..].to_vec(),
+        }
+    } else {
+        Support::Nodes { md: mds }
+    };
+    // **The line the contacts between two nodes are placed on**: the trajectory the frame names, evaluated at a measured
+    // depth - never the chord between two nodes, which on a deviated hole is beside the well. Without it, an interpolated
+    // reading cannot be done, and the frame is refused alone.
+    let along = if place == Place::Interpolated {
+        let line = known.path.as_ref().ok_or_else(|| {
+            "it names no trajectory, so a contact between two nodes has no line to be placed on".to_string()
+        })?;
+        let line = line
+            .along
+            .as_ref()
+            .map_err(|why| format!("its trajectory cannot be followed - {why}"))?;
+        // A line whose knots are not stated gives no measured depth; the vertical from the datum needs none.
+        if !line.is_assumed() && line.knots().is_none() {
+            return Err(format!(
+                "its trajectory `{}` states no measured depth at its stations, so a depth is not a place on it",
+                known
+                    .path
+                    .as_ref()
+                    .map(|one| one.trajectory.title.as_str())
+                    .unwrap_or("")
+            ));
+        }
+        if let Some((rank, gap)) = super::computed_tops::drawn_elsewhere(shape, known, line) {
+            return Err(format!(
+                "it is drawn {gap:.3} away from where its trajectory puts node {rank}: the frame was read in another frame than the line, and a point placed on one would be beside the other"
+            ));
+        }
+        Some(line.clone())
+    } else {
+        None
+    };
+    let title = facts.kind.as_ref().map(|one| one.title.as_str()).unwrap_or(kind);
+    let mut kept: HashMap<Class, (String, Ref)> = HashMap::new();
+    let (classes, threshold) = match mode {
+        Mode::Category { codes, labels, .. } => {
+            // The label of a code, when its table gives one - the words a person chooses by and reads.
+            let label_of = |code: i64| {
+                table_labels
+                    .iter()
+                    .find(|(row, _)| *row == code as f64)
+                    .map(|(_, label)| label.as_str())
+            };
+            for label in labels {
+                if !table_labels.iter().any(|(_, known)| known.trim() == label.trim()) {
+                    return Err(if table_labels.is_empty() {
+                        format!(
+                            "`{}` gives no label: its table names none, so `{label}` cannot choose a class",
+                            reference.title
+                        )
+                    } else {
+                        format!(
+                            "the label `{label}` names no row of the table of `{}`; it has {}",
+                            reference.title,
+                            table_labels
+                                .iter()
+                                .map(|(_, one)| format!("`{one}`"))
+                                .collect::<Vec<_>>()
+                                .join(", ")
+                        )
+                    });
+                }
+            }
+            let classes = (0..rows)
+                .map(|row| match judged.cells.at(row) {
+                    Some(Number::Code(code)) => {
+                        let class = Class::Code(code);
+                        let label = label_of(code);
+                        let wanted = (codes.is_empty() && labels.is_empty())
+                            || codes.contains(&code)
+                            || label.is_some_and(|label| labels.iter().any(|one| one.trim() == label.trim()));
+                        if wanted {
+                            let key = format!("code:{kind}:{code}");
+                            // Titled with its label; the code too when two rows of the table bear one label.
+                            let named = match label {
+                                Some(label)
+                                    if table_labels.iter().filter(|(_, one)| one == label).count() > 1 =>
+                                {
+                                    format!("{label} ({code})")
+                                }
+                                Some(label) => label.to_string(),
+                                None => format!("{title} {code}"),
+                            };
+                            let name = Ref::new(key.clone(), "eml23.PropertyKind", named);
+                            kept.entry(class.clone()).or_insert((key, name));
+                        }
+                        Some(class)
+                    }
+                    _ => None,
+                })
+                .collect();
+            (classes, None)
+        }
+        Mode::Threshold { at, side, .. } => {
+            let values: Vec<Option<f64>> = (0..rows)
+                .map(|row| match judged.cells.at(row) {
+                    Some(Number::Real(value)) => Some(value),
+                    _ => None,
+                })
+                .collect();
+            let classes: Vec<Option<Class>> = values
+                .iter()
+                .map(|value| {
+                    value.map(|value| {
+                        if value >= *at {
+                            Class::AtOrAbove
+                        } else {
+                            Class::Below
+                        }
+                    })
+                })
+                .collect();
+            let (class, word) = match side {
+                ThresholdSide::AtOrAbove => (Class::AtOrAbove, "at or above"),
+                ThresholdSide::Below => (Class::Below, "below"),
+            };
+            let key = format!("threshold:{kind}:{}:{at:?}", side.word());
+            let name = Ref::new(
+                key.clone(),
+                "eml23.PropertyKind",
+                format!("{title} {word} {}", energyml_core::text::plain_number(*at)),
+            );
+            kept.insert(class, (key, name));
+            (classes, Some(Threshold { at: *at, values }))
+        }
+        Mode::Units => unreachable!("a property is read only in the property modes"),
+    };
+    let mut classification = Classification::new(support, classes).map_err(|why| why.to_string())?;
+    classification.threshold = threshold;
+    Ok(vec![Suite {
+        classification,
+        kept,
+        anchor: place.anchor(),
+        along,
+    }])
+}
+
+/// The contacts of one suite of classes, put with the others: every limit of a class that is kept, as many per
+/// class and side as `which` keeps, each placed - on a node of the frame, or between two - and carrying its rank.
+/// A limit that cannot be placed is left out and named in `unplaced`.
+fn contacts_of(
+    suite: &Suite,
+    frame: usize,
+    nodes: &[[f64; 3]],
+    which: Which,
+    found: &mut Contacts,
+    unplaced: &mut Vec<String>,
+) {
+    let found_here = transitions(&suite.classification);
+    let side_of = |kind: LimitKind| match kind {
+        LimitKind::Top => Side::Top,
+        LimitKind::Base => Side::Base,
+    };
+    // The first and the last rank each class reaches on each side, in this frame.
+    let mut ranks: BTreeMap<(String, Side), (usize, usize)> = BTreeMap::new();
+    for limit in &found_here.limits {
+        if let Some((key, _)) = suite.kept.get(&limit.class) {
+            let reach = ranks
+                .entry((key.clone(), side_of(limit.kind)))
+                .or_insert((usize::MAX, 0));
+            reach.0 = reach.0.min(limit.rank);
+            reach.1 = reach.1.max(limit.rank);
+        }
+    }
+    let last_interval = nodes.len().saturating_sub(2);
+    for limit in &found_here.limits {
+        let Some((key, unit)) = suite.kept.get(&limit.class) else {
+            continue;
+        };
+        let side = side_of(limit.kind);
+        let (first, last) = ranks[&(key.clone(), side)];
+        let wanted = match which {
+            Which::All => true,
+            Which::First => limit.rank == first,
+            Which::Last => limit.rank == last,
+        };
+        if !wanted {
+            continue;
+        }
+        let (spot, md) = match &found_here.support {
+            // On intervals, a contact is the node that separates two of them.
+            Support::Intervals { .. } => {
+                let boundary = &found_here.boundaries[limit.boundary];
+                (Spot::Node(found_here.runs[boundary.below].first), None)
+            }
+            Support::Nodes { .. } => match found_here.place(limit, suite.anchor) {
+                Ok(placed) => (placed.spot, Some(placed.md)),
+                Err(why) => {
+                    unplaced.push(format!("the {} of `{}`: {why}", side.word(), unit.title));
+                    continue;
+                }
+            },
+        };
+        let (point, node, interval, between_nodes) = match spot {
+            Spot::Node(node) => (
+                nodes[node],
+                node,
+                match side {
+                    Side::Top => node.min(last_interval),
+                    Side::Base => node.saturating_sub(1),
+                },
+                None,
+            ),
+            Spot::Between { lower, upper, t } => {
+                // On the hole, at the measured depth, as `well::frame` places a node: `property_suites` refuses a
+                // frame that has none.
+                let (Some(line), Some(md)) = (&suite.along, md) else {
+                    unplaced.push(format!(
+                        "the {} of `{}`: no line to place it on",
+                        side.word(),
+                        unit.title
+                    ));
+                    continue;
+                };
+                let at = line.at(md);
+                ([at[0], at[1], at[2]], lower, lower, Some((lower, upper, t)))
+            }
+        };
+        let set = found
+            .entry((key.clone(), side))
+            .or_insert_with(|| Found::of(unit));
+        set.points.push(point);
+        set.origins.push(Origin {
+            frame,
+            node,
+            interval,
+            rank: limit.rank,
+            md,
+            between: between_nodes,
+        });
+    }
 }
 
 impl Operation for ContactsFromFrames {
@@ -464,11 +1070,19 @@ impl Operation for ContactsFromFrames {
         let mut rank = 0usize;
         let frame = support::frame_in(&cx.known(), &params.frame, cx.identity, cx.when, &mut rank)?;
 
-        // Every contact, grouped by unit and side, in the order of the frames.
+        // Every contact, grouped by class and side, in the order of the frames. One reading at a time: the units
+        // the frames name, a categorical property, or a threshold on a continuous one. A frame that the reading
+        // cannot treat is refused **alone**, with its reason, and the others go on.
+        let mode = Mode::of(&params)?;
+        let mode_seed = mode.seed();
         let gather = tracing::info_span!("contacts.gather", frames = inputs.frames.len()).entered();
         let mut found: Contacts = BTreeMap::new();
         let mut unmapped = 0usize;
         let mut used: Vec<Used> = Vec::new();
+        let mut refused: Vec<(String, String)> = Vec::new();
+        let mut unplaced: Vec<String> = Vec::new();
+        // The frames whose interpolated contacts lie on the vertical read from the datum: no trajectory states a line.
+        let mut assumed: Vec<String> = Vec::new();
         for one in &inputs.frames {
             let Some(known) = one.known.as_ref() else {
                 unmapped += 1;
@@ -479,98 +1093,80 @@ impl Operation for ContactsFromFrames {
                 .as_ref()
                 .map(|r| r.title.clone())
                 .unwrap_or_else(|| one.name.clone());
-            let Some(units) = known.interval_units.as_ref() else {
-                unmapped += 1;
-                continue;
-            };
             let nodes: Vec<[f64; 3]> = one
                 .geometry
                 .patches
                 .iter()
                 .flat_map(|patch| patch.points.iter().copied())
                 .collect();
-            if nodes.len() != units.len() + 1 {
-                return Err(Refusal::on(
-                    "frames",
-                    format!(
-                        "`{title}` has {} node(s) for {} interval(s) - an interval lies between two nodes, so where its contacts are cannot be read",
-                        nodes.len(),
-                        units.len()
-                    ),
-                ));
-            }
+            let known_title = title.clone();
+            let uuid = known.reference.as_ref().map(|r| r.uuid.to_ascii_lowercase());
+            let read = match &mode {
+                Mode::Units => unit_suites(known, &nodes, &title, &mut reading),
+                _ => property_suites(
+                    &mode,
+                    params.place,
+                    one,
+                    uuid.as_deref(),
+                    known,
+                    &nodes,
+                    &inputs.properties,
+                )
+                .map(Some),
+            };
+            let suites = match read {
+                Ok(Some(suites)) => suites,
+                Ok(None) => {
+                    unmapped += 1;
+                    continue;
+                }
+                Err(why) => {
+                    refused.push((title, why));
+                    continue;
+                }
+            };
             let from = used.len();
             used.push(Used {
-                uuid: known.reference.as_ref().map(|r| r.uuid.to_ascii_lowercase()),
+                uuid,
                 well: energyml_domain::wellbore_table::stem(&title).to_string(),
                 nodes: nodes.len(),
+                mds: known.node_mds.clone().filter(|mds| mds.len() == nodes.len()),
             });
-            // One sequence of units per reading of the frame, each as long as
-            // its intervals: the frame's own when named; at a rank, one per
-            // division read - inside it, its neighbour outside, `None` for
-            // neither - so a contact is the same node found the same way.
-            for units in reading.sequences(units, &title) {
-                // Runs of one unit, and whether one comes back.
-                let mut seen: Vec<&str> = Vec::new();
-                let mut at = 0usize;
-                while at < units.len() {
-                    let Some(unit) = &units[at] else {
-                        at += 1;
-                        continue;
-                    };
-                    let mut end = at + 1;
-                    while end < units.len() && units[end].as_ref().is_some_and(|next| next.uuid == unit.uuid)
-                    {
-                        end += 1;
-                    }
-                    // What lies outside the division read is its neighbour: it
-                    // makes the division's contacts and has none of its own.
-                    if !reading.keeps(unit) {
-                        at = end;
-                        continue;
-                    }
-                    if seen.contains(&unit.uuid.as_str()) {
-                        return Err(Refusal::on(
-                            "frames",
-                            format!(
-                                "`{title}` crosses `{}` twice, so it would give two tops in one hole - which one is the unit's top is not for this operation to decide",
-                                unit.title
-                            ),
-                        ));
-                    }
-                    seen.push(&unit.uuid);
-                    // A top where a unit lies above, a base where one lies below -
-                    // and the unit's own interval at each: the first that begins
-                    // at its top, the last that ends at its base.
-                    if at > 0 && units[at - 1].is_some() {
-                        let top = found
-                            .entry((unit.uuid.clone(), Side::Top))
-                            .or_insert_with(|| Found::of(unit));
-                        top.points.push(nodes[at]);
-                        top.origins.push(Origin {
-                            frame: from,
-                            node: at,
-                            interval: at,
-                        });
-                    }
-                    if end < units.len() && units[end].is_some() {
-                        let base = found
-                            .entry((unit.uuid.clone(), Side::Base))
-                            .or_insert_with(|| Found::of(unit));
-                        base.points.push(nodes[end]);
-                        base.origins.push(Origin {
-                            frame: from,
-                            node: end,
-                            interval: end - 1,
-                        });
-                    }
-                    at = end;
-                }
+            if suites.iter().any(|suite| {
+                suite
+                    .along
+                    .as_ref()
+                    .is_some_and(energyml_geometry::well::AlongHole::is_assumed)
+            }) {
+                assumed.push(known_title.clone());
+            }
+            // One suite per reading of the frame, each as long as its intervals or nodes. The runs, their ranks and
+            // their limits are `energyml_domain::limits`'s: nothing of them is decided here.
+            for suite in &suites {
+                contacts_of(suite, from, &nodes, params.which, &mut found, &mut unplaced);
             }
         }
         let frames_used = used.len();
         drop(gather);
         if found.is_empty() {
+            if !matches!(mode, Mode::Units) {
+                let why = refused
+                    .iter()
+                    .take(3)
+                    .map(|(title, why)| format!("`{title}`: {why}"))
+                    .collect::<Vec<_>>()
+                    .join("; ");
+                return Err(Refusal::on(
+                    "frames",
+                    format!(
+                        "no contact in the {} frame(s) given - {} refused{}{}",
+                        inputs.frames.len(),
+                        refused.len(),
+                        if refused.is_empty() { "" } else { ": " },
+                        why
+                    ),
+                ));
+            }
             // At a rank, the refusal names the division and what the frames
             // gave it; named, it is the one below.
             if let Some(refusal) = reading.nothing(inputs.frames.len(), unmapped) {
@@ -740,12 +1336,55 @@ impl Operation for ContactsFromFrames {
         objects.extend(named.objects);
         datasets.extend(named.datasets);
 
+        // **The rank of each point**, beside the others and only when some class came back: a run with no repeated
+        // crossing writes what it always wrote.
+        let ranked = rank_properties(&found, &written, &params, cx, &mut rank)?;
+        objects.extend(ranked.objects);
+        datasets.extend(ranked.datasets);
+        let mut dropped = copied.dropped;
+        for (title, why) in &refused {
+            dropped.push(Dropped {
+                count: 1,
+                why: format!("`{title}`: no contact read - {why}"),
+            });
+        }
+
         let mut says = vec![Note {
             key: "contacts",
             detail: format!(
                 "{sets} point set(s) - a top and a base per unit where a unit lies on the other side - from {frames_used} frame(s)"
             ),
         }];
+        if !refused.is_empty() {
+            says.push(Note {
+                key: "frames-refused",
+                detail: format!(
+                    "{} frame(s) could not be read and were refused alone, each named with its reason - the others were read",
+                    refused.len()
+                ),
+            });
+        }
+        if !unplaced.is_empty() {
+            says.push(Note {
+                key: "contacts-unplaced",
+                detail: format!(
+                    "{} contact(s) could not be placed and are not written: {}",
+                    unplaced.len(),
+                    listed(&unplaced)
+                ),
+            });
+        }
+        if !assumed.is_empty() {
+            says.push(Note {
+                key: "contacts-on-datum-vertical",
+                detail: format!(
+                    "the trajectory of {} states no geometry: the interpolated contacts of {} lie on the vertical read from its datum - an assumption, and the place the well is drawn at",
+                    listed(&assumed),
+                    if assumed.len() == 1 { "that frame" } else { "those frames" }
+                ),
+            });
+        }
+        says.extend(ranked.says);
         if unmapped > 0 {
             says.push(Note {
                 key: "frames-unmapped",
@@ -780,11 +1419,11 @@ impl Operation for ContactsFromFrames {
             activity: ActivityDraft {
                 recipe: "contacts-from-frames",
                 title: format!("contacts-from-frames → {sets} point set(s)"),
-                seed: format!("contacts:{frames_used}:{sets}{reading_seed}"),
+                seed: format!("contacts:{frames_used}:{sets}{reading_seed}{mode_seed}"),
                 parameters,
             },
             says,
-            dropped: copied.dropped,
+            dropped,
         })
     }
 }
@@ -1230,12 +1869,16 @@ fn copy(
                         lacking += 1;
                         return None;
                     };
-                    let row = if measure.intervals {
-                        origin.interval
-                    } else {
-                        origin.node
+                    // A contact on a node reads the node's rank; one between two nodes is read **at its MD**
+                    // (`FrameValues::at_md`): a point is no longer a node.
+                    let cell = match origin.between {
+                        None => cells.at(if measure.intervals {
+                            origin.interval
+                        } else {
+                            origin.node
+                        }),
+                        Some(_) => at_md_cell(measure.intervals, cells, &used[origin.frame], origin),
                     };
-                    let cell = cells.at(row);
                     if cell.is_none() {
                         null += 1;
                     }
@@ -1436,6 +2079,141 @@ fn write_one(
             values,
         },
     ))
+}
+
+/// The value a contact between two nodes takes: the interval that holds it for a property on intervals; for one
+/// on nodes, the interpolation `FrameValues::at_md` gives - never over a hole, and never for a code, which is held
+/// at its node and has no value between two.
+fn at_md_cell(on_intervals: bool, cells: &Cells, frame: &Used, origin: &Origin) -> Option<Number> {
+    let (lower, _, _) = origin.between?;
+    if on_intervals {
+        return cells.at(lower);
+    }
+    let (Some(mds), Some(md)) = (&frame.mds, origin.md) else {
+        return None;
+    };
+    let Cells::Real(values) = cells else {
+        return None;
+    };
+    let held = FrameValues {
+        frame: frame.uuid.clone().unwrap_or_default(),
+        property: String::new(),
+        title: String::new(),
+        element: IndexableElement::Nodes,
+        support: Support::Nodes { md: mds.clone() },
+        values: values
+            .iter()
+            .map(|value| value.map(energyml_domain::frame_values::Value::Number))
+            .collect(),
+        continuous: true,
+        uom: None,
+        kind: None,
+        kind_uri: None,
+        range: None,
+        categories: None,
+        time: None,
+        realization: None,
+        derivation: None,
+        notes: Vec::new(),
+    };
+    match held
+        .at_md(md, WhichInterval::Below, "linear")
+        .map(|sample| sample.value)
+    {
+        Ok(Some(energyml_domain::frame_values::Value::Number(value))) => Some(Number::Real(value)),
+        _ => None,
+    }
+}
+
+// -- the rank of each point -------------------------------------------------
+
+/// What writing the ranks produced.
+#[derive(Default)]
+struct Ranked {
+    objects: Vec<NewObject>,
+    datasets: Vec<Dataset>,
+    says: Vec<Note>,
+}
+
+/// The rank of each point as a `DiscreteProperty` on its point set: 1 for the first top of a class in a hole, 2 for
+/// the second... Written **on every point set** when any point of the run has a rank above 1, and on none when
+/// every class crossed each hole once - the output of a run with no repeated crossing is the one it always was.
+///
+/// The kind is the dictionary's `explicit index` (a rank, a pointer into a structure), named by reference like the
+/// kind of `wellOrigin`.
+fn rank_properties(
+    found: &Contacts,
+    written: &[Written],
+    params: &ContactsParams,
+    cx: &Context<'_>,
+    rank: &mut usize,
+) -> Result<Ranked, Refusal> {
+    let repeated = found
+        .values()
+        .map(|one| one.origins.iter().filter(|origin| origin.rank > 1).count())
+        .sum::<usize>();
+    if repeated == 0 {
+        return Ok(Ranked::default());
+    }
+    let kind = json!({
+        "$type": "eml23.DataObjectReference",
+        "Uuid": energyml_domain::table::class::EXPLICIT_INDEX,
+        "QualifiedType": "eml23.PropertyKind",
+        "Title": "explicit index",
+    });
+    let mut out = Ranked::default();
+    for set in written {
+        let Some(one) = found.get(&set.key) else { continue };
+        let ranks: Vec<i64> = one.origins.iter().map(|origin| origin.rank as i64).collect();
+        let digest = ranks.iter().map(i64::to_string).collect::<Vec<_>>().join(",");
+        let uuid = support::next_uuid(cx.identity, &format!("contacts-rank:{}:{digest}", set.uuid), rank)?;
+        let count = ranks.len();
+        let path = format!("/resqml22/{uuid}/values");
+        let array = support::external(&params.data_file, &path, &[count as i64]);
+        let title = format!("{} - rank", set.title);
+        let object = json!({
+            "$type": "resqml22.DiscreteProperty",
+            "uuid": uuid,
+            "schemaVersion": "2.2",
+            "Citation": support::citation(cx.when, &title),
+            "IndexableElement": "nodes",
+            "ValueCountPerIndexableElement": [1],
+            "PropertyKind": kind,
+            "SupportingRepresentation": {
+                "$type": "eml23.DataObjectReference",
+                "Uuid": set.uuid,
+                "QualifiedType": "resqml22.PointSetRepresentation",
+                "Title": set.title,
+            },
+            "ValuesForPatch": [{
+                "$type": "eml23.IntegerExternalArray",
+                "ArrayIntegerType": "arrayOfInt64LE",
+                "NullValue": params.null_value,
+                "CountPerValue": 1,
+                "Values": array,
+            }],
+        });
+        out.objects.push(NewObject {
+            uuid,
+            qualified_type: "resqml22.DiscreteProperty".to_string(),
+            role: "discrete-property".to_string(),
+            title,
+            json: object,
+        });
+        out.datasets.push(Dataset {
+            file: params.data_file.clone(),
+            path,
+            dimensions: vec![count as i64],
+            values: Numbers::I64(ranks),
+        });
+    }
+    out.says.push(Note {
+        key: "contact-ranks",
+        detail: format!(
+            "{repeated} contact(s) bound a class that comes back in the same hole: each point carries its rank, 1 for the first, in a property of its point set"
+        ),
+    });
+    Ok(out)
 }
 
 // -- naming each point after its well ---------------------------------------

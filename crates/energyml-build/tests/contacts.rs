@@ -161,11 +161,19 @@ fn a_contact_is_the_node_between_two_units_and_nothing_else() {
     );
 }
 
+/// A unit that comes back lower in the hole is no longer refused (ADR 0053): it gives two tops and two bases,
+/// in one point set per side, each point carrying its rank.
 #[test]
-fn a_unit_that_comes_back_in_one_hole_is_refused() {
+fn a_unit_that_comes_back_in_one_hole_gives_two_ranked_contacts() {
     let pieces = frame(Pieces::empty(), 0, "F1", vec![unit("A"), unit("B"), unit("A")]);
-    let why = plan(&pieces).expect_err("two tops in one hole");
-    assert!(why.contains("F1") && why.contains("twice"), "{why}");
+    let made = plan(&pieces).expect("A, B, A is an ordinary hole");
+    // A's first run ends at node 1 (its base, rank 1); its second begins at node 2 (its top, rank 2).
+    assert_eq!(points_of(&made, "A - base"), Some(vec![vec![0.0, 0.0, -1.0]]));
+    assert_eq!(points_of(&made, "A - top"), Some(vec![vec![0.0, 0.0, -2.0]]));
+    assert_eq!(points_of(&made, "B - top"), Some(vec![vec![0.0, 0.0, -1.0]]));
+    assert_eq!(points_of(&made, "B - base"), Some(vec![vec![0.0, 0.0, -2.0]]));
+    assert_eq!(copied(&made, "A - top - rank"), Some(Numbers::I64(vec![2])));
+    assert_eq!(copied(&made, "A - base - rank"), Some(Numbers::I64(vec![1])));
 }
 
 #[test]

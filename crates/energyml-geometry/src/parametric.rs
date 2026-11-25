@@ -1254,7 +1254,12 @@ impl Path {
     /// parameters and tangents as the file writes them, the sense of its
     /// vertical read from its own `LocalCrs`.
     pub fn of(geometry: &dyn Reflect, source: &dyn ValueSource) -> Result<Path> {
-        Line::single(geometry, source, "ParametricLineGeometry").map(Path)
+        Path::of_labelled(geometry, source, "ParametricLineGeometry")
+    }
+
+    /// [`Path::of`], an error naming `at` - the object a caller reads the line for.
+    pub(crate) fn of_labelled(geometry: &dyn Reflect, source: &dyn ValueSource, at: &str) -> Result<Path> {
+        Line::single(geometry, source, at).map(Path)
     }
 
     /// A line from values: `kind` is the schema's `LineKindIndex` - an index

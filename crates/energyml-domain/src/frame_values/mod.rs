@@ -345,6 +345,30 @@ impl Categories {
         })
     }
 
+    /// The code each row is named by and its label ([`Categories::label`]): the number in the key column,
+    /// or the rank of the row in a table that has none. A row with no label, a key that is no number, and a
+    /// table keyed on several columns give nothing - a code is not guessed.
+    pub fn labels(&self) -> Vec<(f64, String)> {
+        let key = match self.lookup.key_columns.as_slice() {
+            [only] => Some(*only),
+            [] => None,
+            _ => return Vec::new(),
+        };
+        (0..self.lookup.rows.rows)
+            .filter_map(|row| {
+                let code = match key {
+                    Some(column) => match self.lookup.rows.cell(row, column)? {
+                        Cell::Number(number) => number,
+                        Cell::Text(text) => text.trim().parse::<f64>().ok()?,
+                        Cell::Boolean(_) => return None,
+                    },
+                    None => row as f64,
+                };
+                Some((code, self.label(row)?))
+            })
+            .collect()
+    }
+
     /// The key columns, in the table's order.
     pub fn key_columns(&self) -> &[usize] {
         &self.lookup.key_columns
@@ -756,6 +780,20 @@ fn read_along(
         derivation: None,
         notes: Vec::new(),
     })
+}
+
+/// The code and the label of each row of a category table - [`Categories::labels`] of the table `table` is -, for
+/// a caller that holds the table and not a property (the boundary of `energyml-build`, which gives an operation
+/// the labels of the table a property names).
+///
+/// # Errors
+///
+/// A table that cannot be read, in the reader's own words.
+pub fn category_labels(table: &dyn Reflect, source: &dyn ArraySource) -> Result<Vec<(f64, String)>, Error> {
+    let uuid = identity::uuid_of_reflect(table).unwrap_or_default().to_string();
+    let table_type = table.type_info().name.trim_start_matches("obj_").to_string();
+    let (lookup, columns) = Lookup::read_described(table, source)?;
+    Ok(Categories::new(uuid, table_type, lookup, columns).labels())
 }
 
 /// The table of a property, read.

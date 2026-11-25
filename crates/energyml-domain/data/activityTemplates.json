@@ -10246,6 +10246,97 @@
       {
         "$type": "eml23.ParameterTemplate",
         "AllowedKind": [
+          "string"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "categoryKind"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "integer"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "codes"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": -1,
+        "MinOccurs": 0,
+        "Title": "labels"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "thresholdKind"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "double"
+        ],
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "threshold"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "one of: at-or-above, below",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "thresholdSide"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "one of: inside, outside, interpolated",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "place"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
+          "string"
+        ],
+        "Constraint": "one of: all, first, last",
+        "IsInput": true,
+        "IsOutput": false,
+        "MaxOccurs": 1,
+        "MinOccurs": 0,
+        "Title": "which"
+      },
+      {
+        "$type": "eml23.ParameterTemplate",
+        "AllowedKind": [
           "double"
         ],
         "Constraint": "an EPSG code",
