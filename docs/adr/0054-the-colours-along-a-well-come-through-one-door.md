@@ -49,6 +49,10 @@ the nodes and colour them, and the command line had no way to do it at all.
   the guides say it indexes the components of a vector property and are silent on a table, so the rule of ADR-0050 (a
   column of the table, the key column being 0, refused when it does not exist) stands, and here column 1 is the `Column`
   whose values the map's entries 0 to 4 - the keys - colour.
+  `energyml check` **warns** (`colour-map-draft-element`, never an error) when a package that does not declare the draft - no `_dev3`
+  suffix on the `schemaVersion` of its `GraphicalInformationSet` - names its colour map that way: the element is not in the
+  schema it declares and a strict reader will not find the map. The finding comes from the same reading that tolerates it
+  (`read_raw_entry` notes it, `GraphicalSet::draft_map_elements` counts it); the rule only decides whether the package is entitled to it.
 - **The wells that carry a paint are drawn after the others**: the frames of a wellbore lie at one place, and a frame drawn
   in its own colour hid the one that carried the paint. No well is dropped; the grouping of the wells of a wellbore is
   another question.

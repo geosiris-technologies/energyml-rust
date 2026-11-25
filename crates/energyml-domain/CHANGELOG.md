@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - *(domain)* the hue of a colour is read in turns or in degrees from the values of its set of colours (a map, or the constant colours of a `GraphicalInformationSet`): fractions of a turn are brought to degrees, said in a note that goes with the decision, and warned by `check` (`colour-hue-in-turns`); ADR 0055
 - *(domain)* a frame whose properties say `intervals from datum` is tabulated one row per interval by `wellbore_table`, like `intervals`, instead of every one of its properties being refused (issue 34)
 - *(domain)* a property of several patches, several values per element or `RealizationIndices` is refused by name by `wellbore_table` and `well_strata`
+- *(domain)* `energyml check` warns (`colour-map-draft-element`) when a package that does not declare the 2.2 draft names the colour map of a `ColorInformation` by `DiscreteColorMap` or `ContinuousColorMap`, elements that exist only in the draft; the map is still read
 - *(domain)* a `ColorInformation` that names its colour map by `DiscreteColorMap` or `ContinuousColorMap` (the draft of RESQML 2.2) is read like one that says `ColorMap`: its entry no longer names no map
 
 ## [0.4.0](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-domain-v0.3.0...energyml-domain-v0.4.0) - 2026-11-16

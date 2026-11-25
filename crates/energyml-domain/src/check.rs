@@ -345,7 +345,55 @@ impl Report {
 /// Run with the schema section and reported in it, at warning weight: the
 /// file passes the XSD, and the XSD's text says it should not.
 pub fn documented_rules() -> Vec<Box<dyn validate::ValidationRule>> {
-    vec![Box::new(CitationFormat), Box::new(HueInTurns)]
+    vec![
+        Box::new(CitationFormat),
+        Box::new(HueInTurns),
+        Box::new(ColourMapDraftElement),
+    ]
+}
+
+/// A `ColorInformation` that names its colour map by `DiscreteColorMap` or `ContinuousColorMap`, in a package that does
+/// not declare the draft of RESQML 2.2.
+///
+/// The released 2.2 schema has one element there, `ColorMap` (`v2.2/xsd_schemas/GraphicalInformationObject.xsd`, type
+/// `ColorInformation`); `DiscreteColorMap` and `ContinuousColorMap` are the elements of the draft `v2.2_dev3` (same file, lines
+/// 168-190 there). The library reads them all the same - one reference, whichever name holds it (`color::read_raw_entry`) -, so
+/// the colours come out; the **warning** says the package does not follow the schema it declares, and that a strict reader
+/// will not find the map. A package that declares the draft (a `schemaVersion` with the `_dev3` suffix) is not warned.
+struct ColourMapDraftElement;
+
+impl validate::ValidationRule for ColourMapDraftElement {
+    fn name(&self) -> &str {
+        "colour-map-draft-element"
+    }
+
+    fn applies_to(&self, info: &'static energyml_core::reflect::TypeInfo) -> bool {
+        info.package == "eml" && info.name == "GraphicalInformationSet"
+    }
+
+    fn check(&self, object: &dyn energyml_core::value::Reflect, ctx: &mut validate::ValidationCtx<'_>) {
+        let declared = energyml_core::reflect::fields::text(object, "schemaVersion")
+            .or_else(|| energyml_core::reflect::fields::text(object, "schema_version"));
+        if declared
+            .as_deref()
+            .is_some_and(energyml_core::naming::is_prerelease)
+        {
+            return;
+        }
+        let set = crate::color::GraphicalSet::read(object);
+        if let Some((count, first)) = set.draft_map_elements() {
+            ctx.warn(
+                "colour-map-draft-element",
+                format!(
+                    "{count} entr{} of this set name{} the colour map by an element that exists only in the draft of RESQML 2.2 \
+                     (`DiscreteColorMap` or `ContinuousColorMap`, v2.2_dev3), not in the schema the package declares, which has \
+                     `ColorMap`: a strict reader will not find the map. This library reads it all the same ({first})",
+                    if count == 1 { "y" } else { "ies" },
+                    if count == 1 { "s" } else { "" },
+                ),
+            );
+        }
+    }
 }
 
 /// A colour map, or a set of constant colours, whose hues are fractions of a turn.

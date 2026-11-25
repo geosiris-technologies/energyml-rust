@@ -17,6 +17,7 @@ mod brt;
 mod channel_data_in_hdf5;
 mod check_candidates;
 mod color;
+mod color_draft;
 mod color_hue;
 mod color_inherit;
 mod color_log_mapping;

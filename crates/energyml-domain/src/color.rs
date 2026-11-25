@@ -85,6 +85,10 @@ pub use value_colours::{ColourRefusal, ColourSource, ValueColours};
 /// What a note says when the hues of a set of colours were read as fractions of a turn.
 pub const HUE_IN_TURNS: &str = "hue read as a fraction of a turn";
 
+/// What a note says when a `ColorInformation` names its colour map by an element of the draft of RESQML 2.2 (`v2.2_dev3`:
+/// `DiscreteColorMap`, `ContinuousColorMap`), where the released schema has only `ColorMap`.
+pub const DRAFT_MAP_ELEMENT: &str = "colour map named by an element of the draft of RESQML 2.2";
+
 pub use energyml_core::color::{HueUnit, hue_unit, to_degrees};
 
 /// Settle the hues of one set of colours: decide their unit ([`hue_unit`]) and, in turns, bring each to degrees.
@@ -1315,6 +1319,14 @@ impl GraphicalSet {
         set
     }
 
+    /// How many entries name their colour map by an element of the draft of RESQML 2.2 ([`DRAFT_MAP_ELEMENT`]), and the
+    /// first of their notes.
+    pub fn draft_map_elements(&self) -> Option<(usize, &str)> {
+        let mut found = self.notes.iter().filter(|note| note.contains(DRAFT_MAP_ELEMENT));
+        let first = found.next()?;
+        Some((1 + found.count(), first.as_str()))
+    }
+
     /// Whether the constant colours of this set were read as fractions of a turn ([`HUE_IN_TURNS`]).
     pub fn hue_in_turns(&self) -> bool {
         self.notes.iter().any(|note| note.contains(HUE_IN_TURNS))
@@ -2236,8 +2248,16 @@ fn read_raw_entry(raw: &AnyXml, position: usize, notes: &mut Vec<String>) -> Ent
             // One reference, whichever of the three names holds it.
             map: ["ColorMap", "DiscreteColorMap", "ContinuousColorMap"]
                 .iter()
-                .find_map(|name| scan::section(content, name))
-                .and_then(|map| scan::element_text(map, "Uuid")),
+                .find_map(|name| scan::section(content, name).map(|section| (*name, section)))
+                .and_then(|(name, map)| {
+                    if name != "ColorMap" {
+                        // Read all the same - and said: the released schema has no such element (`check` warns of it).
+                        notes.push(format!(
+                            "entry {position}: {DRAFT_MAP_ELEMENT} (`{name}`, v2.2_dev3), where the released schema has `ColorMap`"
+                        ));
+                    }
+                    scan::element_text(map, "Uuid")
+                }),
             value_vector_index: raw_f64(content, "ValueVectorIndex").map(|v| v as u64),
         }
     } else {
