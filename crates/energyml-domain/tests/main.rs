@@ -20,6 +20,7 @@ mod color;
 mod color_inherit;
 mod color_log_mapping;
 mod color_scopes;
+mod color_table;
 mod color_versions;
 mod component_axes;
 mod compound_crs;

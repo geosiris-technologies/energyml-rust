@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- *(cache)* a category property is painted by the `ColorInformation` on its table before its kind and above, in the scene's `Cache::decision` as in `of_package` and `decisions_of` (issue 35)
+
 ## [0.4.0](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-cache-v0.3.0...energyml-cache-v0.4.0) - 2026-11-16
 
 ### Fixed

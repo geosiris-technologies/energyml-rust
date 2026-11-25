@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - *(views)* the image track offers a property on `intervals from datum` like one on `intervals`
+- *(views)* the values of a category property take the colours of the map on its table, through the package's own colours (issue 35); a category is read by its exact key (`ColourSource::FileAndPalette` says the palette painted a key the map lacks)
 
 ## [0.4.0](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-views-v0.3.0...energyml-views-v0.4.0) - 2026-11-16
 

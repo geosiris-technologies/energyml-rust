@@ -30,13 +30,17 @@
 //! nothing. So the rule is this repository's, written down in ADR-0009:
 //!
 //! 1. a `ColorInformation` whose target **is the property** being drawn;
-//! 2. one targeting **its property kind**, then the kind's **parents**, in
+//! 2. for a category property, one whose target is **the table of its
+//!    `CategoryLookup`** ([`Cascade::resolve_category`], ADR-0050): its map is
+//!    indexed by the table's keys, and its `ValueVectorIndex` names a **column**
+//!    of the table;
+//! 3. one targeting **its property kind**, then the kind's **parents**, in
 //!    order;
-//! 3. the representation's own `DefaultGraphicalInformation`, for the element
+//! 4. the representation's own `DefaultGraphicalInformation`, for the element
 //!    being drawn, then for the whole object;
-//! 4. the same on its **interpretation**;
-//! 5. the same on its **feature**;
-//! 6. nothing - and then it is `None`, never an invented colour.
+//! 5. the same on its **interpretation**;
+//! 6. the same on its **feature**;
+//! 7. nothing - and then it is `None`, never an invented colour.
 //!
 //! Two guarantees come with it. The result always says **which level** it came
 //! from, so an application can refuse an inherited colour rather than have the
@@ -46,7 +50,9 @@
 //! # `ValueVectorIndex` is an index into the data
 //!
 //! It selects the component of a vector-valued property, the same index space
-//! `LabelPerComponent` labels - **not** an entry of the colour map. The
+//! `LabelPerComponent` labels - **not** an entry of the colour map. (On an entry
+//! whose target is a **table**, the data it indexes are the table's columns: see
+//! [`Cascade::table_decision`].) The
 //! decisive argument is in the schema: `ContourLineSetInformation` carries
 //! `ValueVectorIndex` and has no `ColorMap` at all. Reading it as a palette
 //! index turns a 5 000-node gradient into one flat colour, which is exactly
@@ -63,6 +69,7 @@ use crate::error::{Error, Result};
 use crate::inherit::uuid_of_identity;
 use crate::scan;
 use crate::source::ObjectSource;
+use crate::table::Table;
 
 // ---------------------------------------------------------------------------
 // The colour itself
@@ -542,6 +549,20 @@ impl ColorMap {
     /// once to say why.
     pub fn sample(&self, value: Option<f64>, scaling: &Scaling) -> Option<Rgba> {
         self.try_sample(value, scaling).unwrap_or(None)
+    }
+
+    /// The colour of the **category whose key is `key`**: the entry whose index
+    /// is exactly that key, and nothing otherwise. A map colouring a table is
+    /// indexed by the table's keys (ADR-0050); the nearest-lower rule of
+    /// [`ColorMap::sample`] would give a key that has no entry the colour of
+    /// another category, which is a colour the file does not state. The scaling
+    /// (`MinMax`, logarithm, reverse) places a measure on a map and has no say
+    /// about a key.
+    pub fn sample_key(&self, key: f64) -> Option<Rgba> {
+        self.stops
+            .iter()
+            .find(|stop| stop.index == key)
+            .map(|stop| stop.color.to_rgba())
     }
 
     /// Whether this map can place values under this scaling at all - a refusal
@@ -1246,6 +1267,9 @@ impl GraphicalSet {
 pub enum Level {
     /// A `ColorInformation` on the property itself.
     Property,
+    /// One on the table of the property's `CategoryLookup`: the map is indexed by
+    /// the table's keys ([`Cascade::table_decision`]).
+    CategoryTable,
     /// One on the property's kind, or on an ancestor of that kind.
     PropertyKind,
     /// The representation's own default information.
@@ -1265,6 +1289,7 @@ impl std::fmt::Display for Level {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
             Level::Property => "the property",
+            Level::CategoryTable => "the table of its categories",
             Level::PropertyKind => "the property kind",
             Level::Representation => "the representation",
             Level::Interpretation => "the interpretation",
@@ -1663,6 +1688,61 @@ impl<'a> Cascade<'a> {
         Ok(None)
     }
 
+    /// The colour map a `ColorInformation` gives **the table of a category
+    /// property's `CategoryLookup`** (`table` is the table's address, as the
+    /// property names it).
+    ///
+    /// The map's entries are indexed by the table's **keys** (a `DiscreteColorMap`
+    /// entry `index` is the key of a row), and `ValueVectorIndex` designates the
+    /// **column** of the table the map colours, counting the key column or columns
+    /// first, as [`crate::table::Table`] orders them (`1` is the label column of a
+    /// two-column table in either form: `ColumnBasedTable` in 2.2,
+    /// `StringTableLookup` in 2.0.1). Absent, it means the table as a whole.
+    ///
+    /// **An index that cannot be placed is refused by name**: a column the table
+    /// does not have, a table keyed on several columns (a map indexes a row by one
+    /// key), a column asked for of a table the package does not hold.
+    /// `Ok(None)`: nothing targets the table.
+    pub fn table_decision(&self, table: &str, objects: &dyn ObjectSource) -> Result<Option<Decision>> {
+        let mut notes = Vec::new();
+        let Some(decision) = self.color_information_on(table, Level::CategoryTable, objects, &mut notes)?
+        else {
+            return Ok(None);
+        };
+        if let Paint::Mapped {
+            value_vector_index, ..
+        } = &decision.paint
+        {
+            check_table_column(table, *value_vector_index, objects)?;
+        }
+        Ok(Some(decision))
+    }
+
+    /// [`Cascade::resolve`] for a **category property** whose table is `table`: the
+    /// property's own `ColorInformation` first (the author's word about these
+    /// codes), then the one on its table ([`Cascade::table_decision`]), then what
+    /// `resolve` finds - the kind, the representation and above. The table comes
+    /// before the kind because it is about *these* categories and the kind is
+    /// about every property of that sort.
+    pub fn resolve_category(
+        &self,
+        request: &Request<'_>,
+        table: &str,
+        objects: &dyn ObjectSource,
+    ) -> Result<Option<Decision>> {
+        let mut notes = Vec::new();
+        if let Some(property) = request.property
+            && let Some(decision) =
+                self.color_information_on(property, Level::Property, objects, &mut notes)?
+        {
+            return Ok(Some(decision));
+        }
+        if let Some(decision) = self.table_decision(table, objects)? {
+            return Ok(Some(decision));
+        }
+        self.resolve(request, objects)
+    }
+
     /// A `ColorInformation` targeting one object.
     pub(crate) fn color_information_on(
         &self,
@@ -1934,6 +2014,43 @@ impl<'a> Cascade<'a> {
 /// crate's narrow scanner rather than by pulling in an XML parser. What it
 /// cannot make sense of becomes [`Information::Other`] **with a note**, and
 /// keeps its position, because `Active*InformationIndex` counts these.
+/// The refusals of a colour map on a table: what [`Cascade::table_decision`] checks.
+fn check_table_column(table: &str, column: Option<u64>, objects: &dyn ObjectSource) -> Result<()> {
+    let Some(object) = objects.object_at(table) else {
+        return match column {
+            None => Ok(()),
+            Some(column) => Err(Error::malformed(
+                table,
+                format!(
+                    "a colour map names column {column} of a table the package does not hold, so the column cannot be placed"
+                ),
+            )),
+        };
+    };
+    let read = Table::read(object.as_reflect())?;
+    let keys = read.keys().len();
+    if keys > 1 {
+        return Err(Error::malformed(
+            table,
+            format!(
+                "the table is keyed on {keys} columns, and the entries of a colour map index a row by one key"
+            ),
+        ));
+    }
+    if let Some(column) = column
+        && column >= read.columns.len() as u64
+    {
+        return Err(Error::malformed(
+            table,
+            format!(
+                "`ValueVectorIndex` {column} names no column of the table, which has {} (the key column counts, from 0)",
+                read.columns.len()
+            ),
+        ));
+    }
+    Ok(())
+}
+
 fn read_raw_entry(raw: &AnyXml, position: usize, notes: &mut Vec<String>) -> Entry {
     let content = raw.content.as_str();
     // `xsi:type` is what says which subtype this is; it sits on the carrying

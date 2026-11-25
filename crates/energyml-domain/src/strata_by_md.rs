@@ -434,7 +434,7 @@ impl Carried {
 
 /// The identity of a unit across two frames: its uri (two versions of a unit
 /// are two units), else its uuid, else its title.
-fn identity_of(unit: &Unit) -> String {
+pub(crate) fn identity_of(unit: &Unit) -> String {
     match (&unit.uri, &unit.uuid) {
         (Some(uri), _) => uri.to_ascii_lowercase(),
         (None, Some(uuid)) => uuid.to_ascii_lowercase(),

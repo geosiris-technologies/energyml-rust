@@ -209,6 +209,9 @@ pub struct RowCell {
 pub struct Categories {
     /// The uuid of the table object.
     pub table: String,
+    /// The uri the property names the table by, version included - what a colour
+    /// on the table is looked up by. `None` when the property names no uri.
+    pub uri: Option<String>,
     /// The type of the table object, without the `obj_` of release 2.0.1:
     /// `ColumnBasedTable`, `StringTableLookup`, `DoubleTableLookup`.
     pub table_type: String,
@@ -244,6 +247,7 @@ impl Categories {
         }
         Categories {
             table,
+            uri: None,
             table_type,
             lookup,
             columns,
@@ -784,7 +788,9 @@ fn categories_of(
             property: title.to_string(),
             source,
         })?;
-    Ok(Categories::new(uuid.to_string(), table_type, lookup, columns))
+    let mut categories = Categories::new(uuid.to_string(), table_type, lookup, columns);
+    categories.uri = uri.map(str::to_string);
+    Ok(categories)
 }
 
 /// The stored values, as values: an integer is a code - unless the property is

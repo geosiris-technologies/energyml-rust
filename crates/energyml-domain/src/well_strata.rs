@@ -1201,9 +1201,11 @@ fn category(
     // these codes - then the unit a row was matched to.
     let objects = Objects(source);
     let cascade = Cascade::new(cache.merged(known));
+    let table = categories.uri.as_deref().unwrap_or(&categories.table);
     let map = property_map(
         found.kind.as_ref(),
         &found.property,
+        table,
         frame,
         &objects,
         known,
@@ -1211,12 +1213,28 @@ fn category(
         notes,
     );
     for unit in &mut units {
-        if let Some((map, scaling, from)) = &map
-            && let Some(rgba) = map.sample(Some(unit.code), scaling)
-        {
-            unit.colour = Some(rgba);
-            unit.colour_from = Some(from.clone());
-            continue;
+        if let Some((map, scaling, from, by_key)) = &map {
+            // A discrete map colours categories, and a category is its key: the colour of a key is the
+            // entry that has it - never the nearest lower one -, and a key with no entry has no colour
+            // from the map (the unit's own colour is then asked, below). A continuous map is sampled
+            // by its own rule.
+            let rgba = if *by_key {
+                map.sample_key(unit.code)
+            } else {
+                map.sample(Some(unit.code), scaling)
+            };
+            if let Some(rgba) = rgba {
+                unit.colour = Some(rgba);
+                unit.colour_from = Some(from.clone());
+                continue;
+            }
+            if *by_key {
+                notes.push(format!(
+                    "the colour map has no entry for the key {}, so `{}` takes no colour from it",
+                    number(unit.code),
+                    unit.title
+                ));
+            }
         }
         if let Some(uuid) = unit.uuid.clone() {
             let (colour, colour_from) = unit_colour(&uuid, &cascade, known, &objects, notes);
@@ -1479,22 +1497,25 @@ fn unit_colour(
     (Some(rgba), Some(decision.found_on))
 }
 
-/// The colour map a category property carries - on itself or on its kind -
-/// with its scaling and the object that carried it.
+/// The colour map a category property carries - on itself, on the table of its
+/// `CategoryLookup` or on its kind - with its scaling, the object that carried it
+/// and whether it is read by key (a discrete map: a category is its key).
 ///
-/// Only those two levels: the cascade goes on to the frame, its interpretation
+/// Only those three levels: the cascade goes on to the frame, its interpretation
 /// and its feature, and a well's own colour is not a colour for its units.
 /// Asked of the sets read as one, like [`unit_colour`]: a disagreement between
 /// two sets is a note, the later statement is the map.
+#[allow(clippy::too_many_arguments)]
 fn property_map(
     kind: Option<&PropertyKindRef>,
     property: &str,
+    table: &str,
     frame: &str,
     objects: &Objects<'_>,
     known: &Known<'_>,
     cascade: &Cascade<'_>,
     notes: &mut Vec<String>,
-) -> Option<(Box<ColorMap>, Scaling, String)> {
+) -> Option<(Box<ColorMap>, Scaling, String, bool)> {
     if known.graphics.is_empty() {
         return None;
     }
@@ -1515,8 +1536,15 @@ fn property_map(
         kind_chain: &chain,
         element: Scope::WholeObject,
     };
-    let decision = match cascade.resolve(&request, objects) {
-        Ok(Some(decision)) if matches!(decision.level, Level::Property | Level::PropertyKind) => decision,
+    let decision = match cascade.resolve_category(&request, table, objects) {
+        Ok(Some(decision))
+            if matches!(
+                decision.level,
+                Level::Property | Level::CategoryTable | Level::PropertyKind
+            ) =>
+        {
+            decision
+        }
         Ok(_) => return None,
         Err(why) => {
             notes.push(format!(
@@ -1530,8 +1558,11 @@ fn property_map(
         Paint::Mapped { map, scaling, .. } => {
             if known.graphics.len() > 1 {
                 for (set_uuid, set) in known.graphics {
-                    if let Ok(Some(own)) = Cascade::new(set).resolve(&request, objects)
-                        && matches!(own.level, Level::Property | Level::PropertyKind)
+                    if let Ok(Some(own)) = Cascade::new(set).resolve_category(&request, table, objects)
+                        && matches!(
+                            own.level,
+                            Level::Property | Level::CategoryTable | Level::PropertyKind
+                        )
                         && let Paint::Mapped { map: other, .. } = own.paint
                         && other.uuid != map.uuid
                     {
@@ -1544,7 +1575,9 @@ fn property_map(
                     }
                 }
             }
-            Some((map, scaling, decision.found_on))
+            // A discrete map colours **categories**: it is read by key, at whatever level it was found.
+            let by_key = map.continuous.is_none();
+            Some((map, scaling, decision.found_on, by_key))
         }
         Paint::Constant(_) => {
             notes.push(format!(

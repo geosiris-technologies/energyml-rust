@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - *(domain)* `frame_values`: the values of a property along a wellbore frame, read once - support, values, the row of the category table each code names, the value at an MD (never across a hole), a table column as a property, and the values carried onto another representation of the wellbore by MD; ADR 0049
 - *(domain)* `IndexableElement::is_frame_interval`, the one door for `intervals` and `intervals from datum`
 - *(domain)* `table::Lookup::read_described` and `table::ColumnMeta`: a table read with what each column says of itself; `table::CODE`
+- *(domain)* the colour of a category carried by its table: `Level::CategoryTable`, `Cascade::table_decision` and `Cascade::resolve_category`, `ColorMap::sample_key`; a `ColorInformation` on the `CategoryLookup` colours the units of a well, its `ValueVectorIndex` a column of the table, an index that cannot be placed refused by name (issue 35); ADR 0050
+- *(domain)* `limits`: classify a suite along a frame (units, codes, a table column, a threshold with `value >= threshold` at or above), find its runs, boundaries and limits with their rank - a class that comes back is never refused - and place a limit in MD (on intervals the node between, on nodes inside, outside or interpolated, never over a hole); ADR 0051
 
 ### Fixed
 

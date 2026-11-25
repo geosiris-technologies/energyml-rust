@@ -91,3 +91,5 @@
 - [0046 Reading a field through one door](adr/0046-reading-a-field-through-one-door.md)
 - [0047 A view proposes, and says so](adr/0047-a-view-proposes-and-says-so.md)
 - [0049 The values of a property along a frame](adr/0049-the-values-of-a-property-along-a-frame.md)
+- [0050 The colour of a category is carried by its table](adr/0050-the-colour-of-a-category-is-carried-by-its-table.md)
+- [0051 The limits between two runs of values](adr/0051-the-limits-between-two-runs-of-values.md)

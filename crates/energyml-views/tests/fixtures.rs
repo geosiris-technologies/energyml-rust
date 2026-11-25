@@ -147,7 +147,7 @@ fn empty_store() -> EpcStore {
     .expect("it opens")
 }
 
-fn put(store: &mut EpcStore, object: impl DynObject + 'static) {
+pub fn put(store: &mut EpcStore, object: impl DynObject + 'static) {
     store.put(Box::new(object)).expect("it goes in");
 }
 

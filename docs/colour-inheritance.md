@@ -42,6 +42,16 @@ A **property** has a shorter path: the property, its property kind, the kind's
 parents, a collection at each step, and nothing beyond. A property never takes
 the colour of the representation it hangs on, nor of a model.
 
+A **category property** (one that names a `CategoryLookup`) has one more rung, between
+the property and its kind: a `ColorInformation` whose `TargetObject` is **the table**
+([ADR 0050](adr/0050-the-colour-of-a-category-is-carried-by-its-table.md)).
+Its map is indexed by the table's **keys**, and its `ValueVectorIndex` names a
+**column** of the table (the key column counts, from 0; `1` is the label column of a
+`ColumnBasedTable` in 2.2 and of a `StringTableLookup` in 2.0.1). A column the table
+does not have, or a table keyed on several columns, is refused by name. The level is
+`Level::CategoryTable`; `Cascade::table_decision` asks it alone and
+`Cascade::resolve_category` asks it in its place.
+
 ## What the answer carries
 
 An answer is not just a colour. It carries:

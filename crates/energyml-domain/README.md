@@ -12,6 +12,7 @@ The EnergyML concepts that are the same in every version, implemented once over 
 | `property`, `property_kind` | what a property hangs on, what kind of quantity it is |
 | `color`, `table` | how an object is coloured, what a discrete code means |
 | `well_strata`, `series` | stratigraphy along a well, log and time series |
+| `limits` | the limits between two runs of values along a well: classes, transitions with their rank, placement in MD |
 | `frame_values` | what a property is worth along a wellbore frame: support, values, the row of its table, the value at an MD, a table column as a property |
 | `well_members` | what a well has: trajectories, frames, marker frames and properties, from the inventory and the references alone |
 

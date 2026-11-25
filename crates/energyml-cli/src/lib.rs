@@ -1672,6 +1672,12 @@ fn colors(args: ColorsArgs, modes: Modes) -> Result<()> {
                 answered += 1;
                 let origin = match decision.level {
                     Level::Property => "on the property itself".to_string(),
+                    Level::CategoryTable => {
+                        format!(
+                            "on the table of its categories ({})",
+                            short_uuid(&decision.found_on)
+                        )
+                    }
                     Level::PropertyKind => {
                         format!("on its property kind ({})", short_uuid(&decision.found_on))
                     }

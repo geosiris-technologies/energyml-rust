@@ -24,6 +24,7 @@
 //! | [`md_extent`] | from which MD to which, and on which reference |
 //! | [`well_strata`] | which unit is this well in, from which MD to which |
 //! | [`frame_values`] | what is this property worth along this well: its support, its values, the row of its table, the value at an MD |
+//! | [`limits`] | where does one unit, one category or one side of a threshold end and the next begin, and at which MD |
 //! | [`well_members`] | what does this well have: trajectories, frames, tops, properties |
 //! | [`strata_by_md`] | and on its other frames and trajectories, looked up by MD |
 //! | [`series`] | what does this log or time series say, sample by sample |
@@ -99,6 +100,10 @@ pub mod geolts_rank;
 /// package index.
 pub mod inherit;
 pub mod integrity;
+/// The limits between two runs of values along a wellbore: classify a suite (units,
+/// codes, a table column, a threshold), find every switch with its rank, place each
+/// limit in MD (ADR 0051).
+pub mod limits;
 pub mod md_extent;
 pub mod metadata;
 /// What the module keeps of a package: links and property sheets, never the

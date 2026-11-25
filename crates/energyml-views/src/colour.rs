@@ -87,6 +87,9 @@ pub enum ColourSource {
     File,
     /// A palette, by name: not from the file.
     Palette(String),
+    /// The file's map, read **by key** (a category is the entry that has its key, never the nearest lower one), and
+    /// this palette for a key the map has no entry for: not from the file.
+    FileAndPalette(String),
 }
 
 impl ColourSource {
@@ -95,6 +98,9 @@ impl ColourSource {
         match self {
             ColourSource::File => "colours: the file's map".to_string(),
             ColourSource::Palette(name) => format!("colours: palette {name} (not from the file)"),
+            ColourSource::FileAndPalette(name) => format!(
+                "colours: the file's map by key; palette {name} for a key it has no entry for (not from the file)"
+            ),
         }
     }
 }
@@ -102,7 +108,30 @@ impl ColourSource {
 #[derive(Clone, Debug)]
 enum Painting {
     Constant([u8; 4]),
-    Mapped { map: Box<ColorMap>, scaling: Scaling },
+    Mapped {
+        map: Box<ColorMap>,
+        scaling: Scaling,
+    },
+    /// A category: the entry of the map that has its key, else what `fallback` paints (a palette), else nothing.
+    ByKey {
+        map: Box<ColorMap>,
+        fallback: Option<Box<Painting>>,
+    },
+}
+
+impl Painting {
+    fn sample(&self, value: f64) -> Option<[u8; 4]> {
+        match self {
+            Painting::Constant(rgba) => Some(*rgba),
+            Painting::Mapped { map, scaling } => map
+                .sample(Some(value).filter(|v| !v.is_nan()), scaling)
+                .map(bytes),
+            Painting::ByKey { map, fallback } => map
+                .sample_key(value)
+                .map(bytes)
+                .or_else(|| fallback.as_ref().and_then(|fallback| fallback.sample(value))),
+        }
+    }
 }
 
 /// The colours of one picture's values.
@@ -116,12 +145,7 @@ pub struct ValueColours {
 impl ValueColours {
     /// The colour of a value, RGBA; `None` where the map has none (a null value with no null colour).
     pub fn sample(&self, value: f64) -> Option<[u8; 4]> {
-        match &self.painting {
-            Painting::Constant(rgba) => Some(*rgba),
-            Painting::Mapped { map, scaling } => map
-                .sample(Some(value).filter(|v| !v.is_nan()), scaling)
-                .map(bytes),
-        }
+        self.painting.sample(value)
     }
 }
 
@@ -206,6 +230,28 @@ pub fn value_colours(
             .paint(uri)
             .map_err(|why| ViewRefusal::computing(view, why))?
         {
+            // A **category** is placed by its key: the entry that has it, and no other. A key the map has no entry for
+            // takes the default palette of the reading, and the source says so.
+            Some(Paint::Mapped { map, .. })
+                if reading == Reading::Categorical && map.continuous.is_none() =>
+            {
+                return Ok(match cx.palettes.default_for(reading) {
+                    Some(default) => {
+                        let fallback = by_palette(default.name)?;
+                        ValueColours {
+                            painting: Painting::ByKey {
+                                map,
+                                fallback: Some(Box::new(fallback.painting)),
+                            },
+                            source: ColourSource::FileAndPalette(default.name.to_string()),
+                        }
+                    }
+                    None => ValueColours {
+                        painting: Painting::ByKey { map, fallback: None },
+                        source: ColourSource::File,
+                    },
+                });
+            }
             Some(Paint::Mapped { map, scaling, .. }) => {
                 return Ok(ValueColours {
                     painting: Painting::Mapped { map, scaling },

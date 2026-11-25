@@ -25,7 +25,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use energyml_domain::color::{Cascade, Decision, GraphicalSet, Paint, Request, Scope};
+use energyml_domain::color::{Cascade, Decision, GraphicalSet, Level, Paint, Request, Scope};
 use energyml_domain::color_inherit::Ladder;
 use energyml_domain::color_walks::{ColourCache, Stats, changed_targets};
 use energyml_domain::package_index::PackageIndex;
@@ -268,7 +268,7 @@ fn decide_in(
         Some(property) => cascade.inherited_property(index, store, property, chain),
         None => cascade.inherited(index, store, representation),
     }?;
-    Ok(walked.resolution.map(|resolution| {
+    let decided = walked.resolution.map(|resolution| {
         let mut decision = resolution.value;
         for note in resolution.notes {
             if !decision.notes.contains(&note) {
@@ -276,7 +276,27 @@ fn decide_in(
             }
         }
         decision
-    }))
+    });
+    // **The one cascade of a category property** (ADR-0050), for every caller - the scene's `Cache::decision`, the
+    // package's `of_package` and `decisions_of`: when its own `ColorInformation` says nothing, the one on **its table**
+    // answers before its kind and above, the level the walk above does not have.
+    if let Some(property) = property
+        && decided.as_ref().map(|decision| decision.level) != Some(Level::Property)
+        && let Some(table) = table_of(store, property)
+        && let Some(decision) = cascade.table_decision(&table, store)?
+    {
+        return Ok(Some(decision));
+    }
+    Ok(decided)
+}
+
+/// The address of the table a property names as its `CategoryLookup`: its uri when the property names one, else its
+/// uuid. `None` for a property that names none, that the package does not hold, or that does not read.
+fn table_of(store: &EpcStore, property: &str) -> Option<String> {
+    let uri = held_uri(store, property).ok().flatten()?;
+    let object = store.get_object(&uri).ok()?;
+    let read = property::read(object.as_reflect()).ok()?;
+    read.lookup_uri.clone().or_else(|| read.lookup.clone())
 }
 
 /// What the walk decides for one object of the package: `None` for an object that is neither a representation nor a
