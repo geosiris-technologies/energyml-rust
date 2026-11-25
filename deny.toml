@@ -14,6 +14,9 @@ ignore = [
     # hdf5-metno-derive (HDF5 bindings, behind the optional `hdf5` feature), which has no maintained
     # alternative today. Review when hdf5-metno moves off it.
     { id = "RUSTSEC-2026-0173", reason = "transitive, build-time only, via hdf5-metno-derive; no vulnerability" },
+    # chrono is declared unmaintained (no vulnerability, no safe upgrade). It reaches the workspace only
+    # through rmcp (the MCP server crates). Review when rmcp moves off it or a maintained fork is named.
+    { id = "RUSTSEC-2026-0543", reason = "transitive via rmcp; unmaintained notice, no vulnerability, no safe upgrade" },
 ]
 
 [licenses]
