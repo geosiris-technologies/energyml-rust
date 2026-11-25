@@ -23,6 +23,7 @@
 //! | [`forest`] | which node hangs under which, and which loop |
 //! | [`md_extent`] | from which MD to which, and on which reference |
 //! | [`well_strata`] | which unit is this well in, from which MD to which |
+//! | [`frame_values`] | what is this property worth along this well: its support, its values, the row of its table, the value at an MD |
 //! | [`well_members`] | what does this well have: trajectories, frames, tops, properties |
 //! | [`strata_by_md`] | and on its other frames and trajectories, looked up by MD |
 //! | [`series`] | what does this log or time series say, sample by sample |
@@ -88,6 +89,10 @@ mod scan {
 }
 pub mod error;
 pub mod forest;
+/// What a property is worth along a wellbore frame, read once: its support,
+/// its values, the row of its category table, the value at an MD, a table
+/// column as a property (ADR 0049).
+pub mod frame_values;
 pub mod geolts;
 pub mod geolts_rank;
 /// What an object inherits, by which path - the order of ADR-0009, over the

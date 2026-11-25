@@ -81,7 +81,7 @@ pub mod window;
 pub use cells::{CellState, ColumnCells, TableRefusal, row_count};
 pub use check::{ColumnReport, LinkReport, TableToCheck, UriColumnReport, check_links, check_links_of_set};
 pub use class::{
-    ColumnClass, DESCRIPTION, DepthKind, EXPLICIT_INDEX, IDENTIFIER, IntervalColumns, MEASURED_DEPTH,
+    CODE, ColumnClass, DESCRIPTION, DepthKind, EXPLICIT_INDEX, IDENTIFIER, IntervalColumns, MEASURED_DEPTH,
     TRUE_VERTICAL_DEPTH, classify_column, curve_pairs, descends_from, md_columns, resolve_kinds,
 };
 pub use keys::{KeyIndex, NamingRefusal, RowMatch, row_named_by};
@@ -440,13 +440,60 @@ pub struct Lookup {
     pub notes: Vec<String>,
 }
 
+/// What a column of a [`Lookup`] says of itself, beside its values: the title is
+/// in [`Lookup::titles`], the rest is here, in the table's column order.
+///
+/// Read by [`Lookup::read_described`]; [`Lookup::read`] drops it, so a caller that
+/// only wants the cells pays nothing for it.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ColumnMeta {
+    /// `Title`.
+    pub title: Option<String>,
+    /// `Description`.
+    pub description: Option<String>,
+    /// The column's own unit: it overrides the one its property kind implies.
+    pub uom: Option<String>,
+    /// What the column measures: mandatory in a `ColumnBasedTable`, absent in a
+    /// 2.0.1 lookup.
+    pub kind: Option<PropertyKindRef>,
+    /// Whether this is a `KeyColumn`.
+    pub key: bool,
+    /// `ValueCountPerRow`: 1 for a scalar column.
+    pub values_per_row: u64,
+}
+
 impl Lookup {
     /// Read a table and its values in one go.
     pub fn read(object: &dyn Reflect, source: &dyn ArraySource) -> Result<Lookup> {
+        Ok(Self::read_described(object, source)?.0)
+    }
+
+    /// [`Lookup::read`], and what each column says of itself (title, kind, unit,
+    /// key or not, values per row) in the same order as [`Lookup::titles`].
+    ///
+    /// **The one reading of a table**: `read` is this without the descriptions,
+    /// so a caller that shows a row with its column headers (`frame_values`)
+    /// and one that only looks a key up read the same table the same way.
+    pub fn read_described(
+        object: &dyn Reflect,
+        source: &dyn ArraySource,
+    ) -> Result<(Lookup, Vec<ColumnMeta>)> {
         let table = Table::read(object)?;
         let mut rows = table.read_all(source)?;
         let notes = std::mem::take(&mut rows.notes);
-        Ok(Lookup {
+        let meta = table
+            .columns
+            .iter()
+            .map(|column| ColumnMeta {
+                title: column.title.clone(),
+                description: column.description.clone(),
+                uom: column.uom.clone(),
+                kind: column.kind.clone(),
+                key: column.key,
+                values_per_row: column.values_per_row,
+            })
+            .collect();
+        let lookup = Lookup {
             titles: table.columns.iter().map(|c| c.title.clone()).collect(),
             key_columns: table
                 .columns
@@ -457,7 +504,8 @@ impl Lookup {
                 .collect(),
             rows,
             notes,
-        })
+        };
+        Ok((lookup, meta))
     }
 
     /// The row whose key columns hold this tuple, and every duplicate of it.

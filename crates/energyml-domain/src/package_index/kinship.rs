@@ -203,12 +203,7 @@ fn is_along_well(node: &IndexNode) -> bool {
 /// intervals between them (RESQML TRG v2.2 §7.1: an interval is a node-to-node
 /// span; the frame's `NodeCount - 1` intervals).
 fn is_on_nodes_or_intervals(element: IndexableElement) -> bool {
-    matches!(
-        element,
-        IndexableElement::Nodes
-            | IndexableElement::Intervals
-            | IndexableElement::Interval
-            | IndexableElement::IntervalEdges
-            | IndexableElement::IntervalsFromDatum
-    )
+    element == IndexableElement::Nodes
+        || element.is_frame_interval()
+        || element == IndexableElement::IntervalEdges
 }

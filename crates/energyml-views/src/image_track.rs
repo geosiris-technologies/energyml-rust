@@ -148,10 +148,7 @@ impl ViewKind for ImageTrack {
                     .is_some_and(|support| &*support.type_key == FRAME);
                 sheet.values_per_element() > 1
                     && sheet.lookup.is_none()
-                    && matches!(
-                        sheet.indexable,
-                        IndexableElement::Nodes | IndexableElement::Intervals
-                    )
+                    && (sheet.indexable == IndexableElement::Nodes || sheet.indexable.is_frame_interval())
                     && on_a_frame
             })
             .map(|node| Offer {

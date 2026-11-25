@@ -213,10 +213,9 @@ fn matrix_facts(property: &Property<'_>, nodes: u64, values_count: u64) -> Resul
     let per = shape.len() as u64;
     let declared = match property.indexable {
         IndexableElement::Nodes => RowSupport::Nodes,
-        IndexableElement::Intervals
-        | IndexableElement::Interval
-        | IndexableElement::IntervalEdges
-        | IndexableElement::IntervalsFromDatum => RowSupport::Intervals,
+        indexable if indexable.is_frame_interval() || indexable == IndexableElement::IntervalEdges => {
+            RowSupport::Intervals
+        }
         indexable => return Err(MatrixRefusal::Support { indexable }),
     };
     let intervals = nodes.saturating_sub(1);

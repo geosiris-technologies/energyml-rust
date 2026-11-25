@@ -52,6 +52,14 @@ Related decisions: [ADR-0005](../../docs/adr/0005-refuse-rather-than-draw.md), [
 
 **A rule that cannot be applied says so** - `property_kind::check` implements three rules the technical reference guides state (abstract kind used directly, deprecated kind, unit outside the kind's quantity class). The third covers only the unit families this build converts; the others come back as `QuantityClassNotCheckable` rather than passing, and `is_a_defect()` separates a limit of this build from a defect of the file.
 
+## The values of a property along a frame
+
+**One door, `frame_values`** - the support (nodes, or intervals with a top and a base), the values (a number, a code, or `None` for the file's absence), the unit, the range, and for a property that names a table the codes as stored and the row each names. `wellbore_table` and `well_strata` read through it; a reader that wants the same asks it rather than reading a property and a table again ([ADR-0049](../../docs/adr/0049-the-values-of-a-property-along-a-frame.md)).
+
+**`intervals` and `intervals from datum` are one thing** - the intervals of a frame, `NodeCount - 1` of them (`IndexableElement::is_frame_interval`). A reader that compared with `intervals` alone lost every `from datum` property without a word.
+
+**A code names its row by the key, by the rank without one, never both** - `table::row_named_by`; the label of a category is a column among others, not a rule of the table. A value at an MD is never interpolated over an absent neighbour or a gap wider than the rule, and a discrete value is never interpolated at all.
+
 ## Colours
 
 **A colour is found by falling back, and the answer says how far it fell and by which path** - the three technical reference guides define no precedence or inheritance for graphical information, so the order is this library's decision (recorded as `house/inherit/*` rules). Every decision carries the level it came from and the object that carried it; the walk returns the path and any ties (first in document order wins, the others are shown), so a caller can refuse an inherited colour. Nothing found is `None`: the standard defines no default colour, and inventing one draws something the file does not say.

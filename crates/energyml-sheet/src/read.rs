@@ -407,7 +407,7 @@ pub fn board_of_frame(
         }
         match read.indexable {
             IndexableElement::Nodes => node_property_count += 1,
-            IndexableElement::Intervals | IndexableElement::IntervalsFromDatum => {
+            element if element.is_frame_interval() => {
                 candidates.push((summary, object));
             }
             // Neither this frame's nodes nor its intervals - out of scope

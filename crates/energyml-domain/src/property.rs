@@ -203,6 +203,27 @@ impl IndexableElement {
         .into_iter()
         .find(|candidate| squash(candidate.as_str()) == wanted)
     }
+
+    /// Whether the elements are the **intervals of a wellbore frame**: `intervals`,
+    /// and `intervals from datum` (the two values the schemas spell; `interval` is a phantom of this enum, no schema has it).
+    ///
+    /// **The one door for this question.** The three say the same thing about a
+    /// frame of `NodeCount` nodes - `NodeCount - 1` values, one per span from a
+    /// node to the next (see [`element_count`], which counts them the same way):
+    /// `from datum` says how the extents of those spans are *expressed*, not how
+    /// many there are. A reader that compared with `Intervals` alone lost every
+    /// `intervals from datum` property without a word (issue #34 of the public
+    /// repository), and the same comparison written in five places was wrong in
+    /// each its own way. ADR-0049.
+    ///
+    /// `interval edges` is not here: it counts the edges between the intervals
+    /// of a column-layer grid, and [`element_count`] refuses it on a frame.
+    pub fn is_frame_interval(self) -> bool {
+        matches!(
+            self,
+            IndexableElement::Intervals | IndexableElement::IntervalsFromDatum
+        )
+    }
 }
 
 impl std::fmt::Display for IndexableElement {
@@ -1137,7 +1158,11 @@ pub fn element_count(representation: &dyn Reflect, element: IndexableElement) ->
                 // compute rather than refuse; it is not enough to stop
                 // reporting a property whose own data disagrees, which
                 // `Property::check` still does.
-                Intervals | Interval | IntervalsFromDatum => {
+                //
+                // The three are asked through
+                // [`IndexableElement::is_frame_interval`], the one door for
+                // "the intervals of a frame".
+                interval if interval.is_frame_interval() => {
                     Ok(required(representation, "NodeCount")?.saturating_sub(1))
                 }
                 // `interval edges` is **refused** on a frame. RESQML Technical
@@ -1380,6 +1405,21 @@ mod tests {
         ] {
             let parsed = IndexableElement::parse(text).expect(text);
             assert_eq!(IndexableElement::parse(parsed.as_str()), Some(parsed));
+        }
+    }
+
+    /// `intervals` and `intervals from datum` are the intervals of a
+    /// frame, spelled as the schemas spell them; nothing else is, and `interval
+    /// edges` in particular is not (a column-layer grid's, refused on a frame).
+    #[test]
+    fn the_intervals_of_a_frame_are_asked_through_one_door() {
+        for text in ["intervals", "intervals from datum"] {
+            let element = IndexableElement::parse(text).expect(text);
+            assert!(element.is_frame_interval(), "{text}");
+        }
+        for text in ["nodes", "interval", "interval edges", "cells", "patches"] {
+            let element = IndexableElement::parse(text).expect(text);
+            assert!(!element.is_frame_interval(), "{text}");
         }
     }
 

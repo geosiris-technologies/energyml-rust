@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- *(sheet)* `intervals` and `intervals from datum` are asked through `IndexableElement::is_frame_interval`
+
 ## [0.4.0](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-sheet-v0.3.0...energyml-sheet-v0.4.0) - 2026-11-16
 
 ### Added

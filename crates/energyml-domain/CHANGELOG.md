@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- *(domain)* `frame_values`: the values of a property along a wellbore frame, read once - support, values, the row of the category table each code names, the value at an MD (never across a hole), a table column as a property, and the values carried onto another representation of the wellbore by MD; ADR 0049
+- *(domain)* `IndexableElement::is_frame_interval`, the one door for `intervals` and `intervals from datum`
+- *(domain)* `table::Lookup::read_described` and `table::ColumnMeta`: a table read with what each column says of itself; `table::CODE`
+
+### Fixed
+
+- *(domain)* a frame whose properties say `intervals from datum` is tabulated one row per interval by `wellbore_table`, like `intervals`, instead of every one of its properties being refused (issue 34)
+- *(domain)* a property of several patches, several values per element or `RealizationIndices` is refused by name by `wellbore_table` and `well_strata`
+
 ## [0.4.0](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-domain-v0.3.0...energyml-domain-v0.4.0) - 2026-11-16
 
 ### Added

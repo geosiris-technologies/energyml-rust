@@ -16,10 +16,12 @@
 //! Which index is which unit is **not re-read here**:
 //! [`crate::stratigraphy::columns`] is the reader the column view already uses,
 //! and a second reading of a rank's order would be a second answer to one
-//! question. A table is read by [`crate::table::Lookup`], and a code is matched
-//! against the key the way the front end's `rowLabel` matches it - the value parsed
-//! as a number, the first row that holds it - so that a legend and a section
-//! cannot name two different rows for one code.
+//! question. A category property is read by [`crate::frame_values`] (its support,
+//! its codes, its table, ADR-0049), the one door for *what is this property worth
+//! along this frame*; a table is read by [`crate::table::Lookup`], and a code is
+//! matched against the key the way the front end's `rowLabel` matches it - the
+//! value parsed as a number, the first row that holds it - so that a legend and a
+//! section cannot name two different rows for one code.
 //!
 //! RESQML 2.0.1 spells the frame's field `IntervalStratigraphiUnits` (the
 //! missing `c` is in its XSD) and names the rank `StratigraphicOrganization`;
@@ -86,7 +88,8 @@ use energyml_core::registry::DynObject;
 use energyml_core::value::{FieldValue, Reflect};
 
 use crate::color::{Cascade, ColorMap, GraphicalSet, Level, Paint, Request, Rgba, Scaling, Scope};
-use crate::property::{self, IndexableElement};
+use crate::frame_values;
+use crate::property::PropertyKindRef;
 use crate::property_kind::Resolver;
 use crate::source::{ArraySource, ObjectSource};
 use crate::stratigraphy;
@@ -1099,24 +1102,11 @@ fn integers(array: &dyn Reflect, source: &dyn ArraySource, at: &str) -> Result<V
     }
 }
 
-/// A numeric array as the file states it: `None` for its declared
-/// `NullValue` and for a `NaN` - how the corpus writes *no value here*.
-fn numbers(array: &dyn Reflect, source: &dyn ArraySource, at: &str) -> Result<Vec<Option<f64>>, Refusal> {
-    let null = values::null_value(array);
-    match values::read(array, source, at)? {
-        Values::Integer(values) => Ok(values
-            .into_iter()
-            .map(|value| (null != Some(value)).then_some(value as f64))
-            .collect()),
-        Values::Floating(values) => Ok(values
-            .into_iter()
-            .map(|value| (!value.is_nan()).then_some(value))
-            .collect()),
-        _ => Err(Refusal::defect(at, "is not an array of numbers")),
-    }
-}
-
 /// A category property on the frame's intervals, and the rows its codes name.
+///
+/// The property is read by [`crate::frame_values`] - its support, its values, its
+/// table and the row each code names are **not read again here**; what is left is
+/// what is about units: which unit each row makes, and the colour of each.
 #[allow(clippy::too_many_arguments)]
 fn category(
     property: &dyn Reflect,
@@ -1129,63 +1119,33 @@ fn category(
     notes: &mut Vec<String>,
 ) -> Result<Read, Refusal> {
     let intervals = mds.len() - 1;
-    let read = property::read(property)?;
-    let name = read.title.clone().unwrap_or_else(|| read.uuid.clone());
+    let found = frame_values::of_with_mds(frame, mds, property, source).map_err(|why| refused(why, title))?;
+    let name = found.title.clone();
     let what = format!("property `{name}`");
-    if !read
-        .supporting_representation
-        .as_deref()
-        .is_some_and(|supporting| supporting.eq_ignore_ascii_case(frame))
-    {
-        return Err(Refusal::absent(
-            what,
-            format!(
-                "hangs on {}, not on `{title}`, so it says nothing about this frame's intervals",
-                read.supporting_representation
-                    .as_deref()
-                    .unwrap_or("no representation")
-            ),
-        ));
-    }
-    if !matches!(
-        read.indexable,
-        IndexableElement::Intervals | IndexableElement::IntervalsFromDatum
-    ) {
+    if !found.support.is_intervals() {
         return Err(Refusal::unsupported(
             what,
             format!(
                 "hangs on {}, and a section of a well is an interval",
-                read.indexable.as_str()
+                found.element.as_str()
             ),
         ));
     }
-    let Some(table_uuid) = read.lookup.clone() else {
+    let Some(categories) = &found.categories else {
         return Err(Refusal::absent(
             what,
             "names no CategoryLookup, so its values are codes with no unit to name",
         ));
     };
-    let found = match read.lookup_uri.as_deref() {
-        Some(uri) => source.object_at(uri),
-        None => source.object(&table_uuid),
-    };
-    let Some(table_object) = found else {
-        return Err(Refusal::absent(
-            format!("table {table_uuid}"),
-            format!(
-                "is the CategoryLookup of `{name}`, and the package does not hold it - what each code means is unknown"
-            ),
-        ));
-    };
-    let lookup = Lookup::read(table_object.as_reflect(), source)?;
-    notes.extend(lookup.notes.iter().cloned());
-    if lookup.key_columns.len() > 1 {
+    let table_uuid = categories.table.clone();
+    notes.extend(categories.lookup.notes.iter().cloned());
+    if categories.key_columns().len() > 1 {
         return Err(Refusal::unsupported(
             format!("table {table_uuid}"),
             format!(
                 "is keyed on {} columns, and `{name}` stores one value per interval - which key that value \
                  is cannot be read",
-                lookup.key_columns.len()
+                categories.key_columns().len()
             ),
         ));
     }
@@ -1193,71 +1153,39 @@ fn category(
     // **The key, not the position** - common TRG 2.3 §9.1. A table keyed
     // `1..n`, which is what real files write, gives every row a key one above
     // its position; reading the position named every facies of `h+g_PaleoGTM`
-    // with its neighbour's name. The key is parsed as a number, the way the
-    // front end's `categories` parse it, so a text key that reads as a number
-    // matches the same rows in both.
-    let key_column = lookup.key_columns.first().copied();
-    // Which row each code names, **built once**: first row wins, as the
-    // duplicate-key note below says. A scan per interval parsed every key of the
-    // table again and again (a `String` per probe).
-    let mut row_of_code: HashMap<u64, usize> = HashMap::new();
-    if key_column.is_some() {
-        for row in 0..lookup.rows.rows {
-            if let Some(code) = key_number(&lookup, key_column, row).filter(|code| !code.is_nan()) {
-                row_of_code.entry(code_bits(code)).or_insert(row);
-            }
-        }
-    }
-    if !lookup.duplicate_keys().is_empty() {
+    // with its neighbour's name. Which row a code names is `Categories::row_of`:
+    // by the key, by the rank in a table that has none, the first row of a
+    // repeated key, and a text key that reads as a number matched as that number,
+    // the way the front end's `categories` parse it.
+    let key_column = categories.key_columns().first().copied();
+    if !categories.duplicate_keys().is_empty() {
         notes.push(format!(
             "table {table_uuid} repeats a key; the first row holding it is the one a code names"
         ));
     }
 
-    let (mut units, unit_of_row) = category_units(&lookup, key_column, &table_uuid, known, notes);
-
-    let Some(patch) = read.patches.first() else {
-        return Err(Refusal::absent(what, "states no values"));
-    };
-    if read.patches.len() > 1 {
-        notes.push(format!(
-            "`{name}` has {} patches; a frame has one, and the first is read",
-            read.patches.len()
-        ));
-    }
-    let values = numbers(patch.array, source, &what)?;
-    if values.len() != intervals {
-        return Err(Refusal::defect(
-            what,
-            format!(
-                "holds {} value(s) where `{title}` has {intervals} interval(s) - reading it here would shift \
-                 every section",
-                values.len()
-            ),
-        ));
-    }
+    let (mut units, unit_of_row) = category_units(&categories.lookup, key_column, &table_uuid, known, notes);
 
     let mut named = Vec::with_capacity(intervals);
-    for (at, value) in values.iter().enumerate() {
+    for (at, value) in found.values.iter().enumerate() {
         let Some(value) = value else {
             named.push(Vec::new());
             continue;
         };
-        let row = match key_column {
-            Some(_) => row_of_code.get(&code_bits(*value)).copied(),
-            // No key column: the position is all the document offers.
-            None => (value.fract() == 0.0 && *value >= 0.0 && (*value as usize) < lookup.rows.rows)
-                .then_some(*value as usize),
+        let Some(stored) = value.as_f64() else {
+            return Err(Refusal::defect(what, "is not an array of numbers"));
         };
         // A row of a keyed table whose key reads as no number made no unit: it
         // is not one a stored value can name.
-        let row = row.and_then(|row| unit_of_row.get(row).copied().flatten());
+        let row = categories
+            .row_of(value)
+            .and_then(|row| unit_of_row.get(row).copied().flatten());
         let Some(row) = row else {
             return Err(Refusal::defect(
                 interval(title, mds, at),
                 format!(
                     "`{name}` stores {}, which no row of table {table_uuid} holds{}",
-                    number(*value),
+                    number(stored),
                     if key_column.is_some() {
                         " in its key column"
                     } else {
@@ -1273,7 +1201,15 @@ fn category(
     // these codes - then the unit a row was matched to.
     let objects = Objects(source);
     let cascade = Cascade::new(cache.merged(known));
-    let map = property_map(&read, frame, &objects, known, &cascade, notes);
+    let map = property_map(
+        found.kind.as_ref(),
+        &found.property,
+        frame,
+        &objects,
+        known,
+        &cascade,
+        notes,
+    );
     for unit in &mut units {
         if let Some((map, scaling, from)) = &map
             && let Some(rgba) = map.sample(Some(unit.code), scaling)
@@ -1291,7 +1227,7 @@ fn category(
 
     Ok(Read {
         source: Source::Category {
-            property: read.uuid.clone(),
+            property: found.property.clone(),
             table: table_uuid,
         },
         units,
@@ -1299,13 +1235,68 @@ fn category(
     })
 }
 
-/// A code as a hash key: its bits, `-0.0` being `0.0` (they are equal as
-/// numbers, so they name the same row).
-fn code_bits(code: f64) -> u64 {
-    if code == 0.0 {
-        0.0f64.to_bits()
-    } else {
-        code.to_bits()
+/// What a property that cannot be read along the frame is, among the refusals of
+/// a frame's stratigraphy - an absence, a defect of the file or a shape this
+/// build does not read.
+fn refused(why: frame_values::Refusal, title: &str) -> Refusal {
+    use frame_values::Refusal as Why;
+    match why {
+        Why::Read(error) => Refusal::Read(error),
+        Why::NotAFrame => Refusal::unsupported(
+            format!("`{title}`"),
+            "states no NodeMd, so it is not a wellbore frame and has no measured-depth interval to colour",
+        ),
+        Why::NotOnThisFrame { property, supporting } => Refusal::absent(
+            format!("property `{property}`"),
+            format!(
+                "hangs on {}, not on `{title}`, so it says nothing about this frame's intervals",
+                supporting.as_deref().unwrap_or("no representation")
+            ),
+        ),
+        Why::Element { property, element } => Refusal::unsupported(
+            format!("property `{property}`"),
+            format!(
+                "hangs on {}, and a section of a well is an interval",
+                element.as_str()
+            ),
+        ),
+        Why::Vector {
+            property,
+            per_element,
+        } => Refusal::unsupported(
+            format!("property `{property}`"),
+            format!("holds {per_element} values per element, and a unit is one value per interval"),
+        ),
+        Why::Realizations { property } => Refusal::unsupported(
+            format!("property `{property}`"),
+            "declares `RealizationIndices`, which add a dimension to its values - which realization?",
+        ),
+        Why::NoValues { property } => Refusal::absent(format!("property `{property}`"), "states no values"),
+        Why::Patches { property, count } => Refusal::unsupported(
+            format!("property `{property}`"),
+            format!("has {count} patches; a frame has one, and none is chosen for it"),
+        ),
+        Why::Values { source, .. } => Refusal::Read(source),
+        Why::Count {
+            property,
+            found,
+            expected,
+            ..
+        } => Refusal::defect(
+            format!("property `{property}`"),
+            format!(
+                "holds {found} value(s) where `{title}` has {expected} interval(s) - reading it here would shift \
+                 every section"
+            ),
+        ),
+        Why::LookupAbsent { property, uuid, .. } => Refusal::absent(
+            format!("table {uuid}"),
+            format!(
+                "is the CategoryLookup of `{property}`, and the package does not hold it - what each code means is unknown"
+            ),
+        ),
+        Why::LookupUnreadable { source, .. } => Refusal::Read(source),
+        Why::Incomparable { what, why } => Refusal::Incomparable { what, why },
     }
 }
 
@@ -1496,7 +1487,8 @@ fn unit_colour(
 /// Asked of the sets read as one, like [`unit_colour`]: a disagreement between
 /// two sets is a note, the later statement is the map.
 fn property_map(
-    read: &property::Property<'_>,
+    kind: Option<&PropertyKindRef>,
+    property: &str,
     frame: &str,
     objects: &Objects<'_>,
     known: &Known<'_>,
@@ -1506,9 +1498,7 @@ fn property_map(
     if known.graphics.is_empty() {
         return None;
     }
-    let chain: Vec<String> = read
-        .kind
-        .as_ref()
+    let chain: Vec<String> = kind
         .and_then(|kind| Resolver::new(objects).resolve(kind).ok())
         .map(|resolution| {
             resolution
@@ -1521,7 +1511,7 @@ fn property_map(
         .unwrap_or_default();
     let request = Request {
         representation: frame,
-        property: Some(read.uuid.as_str()),
+        property: Some(property),
         kind_chain: &chain,
         element: Scope::WholeObject,
     };
@@ -1531,7 +1521,7 @@ fn property_map(
         Err(why) => {
             notes.push(format!(
                 "the colour map of property {} could not be read: {why}",
-                read.uuid
+                property
             ));
             return None;
         }
@@ -1548,7 +1538,7 @@ fn property_map(
                         notes.push(format!(
                             "property {} is drawn through map {} by set {set_uuid} and map {} by a later statement - \
                              the later statement is taken: {}",
-                            read.uuid, other.uuid, map.uuid, map.uuid
+                            property, other.uuid, map.uuid, map.uuid
                         ));
                         break;
                     }
@@ -1560,7 +1550,7 @@ fn property_map(
             notes.push(format!(
                 "property {} is given one constant colour, which names no unit; its units are coloured by what \
                  they are",
-                read.uuid
+                property
             ));
             None
         }

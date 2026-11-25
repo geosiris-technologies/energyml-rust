@@ -82,6 +82,32 @@ the array's `NullValue`, are empty cells; the first are counted in the table's
 notes. A property whose lookup is missing or unreadable is left out with a note
 that names the reason, rather than written as codes under a label's heading.
 
+A table is **one row per interval** as soon as one of the frame's properties hangs on
+the intervals of the frame: `intervals` and `intervals from datum` are one
+thing (`IndexableElement::is_frame_interval`).
+
+### The values of a property along a frame
+
+`frame_values::of(frame, property, &arrays)` is the one reading behind that table and
+behind the stratigraphy of a category property
+([ADR 0049](adr/0049-the-values-of-a-property-along-a-frame.md)). It gives the
+support (the nodes, or the intervals with their top and base), the values (a number,
+a code, or `None` for the file's absence), the unit, the range, and, for a property that
+names a table, the **codes as stored** and the row each names - every column of the
+row with its title, kind, unit and value:
+
+```rust,ignore
+use energyml_domain::frame_values::{self, Side};
+
+let read = frame_values::of(&frame, &property, &arrays)?;
+let row = read.row_at(3);                              // the row the code of interval 3 names
+let at = read.at_md(1234.5, Side::Below, "linear")?;   // the value at any MD, never across a hole
+let thickness = read.derive(2)?;                       // column 2 of the table, as a property
+```
+
+A count that is not the number of nodes or intervals, several patches, several values
+per element, `RealizationIndices` and a table that is missing are refused by name.
+
 The findings of `energyml check` are filed under the object's **uri**: the report
 items (`SchemaIssue`, `PropertyIssue`, `CountIssue`, `RuleFinding`) carry the `uri`
 beside the `uuid`, so two versions of one object are told apart.

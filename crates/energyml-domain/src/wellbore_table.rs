@@ -26,6 +26,14 @@
 //! Writing the raw code into a CSV would be worse than an absence: an integer
 //! looks like a measurement, and `3` reads as three.
 //!
+//! # Where the values come from
+//!
+//! [`crate::frame_values`], the one door for *what is this property worth along
+//! this frame* (ADR-0049): its support (nodes or intervals - `intervals from
+//! datum` is a pass like `intervals`), its values and the row of its table. This
+//! module lays them in columns and writes them as text; it reads neither a
+//! property nor a table of its own.
+//!
 //! # Merging several wells into one file, and knowing when it cannot be done
 //!
 //! Two boreholes are pasted into one CSV by **uniting their columns**: what a
@@ -37,10 +45,10 @@
 //! whatever code carried it.
 
 use crate::error::Result;
+use crate::frame_values::{self, Categories, Value};
 use crate::property::{self, IndexableElement};
 use crate::source::ArraySource;
-use crate::table::{Cell, KeyIndex, Lookup, RowMatch, row_named_by};
-use crate::values::{self, Values};
+use crate::table::Cell;
 use energyml_core::value::Reflect;
 
 /// Where a column comes from.
@@ -199,6 +207,10 @@ pub fn hangs_on(object: &dyn Reflect, representation: &str) -> bool {
 /// `properties` is what the caller found through [`hangs_on`]: this module does
 /// not walk a package, it reads what it is given - the rule that keeps it
 /// testable without a file.
+///
+/// The values of each property are read by [`crate::frame_values`], the one door
+/// for *what is this property worth along this frame*: this module lays them in
+/// columns and writes them as text.
 pub fn of_frame(
     frame: &dyn Reflect,
     properties: &[&dyn Reflect],
@@ -215,27 +227,25 @@ pub fn of_frame(
 
     // The depth first: it is the axis, and it fixes the number of rows. Without
     // it there is no table - a value without a depth fits nowhere.
-    let mds = match frame.field("NodeMd") {
-        Some(energyml_core::value::FieldValue::Object(array)) => {
-            crate::values::read(array, arrays, "NodeMd")?
-        }
-        _ => {
-            return Err(crate::error::Error::malformed(
-                &uuid,
-                "this object states no `NodeMd`, so it is not a wellbore frame and its values have no depth to sit at",
-            ));
-        }
-    };
+    let mds = frame_values::node_mds(frame, arrays).map_err(|why| match why {
+        frame_values::Refusal::Read(error) => error,
+        other => crate::error::Error::malformed(&uuid, other.to_string()),
+    })?;
     // **One row per interval when the frame carries passes.** A pass property is
     // worth *from here to there*: putting it on a node would shift it by one
     // rank, and that is the fault `properties-from-table` exists to avoid. So
     // the table takes the shape of the file it comes from - a top, a base, a
     // value - and that is what makes the CSV identical to the source one.
+    //
+    // `intervals` and `intervals from datum` are both passes
+    // ([`IndexableElement::is_frame_interval`]): the table used to compare with
+    // `intervals` alone and wrote a frame whose properties said `intervals from
+    // datum` as a table of nodes, with every one of those properties refused.
     let by_passes = mds.len() >= 2
-        && properties.iter().any(|object| {
-            property::read(*object).is_ok_and(|read| read.indexable == IndexableElement::Intervals)
-        });
-    let (rows, wanted, mut columns) = if by_passes {
+        && properties
+            .iter()
+            .any(|object| property::read(*object).is_ok_and(|read| read.indexable.is_frame_interval()));
+    let (rows, mut columns) = if by_passes {
         let rows = mds.len() - 1;
         let top = Column {
             title: "top MD".to_string(),
@@ -243,7 +253,7 @@ pub fn of_frame(
             kind: None,
             kind_title: Some("top depth".to_string()),
             from: From::TopDepth,
-            values: (0..rows).map(|at| cell_text(&mds, at)).collect(),
+            values: (0..rows).map(|at| md_text(&mds, at)).collect(),
         };
         let base = Column {
             title: "MD".to_string(),
@@ -251,9 +261,9 @@ pub fn of_frame(
             kind: None,
             kind_title: Some("measured depth".to_string()),
             from: From::MeasuredDepth,
-            values: (0..rows).map(|at| cell_text(&mds, at + 1)).collect(),
+            values: (0..rows).map(|at| md_text(&mds, at + 1)).collect(),
         };
-        (rows, IndexableElement::Intervals, vec![top, base])
+        (rows, vec![top, base])
     } else {
         let rows = mds.len();
         let md = Column {
@@ -262,13 +272,13 @@ pub fn of_frame(
             kind: None,
             kind_title: Some("measured depth".to_string()),
             from: From::MeasuredDepth,
-            values: (0..rows).map(|at| cell_text(&mds, at)).collect(),
+            values: (0..rows).map(|at| md_text(&mds, at)).collect(),
         };
-        (rows, IndexableElement::Nodes, vec![md])
+        (rows, vec![md])
     };
 
     for object in properties {
-        match one_property(*object, &well, rows, wanted, arrays) {
+        match one_property(*object, &well, &uuid, &mds, by_passes, arrays) {
             Ok((made, said)) => {
                 columns.extend(made);
                 notes.extend(said);
@@ -294,132 +304,97 @@ pub fn of_frame(
 fn one_property(
     object: &dyn Reflect,
     well: &str,
-    rows: usize,
-    wanted: IndexableElement,
+    frame: &str,
+    mds: &[f64],
+    by_passes: bool,
     arrays: &dyn ArraySource,
 ) -> std::result::Result<(Vec<Column>, Vec<String>), String> {
-    let read = property::read(object).map_err(|why| why.to_string())?;
-    let title = read.title.clone().unwrap_or_else(|| read.uuid.clone());
+    let found = frame_values::of_given(frame, mds, object, arrays).map_err(|why| match why {
+        // **Only what hangs on what the rows are**: said below for a property
+        // that hangs on the other of the two, and here for one that hangs on
+        // neither.
+        frame_values::Refusal::Element { property, element } => {
+            hangs_elsewhere(&property, element, by_passes)
+        }
+        other => other.to_string(),
+    })?;
+    let title = found.title.clone();
     let column = heading(&title, well);
 
     // **Only what hangs on what the rows are.** An interval property has one
     // fewer value than there are nodes, and putting it on the nodes would shift
     // every value by one rank - the fault `properties-from-table` exists to
     // avoid. The reverse too: a node value has no row in a table of passes.
-    if read.indexable != wanted {
-        return Err(format!(
-            "`{title}` hangs on {} while this table has one row per {}, so it has no row here",
-            read.indexable.as_str(),
-            if wanted == IndexableElement::Intervals {
-                "interval"
-            } else {
-                "node"
-            }
-        ));
+    if found.support.is_intervals() != by_passes {
+        return Err(hangs_elsewhere(&title, found.element, by_passes));
     }
-    let Some(patch) = read.patches.first() else {
-        return Err(format!("`{title}` states no values"));
-    };
-    let values = patch.read(arrays).map_err(|why| format!("`{title}`: {why}"))?;
-    if values.len() != rows {
-        return Err(format!(
-            "`{title}` holds {} value(s) where the frame has {rows} {} - reading it here would shift every one",
-            values.len(),
-            if wanted == IndexableElement::Intervals {
-                "interval(s)"
-            } else {
-                "node(s)"
-            }
-        ));
-    }
+    let rows = found.values.len();
 
-    // The `NullValue` of the integer array: a code equal to it is no code.
-    let null = values::null_value(patch.array);
-
-    // The label rather than the code, when a table gives one.
-    //
-    // **A property that names a lookup it cannot be read through is refused**,
-    // not written as raw codes: the module doc says an integer looks like a
-    // measurement, so a column of codes under a label's heading would be worse
-    // than an absence. The note carries the reason.
-    let labels = match read.lookup.as_deref() {
-        None => None,
-        Some(uuid) => {
-            // By the uri the property names: the version named is the version read.
-            let object = match read.lookup_uri.as_deref() {
-                Some(uri) => arrays.object_at(uri),
-                None => arrays.object(uuid),
-            };
-            let Some(object) = object else {
-                return Err(format!(
-                    "`{title}` names a category lookup ({}) that is not here, so its codes have no label; \
-                     they are not written as if they were values",
-                    read.lookup_uri.as_deref().unwrap_or(uuid)
-                ));
-            };
-            match Lookup::read(object.as_reflect(), arrays) {
-                Ok(table) => Some(table),
-                Err(why) => {
-                    return Err(format!(
-                        "`{title}` names a category lookup that cannot be read ({why}), so its codes have no label; \
-                         they are not written as if they were values"
-                    ));
-                }
-            }
-        }
-    };
-    let kind = read.kind.as_ref().and_then(kind_uuid);
-    let kind_title = read.kind.as_ref().and_then(|kind| match kind {
+    let kind = found.kind.as_ref().and_then(kind_uuid);
+    let kind_title = found.kind.as_ref().and_then(|kind| match kind {
         property::PropertyKindRef::Object { title, .. } => title.clone(),
         property::PropertyKindRef::Standard { name } => Some(name.clone()),
     });
 
+    // The label rather than the code, when a table gives one. **A property that
+    // names a lookup it cannot be read through was refused above**, not written
+    // as raw codes: the module doc says an integer looks like a measurement, so
+    // a column of codes under a label's heading would be worse than an absence.
+    let Some(categories) = &found.categories else {
+        let cells = found
+            .values
+            .iter()
+            .map(|value| value.as_ref().and_then(value_text))
+            .collect();
+        return Ok((
+            vec![Column {
+                title: column,
+                uom: found.uom.clone(),
+                kind,
+                kind_title,
+                from: From::Property(found.property.clone()),
+                values: cells,
+            }],
+            Vec::new(),
+        ));
+    };
+
     // The table's columns that are not keys: the label alone most of the time,
     // the code and the label when the table groups both.
-    let table_columns: Vec<usize> = labels
-        .as_ref()
-        .map(|table| {
-            (0..table.titles.len())
-                .filter(|one| !table.key_columns.contains(one))
-                .collect()
-        })
-        .unwrap_or_default();
-    // The table's key index, built **once** and asked for every cell: a code
-    // names its row by the table's key, or by its rank when it has none.
-    let index: Option<KeyIndex> = labels.as_ref().map(Lookup::key_index);
+    let table_columns = categories.value_columns();
 
     // **A code no row names is an absence, said in the notes**, never the raw
     // number written under the label's heading. A code that is the array's
     // `NullValue` is an absence too, without a note: that is what it is for.
     let mut said = Vec::new();
-    if let Some(index) = &index {
-        let unmatched: Vec<String> = (0..rows)
-            .filter(|at| !is_absent(&values, *at, null))
-            .filter(|at| row_of(index, &values, *at).is_none())
-            .filter_map(|at| cell_text(&values, at))
-            .collect();
-        if !unmatched.is_empty() {
-            let mut distinct: Vec<&str> = Vec::new();
-            for code in &unmatched {
-                if !distinct.contains(&code.as_str()) {
-                    distinct.push(code);
-                }
+    let unmatched: Vec<String> = found
+        .values
+        .iter()
+        .flatten()
+        .filter(|value| categories.row_of(value).is_none())
+        .map(Value::to_string)
+        .collect();
+    if !unmatched.is_empty() {
+        let mut distinct: Vec<&str> = Vec::new();
+        for code in &unmatched {
+            if !distinct.contains(&code.as_str()) {
+                distinct.push(code);
             }
-            said.push(format!(
-                "`{title}`: {} code(s) name no row of their category lookup, and are left empty \
-                 rather than written as values (code(s) {})",
-                unmatched.len(),
-                distinct.iter().take(5).copied().collect::<Vec<_>>().join(", ")
-            ));
         }
+        said.push(format!(
+            "`{title}`: {} code(s) name no row of their category lookup, and are left empty \
+             rather than written as values (code(s) {})",
+            unmatched.len(),
+            distinct.iter().take(5).copied().collect::<Vec<_>>().join(", ")
+        ));
     }
 
-    if let (Some(table), Some(index), true) = (&labels, &index, table_columns.len() > 1) {
+    if table_columns.len() > 1 {
         let made = table_columns
             .iter()
             .enumerate()
             .map(|(rank, &at_column)| Column {
-                title: table.titles[at_column]
+                title: categories.lookup.titles[at_column]
                     .clone()
                     .unwrap_or_else(|| format!("{column} {}", rank + 1)),
                 uom: None,
@@ -428,9 +403,15 @@ fn one_property(
                 // meaning and have no kind of their own here.
                 kind: if rank == 0 { kind.clone() } else { None },
                 kind_title: if rank == 0 { kind_title.clone() } else { None },
-                from: From::Property(read.uuid.clone()),
-                values: (0..rows)
-                    .map(|at| cell_of(table, index, &values, at, at_column))
+                from: From::Property(found.property.clone()),
+                values: found
+                    .values
+                    .iter()
+                    .map(|value| {
+                        value
+                            .as_ref()
+                            .and_then(|value| cell_of(categories, value, at_column))
+                    })
                     .collect(),
             })
             .collect();
@@ -438,69 +419,65 @@ fn one_property(
     }
 
     let cells = (0..rows)
-        .map(|at| match (&labels, &index) {
-            (Some(table), Some(index)) => label_at(table, index, &values, at),
-            _ => code_text(&values, at, null),
+        .map(|at| {
+            found
+                .values
+                .get(at)
+                .and_then(Option::as_ref)
+                .and_then(|value| label_of(categories, value))
         })
         .collect();
 
     Ok((
         vec![Column {
             title: column,
-            uom: read.uom.clone(),
+            uom: found.uom.clone(),
             kind,
             kind_title,
-            from: From::Property(read.uuid.clone()),
+            from: From::Property(found.property.clone()),
             values: cells,
         }],
         said,
     ))
 }
 
-/// Whether the value at `at` is the file's absence: an integer equal to the
-/// array's `NullValue`, a floating value that is not a number.
-fn is_absent(values: &Values, at: usize, null: Option<i64>) -> bool {
-    match values {
-        Values::Integer(v) => v.get(at).is_none_or(|one| Some(*one) == null),
-        Values::Floating(v) => v.get(at).is_none_or(|one| !one.is_finite()),
-        Values::Boolean(_) | Values::Text(_) => false,
-    }
+/// The note of a property that hangs on what the rows are not.
+fn hangs_elsewhere(title: &str, element: IndexableElement, by_passes: bool) -> String {
+    format!(
+        "`{title}` hangs on {} while this table has one row per {}, so it has no row here",
+        element.as_str(),
+        if by_passes { "interval" } else { "node" }
+    )
 }
 
-/// A stored value as text, `None` when it is the file's absence ([`is_absent`]).
-fn code_text(values: &Values, at: usize, null: Option<i64>) -> Option<String> {
-    if is_absent(values, at, null) {
-        return None;
+/// A measured depth, as text - and `None` for what the file does not say.
+fn md_text(mds: &[f64], at: usize) -> Option<String> {
+    let one = *mds.get(at)?;
+    one.is_finite().then(|| trim(one))
+}
+
+/// A stored value as text, `None` for what the file does not say.
+///
+/// A `NaN` is **an absence**, not the string `NaN`: that is how properties
+/// created from a table write a node without a measurement, and rendering it
+/// literally would turn a blank into a word. ([`crate::frame_values`] made it
+/// `None` already.)
+fn value_text(value: &Value) -> Option<String> {
+    match value {
+        Value::Number(number) => Some(trim(*number)),
+        Value::Code(code) => Some(code.to_string()),
+        Value::Boolean(flag) => Some(flag.to_string()),
+        Value::Text(text) => (!text.is_empty()).then(|| text.clone()),
     }
-    cell_text(values, at)
 }
 
 /// The cell of this table column, at the row the code designates.
-fn cell_of(table: &Lookup, index: &KeyIndex, values: &Values, at: usize, column: usize) -> Option<String> {
-    let row = row_of(index, values, at)?;
-    match table.rows.cell(row, column)? {
+fn cell_of(categories: &Categories, value: &Value, column: usize) -> Option<String> {
+    let row = categories.row_of(value)?;
+    match categories.lookup.rows.cell(row, column)? {
         Cell::Text(text) => Some(text),
         Cell::Number(number) => Some(trim(number)),
         Cell::Boolean(flag) => Some(flag.to_string()),
-    }
-}
-
-/// The row of the code table that the value at `at` names: **by the table's
-/// key** when it has one, by its rank from 0 when it has none
-/// (`house/table/row-rank-without-key`, [`row_named_by`]) - never the rank of a
-/// keyed table. A duplicated key names its first row ("first match wins"). A
-/// value no row holds, and a refused table, name no row: the caller falls back
-/// on the stored value.
-fn row_of(index: &KeyIndex, values: &Values, at: usize) -> Option<usize> {
-    let value = match values {
-        Values::Integer(v) => *v.get(at)? as f64,
-        Values::Floating(v) => *v.get(at)?,
-        _ => return None,
-    };
-    match row_named_by(index, &Cell::Number(value)) {
-        Ok(RowMatch::One(row)) => Some(row),
-        Ok(RowMatch::Several(rows)) => rows.first().copied(),
-        Ok(RowMatch::None) | Err(_) => None,
     }
 }
 
@@ -519,48 +496,25 @@ fn kind_uuid(kind: &property::PropertyKindRef) -> Option<String> {
 /// **The last column that is not a key**, because that is where the label lives
 /// in both forms: a `StringTableLookup` has `Key` and `Value`, a category
 /// `ColumnBasedTable` has the code then its name. A single-column table returns
-/// that column - it *is* the label.
-fn label_at(table: &Lookup, index: &KeyIndex, values: &Values, at: usize) -> Option<String> {
-    let row = row_of(index, values, at)?;
-    let column = (0..table.titles.len())
-        .rev()
-        .find(|one| !table.key_columns.contains(one))?;
-    match table.rows.cell(row, column)? {
+/// that column - it *is* the label. (The row is named by
+/// [`Categories::row_of`]: by the key, by the rank in a table that has none.)
+///
+/// This is not [`Categories::label_column`] (the column of kind `code`, else the
+/// only text column): a table whose only value column is a number is written
+/// with that number here, as it always was.
+fn label_of(categories: &Categories, value: &Value) -> Option<String> {
+    let row = categories.row_of(value)?;
+    let column = categories.value_columns().last().copied()?;
+    match categories.lookup.rows.cell(row, column)? {
         Cell::Text(text) => Some(text),
         Cell::Number(number) => Some(trim(number)),
         Cell::Boolean(flag) => Some(flag.to_string()),
     }
 }
 
-/// A value, as text - and `None` for what the file does not say.
-///
-/// A `NaN` is **an absence**, not the string `NaN`: that is how properties
-/// created from a table write a node without a measurement, and rendering it
-/// literally would turn a blank into a word.
-fn cell_text(values: &Values, at: usize) -> Option<String> {
-    match values {
-        Values::Floating(v) => {
-            let one = *v.get(at)?;
-            one.is_finite().then(|| trim(one))
-        }
-        Values::Integer(v) => Some(v.get(at)?.to_string()),
-        Values::Boolean(v) => Some(v.get(at)?.to_string()),
-        Values::Text(v) => {
-            let one = v.get(at)?;
-            (!one.is_empty()).then(|| one.clone())
-        }
-    }
-}
-
-/// A number written without useless zeros - `6.4` and not `6.4000000000000004`.
-fn trim(value: f64) -> String {
-    if value == value.trunc() && value.abs() < 1e15 {
-        format!("{}", value as i64)
-    } else {
-        let text = format!("{value}");
-        text
-    }
-}
+// A number written without useless zeros - `6.4` and not `6.4000000000000004`:
+// the one copy, in core.
+use energyml_core::text::plain_number as trim;
 
 /// Several boreholes, ready for a single file.
 #[derive(Debug, Clone)]
@@ -677,7 +631,8 @@ pub fn to_csv(merged: &Merged, separator: char) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::table::Rows;
+    use crate::table::{ColumnMeta, Lookup, Rows};
+    use crate::values::Values;
 
     fn lookup(key: Option<Vec<i64>>, labels: Vec<&str>) -> Lookup {
         let mut columns = Vec::new();
@@ -706,18 +661,33 @@ mod tests {
         }
     }
 
+    /// The table, as `frame_values` holds it: with its rule for naming a row.
+    fn categories(key: Option<Vec<i64>>, labels: Vec<&str>) -> Categories {
+        let table = lookup(key, labels);
+        let columns: Vec<ColumnMeta> = table
+            .titles
+            .iter()
+            .enumerate()
+            .map(|(at, title)| ColumnMeta {
+                title: title.clone(),
+                description: None,
+                uom: None,
+                kind: None,
+                key: table.key_columns.contains(&at),
+                values_per_row: 1,
+            })
+            .collect();
+        Categories::new(String::new(), "ColumnBasedTable".to_string(), table, columns)
+    }
+
     #[test]
     fn a_keyed_category_table_names_its_row_by_key() {
         // Common TRG 2.3 §9.1 p. 190: a key column is what makes the table a
         // lookup; a code names its row by that key, never by its position.
-        let table = lookup(Some(vec![10, 20, 30]), vec!["a", "b", "c"]);
-        let index = table.key_index();
+        let table = categories(Some(vec![10, 20, 30]), vec!["a", "b", "c"]);
+        assert_eq!(label_of(&table, &Value::Code(20)).as_deref(), Some("b"));
         assert_eq!(
-            label_at(&table, &index, &Values::Integer(vec![20]), 0).as_deref(),
-            Some("b")
-        );
-        assert_eq!(
-            label_at(&table, &index, &Values::Integer(vec![1]), 0),
+            label_of(&table, &Value::Code(1)),
             None,
             "a keyed table is never read by rank"
         );
@@ -725,12 +695,8 @@ mod tests {
 
     #[test]
     fn a_keyless_category_table_names_its_row_by_rank() {
-        let table = lookup(None, vec!["a", "b", "c"]);
-        let index = table.key_index();
-        assert_eq!(
-            label_at(&table, &index, &Values::Integer(vec![1]), 0).as_deref(),
-            Some("b")
-        );
-        assert_eq!(label_at(&table, &index, &Values::Integer(vec![3]), 0), None);
+        let table = categories(None, vec!["a", "b", "c"]);
+        assert_eq!(label_of(&table, &Value::Code(1)).as_deref(), Some("b"));
+        assert_eq!(label_of(&table, &Value::Code(3)), None);
     }
 }

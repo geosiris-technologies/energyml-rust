@@ -19,6 +19,9 @@ use super::{ColumnCells, ColumnSheet, TableSheet};
 
 /// `identifier`: a value that names something (property kind dictionary, TSV line 967).
 pub const IDENTIFIER: &str = "311dcaba-6512-4144-aa7c-79a9de19b4ab";
+/// `code`: the short word a category is written with (TSV line 175). What
+/// `frame_values` takes for the label column of a category table.
+pub const CODE: &str = "5f78f66a-ed1b-4827-a868-beb989febb31";
 /// `explicit index`: a pointer into a structure, a rank (TSV line 1762).
 pub const EXPLICIT_INDEX: &str = "36f718c4-371e-4d5b-a8cb-3bc3a3a84ea0";
 /// `measured depth` (TSV line 1286).

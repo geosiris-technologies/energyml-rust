@@ -90,3 +90,4 @@
 - [0045 Text and numbers, one copy each](adr/0045-text-and-numbers-one-copy.md)
 - [0046 Reading a field through one door](adr/0046-reading-a-field-through-one-door.md)
 - [0047 A view proposes, and says so](adr/0047-a-view-proposes-and-says-so.md)
+- [0049 The values of a property along a frame](adr/0049-the-values-of-a-property-along-a-frame.md)
