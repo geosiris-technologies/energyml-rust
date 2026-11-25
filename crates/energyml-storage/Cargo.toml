@@ -25,7 +25,7 @@ energyml-core = { workspace = true }
 # Spans and events only; the face installs the subscriber (`energyml-log`).
 tracing = { workspace = true }
 async-trait = "0.1"
-quick-xml = "0.41"
+quick-xml = "0.42"
 thiserror = "2.0"
 # Casts a `Vec<f64>` to `&[u8]` and back without a copy and without `unsafe`
 # here. Tiny, no dependencies, and the alternative was an unsafe block in a

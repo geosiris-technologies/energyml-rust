@@ -19,7 +19,7 @@ documentation = "https://docs.rs/energyml-core"
 include = ["src/**", "Cargo.toml", "README.md", "LICENSE*", "NOTICE*"]
 
 [dependencies]
-quick-xml = "0.41"
+quick-xml = "0.42"
 serde = { version = "1.0", features = ["derive"] }
 # `float_roundtrip` is not optional in spirit: without it serde_json's fast
 # float parser is off by one ULP on some 17-digit doubles - `248.49637958325286`

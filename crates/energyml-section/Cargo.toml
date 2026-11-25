@@ -54,7 +54,7 @@ png = ["dep:resvg"]
 
 [dev-dependencies]
 # `tests/svg.rs` re-reads the SVG with a parser that is not this crate's code.
-quick-xml = "0.41"
+quick-xml = "0.42"
 energyml-eml-2-3 = { path = "../generated/energyml-eml-2-3" }
 energyml-resqml-2-2 = { path = "../generated/energyml-resqml-2-2" }
 energyml-eml-2-0 = { path = "../generated/energyml-eml-2-0" }

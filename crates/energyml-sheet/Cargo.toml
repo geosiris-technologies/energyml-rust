@@ -61,7 +61,7 @@ path = "tests/main.rs"
 # crate's own code (two independent readings of one fact, ADR-0011) -
 # the same version `energyml-storage` already resolves in the workspace, so
 # this adds no new dependency to `Cargo.lock`.
-quick-xml = "0.41"
+quick-xml = "0.42"
 # `tests/read.rs` builds a frame, its properties and a lookup table in
 # memory, after the specification - the same pattern
 # `crates/energyml-domain/tests/well_strata.rs` uses.
