@@ -1,15 +1,15 @@
 //! The unit of a hue, read from the numbers of the colours it belongs to (the rule is `energyml_core::color::hue_unit`).
 //!
 //! RESQML TRG 2.2 section 4.21 (`HsvColor`) gives `Hue` no unit. A map whose hues all lie in 0-1 with one strictly between is
-//! read in turns, a map of degrees is not touched, and the reading in turns is **said**: a note on the map, a warning of the
-//! validation. Every object is built here.
+//! read in turns, a map of degrees is not touched, and the reading in turns is **said** in a note on the map - and never
+//! warned of by the validation: turns are a valid form. Every object is built here.
 //!
 //! What it would take to make each one fail: deciding on one colour alone, leaving out the null, above and below colours, taking 0
-//! and 1 as turns, forgetting the note, or counting the warning an error.
+//! and 1 as turns, forgetting the note, or reporting turns as a finding of the validation.
 
 use energyml_core::any_xml::AnyXml;
 use energyml_core::registry::DynObject;
-use energyml_core::validate::{self, Severity};
+use energyml_core::validate;
 use energyml_domain::check;
 use energyml_domain::color::{ColorMap, GraphicalSet, HUE_IN_TURNS, Information};
 use energyml_eml_2_3 as eml23;
@@ -232,35 +232,31 @@ fn a_constant_colour_is_decided_by_its_set() {
     assert!(!undecided.hue_in_turns());
 }
 
-/// The validation warns, and does not condemn: a map and a set read in turns each give one **warning** of the code
-/// `colour-hue-in-turns`, no error; a map in degrees gives none.
+/// The validation says **nothing** of hues in turns: a map in fractions of a turn is a valid form (the schema fixes no unit, and
+/// the translator writes this one), so a package that has them leaves `energyml check` with no finding of any kind about its
+/// colours - while the map keeps its note, which says how it was read.
 ///
-/// Break it: in `HueInTurns::check` (`check.rs`), warn for every map.
+/// Break it: add a rule to `documented_rules()` that reports a map read in turns.
 #[test]
-fn the_validation_warns_of_hues_read_in_turns() {
+fn a_map_in_turns_is_not_a_finding_of_the_validation_and_keeps_its_note() {
     let rules = check::documented_rules();
     let judge = |object: Box<dyn DynObject>| validate::validate_with(object.as_validate(), &rules).issues;
-    let issues = judge(Box::new(discrete(&[0.2, 0.7])));
-    let ours: Vec<_> = issues
-        .iter()
-        .filter(|issue| issue.code == "colour-hue-in-turns")
-        .collect();
-    assert_eq!(ours.len(), 1, "{issues:?}");
-    assert_eq!(ours[0].severity, Severity::Warning);
-    assert!(ours[0].message.contains(HUE_IN_TURNS), "{}", ours[0].message);
-
+    // The five hues of a strata map written in fractions of a turn.
+    let alai = discrete(&[0.602_409_66, 0.166_666_67, 0.922_338_5, 0.916_010_5, 0.0]);
+    let issues = judge(Box::new(alai.clone()));
+    assert!(
+        issues.iter().all(|issue| !issue.code.starts_with("colour")),
+        "no finding about the colours: {issues:?}"
+    );
     let set = judge(Box::new(set_of(&[0.5, 0.0])));
-    assert_eq!(
-        set.iter()
-            .filter(|issue| issue.code == "colour-hue-in-turns" && issue.severity == Severity::Warning)
-            .count(),
-        1,
+    assert!(
+        set.iter().all(|issue| !issue.code.starts_with("colour")),
         "{set:?}"
     );
 
-    let degrees = judge(Box::new(discrete(&[120.0, 240.0])));
+    let (_, notes) = ColorMap::read_noted(&alai).expect("the map reads");
     assert!(
-        degrees.iter().all(|issue| issue.code != "colour-hue-in-turns"),
-        "{degrees:?}"
+        notes.iter().any(|note| note.contains(HUE_IN_TURNS)),
+        "the note says how it was read: {notes:?}"
     );
 }

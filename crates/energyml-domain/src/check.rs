@@ -345,11 +345,7 @@ impl Report {
 /// Run with the schema section and reported in it, at warning weight: the
 /// file passes the XSD, and the XSD's text says it should not.
 pub fn documented_rules() -> Vec<Box<dyn validate::ValidationRule>> {
-    vec![
-        Box::new(CitationFormat),
-        Box::new(HueInTurns),
-        Box::new(ColourMapDraftElement),
-    ]
+    vec![Box::new(CitationFormat), Box::new(ColourMapDraftElement)]
 }
 
 /// A `ColorInformation` that names its colour map by `DiscreteColorMap` or `ContinuousColorMap`, in a package that does
@@ -390,52 +386,6 @@ impl validate::ValidationRule for ColourMapDraftElement {
                      `ColorMap`: a strict reader will not find the map. This library reads it all the same ({first})",
                     if count == 1 { "y" } else { "ies" },
                     if count == 1 { "s" } else { "" },
-                ),
-            );
-        }
-    }
-}
-
-/// A colour map, or a set of constant colours, whose hues are fractions of a turn.
-///
-/// RESQML TRG 2.2 section 4.21 (`HsvColor`) says *"Hue of the color in the HSV model"* and refers to Wikipedia: no unit. A
-/// producer that writes 0.602 for a blue is not wrong by the text, and the library reads it
-/// as it was meant ([`crate::color::HueUnit`]: all the hues of the set in 0-1, one strictly between) - **a warning**, not an
-/// error, because the file is readable and the reading is an inference: a colour map written in degrees whose hues are all under
-/// one degree would be read in turns too, and this is what lets its author see it.
-struct HueInTurns;
-
-impl validate::ValidationRule for HueInTurns {
-    fn name(&self) -> &str {
-        "colour-hue-in-turns"
-    }
-
-    fn applies_to(&self, info: &'static energyml_core::reflect::TypeInfo) -> bool {
-        (info.package == "resqml" && matches!(info.name, "DiscreteColorMap" | "ContinuousColorMap"))
-            || (info.package == "eml" && info.name == "GraphicalInformationSet")
-    }
-
-    fn check(&self, object: &dyn energyml_core::value::Reflect, ctx: &mut validate::ValidationCtx<'_>) {
-        let said = if object.type_info().name == "GraphicalInformationSet" {
-            let set = crate::color::GraphicalSet::read(object);
-            set.hue_in_turns()
-                .then(|| {
-                    set.notes
-                        .into_iter()
-                        .find(|note| note.contains(crate::color::HUE_IN_TURNS))
-                })
-                .flatten()
-        } else {
-            crate::color::ColorMap::read_noted(object)
-                .ok()
-                .and_then(|(_, notes)| notes.into_iter().next())
-        };
-        if let Some(note) = said {
-            ctx.warn(
-                "colour-hue-in-turns",
-                format!(
-                    "{note}. The schema fixes no unit for `Hue` (RESQML TRG 2.2 section 4.21); the library reads the values: \
-                     degrees, unless every hue lies in 0-1 and one is strictly between"
                 ),
             );
         }

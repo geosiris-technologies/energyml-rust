@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- *(domain)* the hue of a colour is read in turns or in degrees from the values of its set of colours (a map, or the constant colours of a `GraphicalInformationSet`): fractions of a turn are brought to degrees, said in a note that goes with the decision, and warned by `check` (`colour-hue-in-turns`); ADR 0055
+- *(domain)* the hue of a colour is read in turns or in degrees from the values of its set of colours (a map, or the constant colours of a `GraphicalInformationSet`): fractions of a turn are brought to degrees, said in a note that goes with the decision; ADR 0055. The reading in turns is a note, not a finding of `check`: both forms are valid
 - *(domain)* a frame whose properties say `intervals from datum` is tabulated one row per interval by `wellbore_table`, like `intervals`, instead of every one of its properties being refused (issue 34)
 - *(domain)* a property of several patches, several values per element or `RealizationIndices` is refused by name by `wellbore_table` and `well_strata`
 - *(domain)* `energyml check` warns (`colour-map-draft-element`) when a package that does not declare the 2.2 draft names the colour map of a `ColorInformation` by `DiscreteColorMap` or `ContinuousColorMap`, elements that exist only in the draft; the map is still read
