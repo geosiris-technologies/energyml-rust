@@ -796,3 +796,116 @@ fn assembling_with_the_traces_already_computed_gives_the_same_catalogue() {
     assert_eq!(once, assemble(&i, &contributions).expect("assembles"));
     // Break it: let `assemble_with` drop the `notes` it is handed.
 }
+
+// -- a wellbore is the pair (package, wellbore) -------------------------------------------------------
+
+/// `well`, in the package `store`.
+fn in_store(store: &str, mut w: WellRead) -> WellRead {
+    w.object.store = store.to_string();
+    w.object.uri = format!("{}#{store}", w.object.uri);
+    w
+}
+
+fn contribution(store: &str, wells: Vec<WellRead>) -> Contribution {
+    Contribution {
+        store: store.to_string(),
+        wells,
+        ..Contribution::default()
+    }
+}
+
+fn frame_and_trajectory(store: &str) -> Vec<WellRead> {
+    let head = [30.0, 5.0, 0.0];
+    vec![
+        in_store(
+            store,
+            well("t", WellKind::Trajectory, Some("wb"), head, vec![head]),
+        ),
+        in_store(store, well("f", WellKind::Frame, Some("wb"), head, vec![head])),
+    ]
+}
+
+/// Two packages that hold **the same wellbore under the same uuid** are two wellbores, cut together: one line each, drawn
+/// from its own package - never one line with the second package's frame folded into the first's (its paint lost).
+///
+/// Break it: in `fold_wells`, key the wellbores by the wellbore alone (drop the store from the key).
+#[test]
+fn the_same_wellbore_in_two_packages_is_two_lines() {
+    let i = inputs(vec![[0.0, 0.0], [100.0, 0.0]]);
+    let both = [
+        contribution(
+            "s1",
+            vec![in_store(
+                "s1",
+                well(
+                    "f",
+                    WellKind::Frame,
+                    Some("wb"),
+                    [30.0, 5.0, 0.0],
+                    vec![[30.0, 5.0, 0.0]],
+                ),
+            )],
+        ),
+        contribution(
+            "s2",
+            vec![in_store(
+                "s2",
+                well(
+                    "f",
+                    WellKind::Frame,
+                    Some("wb"),
+                    [30.0, 5.0, 0.0],
+                    vec![[30.0, 5.0, 0.0]],
+                ),
+            )],
+        ),
+    ];
+    let cat = assemble(&i, &both).expect("assembles");
+    let items = well_items(&cat.long.items);
+    assert_eq!(items.len(), 2, "one line per package: {items:?}");
+    let mut stores: Vec<&str> = items.iter().map(|w| w.object.store.as_str()).collect();
+    stores.sort_unstable();
+    assert_eq!(stores, ["s1", "s2"]);
+    assert!(
+        items.iter().all(|w| w.merged.is_empty()),
+        "nothing of one package folded into the other"
+    );
+    assert!(
+        cat.objects
+            .iter()
+            .all(|row| !matches!(row.outcome, Outcome::Merged { .. })),
+        "{:?}",
+        cat.objects.iter().map(|row| &row.outcome).collect::<Vec<_>>()
+    );
+}
+
+/// In **one** package, a wellbore still folds its frame and its trajectory into one line, as it always did; in a second package
+/// holding the same wellbore the same happens, on its own.
+///
+/// Break it: in `fold_wells`, never fold (give every member a line of its own).
+#[test]
+fn within_one_package_a_wellbore_still_folds_and_each_package_folds_its_own() {
+    let i = inputs(vec![[0.0, 0.0], [100.0, 0.0]]);
+    let one = assemble(&i, &[contribution("s1", frame_and_trajectory("s1"))]).expect("assembles");
+    let items = well_items(&one.long.items);
+    assert_eq!(items.len(), 1);
+    assert_eq!(items[0].object.uuid, "f");
+    assert_eq!(items[0].merged.len(), 1);
+
+    let two = assemble(
+        &i,
+        &[
+            contribution("s1", frame_and_trajectory("s1")),
+            contribution("s2", frame_and_trajectory("s2")),
+        ],
+    )
+    .expect("assembles");
+    let items = well_items(&two.long.items);
+    assert_eq!(items.len(), 2, "{items:?}");
+    assert!(
+        items
+            .iter()
+            .all(|w| w.merged.len() == 1 && w.merged[0].store == w.object.store),
+        "each line folds the trajectory of its own package: {items:?}"
+    );
+}

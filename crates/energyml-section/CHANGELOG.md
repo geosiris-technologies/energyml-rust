@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- *(section)* the wells of a section are folded by the pair (package, wellbore), not by the wellbore alone: two packages that hold the same wellbore under the same uuid are two lines, each from its own package, where the second used to be folded into the first's line and its paint lost
 - *(section)* the comment of `cut_sources` said `TraceItem` carries no `sources`; it does
 
 ## [0.4.0](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-section-v0.3.0...energyml-section-v0.4.0) - 2026-11-16

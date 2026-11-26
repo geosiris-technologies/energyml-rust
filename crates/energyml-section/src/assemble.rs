@@ -328,19 +328,21 @@ struct Line<'a> {
 /// sister that knew their units (03/10, the first export of Lutetia).
 fn fold_wells<'a>(all: &[&'a WellRead]) -> Vec<Line<'a>> {
     let mut lines: Vec<Line<'a>> = Vec::new();
-    let mut by_wellbore: HashMap<&str, usize> = HashMap::new();
+    // A wellbore is the pair (package, wellbore): two packages that hold the same wellbore under the same uuid are two
+    // wellbores, never one line.
+    let mut by_wellbore: HashMap<(&str, &str), usize> = HashMap::new();
     for &w in all {
         // A well told by its head alone has no strata to rank: it stands alone
         // (a wellbore whose members are all far is not merged).
         let wellbore = if w.head_only { None } else { w.wellbore.as_deref() };
-        let Some(wb) = wellbore else {
+        let Some(wb) = wellbore.map(|wellbore| (w.object.store.as_str(), wellbore)) else {
             lines.push(Line {
                 well: w,
                 merged: Vec::new(),
             });
             continue;
         };
-        match by_wellbore.get(wb) {
+        match by_wellbore.get(&wb) {
             None => {
                 by_wellbore.insert(wb, lines.len());
                 lines.push(Line {
