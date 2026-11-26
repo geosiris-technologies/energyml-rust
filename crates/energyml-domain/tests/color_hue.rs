@@ -242,8 +242,8 @@ fn a_map_in_turns_is_not_a_finding_of_the_validation_and_keeps_its_note() {
     let rules = check::documented_rules();
     let judge = |object: Box<dyn DynObject>| validate::validate_with(object.as_validate(), &rules).issues;
     // The five hues of a strata map written in fractions of a turn.
-    let alai = discrete(&[0.602_409_66, 0.166_666_67, 0.922_338_5, 0.916_010_5, 0.0]);
-    let issues = judge(Box::new(alai.clone()));
+    let in_turns = discrete(&[0.602_409_66, 0.166_666_67, 0.922_338_5, 0.916_010_5, 0.0]);
+    let issues = judge(Box::new(in_turns.clone()));
     assert!(
         issues.iter().all(|issue| !issue.code.starts_with("colour")),
         "no finding about the colours: {issues:?}"
@@ -254,7 +254,7 @@ fn a_map_in_turns_is_not_a_finding_of_the_validation_and_keeps_its_note() {
         "{set:?}"
     );
 
-    let (_, notes) = ColorMap::read_noted(&alai).expect("the map reads");
+    let (_, notes) = ColorMap::read_noted(&in_turns).expect("the map reads");
     assert!(
         notes.iter().any(|note| note.contains(HUE_IN_TURNS)),
         "the note says how it was read: {notes:?}"
